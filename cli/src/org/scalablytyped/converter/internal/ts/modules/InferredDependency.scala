@@ -25,7 +25,7 @@ object InferredDependency {
     val prefixes: Set[TsIdent] =
       TsTreeTraverse.collect(file) { case TsQIdent(parts) if parts.nonEmpty => parts.head }.toSet
 
-    libraryPrefix.filterKeys(prefixes).values
+    libraryPrefix.view.filterKeys(prefixes).toMap.values
   }
 
   private def inferNode(nonResolvedModules: Set[TsIdentModule]): Option[TsIdentLibrary] =

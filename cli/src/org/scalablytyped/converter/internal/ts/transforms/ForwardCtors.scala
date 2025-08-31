@@ -5,7 +5,7 @@ package transforms
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
 
 object ForwardCtors extends TreeTransformationScopedChanges {
-  def parentWithCtor(scope: TsTreeScope, loopDetector: LoopDetector)(parentRef: TsTypeRef): Option[IArray[TsMember]] =
+  private def parentWithCtor(scope: TsTreeScope, loopDetector: LoopDetector)(parentRef: TsTypeRef): Option[IArray[TsMember]] =
     loopDetector.including(parentRef, scope) match {
       case Left(()) => None
       case Right(newLd) =>

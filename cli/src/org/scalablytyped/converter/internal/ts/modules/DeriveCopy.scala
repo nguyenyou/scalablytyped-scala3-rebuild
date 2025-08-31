@@ -109,7 +109,7 @@ object DeriveCopy {
     }
   }
 
-  def updatedContainer(ownerCp: CodePath, x: TsContainer & TsNamedDecl): TsNamedDecl = {
+  private def updatedContainer(ownerCp: CodePath, x: TsContainer & TsNamedDecl): TsNamedDecl = {
     def go(tree: TsContainerOrDecl): IArray[TsContainerOrDecl] =
       tree match {
         case m: TsNamedDecl => apply(m, x.codePath, None)

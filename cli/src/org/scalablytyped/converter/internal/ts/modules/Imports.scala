@@ -186,7 +186,7 @@ object Imports {
 
   }
 
-  def pickImport(imports: IArray[TsImport], wanted: IArray[TsIdent]): IArray[TsImport] =
+  private def pickImport(imports: IArray[TsImport], wanted: IArray[TsIdent]): IArray[TsImport] =
     imports.mapNotNone(validImport(wanted))
 
   def validImport(wanted: IArray[TsIdent])(i: TsImport): Option[TsImport] =

@@ -8,7 +8,7 @@ import org.scalablytyped.converter.internal.ts.transforms.SetCodePath
 
 /* Skip traversing the entire tree if the module is cached */
 object CachedReplaceExports {
-  val Unique = TsIdent("__CachedReplaceExports__")
+  private val Unique = TsIdent("__CachedReplaceExports__")
   def apply(scope: TsTreeScope, loopDetector: LoopDetector, x: TsDeclModule): TsDeclModule =
     if (scope.root.cache.isDefined && scope.root.cache.get.exports.contains(x.name))
       scope.root.cache.get.exports(x.name)
@@ -90,7 +90,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
       case other                                 => Some(other)
     })
 
-  def ensureTypesPresent[T <: TsContainer](old: T, `new`: T): T = {
+  private def ensureTypesPresent[T <: TsContainer](old: T, `new`: T): T = {
     val newTypes: Set[TsIdent] =
       `new`.members.collect { case Picker.Types(tpe) => tpe.name }.toSet
 
@@ -106,7 +106,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
     `new`.withMembers(`new`.members ++ missingTypes).asInstanceOf[T]
   }
 
-  case class CanBeShadowed(maybe: Boolean, trees: IArray[TsContainerOrDecl])
+  private case class CanBeShadowed(maybe: Boolean, trees: IArray[TsContainerOrDecl])
 
   def newMembers(
       scope: TsTreeScope,
@@ -126,7 +126,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
     keepMaybe ++ keep
   }
 
-  def newMember(scope: TsTreeScope, owner: TsDeclNamespaceOrModule, jsLocation: ModuleSpec => JsLocation)(
+  private def newMember(scope: TsTreeScope, owner: TsDeclNamespaceOrModule, jsLocation: ModuleSpec => JsLocation)(
       decl: TsContainerOrDecl
   ): CanBeShadowed = {
     lazy val hasExportedValues: Boolean =

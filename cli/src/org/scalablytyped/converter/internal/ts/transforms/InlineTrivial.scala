@@ -28,7 +28,7 @@ object InlineTrivial extends TreeTransformationScopedChanges {
     }
 
   /* bugfix for a case where we have ended up combining two types which are structurally equal */
-  object EffectiveTypeRef {
+  private object EffectiveTypeRef {
     def unapply(tpe: TsType): Option[TsTypeRef] =
       tpe match {
         case tr: TsTypeRef => Some(tr)
@@ -41,7 +41,7 @@ object InlineTrivial extends TreeTransformationScopedChanges {
       }
   }
 
-  def followTrivial(scope: TsTreeScope)(cur: TsDecl): Option[TsQIdent] =
+  private def followTrivial(scope: TsTreeScope)(cur: TsDecl): Option[TsQIdent] =
     cur match {
       case TsDeclInterface(cs, _, _, _, IArray.first(EffectiveTypeRef(TsTypeRef(_, nextName, _))), _, codePath)
           if cs.has[Marker.IsTrivial.type] =>

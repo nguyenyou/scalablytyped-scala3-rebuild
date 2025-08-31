@@ -56,7 +56,7 @@ object ModuleAsGlobalNamespace {
         }
     }
 
-  def findTopLevelModule(libName: TsIdentLibrary, x: TsParsedFile): Option[TsDeclModule] =
+  private def findTopLevelModule(libName: TsIdentLibrary, x: TsParsedFile): Option[TsDeclModule] =
     x.membersByName.get(TsIdentModule.fromLibrary(libName)).flatMap {
       case IArray.first(mod: TsDeclModule) => Some(mod)
       case _                               => None

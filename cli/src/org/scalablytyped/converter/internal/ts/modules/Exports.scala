@@ -160,7 +160,7 @@ object Exports {
   /** This is used when resolving. If we have an import in current scope which points to a module, this finds the
     * matching export in the pointee.
     */
-  def pickExports(exports: IArray[TsExport], wanted: IArray[TsIdent]): IArray[PickedExport] =
+  private def pickExports(exports: IArray[TsExport], wanted: IArray[TsIdent]): IArray[PickedExport] =
     exports.mapNotNone {
       case e @ TsExport(_, _, ExportType.Namespaced, _) =>
         Some(PickedExport(e, wanted))
@@ -194,7 +194,7 @@ object Exports {
   /** Structures which come from an `import` do not have a fixed javascript location, that can only be determined once
     * they are exported
     */
-  def rewriteLocationToOwner(jsLocation: JsLocation, ms: ModuleSpec): JsLocation =
+  private def rewriteLocationToOwner(jsLocation: JsLocation, ms: ModuleSpec): JsLocation =
     (jsLocation, ms) match {
       case (m: JsLocation.Module, spec)                              => JsLocation.Module(m.module, spec)
       case (JsLocation.Global(jsPath), ModuleSpec.Specified(idents)) => JsLocation.Global(jsPath ++ idents)

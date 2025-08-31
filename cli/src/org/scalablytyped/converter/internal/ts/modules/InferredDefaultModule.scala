@@ -6,7 +6,7 @@ import org.scalablytyped.converter.internal.logging.Logger
 import org.scalablytyped.converter.internal.ts.*
 
 object InferredDefaultModule {
-  def onlyAugments(in: TsParsedFile): Boolean =
+  private def onlyAugments(in: TsParsedFile): Boolean =
     in.members.forall {
       case _: TsImport          => true
       case _: TsAugmentedModule => true

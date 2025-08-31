@@ -6,7 +6,7 @@ object InferEnumTypes extends TreeTransformationScopedChanges {
   override def enterTsDeclEnum(scope: TsTreeScope)(e: TsDeclEnum): TsDeclEnum =
     e.copy(members = replaceReferences(initializeMembers(e.members)))
 
-  def initializeMembers(members: IArray[TsEnumMember]): IArray[TsEnumMember] = {
+  private def initializeMembers(members: IArray[TsEnumMember]): IArray[TsEnumMember] = {
     var lastUnspecifiedIndex = 0
     members.map {
       case em @ TsEnumMember(_, _, None) =>
@@ -17,7 +17,7 @@ object InferEnumTypes extends TreeTransformationScopedChanges {
     }
   }
 
-  def replaceReferences(members: IArray[TsEnumMember]): IArray[TsEnumMember] = {
+  private def replaceReferences(members: IArray[TsEnumMember]): IArray[TsEnumMember] = {
     lazy val byName = members.groupBy(_.name)
 
     members.map {

@@ -22,7 +22,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   final case class Shebang(chars: String) extends Token
 
   final case class StringTemplateLiteral(tokens: List[Either[Char, List[Token]]]) extends Token {
-    def chars =
+    def chars: String =
       tokens
         .map {
           case Left(str)     => str.toString
@@ -34,7 +34,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   // format: off
 
   /** The set of reserved identifiers: these will be returned as `Keyword`s */
-  val keywords = HashSet(
+  private val keywords = HashSet(
     "abstract", "as", "asserts", "break", "case", "catch", "class", "const", "continue", "debugger",
     "declare", "default", "delete", "do", "else", "enum", "export", "extends", "false",
     "finally", "for", "from", "function", "global", "if", "implements", "import", "in",
@@ -44,11 +44,11 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     "unique", "var", "void", "while", "with", "yield",
   )
 
-  val shebang = '#' ~ '!' ~ chrExcept('\n', EofCh).+ ^^ {
+  val shebang: Parser[Shebang] = '#' ~ '!' ~ chrExcept('\n', EofCh).+ ^^ {
     case hash ~ exclamation ~ rest => Shebang(hash.toString + exclamation.toString + chars2string(rest))
   }
 
-  val hexDigit: Parser[Int] =
+  private val hexDigit: Parser[Int] =
     accept("hex digit", {
       case c @ ('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9') => c - '0'
       case c @ ('A' | 'B' | 'C' | 'D' | 'E' | 'F')                         => c - 'A' + 10
@@ -57,7 +57,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
 
   // format: on
 
-  val pseudoChar: Parser[Char] = {
+  private val pseudoChar: Parser[Char] = {
     '\\' ~> (
       'x' ~> hexDigit ~ hexDigit ^^ { case d1 ~ d0 => (16 * d1 + d0).toChar } |
         'u' ~> hexDigit ~ hexDigit ~ hexDigit ~ hexDigit ^^ { case d3 ~ d2 ~ d1 ~ d0 =>
@@ -76,7 +76,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     )
   }
 
-  val identifier: Parser[Token] = {
+  private val identifier: Parser[Token] = {
     // legal identifier chars
     def isIdentifierStart(c: Char): Boolean =
       c === '$' || c === '_' || c === '#' || c.isUnicodeIdentifierStart
@@ -95,7 +95,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     }
   }
 
-  val numericLiteral: Parser[NumericLit] = {
+  private val numericLiteral: Parser[NumericLit] = {
     val binaryNumericLiteral: Parser[NumericLit] =
       '0' ~> (Parser('b') | 'B') ~> stringOf1(Parser('0') | '1') ^^ (s => NumericLit("0b" + s))
 
@@ -109,7 +109,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     binaryNumericLiteral | hexNumericLiteral | decimal.filter(_.chars.exists(_.isDigit))
   }
 
-  val stringLiteral: Parser[StringLit] = {
+  private val stringLiteral: Parser[StringLit] = {
     def inQuoteChar(quoteChar: Char): Parser[Char] =
       chrExcept('\\', quoteChar, EofCh) | pseudoChar
 
@@ -119,7 +119,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     (quoted('\"') | quoted('\'')) ^^ StringLit.apply
   }
 
-  lazy val stringTemplateLiteral: Parser[StringTemplateLiteral] = {
+  private lazy val stringTemplateLiteral: Parser[StringTemplateLiteral] = {
     val templateQuote                    = '`'
     val interpolationStart: Parser[Char] = '$' ~> '{'
     val interpolationEnd: Parser[Char]   = '}'
@@ -132,7 +132,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     templateQuote ~> rep(either) <~ templateQuote ^^ StringTemplateLiteral.apply
   }
 
-  val delim: Parser[Keyword] = {
+  private val delim: Parser[Keyword] = {
     /* construct parser for delimiters by |'ing together the parsers for the
      * individual delimiters, starting with the longest one -- otherwise a
      * delimiter D will never be matched if there is another delimiter that is
