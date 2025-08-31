@@ -203,7 +203,7 @@ object UnionToInheritance {
     }
 
     private def includeUnchangeds(all: IArray[Rewrite]): IArray[Rewrite] = {
-      val allIndexed = all.groupBy(_.original.codePath).mapValues(_.head)
+      val allIndexed = all.groupBy(_.original.codePath).view.mapValues(_.head).toMap
 
       def go(name: QualifiedName): IArray[TypeRef] =
         allIndexed.get(name) match {

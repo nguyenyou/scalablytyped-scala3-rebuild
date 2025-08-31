@@ -42,7 +42,7 @@ object PhaseRunner {
 
     val logger = getLogger(id)
       .withContext(id)
-      .withContext("thread", Thread.currentThread().getId)
+      .withContext("thread", Thread.currentThread().threadId())
       .withContext("phase", next.name)
 
     next.cache.getOrElse((id, isCircular)) { () =>

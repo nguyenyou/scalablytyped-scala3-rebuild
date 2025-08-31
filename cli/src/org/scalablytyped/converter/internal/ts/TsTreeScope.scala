@@ -334,7 +334,7 @@ object TsTreeScope {
     override lazy val moduleAuxScopes: Map[TsIdentModule, TsTreeScope.Scoped] = {
       val ret = outer.moduleAuxScopes ++ (current match {
         case x: TsContainer =>
-          x.augmentedModulesMap.mapValues(mods => this / mods.reduce(FlattenTrees.mergeAugmentedModule))
+          x.augmentedModulesMap.view.mapValues(mods => this / mods.reduce(FlattenTrees.mergeAugmentedModule)).toMap
         case _ => Map.empty
       })
       ret

@@ -6,7 +6,7 @@ object seqs {
   @inline final implicit class TraversableOps[CC[_], T](private val ts: CC[T])(implicit ev: CC[T] <:< Iterable[T]) {
 
     def firstDefined[U](f: T => Option[U]): Option[U] = {
-      val it = ts.toIterator
+      val it = ts.iterator
 
       while (it.hasNext) {
         val res = f(it.next())

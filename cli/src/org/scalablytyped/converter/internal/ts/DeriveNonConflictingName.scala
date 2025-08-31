@@ -62,11 +62,11 @@ object DeriveNonConflictingName {
 
     val details = IArray.fromOptions(fromCalls, fromInstantiable, fromDict) ++ fromMembers.sorted.distinct
 
-    val nameVariants: Stream[String] =
+    val nameVariants: LazyList[String] =
       for {
-        longVersion <- Stream(false, true)
-        amount      <- Stream.range(if (isMeaningless(prefix)) 1 else 0, details.length + 1)
-        idx         <- Stream.range(0, details.length)
+        longVersion <- LazyList(false, true)
+        amount      <- LazyList.range(if (isMeaningless(prefix)) 1 else 0, details.length + 1)
+        idx         <- LazyList.range(0, details.length)
       } yield {
         val pick = details.drop(idx).take(amount)
         prefix + pick.map(_.pick(longVersion)).mkString("")

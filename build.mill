@@ -60,7 +60,6 @@ object cli extends BaseModule with BuildInfo {
     "-rewrite",
     "-source", "3.7-migration",
     "-feature",
-    "-deprecation",
     "-language:implicitConversions"
   )
 }

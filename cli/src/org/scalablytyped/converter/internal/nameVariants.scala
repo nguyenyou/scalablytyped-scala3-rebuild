@@ -9,14 +9,14 @@ object nameVariants {
   /* you would be surprised what shows up */
   private val WordBoundary = Set[Char]('.', ',', ':', ';', '?', '!', ' ', '\t', '\n', '-', '_', '/')
 
-  def apply(value: String): Stream[String] =
-    if (value.forall(c => c.isUpper || c === '_' || c.isDigit)) Stream(value)
+  def apply(value: String): LazyList[String] =
+    if (value.forall(c => c.isUpper || c === '_' || c.isDigit)) LazyList(value)
     else {
-      val variants: Stream[NameVariant] =
+      val variants: LazyList[NameVariant] =
         value.count(c => !c.isLetterOrDigit) match {
-          case 0 => Stream(Unchanged)
-          case 1 => Stream(Clean, Unchanged)
-          case n => Stream(Clean) #::: Stream.range[Int](0, n + 1).map(KeepSymbolNum.apply) #::: Stream(Unchanged)
+          case 0 => LazyList(Unchanged)
+          case 1 => LazyList(Clean, Unchanged)
+          case n => LazyList(Clean) #::: LazyList.range[Int](0, n + 1).map(KeepSymbolNum.apply) #::: LazyList(Unchanged)
         }
       variants.map(rewrite(value))
     }

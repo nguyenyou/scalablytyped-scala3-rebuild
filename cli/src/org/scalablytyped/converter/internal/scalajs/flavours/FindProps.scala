@@ -219,8 +219,8 @@ final class FindProps(
             *
             * Compressing in this context means to take a whole object which corresponds to a parent type
             */
-          val propsStream: Stream[IArray[Prop]] =
-            Stream.range(0, keptDirectParents.length + 1).reverse.map { n =>
+          val propsStream: LazyList[IArray[Prop]] =
+            LazyList.range(0, keptDirectParents.length + 1).reverse.map { n =>
               val inlineParents     = keptDirectParents.take(n)
               val compressedParents = keptDirectParents.drop(n)
 

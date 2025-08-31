@@ -86,7 +86,7 @@ object maps {
         f: (K, V) => Option[VV]
     )(implicit cbf: BuildFrom[M[K, V], (K, VV), M[K, VV]]): M[K, VV] = {
       val b  = cbf.newBuilder(m)
-      val it = m.toIterator
+      val it = m.iterator
 
       while (it.hasNext) {
         it.next() match {
@@ -103,7 +103,7 @@ object maps {
     @inline def toSorted(implicit O: Ordering[K]): SortedMap[K, V] = TreeMap() ++ m
 
     @inline def firstDefined[U](f: (K, V) => Option[U]): Option[U] = {
-      val it = m.toIterator
+      val it = m.iterator
 
       while (it.hasNext) {
         it.next() match {

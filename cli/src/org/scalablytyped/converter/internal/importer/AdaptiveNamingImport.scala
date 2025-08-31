@@ -104,12 +104,12 @@ object AdaptiveNamingImport {
       inLib: Option[TsIdentLibrary],
       illegalNames: Set[String],
       useDeprecatedModuleNames: Boolean
-  ): Stream[String] = {
+  ): LazyList[String] = {
     val base = tsIdent match {
-      case TsIdent.namespaced                          => Stream(Name.namespaced.unescaped)
-      case TsIdent.Apply                               => Stream(Name.APPLY.unescaped)
-      case TsIdent.Global                              => Stream(Name.global.unescaped, "global_", "global__")
-      case TsIdentSimple(value) if illegalNames(value) => Stream(value + "_")
+      case TsIdent.namespaced                          => LazyList(Name.namespaced.unescaped)
+      case TsIdent.Apply                               => LazyList(Name.APPLY.unescaped)
+      case TsIdent.Global                              => LazyList(Name.global.unescaped, "global_", "global__")
+      case TsIdentSimple(value) if illegalNames(value) => LazyList(value + "_")
       case TsIdentSimple(value)                        => nameVariants(value)
 
       case m: TsIdentModule if hasModuleParent => // if this is an augmented module
@@ -117,21 +117,21 @@ object AdaptiveNamingImport {
         nameVariants(joinCamelCase(m.scopeOpt.toList ++ m.fragments)).map(_ + "AugmentingMod")
 
       case m: TsIdentModule if useDeprecatedModuleNames =>
-        val increasingLength: Stream[List[String]] = {
+        val increasingLength: LazyList[List[String]] = {
           val (libraryBits, moduleBits) =
             m match {
               case TsIdentModule(Some(scope), head :: tail) => (List(scope + head.capitalize), tail)
               case TsIdentModule(None, head :: tail)        => (List(head), tail)
             }
 
-          val withoutLibrary = Stream(Nil) #::: moduleBits.indices.toStream.map(n => moduleBits.takeRight(n + 1))
+          val withoutLibrary = LazyList(Nil) #::: moduleBits.indices.to(LazyList).map(n => moduleBits.takeRight(n + 1))
 
           val withLibrary = withoutLibrary.map(ss => libraryBits ::: ss)
 
           withoutLibrary #::: withLibrary
         }
 
-        val preferCamelCase: Stream[List[String]] = {
+        val preferCamelCase: LazyList[List[String]] = {
           val unCamelCased = increasingLength.filter(_.exists(str => str.contains("-") || str.contains("_")))
           increasingLength.map(_.map(toCamelCase)) ++ unCamelCased
         }
@@ -149,7 +149,7 @@ object AdaptiveNamingImport {
               m.fragments
           }
         }
-        Stream(addMod(joinCamelCase(shortenedFragments.map(toCamelCase))))
+        LazyList(addMod(joinCamelCase(shortenedFragments.map(toCamelCase))))
 
       case library: TsIdentLibrary => variantsForLibName(library)
       case _: TsIdentImport        => sys.error("unexpected")

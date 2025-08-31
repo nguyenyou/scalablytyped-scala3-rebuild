@@ -52,8 +52,8 @@ object IArray {
   def fromArray[A <: AnyRef](as: Array[A]): IArray[A] =
     fromArrayAndSize(as.asInstanceOf[Array[AnyRef]], as.length)
 
-  def fromTraversable[A <: AnyRef](as: Traversable[A]): IArray[A] =
-    fromArrayAndSize(as.asInstanceOf[Traversable[AnyRef]].toArray, as.size)
+  def fromTraversable[A <: AnyRef](as: Iterable[A]): IArray[A] =
+    fromArrayAndSize(as.asInstanceOf[Iterable[AnyRef]].toArray, as.size)
 
   @inline private def fromArrayAndSize[A <: AnyRef](as: Array[AnyRef], length: Int): IArray[A] =
     if (length == 0) Empty else new IArray[A](as, length)
@@ -1034,7 +1034,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   }
 
   private def occCounts[B <: AnyRef](sq: IArray[B]): mutable.Map[B, Int] = {
-    val occ = new mutable.HashMap[B, Int] { override def default(k: B) = 0 }
+    val occ = mutable.HashMap[B, Int]().withDefault(_ => 0)
     for (y <- sq) occ(y) += 1
     occ
   }
