@@ -17,7 +17,7 @@ import scala.util.Try
 
 object FileLocking {
 
-  object Serializer {
+  private object Serializer {
     def serialize[T <: Serializable](obj: T): Array[Byte] = {
       val byteOut = new ByteArrayOutputStream()
       val objOut  = new ObjectOutputStream(byteOut)
@@ -44,7 +44,7 @@ object FileLocking {
   def persistingFunction[K, V <: Serializable](cachedFileFor: K => Path, logger: Logger[Unit])(f: K => V): K => V =
     (key: K) => cachedValue[V](cachedFileFor(key), logger)(f(key))
 
-  def cachedValue[V <: Serializable](path: Path, logger: Logger[Unit])(value: => V): V = {
+  private def cachedValue[V <: Serializable](path: Path, logger: Logger[Unit])(value: => V): V = {
     def onExists(channel: FileChannel, contents: () => ByteBuffer): V =
       Serializer.deserialize[V](contents().array) match {
         case Failure(error) =>
@@ -65,7 +65,7 @@ object FileLocking {
     tryWrite[V](path, onExists = onExists, onNotExists = onNotExists)
   }
 
-  def tryWrite[T](path: Path, onExists: (FileChannel, () => ByteBuffer) => T, onNotExists: FileChannel => T): T =
+  private def tryWrite[T](path: Path, onExists: (FileChannel, () => ByteBuffer) => T, onNotExists: FileChannel => T): T =
     withLock(path) { channel =>
       val size = channel.size
       if (size > 0) {
@@ -82,7 +82,7 @@ object FileLocking {
       }
     }
 
-  def withLock[T](path: Path)(f: FileChannel => T): T = {
+  private def withLock[T](path: Path)(f: FileChannel => T): T = {
     var continue = true
     var ret      = null.asInstanceOf[T]
     Files.createDirectories(path.getParent)

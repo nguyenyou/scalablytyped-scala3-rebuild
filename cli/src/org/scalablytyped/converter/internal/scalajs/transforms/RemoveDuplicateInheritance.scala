@@ -56,7 +56,7 @@ class RemoveDuplicateInheritance(parentsResolver: ParentsResolver) extends TreeT
     * Note that: 1) we depend upon parent references to be fully qualified for now 2) type params of the conflicts might
     * be compatible, but we remove anyway
     */
-  def dropInheritedConflicts(scope: TreeScope, cls: ClassTree): ClassTree = {
+  private def dropInheritedConflicts(scope: TreeScope, cls: ClassTree): ClassTree = {
     val allParentRefs: Set[TypeRef] =
       parentsResolver(scope, cls).transitiveParents
         .foldLeft(Set.empty[TypeRef])(_ ++ _._2.parents.map(_.copy(targs = Empty)).toSet)

@@ -3,7 +3,7 @@ package scalajs
 package transforms
 
 class CleanIllegalNames(outputPkg: Name) extends TreeTransformation {
-  val Dash = Name("-") // `def `-`(d: Double) = d; `-`(d) doesn't do what you would think
+  private val Dash = Name("-") // `def `-`(d: Double) = d; `-`(d) doesn't do what you would think
 
   val Illegal: Set[Name] = Set(Name.js, Name.java, Name.scala, outputPkg, Dash, Name.org, Name.com)
 

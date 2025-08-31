@@ -12,23 +12,7 @@ sealed trait Dep {
   def for3Use2_13(is3: Boolean): Dep =
     if (is3) Dep.For3Use2_13(this) else this
 
-  def asSbt: String =
-    this match {
-      case Dep.Mangled(_, dep) =>
-        dep.asSbt
-      case Dep.Java(_, artifact, _) =>
-        s"${quote(org)} % ${quote(artifact)} % ${quote(version)}"
-      case Dep.Scala(_, artifact, _) =>
-        s"${quote(org)} %% ${quote(artifact)} % ${quote(version)}"
-      case Dep.ScalaJs(_, artifact, _) =>
-        s"${quote(org)} %%% ${quote(artifact)} % ${quote(version)}"
-      case Dep.ScalaFullVersion(_, artifact, _) =>
-        s"${quote(org)} % ${quote(artifact)} % ${quote(version)} cross CrossVersion.Full()"
-      case Dep.For3Use2_13(dep) =>
-        s"""(${dep.asSbt}).cross(CrossVersion.for3Use2_13)"""
-    }
-
-  def concrete(versions: Versions): Dep.Concrete =
+  private def concrete(versions: Versions): Dep.Concrete =
     this match {
       case concrete: Dep.Concrete => concrete
       case Dep.Scala(_, artifact, _) =>

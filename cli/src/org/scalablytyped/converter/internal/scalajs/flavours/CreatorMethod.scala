@@ -52,9 +52,9 @@ object CreatorMethod {
     *     object
     */
   sealed trait CreatorMethodFragment
-  case class Const(objectUpdater: ObjectUpdater)                     extends CreatorMethodFragment
-  case class Provide(objectUpdater: ObjectUpdater, param: ParamTree) extends CreatorMethodFragment
-  case object NotNeeded                                              extends CreatorMethodFragment
+  private case class Const(objectUpdater: ObjectUpdater)                     extends CreatorMethodFragment
+  private case class Provide(objectUpdater: ObjectUpdater, param: ParamTree) extends CreatorMethodFragment
+  private case object NotNeeded                                              extends CreatorMethodFragment
 
   // use this to construct a minimal object, with required props, null and literals
   def minimal(prop: Prop): CreatorMethodFragment =
@@ -186,10 +186,10 @@ object CreatorMethod {
         }
     }
 
-  def requiredProp(prop: Prop.Normal, value: ExprTree): ObjectUpdater =
+  private def requiredProp(prop: Prop.Normal, value: ExprTree): ObjectUpdater =
     if (prop.canBeInitializer) ObjectUpdater.Initializer(Arg.Named(prop.name, value)) else updateObj(prop, value)
 
-  def updateObj(prop: Prop.Normal, value: ExprTree): ObjectUpdater.Mutator =
+  private def updateObj(prop: Prop.Normal, value: ExprTree): ObjectUpdater.Mutator =
     ObjectUpdater.Mutator(ref =>
       Call(
         Select(ref, Name("updateDynamic")),

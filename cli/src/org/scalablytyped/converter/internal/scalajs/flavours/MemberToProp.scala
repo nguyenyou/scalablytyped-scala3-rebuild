@@ -11,7 +11,7 @@ trait MemberToProp {
 object MemberToProp {
   class Default(conversions: IArray[CastConversion]) extends MemberToProp {
     // might want to phase out this logic. it generates some overloads which can be used instead of a base with union type
-    val conversionsTo: Set[QualifiedName] =
+    private val conversionsTo: Set[QualifiedName] =
       conversions.collect { case c if !c.to.parts.contains(Name.scalajs) => c.to }.toSet
 
     override def apply(scope: TreeScope, x: MemberTree, isInherited: Boolean): Option[Prop] =

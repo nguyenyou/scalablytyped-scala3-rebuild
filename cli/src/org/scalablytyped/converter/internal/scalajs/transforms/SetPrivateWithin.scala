@@ -10,7 +10,7 @@ class SetPrivateWithin(within: Name) extends TreeTransformation {
 
   val p = ProtectionLevel.Private(Some(within))
 
-  def insideInheritanceTree(scope: TreeScope): Boolean = {
+  private def insideInheritanceTree(scope: TreeScope): Boolean = {
     var idx = 1 // skip current
     while (idx < scope.stack.length) {
       scope.stack(idx) match {

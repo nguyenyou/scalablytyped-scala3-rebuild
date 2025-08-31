@@ -15,7 +15,7 @@ object FakeLiterals {
       scope: TreeScope
   ) extends TreeTransformation {
 
-    val stringsByLowercase: Map[String, IArray[String]] =
+    private val stringsByLowercase: Map[String, IArray[String]] =
       TreeTraverse
         .collect(tree) { case TypeRef.StringLiteral(underlying) =>
           cleanName(underlying)
@@ -23,27 +23,27 @@ object FakeLiterals {
         .groupBy(_.toLowerCase)
         .map { case (k, v) => (k, v.distinct.sorted) }
 
-    def calculateName(underlying: String): Name = {
+    private def calculateName(underlying: String): Name = {
       val cleaned = cleanName(underlying)
       val n       = stringsByLowercase(cleaned.toLowerCase).indexWhere(_ === underlying)
       val suffix  = "_" * n
       Name(cleaned + suffix)
     }
 
-    def cleanName(str: String): String =
+    private def cleanName(str: String): String =
       str match {
         case illegal if illegalNames.Illegal(Name(illegal)) => illegal + "_"
         case fine                                           => Name.necessaryRewrite(fine).getOrElse(fine)
       }
 
-    val StringModuleName   = Name(tree.name.unescaped + "Strings")
-    val collectedStrings   = mutable.HashMap.empty[Name, ExprTree.Lit]
-    val DoublesModuleName  = Name(tree.name.unescaped + "Doubles")
-    val collectedDoubles   = mutable.HashMap.empty[Name, ExprTree.Lit]
-    val IntsModuleName     = Name(tree.name.unescaped + "Ints")
-    val collectedInts      = mutable.HashMap.empty[Name, ExprTree.Lit]
-    val BooleansModuleName = Name(tree.name.unescaped + "Booleans")
-    val collectedBooleans  = mutable.HashMap.empty[Name, ExprTree.Lit]
+    private val StringModuleName   = Name(tree.name.unescaped + "Strings")
+    private val collectedStrings   = mutable.HashMap.empty[Name, ExprTree.Lit]
+    private val DoublesModuleName  = Name(tree.name.unescaped + "Doubles")
+    private val collectedDoubles   = mutable.HashMap.empty[Name, ExprTree.Lit]
+    private val IntsModuleName     = Name(tree.name.unescaped + "Ints")
+    private val collectedInts      = mutable.HashMap.empty[Name, ExprTree.Lit]
+    private val BooleansModuleName = Name(tree.name.unescaped + "Booleans")
+    private val collectedBooleans  = mutable.HashMap.empty[Name, ExprTree.Lit]
 
     def module(collected: mutable.HashMap[Name, ExprTree.Lit], moduleName: Name): Option[ModuleTree] =
       if (collected.isEmpty) None

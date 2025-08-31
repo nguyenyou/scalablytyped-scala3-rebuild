@@ -83,7 +83,7 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
     members ++ addedFields ++ addedMethods
   }
 
-  def canBeUndefined(tpe: TypeRef): Boolean =
+  private def canBeUndefined(tpe: TypeRef): Boolean =
     tpe match {
       case TypeRef(QualifiedName.JsUndefOr, _, _) => true
       case TypeRef.undefined                      => true

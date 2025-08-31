@@ -514,7 +514,7 @@ class ScalaJsDomNames(stdNames: QualifiedName.StdNames) {
       CastConversion(stdNames.lib + Name("XPathResult"), QualifiedName("org.scalajs.dom.XPathResult")),
     )
     val globals = base.map {
-      case CastConversion(from, to, tparams @_*) =>
+      case CastConversion(from, to, tparams*) =>
         val newFrom = QualifiedName(stdNames.lib.parts ++ IArray(Name.global) ++ from.parts.drop(stdNames.lib.parts.length))
         CastConversion(newFrom, to, tparams*)
     }

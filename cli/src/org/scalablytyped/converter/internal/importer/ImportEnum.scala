@@ -6,7 +6,7 @@ import org.scalablytyped.converter.internal.scalajs.transforms.CleanIllegalNames
 import org.scalablytyped.converter.internal.ts.*
 
 object ImportEnum {
-  def underlyingType(e: TsDeclEnum): TypeRef = {
+  private def underlyingType(e: TsDeclEnum): TypeRef = {
     val found = e.members.collect { case TsEnumMember(_, _, Some(TsExpr.Literal(lit))) =>
       lit match {
         case _: TsLiteral.Str  => TypeRef.String

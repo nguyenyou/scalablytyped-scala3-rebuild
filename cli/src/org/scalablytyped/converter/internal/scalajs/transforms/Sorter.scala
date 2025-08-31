@@ -15,7 +15,7 @@ object Sorter extends TreeTransformation {
   override def leavePackageTree(scope: TreeScope)(s: PackageTree): PackageTree =
     s.copy(members = sorted(s.members))
 
-  def hasNativeLocation(t: Tree): Boolean = {
+  private def hasNativeLocation(t: Tree): Boolean = {
     def has(anns: IArray[Annotation]): Boolean =
       anns.exists {
         case _: LocationAnnotation => true
@@ -32,7 +32,7 @@ object Sorter extends TreeTransformation {
       case _                   => false
     }
   }
-  val Unnamed = Set(Name.Default, Name.namespaced, Name.APPLY)
+  private val Unnamed = Set(Name.Default, Name.namespaced, Name.APPLY)
 
   def sorted(members: IArray[Tree]): IArray[Tree] = {
     val nativeValueNamesOrCompanion: Set[String] = members.collect {

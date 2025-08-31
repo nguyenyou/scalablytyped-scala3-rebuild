@@ -100,7 +100,7 @@ object ModulesCombine extends TreeTransformation {
     c.withMembers(combinedMembers).asInstanceOf[C]
   }
 
-  object Legal {
+  private object Legal {
     def unapply(annotations: IArray[Annotation]): Boolean =
       annotations.nonEmpty && annotations.forall {
         case Annotation.JsImport(_, imported, _) =>
@@ -113,7 +113,7 @@ object ModulesCombine extends TreeTransformation {
       }
   }
 
-  object AllCalls {
+  private object AllCalls {
     def unapply(members: IArray[Tree]): Option[IArray[MethodTree]] =
       members.partitionCollect { case x: MethodTree if x.name === Name.APPLY => x } match {
         case (applies, Empty) if applies.nonEmpty => Some(applies)

@@ -90,7 +90,7 @@ object UnionToInheritance {
     addedInheritance(withRewrittenTypes, newParentsByCodePath)
   }
 
-  def typesToInterfaces(
+  private def typesToInterfaces(
       c: ContainerTree,
       indexedRewrites: Map[QualifiedName, Rewrite],
       newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]]
@@ -157,12 +157,12 @@ object UnionToInheritance {
     c.withMembers(newMembers)
   }
 
-  def patchCodePath(ta: TypeAliasTree): TypeAliasTree = {
+  private def patchCodePath(ta: TypeAliasTree): TypeAliasTree = {
     val newName = Name("_" + ta.name.unescaped)
     ta.copy(name = newName, codePath = QualifiedName(ta.codePath.parts.init :+ newName))
   }
 
-  def addedInheritance(
+  private def addedInheritance(
       c: ContainerTree,
       newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]]
   ): ContainerTree =
@@ -215,7 +215,7 @@ object UnionToInheritance {
       all.map(r => r.copy(unchanged = r.unchanged ++ r.asInheritance.map(_.typeName).flatMap(go).distinct))
     }
 
-    def canRewrite(
+    private def canRewrite(
         inLib: Name,
         ta: TypeAliasTree,
         scope: TreeScope
@@ -263,7 +263,7 @@ object UnionToInheritance {
       )
   }
 
-  object InvertingTypeParamRef {
+  private object InvertingTypeParamRef {
     def apply(r: Rewrite): IArray[(QualifiedName, InvertingTypeParamRef)] = {
       val parentType: TypeAliasTree =
         if (r.unchanged.isEmpty) r.original else patchCodePath(r.original)

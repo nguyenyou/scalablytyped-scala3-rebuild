@@ -5,7 +5,7 @@ package transforms
 import org.scalablytyped.converter.internal.scalajs.ExprTree.*
 
 object Mangler extends TreeTransformation {
-  val WasJsNativeComment = Comments(List(Marker.ManglerWasJsNative))
+  private val WasJsNativeComment = Comments(List(Marker.ManglerWasJsNative))
 
   override def leaveContainerTree(scope: TreeScope)(container: ContainerTree): ContainerTree = {
     val rewrittenMembers = container.members.map {
@@ -58,7 +58,7 @@ object Mangler extends TreeTransformation {
 
   sealed trait Action
 
-  object Action {
+  private object Action {
     case object RemainModule     extends Action
     case object ConvertToPackage extends Action
 
@@ -120,7 +120,7 @@ object Mangler extends TreeTransformation {
     }
   }
 
-  def genPkgForwarders(pkg: PackageTree, inheritance: IArray[TypeRef]): PackageTree = {
+  private def genPkgForwarders(pkg: PackageTree, inheritance: IArray[TypeRef]): PackageTree = {
     val hatCp = pkg.codePath + Name.namespaced
 
     val isGlobal = pkg.annotations.contains(Annotation.JsGlobalScope)
@@ -273,7 +273,7 @@ object Mangler extends TreeTransformation {
     )
   }
 
-  def genModForwarders(mod: ModuleTree): ModuleTree = {
+  private def genModForwarders(mod: ModuleTree): ModuleTree = {
     val isGlobal = mod.annotations.contains(Annotation.JsGlobalScope)
     val hatCp    = mod.codePath + Name.namespaced
 

@@ -114,7 +114,7 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
   /** Avoid errors like this [E] [E-1] Error while emitting
     * typingsJapgolly/csstype/csstypeMod/StandardLonghandPropertiesHyphenFallback$ [E] UTF8 string too large
     */
-  def ensureNotTooManyStrings(scope: TreeScope)(mod: MethodTree): Boolean = {
+  private def ensureNotTooManyStrings(scope: TreeScope)(mod: MethodTree): Boolean = {
     val MaxWeight = 32768 // an estimate. If you see the error again, decrease this
 
     object Dealias extends TreeTransformation {
@@ -136,7 +136,7 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
     stringLength < MaxWeight
   }
 
-  def generateCreator(
+  private def generateCreator(
       name: Name,
       creatorMethod: CreatorMethod,
       typeCp: QualifiedName,

@@ -71,8 +71,8 @@ object ParentsResolver {
 
   /** Result of conversion error. We handle it since it's not necessary to fail a whole library if one exists
     */
-  case object Circular            extends Res
-  case class Resolved(nr: Parent) extends Res
+  private case object Circular            extends Res
+  private case class Resolved(nr: Parent) extends Res
   /* A primitive doesn't resolve to a `ClassTree`, for instance */
   case class Unresolved(tr: IArray[TypeRef]) extends Res
 

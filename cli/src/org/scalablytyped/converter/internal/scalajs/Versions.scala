@@ -76,44 +76,6 @@ object Versions {
 }
 
 case class Versions(scala: Versions.Scala, scalaJs: Versions.ScalaJs) {
-  val scalacOptions: List[String] =
-    if (scala.is3)
-      List(
-        "-encoding",
-        "utf-8",
-        "-feature",
-        "-language:implicitConversions",
-        "-language:higherKinds",
-        "-language:existentials",
-        "-no-indent",
-        "-source:future"
-//        "-Yexplicit-nulls"
-      )
-    else
-      List(
-        "-encoding",
-        "utf-8",
-        "-feature",
-        "-g:notailcalls",
-        "-language:implicitConversions",
-        "-language:higherKinds",
-        "-language:existentials"
-      )
-
-  val scalaJsLibrary: Dep =
-    Dep
-      .Scala(scalaJs.scalaJsOrganization, "scalajs-library", scalaJs.scalaJsVersion)
-      .for3Use2_13(scala.is3)
-
-  val scalaJsTestInterface: Dep =
-    Dep
-      .Scala(scalaJs.scalaJsOrganization, "scalajs-test-interface", scalaJs.scalaJsVersion)
-      .for3Use2_13(scala.is3)
-
-  val scalaJsCompiler: Option[Dep.ScalaFullVersion] =
-    if (scala.is3) None
-    else Some(Dep.ScalaFullVersion(scalaJs.scalaJsOrganization, "scalajs-compiler", scalaJs.scalaJsVersion))
-
   val runtime      = Dep.ScalaJs("com.olvind", "scalablytyped-runtime", "2.4.2")
   val scalaJsDom   = Dep.ScalaJs("org.scala-js", "scalajs-dom", "2.8.0")
 }

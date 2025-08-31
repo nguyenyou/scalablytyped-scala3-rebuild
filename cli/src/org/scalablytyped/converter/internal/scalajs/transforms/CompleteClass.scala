@@ -79,7 +79,7 @@ class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVer
 }
 
 object CompleteClass {
-  object SetterFor {
+  private object SetterFor {
     def unapply(m: MethodTree): Option[Name] =
       if (
         m.name.unescaped.endsWith("_=") &&
@@ -90,7 +90,7 @@ object CompleteClass {
       } else None
   }
 
-  def isAlreadyImplemented(
+  private def isAlreadyImplemented(
       erasure: Erasure,
       scope: TreeScope,
       potential: MethodTree,

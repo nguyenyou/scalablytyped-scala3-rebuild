@@ -98,7 +98,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
     default +: suffixed
   }
 
-  def asUnionType(_types: IArray[TypeRef]): TypeRef =
+  private def asUnionType(_types: IArray[TypeRef]): TypeRef =
     _types match {
       case IArray.exactlyOne(head) =>
         head
@@ -125,7 +125,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
         )
     }
 
-  def combineOverloads(scope: TreeScope, methods: IArray[MethodTree]): IArray[MethodTree] = {
+  private def combineOverloads(scope: TreeScope, methods: IArray[MethodTree]): IArray[MethodTree] = {
 
     val methodsByBase = methods.groupBy(erasure.base(scope))
 
@@ -157,7 +157,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
 
   /** Ctors are methods...ish. This was easier than refactoring
     */
-  def ctorHack(scope: TreeScope, members: IArray[CtorTree]): IArray[CtorTree] = {
+  private def ctorHack(scope: TreeScope, members: IArray[CtorTree]): IArray[CtorTree] = {
     val asMethods: IArray[MethodTree] =
       members.map(ctor =>
         MethodTree(
@@ -180,7 +180,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
     }
   }
 
-  def unifyFields(fields: IArray[FieldTree]): IArray[FieldTree] =
+  private def unifyFields(fields: IArray[FieldTree]): IArray[FieldTree] =
     fields.groupBy(_.name).mapToIArray {
       case (_, IArray.exactlyOne(one)) => one
       case (_, sameName)               => sameName.head.copy(tpe = asUnionType(sameName.map(_.tpe)))

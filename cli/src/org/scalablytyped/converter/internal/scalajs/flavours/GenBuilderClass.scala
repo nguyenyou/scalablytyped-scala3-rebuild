@@ -178,7 +178,7 @@ object GenBuilderClass {
     else None
   }
 
-  object AvailableName {
+  private object AvailableName {
     def apply(usedNamess: IArray[Name]*): AvailableName = {
       val m = mutable.HashSet.empty[Name]
       usedNamess.foreach(usedNames => usedNames.foreach(m += _))

@@ -10,7 +10,7 @@ trait FlavourImpl {
   val outputPkg: Name
   val rewrites: IArray[CastConversion]
 
-  override val toString = getClass.getSimpleName
+  override val toString: String = getClass.getSimpleName
 }
 
 trait FlavourImplReact extends FlavourImpl {

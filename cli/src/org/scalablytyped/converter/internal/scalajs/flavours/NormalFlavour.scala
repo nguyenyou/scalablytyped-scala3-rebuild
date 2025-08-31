@@ -10,8 +10,8 @@ case class NormalFlavour(
     versions: Versions
 ) extends FlavourImpl {
   lazy val stdNames        = new QualifiedName.StdNames(outputPkg)
-  lazy val scalaJsLibNames = new ScalaJsLibNames(stdNames)
-  lazy val scalaJsDomNames = new ScalaJsDomNames(stdNames)
+  private lazy val scalaJsLibNames = new ScalaJsLibNames(stdNames)
+  private lazy val scalaJsDomNames = new ScalaJsDomNames(stdNames)
 
   override val dependencies: Set[Dep] =
     if (shouldUseScalaJsDomTypes) Set(versions.scalaJsDom, versions.runtime) else Set(versions.runtime)
@@ -22,7 +22,7 @@ case class NormalFlavour(
   lazy val parentsResolver = new ParentsResolver
   val memberToProp         = new MemberToProp.Default(rewrites)
   val findProps            = new FindProps(new CleanIllegalNames(outputPkg), memberToProp, parentsResolver)
-  val genCompanions        = new GenCompanions(findProps, enableLongApplyMethod) >> GenPromiseOps
+  val genCompanions: TreeTransformation = new GenCompanions(findProps, enableLongApplyMethod) >> GenPromiseOps
 
   final override def rewrittenTree(scope: TreeScope, tree: PackageTree): PackageTree =
     genCompanions.visitPackageTree(scope)(tree)

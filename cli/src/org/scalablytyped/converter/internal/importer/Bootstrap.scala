@@ -61,7 +61,7 @@ object Bootstrap {
     Bootstrapped(inputFolders, libraryResolver, initialLibs)
   }
 
-  def findSources(folders: IArray[InFolder]): IArray[LibTsSource.FromFolder] =
+  private def findSources(folders: IArray[InFolder]): IArray[LibTsSource.FromFolder] =
     folders.foldLeft[IArray[LibTsSource.FromFolder]](IArray.Empty) { case (foundSources, next) =>
       val foundNames = foundSources.map(_.libName).toSet
       val newSources = forFolder(next).filterNot(s => foundNames(s.libName))
@@ -85,7 +85,7 @@ object Bootstrap {
         .filter(s => LibTsSource.hasTypescriptSources(s.folder))
     )
 
-  def resolveAll(
+  private def resolveAll(
       libraryResolver: LibraryResolver,
       libs: SortedSet[TsIdentLibrary]
   ): Either[Unresolved, Vector[LibTsSource]] =

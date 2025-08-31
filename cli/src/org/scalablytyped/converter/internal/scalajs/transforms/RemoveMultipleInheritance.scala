@@ -33,7 +33,7 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
       mod.copy(comments = newComments, parents = newParents, members = mod.members ++ newMembers)
     } else mod
 
-  def findNewParents(scope: TreeScope, c: InheritanceTree): (Comments, IArray[TypeRef], IArray[Tree]) = {
+  private def findNewParents(scope: TreeScope, c: InheritanceTree): (Comments, IArray[TypeRef], IArray[Tree]) = {
     val allParents = parentsResolver(scope, c)
 
     // determine which parent goes first, it needs to be one with a class
@@ -70,7 +70,7 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
     (newComments, ps.reverse ++ allParents.unresolved, changes.flatMap(_.members))
   }
 
-  def parentWithInheritedClass(parents: Parents): Option[Parent] = {
+  private def parentWithInheritedClass(parents: Parents): Option[Parent] = {
     def go(p: Parent): Option[Parent] =
       if (
         p.classTree.classType =/= ClassType.Trait &&

@@ -45,7 +45,7 @@ object GenPromiseOps extends TreeTransformation {
     }
   }
 
-  def genPromiseOps(cls: ClassTree, mod: ModuleTree) = {
+  private def genPromiseOps(cls: ClassTree, mod: ModuleTree) = {
     val paramName = Name("promise")
     val Ops       = Name(cls.name.unescaped + "Ops")
     val OpsCP     = mod.codePath + Ops

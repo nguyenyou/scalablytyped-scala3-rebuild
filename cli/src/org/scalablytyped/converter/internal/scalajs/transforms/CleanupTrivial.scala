@@ -16,7 +16,7 @@ object CleanupTrivial extends TreeTransformation {
   override def leavePackageTree(scope: TreeScope)(s: PackageTree): PackageTree =
     s.copy(members = clearEmptyContainers(removeTrivial(s.members)))
 
-  def clearEmptyContainers(members: IArray[Tree]): IArray[Tree] =
+  private def clearEmptyContainers(members: IArray[Tree]): IArray[Tree] =
     members.filter {
       case x: ModuleTree =>
         x.parents.nonEmpty ||
@@ -28,6 +28,6 @@ object CleanupTrivial extends TreeTransformation {
       case _ => true
     }
 
-  def removeTrivial(members: IArray[Tree]): IArray[Tree] =
+  private def removeTrivial(members: IArray[Tree]): IArray[Tree] =
     members.filterNot(_.comments.has[Marker.IsTrivial.type])
 }

@@ -70,7 +70,7 @@ object FindProps {
       }
   }
 
-  def parentParameter(name: Name, typeRef: TypeRef, isRequired: Boolean): (Name, Prop) = {
+  private def parentParameter(name: Name, typeRef: TypeRef, isRequired: Boolean): (Name, Prop) = {
     import ExprTree._
     name -> Prop.CompressedProp(
       name,
