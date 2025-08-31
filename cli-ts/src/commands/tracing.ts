@@ -182,38 +182,44 @@ export class TracingCommand extends BaseCommand {
 
   private async generateFiles(importedLibs: Map<any, any>): Promise<void> {
     this.startSpinner('Generating source files...');
-    
-    // Ensure output directory exists
-    await fs.ensureDir(this.sourceOutputDir);
+
+    const { FileGenerator, DEFAULT_FILE_GENERATOR_CONFIG } = await import('../core/file-generator.js');
+
+    // Configure file generator
+    const fileGenerator = new FileGenerator({
+      ...DEFAULT_FILE_GENERATOR_CONFIG,
+      outputDir: this.sourceOutputDir,
+      overwriteExisting: true,
+      usePackageStructure: true
+    });
 
     let totalFiles = 0;
+    let totalSize = 0;
 
-    for (const [source, lib] of importedLibs) {
-      if (lib.isSuccess()) {
-        const targetFolder = path.join(this.sourceOutputDir, source.libName);
-        await fs.ensureDir(targetFolder);
-        
-        // Generate Scala files (placeholder - will be implemented in later phases)
-        const scalaFiles = await this.generateScalaFiles(lib.value);
-        
-        for (const [relPath, content] of scalaFiles) {
-          const filePath = path.join(targetFolder, relPath);
-          await fs.ensureDir(path.dirname(filePath));
-          await fs.writeFile(filePath, content, 'utf8');
-          totalFiles++;
+    for (const [source, result] of importedLibs) {
+      if (result.isSuccess()) {
+        this.updateSpinner(`Generating files for ${source.libName}...`);
+
+        try {
+          // Generate files from the phase result
+          const generationResult = await fileGenerator.generateFiles(result.value);
+
+          totalFiles += generationResult.fileCount;
+          totalSize += generationResult.totalSize;
+
+          this.info(`Generated ${generationResult.fileCount} files for ${source.libName}`);
+
+          if (this.options.debug) {
+            console.log(fileGenerator.getGenerationSummary(generationResult));
+          }
+        } catch (error) {
+          this.warn(`Failed to generate files for ${source.libName}: ${error}`);
         }
-
-        this.info(`Writing ${source.libName} (${scalaFiles.length} files) to ${targetFolder}...`);
+      } else if (result.isFailure()) {
+        this.warn(`Skipping ${source.libName} due to processing failure: ${result.error?.message}`);
       }
     }
 
-    this.succeedSpinner(`Generated ${totalFiles} Scala source files`);
-  }
-
-  private async generateScalaFiles(lib: any): Promise<Array<[string, string]>> {
-    // Placeholder implementation - will be replaced with actual Scala code generation
-    return [
-      ['placeholder.scala', '// Generated Scala code will go here\n']
-    ];
+    this.succeedSpinner(`Generated ${totalFiles} Scala source files (${totalSize} bytes)`);
   }
 }
