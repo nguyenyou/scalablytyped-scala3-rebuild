@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "scalablytyped-scala3-rebuild-metals": {
+      "url": "http://localhost:58259/sse"
+    }
+  }
+}

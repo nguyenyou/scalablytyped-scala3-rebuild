@@ -1,0 +1,96 @@
+package org.scalablytyped.converter.internal
+
+import java.io._
+import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
+import java.nio.file.{Files, Path}
+import java.util
+
+import io.circe.{Decoder, Encoder}
+import org.scalablytyped.converter.internal.environment.OpSystem
+
+import scala.util.Try
+
+sealed trait Synced
+object Synced {
+  case object New extends Synced
+  case object Changed extends Synced
+  case object Unchanged extends Synced
+  case object Deleted extends Synced
+}
+
+final case class InFile(path: os.Path) {
+  def folder: InFolder =
+    InFolder(path / os.up)
+  override val toString: String = path.toString()
+}
+
+object InFile {
+  implicit val ordering: Ordering[InFile] = Ordering.by(_.toString)
+}
+
+final case class InFolder(path: os.Path) {
+  def name: String = path.last
+}
+object InFolder {
+  implicit val encodes: Encoder[InFolder] = orphanCodecs.PathEncoder.contramap(_.path)
+  implicit val decodes: Decoder[InFolder] = orphanCodecs.PathDecoder.map(InFolder.apply)
+}
+
+trait Layout[F, V] {
+  def all: Map[F, V]
+}
+
+object files {
+  // os.exists is too slow because it throws exceptions behind the scenes
+  def exists(path: os.Path): Boolean = path.toIO.exists()
+
+  def content(file: InFile): String =
+    new String(os.read.bytes(file.path), constants.Utf8)
+
+  val IgnoreProjectFiles: os.Path => Boolean = p => {
+    val name = p.last
+    name === ".idea" || name === "target" || name === ".git"
+  }
+
+  def softWrite[T](path: os.Path)(f: PrintWriter => T): Synced =
+    softWrite(path.toNIO)(f)
+
+  def softWrite[T](path: Path)(f: PrintWriter => T): Synced = {
+    val baos: ByteArrayOutputStream =
+      new ByteArrayOutputStream(1024 * 1024)
+
+    val writer = new PrintWriter(new OutputStreamWriter(baos, constants.Utf8))
+
+    try f(writer)
+    finally writer.close()
+
+    softWriteBytes(path, baos.toByteArray)
+  }
+  def softWriteBytes(path: os.Path, newContent: Array[Byte]): Synced = softWriteBytes(path.toNIO, newContent)
+
+  def softWriteBytes(path: Path, newContent: Array[Byte]): Synced =
+    (if (Files.exists(path)) Some(Files.readAllBytes(path)) else None) match {
+      case None => writeBytes(path, newContent)
+      case Some(existingContent) if !util.Arrays.equals(existingContent, newContent) =>
+        Files.write(path, newContent, TRUNCATE_EXISTING)
+        Synced.Changed
+      case _ =>
+        Synced.Unchanged
+    }
+
+  def writeBytes[T](path: Path, newContent: Array[Byte]): Synced = {
+    Files.createDirectories(path.getParent)
+    Files.write(path, newContent, CREATE, TRUNCATE_EXISTING)
+    Synced.New
+  }
+
+  def existing(p: os.Path): os.Path = {
+    os.makeDir.all(p)
+    p
+  }
+
+  def existing(p: Path): Path = {
+    Files.createDirectories(p)
+    p
+  }
+}
