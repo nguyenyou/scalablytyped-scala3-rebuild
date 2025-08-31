@@ -1,24 +1,26 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
+import scala.annotation.unused
+
 //column-editing driven development FTW
 class TreeTransformation { self =>
-  def leaveClassTree(scope: TreeScope)(s: ClassTree): ClassTree             = s
-  def leaveContainerTree(scope: TreeScope)(s: ContainerTree): ContainerTree = s
-  def leaveCtorTree(scope: TreeScope)(s: CtorTree): CtorTree                = s
-  def leaveExprTree(scope: TreeScope)(s: ExprTree): ExprTree                = s
-  def leaveExprRefTree(scope: TreeScope)(s: ExprTree.Ref): ExprTree.Ref     = s
-  def leaveFieldTree(scope: TreeScope)(s: FieldTree): FieldTree             = s
-  def leaveImplTree(scope: TreeScope)(s: ImplTree): ImplTree                = s
-  def leaveMemberTree(scope: TreeScope)(s: MemberTree): MemberTree          = s
-  def leaveMethodTree(scope: TreeScope)(s: MethodTree): MethodTree          = s
-  def leaveModuleTree(scope: TreeScope)(s: ModuleTree): ModuleTree          = s
-  def leavePackageTree(scope: TreeScope)(s: PackageTree): PackageTree       = s
-  def leaveParamTree(scope: TreeScope)(s: ParamTree): ParamTree             = s
-  def leaveTree(scope: TreeScope)(s: Tree): Tree                            = s
-  def leaveTypeAliasTree(scope: TreeScope)(s: TypeAliasTree): TypeAliasTree = s
-  def leaveTypeParamTree(scope: TreeScope)(s: TypeParamTree): TypeParamTree = s
-  def leaveTypeRef(scope: TreeScope)(s: TypeRef): TypeRef                   = s
+  def leaveClassTree(@unused scope: TreeScope)(s: ClassTree): ClassTree             = s
+  def leaveContainerTree(@unused scope: TreeScope)(s: ContainerTree): ContainerTree = s
+  def leaveCtorTree(@unused scope: TreeScope)(s: CtorTree): CtorTree                = s
+  def leaveExprTree(@unused scope: TreeScope)(s: ExprTree): ExprTree                = s
+  def leaveExprRefTree(@unused scope: TreeScope)(s: ExprTree.Ref): ExprTree.Ref     = s
+  def leaveFieldTree(@unused scope: TreeScope)(s: FieldTree): FieldTree             = s
+  def leaveImplTree(@unused scope: TreeScope)(s: ImplTree): ImplTree                = s
+  def leaveMemberTree(@unused scope: TreeScope)(s: MemberTree): MemberTree          = s
+  def leaveMethodTree(@unused scope: TreeScope)(s: MethodTree): MethodTree          = s
+  def leaveModuleTree(@unused scope: TreeScope)(s: ModuleTree): ModuleTree          = s
+  def leavePackageTree(@unused scope: TreeScope)(s: PackageTree): PackageTree       = s
+  def leaveParamTree(@unused scope: TreeScope)(s: ParamTree): ParamTree             = s
+  def leaveTree(@unused scope: TreeScope)(s: Tree): Tree                            = s
+  def leaveTypeAliasTree(@unused scope: TreeScope)(s: TypeAliasTree): TypeAliasTree = s
+  def leaveTypeParamTree(@unused scope: TreeScope)(s: TypeParamTree): TypeParamTree = s
+  def leaveTypeRef(@unused scope: TreeScope)(s: TypeRef): TypeRef                   = s
 
   final def visitClassTree(scope: TreeScope)(s: ClassTree): ClassTree = {
     val childrenScope =
@@ -35,7 +37,7 @@ class TreeTransformation { self =>
     leaveClassTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitCtorTree(scope: TreeScope)(s: CtorTree): CtorTree = {
+  private final def visitCtorTree(scope: TreeScope)(s: CtorTree): CtorTree = {
     val childrenScope =
       scope / s
 
@@ -45,7 +47,7 @@ class TreeTransformation { self =>
     leaveCtorTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitFieldTree(scope: TreeScope)(s: FieldTree): FieldTree = {
+  private final def visitFieldTree(scope: TreeScope)(s: FieldTree): FieldTree = {
     val childrenScope =
       scope / s
 
@@ -58,7 +60,7 @@ class TreeTransformation { self =>
     leaveFieldTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitExprTree(scope: TreeScope)(s: ExprTree): ExprTree = {
+  private final def visitExprTree(scope: TreeScope)(s: ExprTree): ExprTree = {
     val childrenScope =
       scope / s
 
@@ -137,7 +139,7 @@ class TreeTransformation { self =>
     leaveMethodTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitModuleTree(scope: TreeScope)(s: ModuleTree): ModuleTree = {
+  private final def visitModuleTree(scope: TreeScope)(s: ModuleTree): ModuleTree = {
     val childrenScope =
       scope / s
 
@@ -162,7 +164,7 @@ class TreeTransformation { self =>
     leavePackageTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitParamTree(scope: TreeScope)(s: ParamTree): ParamTree = {
+  private final def visitParamTree(scope: TreeScope)(s: ParamTree): ParamTree = {
     val childrenScope =
       scope / s
 
@@ -188,7 +190,7 @@ class TreeTransformation { self =>
     leaveTypeAliasTree(scope / updatedChildren)(updatedChildren)
   }
 
-  final def visitTypeParamTree(scope: TreeScope)(s: TypeParamTree): TypeParamTree = {
+  private final def visitTypeParamTree(scope: TreeScope)(s: TypeParamTree): TypeParamTree = {
     val childrenScope =
       scope / s
 
@@ -219,13 +221,13 @@ class TreeTransformation { self =>
       }
     )
 
-  final def visitImplTree(scope: TreeScope)(s: ImplTree): ImplTree =
+  private final def visitImplTree(scope: TreeScope)(s: ImplTree): ImplTree =
     leaveImplTree(scope)(s match {
       case NotImplemented => NotImplemented
       case expr: ExprTree => visitExprTree(scope)(expr)
     })
 
-  final def visitMemberTree(scope: TreeScope)(s: MemberTree): MemberTree =
+  private final def visitMemberTree(scope: TreeScope)(s: MemberTree): MemberTree =
     leaveMemberTree(scope / s)(s match {
       case x: MethodTree => visitMethodTree(scope)(x)
       case x: FieldTree  => visitFieldTree(scope)(x)

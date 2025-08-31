@@ -83,6 +83,6 @@ object EscapeStrings {
     * @return
     *   An upper case hexadecimal <code>String</code>
     */
-  def hex(ch: Char): String =
+  private def hex(ch: Char): String =
     Integer.toHexString(ch.toInt).toUpperCase(Locale.ENGLISH)
 }

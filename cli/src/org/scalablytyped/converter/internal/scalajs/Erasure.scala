@@ -4,7 +4,7 @@ package scalajs
 /** Note, this requires that the method tree has already filled in type params for containing context!
   */
 class Erasure(scalaVersion: Versions.Scala) {
-  val ByName: Ordering[QualifiedName] = {
+  private val ByName: Ordering[QualifiedName] = {
     Ordering[IArray[Name]].on[QualifiedName](_.parts)
   }
 
@@ -24,7 +24,7 @@ class Erasure(scalaVersion: Versions.Scala) {
     )
   }
 
-  def simplify(scope: TreeScope, tpe: TypeRef): QualifiedName =
+  private def simplify(scope: TreeScope, tpe: TypeRef): QualifiedName =
     tpe.typeName match {
       case QualifiedName.AnyVal                        => QualifiedName.Any
       case QualifiedName.AnyRef                        => QualifiedName.Any

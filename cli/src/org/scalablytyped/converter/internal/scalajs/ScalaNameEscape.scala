@@ -6,7 +6,7 @@ object ScalaNameEscape {
     if (needsEscaping(ident)) "`" + ident + "`"
     else ident
 
-  def isValidIdentifier(name: String): Boolean = {
+  private def isValidIdentifier(name: String): Boolean = {
     val c = name.head
     (c === '$' || c === '_' || c.isUnicodeIdentifierStart) &&
     name.tail.forall(c => c === '$' || c.isUnicodeIdentifierPart)
@@ -21,7 +21,7 @@ object ScalaNameEscape {
       case str                                             => !isValidIdentifier(str)
     }
 
-  val isScalaKeyword: Set[String] =
+  private val isScalaKeyword: Set[String] =
     Set(
       "abstract",
       "case",

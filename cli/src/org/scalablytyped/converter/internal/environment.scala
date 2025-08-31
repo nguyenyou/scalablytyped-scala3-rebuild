@@ -2,14 +2,14 @@ package org.scalablytyped.converter.internal
 
 object environment {
 
-  val OS: OpSystem.OpSystem = getOperatingSystem()
+  val OS: OpSystem.OpSystem = getOperatingSystem
 
   object OpSystem extends Enumeration {
     type OpSystem = Value
     val WINDOWS, LINUX, MAC, UNKNOWN = Value
   }
 
-  private def getOperatingSystem(): OpSystem.OpSystem = {
+  private def getOperatingSystem: OpSystem.OpSystem = {
     // detecting the operating system using os.name System property
     val osName = System.getProperty("os.name").toLowerCase
 

@@ -65,8 +65,8 @@ object stringUtils {
   def escapeUnicodeEscapes(s: String): String =
     s.replaceAll("\\\\u", "\\\\\\\\u")
 
-  def unCapitalize(str: String): String =
-    if (str.length == 0) ""
+  private def unCapitalize(str: String): String =
+    if (str.isEmpty) ""
     else if (str.charAt(0).isLower) str
     else {
       val chars = str.toCharArray

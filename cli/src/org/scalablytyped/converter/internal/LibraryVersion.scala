@@ -13,10 +13,10 @@ import java.time.format.DateTimeFormatter
   *   "official"
   */
 case class LibraryVersion(isStdLib: Boolean, libraryVersion: Option[String], inGit: Option[InGit]) {
-  def ignoreStdLibMinorVersion(v: String): String =
+  private def ignoreStdLibMinorVersion(v: String): String =
     if (isStdLib) v.substring(0, v.lastIndexOf(".")) else v
 
-  def libraryVersionOrDefault = libraryVersion.map(ignoreStdLibMinorVersion).getOrElse("0.0-unknown")
+  private def libraryVersionOrDefault: String = libraryVersion.map(ignoreStdLibMinorVersion).getOrElse("0.0-unknown")
 
   def version(digest: Digest): String =
     IArray

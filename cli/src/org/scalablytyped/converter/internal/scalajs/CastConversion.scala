@@ -43,20 +43,20 @@ object CastConversion {
     /* default to a given type */
     case class Ref(typeRef: TypeRef) extends TParam
     /* If we need to adhere to a type bound which isn't (directly) in Typescript */
-    case class Constrained(outer: TParam, among: Set[QualifiedName], default: QualifiedName) extends TParam
+    private case class Constrained(outer: TParam, among: Set[QualifiedName], default: QualifiedName) extends TParam
   }
 
   final class TypeRewriterCast(conversions: IArray[CastConversion]) extends TreeTransformation {
-    val conversionsForTypeName: Map[QualifiedName, CastConversion] =
+    private val conversionsForTypeName: Map[QualifiedName, CastConversion] =
       conversions.map(x => x.from -> x).toMap
 
-    def maybeRewrite(original: TypeRef, scope: TreeScope): Option[TypeRef] =
-      conversionsForTypeName.get(original.typeName).map { case CastConversion(_, to, tparams @ _*) =>
+    private def maybeRewrite(original: TypeRef, scope: TreeScope): Option[TypeRef] =
+      conversionsForTypeName.get(original.typeName).map { case CastConversion(_, to, tparams*) =>
         val targs = IArray(tparams.map(tp => visitTypeRef(scope)(tp.eval(original.targs)))*)
         original.copy(typeName = to, targs = targs)
       }
 
-    def isInheritanceClause(scope: TreeScope): Boolean =
+    private def isInheritanceClause(scope: TreeScope): Boolean =
       scope.stack match {
         case (_: TypeRef) :: (_: InheritanceTree) :: _                                              => true
         case (_: TypeRef) :: (int: TypeRef) :: (_: InheritanceTree) :: _ if Name.Internal(int.name) => true

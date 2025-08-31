@@ -14,7 +14,7 @@ object Json {
   /** Using circe's built-in parser instead of Jackson for Scala 3 compatibility. Note: This loses some lenient parsing
     * features (comments, trailing commas, etc.) but provides better Scala 3 support.
     */
-  object CustomCirceParser extends Parser {
+  private object CustomCirceParser extends Parser {
 
     // Simple preprocessing to handle some common non-standard JSON features
     private def preprocessJson(input: String): String = {

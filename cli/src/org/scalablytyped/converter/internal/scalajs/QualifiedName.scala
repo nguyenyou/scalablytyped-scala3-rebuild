@@ -16,7 +16,7 @@ final case class QualifiedName(parts: IArray[Name]) {
   def startsWith(other: QualifiedName): Boolean =
     parts.startsWith(other.parts)
 
-  override lazy val hashCode = parts.hashCode
+  override lazy val hashCode: Int = parts.hashCode
 
   override def equals(obj: Any): Boolean =
     obj match {
