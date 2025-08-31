@@ -28,7 +28,7 @@ case class ProxyModule(
 }
 
 object ProxyModule {
-  val FromExports = Comments("/* from `exports` in `package.json` */\n")
+  private val FromExports = Comments("/* from `exports` in `package.json` */\n")
 
   def fromExports(
       source: LibTsSource,
@@ -52,7 +52,7 @@ object ProxyModule {
 
           // need to take whatever the glob expanded to and expand it into both `name` and `types`
           val expandedFragments = os.walk(lookIn).flatMap { path =>
-            val relPathString = path.relativeTo(lookIn).toString()
+            val relPathString = path.relativeTo(lookIn).toString
 
             if (relPathString.startsWith(preFileNameStart) && relPathString.endsWith(post))
               Some(relPathString.drop(preFileNameStart.length).dropRight(post.length))

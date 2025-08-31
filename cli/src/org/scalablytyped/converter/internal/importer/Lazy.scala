@@ -65,7 +65,7 @@ object Lazy {
   }
 
   sealed trait State[+T]
-  object State {
+  private object State {
     case object Initial              extends State[Nothing]
     case object Computing            extends State[Nothing]
     case class Done[T](value: T)     extends State[T]

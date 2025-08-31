@@ -38,7 +38,7 @@ object LibTsSource {
     _.libName.value
 
   /* for files referenced through here we must shorten the paths */
-  def findShortenedFiles(src: LibTsSource): IArray[InFile] = {
+  private def findShortenedFiles(src: LibTsSource): IArray[InFile] = {
     def fromTypingsJson(fromFolder: LibTsSource.FromFolder, files: Option[IArray[String]]): IArray[InFile] =
       files.getOrElse(IArray.Empty).collect {
         case path if path.endsWith("typings.json") =>

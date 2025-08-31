@@ -104,7 +104,7 @@ object ShortenNames {
     (imports, newMembers)
   }
 
-  def dropOuterPackages(scope: TreeScope): List[Tree] = {
+  private def dropOuterPackages(scope: TreeScope): List[Tree] = {
     val numPackages = scope.stack.count(_.isInstanceOf[PackageTree])
     scope.stack.dropRight(numPackages - 1)
   }

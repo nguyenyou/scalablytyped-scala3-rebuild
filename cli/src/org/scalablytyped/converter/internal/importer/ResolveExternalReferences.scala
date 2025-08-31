@@ -54,7 +54,7 @@ object ResolveExternalReferences {
     /** Todo: `InferredDependency` takes care of undeclared node dependency. However, that is not solid enough when
       * there actually exists a library with the same name as the requested module.
       */
-    def doResolve(mod: TsIdentModule): Option[ResolvedModule] = mod match {
+    private def doResolve(mod: TsIdentModule): Option[ResolvedModule] = mod match {
       case TsIdentModule(None, "events" :: Nil) => None
       case jsName if jsName.value.endsWith(".js") =>
         resolve.module(source, folder, jsName.value.dropRight(".js".length))

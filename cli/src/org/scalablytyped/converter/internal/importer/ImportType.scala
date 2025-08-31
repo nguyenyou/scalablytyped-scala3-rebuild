@@ -368,7 +368,7 @@ object ImportType {
     validInt.orElse(validDouble).getOrElse(other)
   }
 
-  def numberToTypeRef(value: String): TypeRef = {
+  private def numberToTypeRef(value: String): TypeRef = {
     def validInt = Try(java.lang.Long.decode(value)) match {
       case Success(int) if int < Int.MaxValue && int > Int.MinValue => Some(TypeRef.IntLiteral(value))
       case _                                                        => None
@@ -392,7 +392,7 @@ object ImportType {
     else lit
   }
 
-  def stringToTypeRef(value: String, shouldWiden: ShouldWiden): TypeRef = {
+  private def stringToTypeRef(value: String, shouldWiden: ShouldWiden): TypeRef = {
     val lit = ExprTree.StringLit(value)
     if (shouldWiden(value))
       TypeRef.String.withComments(Comments(List(Comment(s"/* $value */ "), Marker.WasLiteral(lit))))

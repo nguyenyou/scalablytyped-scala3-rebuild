@@ -476,7 +476,7 @@ class ImportTree(
 
   sealed trait MemberRet
 
-  object MemberRet {
+  private object MemberRet {
     def apply(value: MemberTree): MemberRet = Normal(value)
 
     case class Ctor(value: CtorTree) extends MemberRet
@@ -629,14 +629,14 @@ class ImportTree(
         Empty
     }
   }
-  def protectionLevelComment(pl: TsProtectionLevel): Option[Comment] =
+  private def protectionLevelComment(pl: TsProtectionLevel): Option[Comment] =
     pl match {
       case TsProtectionLevel.Default   => None
       case TsProtectionLevel.Private   => Some(Comment("/* private */"))
       case TsProtectionLevel.Protected => Some(Comment("/* protected */"))
     }
 
-  def tsMemberProperty(
+  private def tsMemberProperty(
       scope: TsTreeScope,
       scalaJsDefined: Boolean,
       importName: AdaptiveNamingImport,
@@ -715,13 +715,13 @@ class ImportTree(
       ignoreBound = true
     )
 
-  def tsFunParams(scope: TsTreeScope, importName: AdaptiveNamingImport, params: IArray[TsFunParam]): IArray[ParamTree] =
+  private def tsFunParams(scope: TsTreeScope, importName: AdaptiveNamingImport, params: IArray[TsFunParam]): IArray[ParamTree] =
     params.map { param =>
       val tpe = importType.orAny(scope / param, importName)(param.tpe)
       ParamTree(ImportName(param.name), isImplicit = false, isVal = false, tpe, NotImplemented, param.comments)
     }
 
-  def tsMethod(
+  private def tsMethod(
       scope: TsTreeScope,
       level: ProtectionLevel,
       name: Name,

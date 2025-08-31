@@ -19,10 +19,10 @@ object ImportJsLocation {
         IArray(jsMod(mod, None), Annotation.JsNative)
     }
 
-  def jsGlobal(x: JsLocation.Global): Annotation.JsGlobal =
+  private def jsGlobal(x: JsLocation.Global): Annotation.JsGlobal =
     Annotation.JsGlobal(ImportName.skipConversion(x.jsPath))
 
-  def jsMod(x: JsLocation.Module, globalOpt: Option[Annotation.JsGlobal]): Annotation.JsImport = x match {
+  private def jsMod(x: JsLocation.Module, globalOpt: Option[Annotation.JsGlobal]): Annotation.JsImport = x match {
     case JsLocation.Module(modName, spec) =>
       spec match {
         case ModuleSpec.Defaulted  => Annotation.JsImport(modName.value, Imported.Default, globalOpt)

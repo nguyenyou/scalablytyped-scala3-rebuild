@@ -51,13 +51,13 @@ object CreatorMethod {
     *   - provided are parameters which the user will provide. These values may be rewritten before we put them into the
     *     object
     */
-  sealed trait CreatorMethodFragment
+  private sealed trait CreatorMethodFragment
   private case class Const(objectUpdater: ObjectUpdater)                     extends CreatorMethodFragment
   private case class Provide(objectUpdater: ObjectUpdater, param: ParamTree) extends CreatorMethodFragment
   private case object NotNeeded                                              extends CreatorMethodFragment
 
   // use this to construct a minimal object, with required props, null and literals
-  def minimal(prop: Prop): CreatorMethodFragment =
+  private def minimal(prop: Prop): CreatorMethodFragment =
     prop match {
       // this branch is very rarely needed, only if there are > 254 required props (including in parents)
       // will the user have to provide a valid instance of a parent type
@@ -89,7 +89,7 @@ object CreatorMethod {
     }
 
   // use this to
-  def full(prop: Prop): CreatorMethodFragment =
+  private def full(prop: Prop): CreatorMethodFragment =
     prop match {
       case Prop.CompressedProp(name, tpe, asExpr, isRequired) =>
         val default = if (isRequired) NotImplemented else Null

@@ -18,7 +18,7 @@ object IsUserImplementable {
     if (interface.unresolved.nonEmpty) false
     else pred(interface.value) && interface.parents.forall(pred)
 
-  def legalName(name: TsIdent): Boolean =
+  private def legalName(name: TsIdent): Boolean =
     name =/= TsIdent.Apply && name =/= TsIdent.namespaced
 
   def pred(x: HasClassMembers): Boolean =

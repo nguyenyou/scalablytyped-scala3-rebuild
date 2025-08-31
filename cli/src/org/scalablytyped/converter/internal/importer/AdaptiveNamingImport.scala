@@ -98,7 +98,7 @@ object AdaptiveNamingImport {
     new AdaptiveNamingImport(registeredReferences.toMap)
   }
 
-  def variantsFor(
+  private def variantsFor(
       tsIdent: TsIdent,
       hasModuleParent: Boolean,
       inLib: Option[TsIdentLibrary],

@@ -4,9 +4,11 @@ import org.scalablytyped.converter.internal.IArray
 import org.scalablytyped.converter.internal.InFile
 import org.scalablytyped.converter.internal.InFolder
 
+import scala.util.matching.Regex
+
 object PathsFromTsLibSource {
-  val V  = "v[\\d\\.]+".r
-  val TS = "ts[\\d\\.]+".r
+  val V: Regex = "v[\\d.]+".r
+  val TS: Regex = "ts[\\d.]+".r
 
   def filesFrom(bound: InFolder): IArray[InFile] = {
     def skip(dir: os.Path) =
