@@ -173,8 +173,8 @@ object PreferTypeAlias {
           * {{{
           * interface Foo { [key: string]: value}
           * }}}
-          * We would normally end up with {{{scala trait Foo extends StringDictionary[value] }}} There is little value
-          * in keep these two types distinct
+          * We would normally end up with {{{scala trait Foo extends StringDictionary[value]}}} There is little value in
+          * keep these two types distinct
           */
         case TsDeclInterface(comments, declared, name, tparams, Empty, members, codePath)
             if ExtractInterfaces.isDictionary(members) =>

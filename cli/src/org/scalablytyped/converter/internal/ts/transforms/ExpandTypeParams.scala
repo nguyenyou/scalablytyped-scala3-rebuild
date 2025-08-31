@@ -172,8 +172,7 @@ object ExpandTypeParams extends TransformMembers with TransformClassMembers {
     expanded ++ IArray.fromOption(keptInBounds)
   }
 
-  /** Since we inline the `T` also erase references to it
-    * \```typescript <T extends (Array<T> | number)>(t: T): T`
+  /** Since we inline the `T` also erase references to it \```typescript <T extends (Array<T> | number)>(t: T): T`
     */
   def clearCircularRef(self: TsIdent, tr: TsTypeRef): TsTypeRef =
     new TypeRewriter(tr).visitTsTypeRef(Map(TsTypeRef(self) -> TsTypeRef.any))(tr)

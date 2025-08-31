@@ -115,7 +115,7 @@ class FilterMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) 
       case m =>
         val mBase = erasure.base(scope)(m)
         inheritedMethodsByBase.get(mBase) match {
-          case Some(conflicting @ _) => Empty
+          case Some(_ @ _) => Empty
           case _                     => IArray(m)
         }
     }

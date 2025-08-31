@@ -5,6 +5,7 @@ import io.circe.Encoder
 import org.scalablytyped.converter.internal.IArray.fromArrayAndSize
 
 import java.util
+import scala.annotation.unused
 import scala.collection.IterableOnce
 import scala.collection.Iterator
 import scala.collection.immutable
@@ -845,6 +846,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   }
 
   def iterator: Iterator[A] = new Iterator[A] {
+    @unused
     var idx                       = 0
     override def hasNext: Boolean = idx < self.length
 

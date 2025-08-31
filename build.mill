@@ -56,7 +56,7 @@ object cli extends BaseModule with BuildInfo {
     BuildInfo.Value("version", "0.1.0"),
   )
 
-  def scalacOptions = Seq(
+  def scalacOptions = super.scalacOptions() ++ Seq(
     "-rewrite",
     "-source", "3.7-migration",
     "-feature",

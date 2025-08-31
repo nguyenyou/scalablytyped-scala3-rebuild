@@ -213,7 +213,9 @@ class TsParser(path: Option[(os.Path, Int)]) extends StdTokenParsers with Parser
 
       repsep_(
         "*" ~> rename ^^ (r => TsImported.Star(Some(r))) |
-          "{" ~> (tsIdent ~ rename.? <~ ",".? ^^ { case x1 ~ x2 => (x1, x2) }).** <~ "}" ^^ TsImported.Destructured.apply |
+          "{" ~> (tsIdent ~ rename.? <~ ",".? ^^ { case x1 ~ x2 =>
+            (x1, x2)
+          }).** <~ "}" ^^ TsImported.Destructured.apply |
           tsIdent ^^ TsImported.Ident.apply,
         ","
       )

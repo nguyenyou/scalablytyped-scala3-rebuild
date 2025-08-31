@@ -19,9 +19,8 @@ object GenBuilderClass {
     /* we need to add a few type parameter names into an unknown set, so this avoids collisions */
     val mutableAllocateTypeName = AvailableName(original.tparams.map(_.name), IArray(original.name))
 
-    /** We generate a Self type like this:
-      * \```implicit class DOMAttributesOps[Self[t] &lt;: DOMAttributes[t], T] (val x: Self[T])``` because subclasses
-      * can use * the methods defined here without losing the type of the subclass
+    /** We generate a Self type like this: \```implicit class DOMAttributesOps[Self[t] &lt;: DOMAttributes[t], T] (val
+      * x: Self[T])``` because subclasses can use * the methods defined here without losing the type of the subclass
       */
     val SelfName = mutableAllocateTypeName(Name("Self"))
     val selfRef  = TypeRef(QualifiedName(IArray(SelfName)), Empty, NoComments)
