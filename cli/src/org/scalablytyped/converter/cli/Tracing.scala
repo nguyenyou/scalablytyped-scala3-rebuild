@@ -167,7 +167,7 @@ object Tracing {
 
         // Static minimization policy applied to every run
         val minimizes =
-          List("quill", "clsx", "scroll-into-view-if-needed").map(TsIdentLibrary.apply)
+          List("quill", "clsx", "scroll-into-view-if-needed", "tabulator-tables").map(TsIdentLibrary.apply)
         val staticMinimize: Selection[TsIdentLibrary] = Selection.AllExcept(minimizes*)
         val staticMinimizeKeep: IArray[QualifiedName] = IArray.Empty
 
