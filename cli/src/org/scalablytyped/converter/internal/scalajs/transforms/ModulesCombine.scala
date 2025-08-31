@@ -2,46 +2,51 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import maps._
+import maps.*
 
 object ModulesCombine extends TreeTransformation {
   override def leaveContainerTree(scope: TreeScope)(c: ContainerTree): ContainerTree =
     combineModules(c)
 
   def combineModules[C <: ContainerTree](c: C): C = {
-    val combinedMembers = c.index.flatMapToIArray {
-      case (name, sameName) =>
-        sameName.partitionCollect3({ case x: ModuleTree => x }, { case x: FieldTree => x }, { case x: MethodTree => x }) match {
-          case (IArray.headTail(baseModule, restModules), fields, methods, rest)
-            if fields.nonEmpty || methods.nonEmpty || restModules.nonEmpty =>
-            val asHats: IArray[FieldTree] =
-              fields.map(f =>
-                f.copy(
-                  name       = Name.namespaced,
-                  codePath   = baseModule.codePath + Name.namespaced,
-                  isReadOnly = true,
-                ),
-              )
+    val combinedMembers = c.index.flatMapToIArray { case (name, sameName) =>
+      sameName.partitionCollect3(
+        { case x: ModuleTree => x },
+        { case x: FieldTree => x },
+        { case x: MethodTree => x }
+      ) match {
+        case (IArray.headTail(baseModule, restModules), fields, methods, rest)
+            if fields.nonEmpty || methods.nonEmpty || restModules.nonEmpty => {
+          val asHats: IArray[FieldTree] =
+            fields.map(f =>
+              f.copy(
+                name = Name.namespaced,
+                codePath = baseModule.codePath + Name.namespaced,
+                isReadOnly = true
+              ),
+            )
 
-            val asApplies: IArray[MethodTree] =
-              methods.map(m => m.copy(name = Name.APPLY, codePath = baseModule.codePath + Name.APPLY))
+          val asApplies: IArray[MethodTree] =
+            methods.map(m => m.copy(name = Name.APPLY, codePath = baseModule.codePath + Name.APPLY))
 
-            val mergedCompanion: ModuleTree =
-              restModules.foldLeft(baseModule.copy(members = baseModule.members ++ asHats ++ asApplies)) {
-                case (acc, mod) =>
-                  ModuleTree(
-                    annotations = acc.annotations,
-                    level       = ProtectionLevel.stricter(acc.level, mod.level),
-                    name        = acc.name,
-                    parents     = (acc.parents ++ mod.parents).distinct,
-                    members     = (acc.members ++ mod.members).distinct,
-                    comments    = acc.comments ++ mod.comments,
-                    codePath    = acc.codePath,
-                    isOverride  = false,
-                  )
-              }
+          val mergedCompanion: ModuleTree =
+            restModules.foldLeft(baseModule.copy(members = baseModule.members ++ asHats ++ asApplies)) {
+              case (acc, mod) =>
+                ModuleTree(
+                  annotations = acc.annotations,
+                  level = ProtectionLevel.stricter(acc.level, mod.level),
+                  name = acc.name,
+                  parents = (acc.parents ++ mod.parents).distinct,
+                  members = (acc.members ++ mod.members).distinct,
+                  comments = acc.comments ++ mod.comments,
+                  codePath = acc.codePath,
+                  isOverride = false
+                )
+            }
 
-            mergedCompanion +: rest
+          mergedCompanion +: rest
+        }
+            
           // format: off
           case (IArray.exactlyOne(ModuleTree(annotations @ Legal(), level, name, Empty, AllCalls(applies), comments, codePath, isOverride)), Empty, Empty, rest) =>
             rest ++ applies.map(a =>
@@ -57,39 +62,39 @@ object ModulesCombine extends TreeTransformation {
 
           case (IArray.exactlyOne(ModuleTree(annotations @ Legal(), level, name, parents, Empty, comments, codePath, isOverride)), Empty, Empty, rest) if parents.nonEmpty =>
             // format: on
-            val asField = FieldTree(
-              annotations,
-              level,
-              name,
-              tpe        = TypeRef.Intersection(parents, NoComments),
-              impl       = ExprTree.native,
-              isReadOnly = true,
-              isOverride = isOverride,
-              comments   = comments,
-              codePath   = codePath,
-            )
+          val asField = FieldTree(
+            annotations,
+            level,
+            name,
+            tpe = TypeRef.Intersection(parents, NoComments),
+            impl = ExprTree.native,
+            isReadOnly = true,
+            isOverride = isOverride,
+            comments = comments,
+            codePath = codePath
+          )
 
-            rest :+ asField
+          rest :+ asField
 
-          case (Empty, Empty, methods, rest) if methods.nonEmpty && rest.exists(_.isInstanceOf[ClassTree]) =>
-            val asApplies: IArray[MethodTree] =
-              methods.map(m => m.copy(name = Name.APPLY, codePath = m.codePath + Name.APPLY))
+        case (Empty, Empty, methods, rest) if methods.nonEmpty && rest.exists(_.isInstanceOf[ClassTree]) =>
+          val asApplies: IArray[MethodTree] =
+            methods.map(m => m.copy(name = Name.APPLY, codePath = m.codePath + Name.APPLY))
 
-            val asMod = ModuleTree(
-              annotations = Empty,
-              level       = ProtectionLevel.Public,
-              name        = name,
-              parents     = Empty,
-              members     = asApplies,
-              comments    = NoComments,
-              codePath    = methods.head.codePath,
-              isOverride  = false,
-            )
+          val asMod = ModuleTree(
+            annotations = Empty,
+            level = ProtectionLevel.Public,
+            name = name,
+            parents = Empty,
+            members = asApplies,
+            comments = NoComments,
+            codePath = methods.head.codePath,
+            isOverride = false
+          )
 
-            asMod +: rest
+          asMod +: rest
 
-          case _ => sameName
-        }
+        case _ => sameName
+      }
     }
 
     c.withMembers(combinedMembers).asInstanceOf[C]
