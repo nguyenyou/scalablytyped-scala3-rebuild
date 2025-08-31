@@ -148,7 +148,7 @@ object TsTreeScope {
     def packageJsonOpt: Option[PackageJson]
   }
 
-  final case class ImportCacheKey(scope: TsTreeScope, picker: Picker[_], idents: IArray[TsIdent]) {
+  final case class ImportCacheKey(scope: TsTreeScope, picker: Picker[?], idents: IArray[TsIdent]) {
     override def canEqual(that: Any): Boolean = that.## == ##
     override val hashCode: Int                = productHash(this)
   }
@@ -165,7 +165,7 @@ object TsTreeScope {
   def apply(
       libName: TsIdentLibrary,
       pedantic: Boolean,
-      deps: Map[_ <: TsLib, TsParsedFile],
+      deps: Map[? <: TsLib, TsParsedFile],
       logger: Logger[Unit]
   ): TsTreeScope.Root =
     new Root(libName, pedantic, deps, logger, None, false)
@@ -199,7 +199,7 @@ object TsTreeScope {
   final class Root private[TsTreeScope] (
       val libName: TsIdentLibrary,
       val pedantic: Boolean,
-      _deps: Map[_ <: TsLib, TsParsedFile],
+      _deps: Map[? <: TsLib, TsParsedFile],
       val logger: Logger[Unit],
       val cache: Option[Cache],
       val lookupUnqualified: Boolean
@@ -283,7 +283,7 @@ object TsTreeScope {
 
     // lazy val with no locking
     private var hasHash   = false
-    private var hash: Int = _
+    private var hash: Int = scala.compiletime.uninitialized
     override def hashCode: Int = {
       if (!hasHash) {
         hasHash = true

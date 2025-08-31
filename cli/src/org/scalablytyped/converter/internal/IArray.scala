@@ -47,7 +47,7 @@ object IArray {
     }
 
   def fromOptions[A <: AnyRef](as: Option[A]*): IArray[A] =
-    apply(as.flatten: _*)
+    apply(as.flatten*)
 
   def fromArray[A <: AnyRef](as: Array[A]): IArray[A] =
     fromArrayAndSize(as.asInstanceOf[Array[AnyRef]], as.length)
@@ -858,7 +858,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   def indices: Range = 0 until length
 
   def sortBy[B](f: A => B)(implicit ord: Ordering[B]): IArray[A] =
-    sorted(ord.on(f))
+    sorted(using ord.on(f))
 
   def sorted[B >: A <: AnyRef](implicit ord: Ordering[B]): IArray[A] =
     if (length < 2) this

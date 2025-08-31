@@ -10,7 +10,7 @@ import org.scalablytyped.converter.internal.ts.CodePath.NoPath
   * approach here
   */
 object ParentsResolver {
-  type InterfaceOrClass = TsTree with HasClassMembers
+  type InterfaceOrClass = TsTree & HasClassMembers
 
   case class WithParents[X <: InterfaceOrClass](value: X, parents: IArray[InterfaceOrClass], unresolved: IArray[TsType])
 

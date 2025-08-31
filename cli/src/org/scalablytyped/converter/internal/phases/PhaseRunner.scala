@@ -26,7 +26,7 @@ object PhaseRunner {
       listener: PhaseListener[Id]
   ): PhaseRes[Id, TT] =
     phase match {
-      case _: RecPhase.Initial[Id]        => PhaseRes.Ok[Id, TT](id)
+      case _: RecPhase.Initial[Id] @unchecked => PhaseRes.Ok[Id, TT](id)
       case next: RecPhase.Next[Id, t, TT] => doNext[Id, t, TT](next, id, circuitBreaker, getLogger, listener)
     }
 

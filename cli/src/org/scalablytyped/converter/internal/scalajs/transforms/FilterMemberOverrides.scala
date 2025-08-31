@@ -22,7 +22,7 @@ class FilterMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) 
 
   private def newMembers(
       scope: TreeScope,
-      owner: Tree with HasAnnotations,
+      owner: Tree & HasAnnotations,
       members: IArray[Tree],
       inheritance: IArray[TypeRef]
   ): IArray[Tree] = {
@@ -102,7 +102,7 @@ class FilterMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) 
       }
     }
 
-    val newMethods: IArray[MethodTree] = methods.sorted(Sorter.TreeOrdering).flatMap {
+    val newMethods: IArray[MethodTree] = methods.sorted(using Sorter.TreeOrdering).flatMap {
       // remove setters if there is a corresponding var in a parent class
       case m
           if m.name.unescaped.endsWith("_=") &&

@@ -184,6 +184,6 @@ object TreeScope {
 
   trait Lib {
     def packageTree: ContainerTree
-    def dependencies: Map[_, Lib]
+    def dependencies: Map[?, Lib]
   }
 }

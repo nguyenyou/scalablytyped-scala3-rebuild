@@ -102,7 +102,7 @@ object LibraryResolver {
     }
 
   private def resolve(within: os.Path, frags: String*): IArray[os.Path] =
-    IArray(frags: _*).mapNotNone(frag => Option(within / os.RelPath(frag.dropWhile(_ === '/'))).filter(files.exists))
+    IArray(frags*).mapNotNone(frag => Option(within / os.RelPath(frag.dropWhile(_ === '/'))).filter(files.exists))
 
   private object LocalPath {
     def unapply(s: String): Option[String] = if (s.startsWith(".")) Some(s) else None

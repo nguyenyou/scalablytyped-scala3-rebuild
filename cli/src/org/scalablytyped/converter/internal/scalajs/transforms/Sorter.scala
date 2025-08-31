@@ -45,7 +45,7 @@ object Sorter extends TreeTransformation {
       { case x if nativeValueNamesOrCompanion(x.name.unescaped.replace("_=", "")) => x }
     )
 
-    IArray(_1, _2, _3).map(_.sorted(TreeOrdering)).flatten
+    IArray(_1, _2, _3).map(_.sorted(using TreeOrdering)).flatten
   }
   object TreeOrdering extends Ordering[Tree] {
     override def compare(x: Tree, y: Tree): Int =

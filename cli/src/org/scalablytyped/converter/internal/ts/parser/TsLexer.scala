@@ -104,7 +104,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
         digit | 'a' | 'A' | 'b' | 'B' | 'c' | 'C' | 'd' | 'D' | 'e' | 'E' | 'f' | 'F'
       ) ^^ (s => NumericLit("0x" + s))
 
-    val decimal = stringOf1(digit | '.' | '-' | 'e' | '+') <~ 'n'.? ^^ NumericLit // yeah yeah, good enough for us
+    val decimal = stringOf1(digit | '.' | '-' | 'e' | '+') <~ 'n'.? ^^ NumericLit.apply // yeah yeah, good enough for us
 
     binaryNumericLiteral | hexNumericLiteral | decimal.filter(_.chars.exists(_.isDigit))
   }
@@ -116,7 +116,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
     def quoted(quoteChar: Char): Parser[String] =
       quoteChar ~> stringOf(inQuoteChar(quoteChar)) <~ quoteChar
 
-    (quoted('\"') | quoted('\'')) ^^ StringLit
+    (quoted('\"') | quoted('\'')) ^^ StringLit.apply
   }
 
   lazy val stringTemplateLiteral: Parser[StringTemplateLiteral] = {

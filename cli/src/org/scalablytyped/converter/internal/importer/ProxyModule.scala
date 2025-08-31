@@ -32,7 +32,7 @@ object ProxyModule {
 
   def fromExports(
       source: LibTsSource,
-      logger: Logger[_],
+      logger: Logger[?],
       resolve: LibraryResolver,
       existing: TsIdent => Boolean,
       exports: Map[String, String]

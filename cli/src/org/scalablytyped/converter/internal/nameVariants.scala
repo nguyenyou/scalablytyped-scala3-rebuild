@@ -16,7 +16,7 @@ object nameVariants {
         value.count(c => !c.isLetterOrDigit) match {
           case 0 => Stream(Unchanged)
           case 1 => Stream(Clean, Unchanged)
-          case n => Stream(Clean) #::: Stream.range[Int](0, n + 1).map(KeepSymbolNum) #::: Stream(Unchanged)
+          case n => Stream(Clean) #::: Stream.range[Int](0, n + 1).map(KeepSymbolNum.apply) #::: Stream(Unchanged)
         }
       variants.map(rewrite(value))
     }

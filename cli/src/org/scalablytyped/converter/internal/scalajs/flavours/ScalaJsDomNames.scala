@@ -516,7 +516,7 @@ class ScalaJsDomNames(stdNames: QualifiedName.StdNames) {
     val globals = base.map {
       case CastConversion(from, to, tparams @_*) =>
         val newFrom = QualifiedName(stdNames.lib.parts ++ IArray(Name.global) ++ from.parts.drop(stdNames.lib.parts.length))
-        CastConversion(newFrom, to, tparams :_*)
+        CastConversion(newFrom, to, tparams*)
     }
     base ++ globals
   }

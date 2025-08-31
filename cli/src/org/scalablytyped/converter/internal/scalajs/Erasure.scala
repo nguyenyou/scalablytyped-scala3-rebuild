@@ -75,7 +75,7 @@ class Erasure(scalaVersion: Versions.Scala) {
           }
 
         def fromAlphabetic: QualifiedName =
-          tpe.targs.map(targ => simplify(scope, targ)).min(ByName)
+          tpe.targs.map(targ => simplify(scope, targ)).min(using ByName)
 
         fromPrimitive.orElse(fromClass).getOrElse(fromAlphabetic)
 

@@ -57,7 +57,7 @@ sealed trait ContainerTree extends Tree with HasCodePath with HasAnnotations wit
 }
 
 sealed trait InheritanceTree extends Tree with HasCodePath with HasAnnotations with HasMembers {
-  def isScalaJsDefined: Boolean  = annotations contains Annotation.ScalaJSDefined
+  def isScalaJsDefined: Boolean  = annotations `contains` Annotation.ScalaJSDefined
   def receivesCompanion: Boolean = isScalaJsDefined || comments.has[Marker.CouldBeScalaJsDefined.type]
 
   def isNative: Boolean =

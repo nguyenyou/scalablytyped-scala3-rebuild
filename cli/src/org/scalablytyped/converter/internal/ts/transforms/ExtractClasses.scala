@@ -83,7 +83,7 @@ object ExtractClasses extends TransformLeaveMembers {
                   codePath = clsCodePath
                 )
               }
-            case _ => None
+            case null => None
           }
 
         Some(restVars ++ IArray.fromOption(clsOpt) ++ newNamespacesAndV ++ rest)

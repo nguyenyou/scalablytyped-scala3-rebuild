@@ -14,13 +14,13 @@ object SetCodePath extends TreeTransformation[CodePath.HasPath] {
   override def enterTsContainer(cp: CodePath.HasPath)(x: TsContainer): TsContainer =
     x match {
       case xx: CodePath.Has => xx.withCodePath(cp).asInstanceOf[TsContainer]
-      case other            => other
+      case null             => null
     }
 
   override def enterTsNamedDecl(cp: CodePath.HasPath)(x: TsNamedDecl): TsNamedDecl =
     x match {
       case xx: CodePath.Has => xx.withCodePath(cp).asInstanceOf[TsNamedDecl]
-      case other            => other
+      case null             => null
     }
 
   override def enterTsParsedFile(t: CodePath.HasPath)(x: TsParsedFile): TsParsedFile =

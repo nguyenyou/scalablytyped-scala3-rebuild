@@ -36,7 +36,7 @@ object Exports {
                     things.flatMap {
                       case (m: TsNamedDecl, newScope) =>
                         `export`(codePath, jsLocation, newScope, exportType, m, Some(ident), loopDetector)
-                      case _ => Empty
+                      case (null, _) => Empty
                     }
 
                   case ExpandedMod.Whole(defaults, namespaceds, rest, newScope) =>

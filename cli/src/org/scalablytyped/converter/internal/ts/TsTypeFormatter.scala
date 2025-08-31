@@ -81,7 +81,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
           case Indexing.Single(name)    => s"[${qident(name)}]"
         }),
         valueType.map(tpe => s": ${apply(tpe)}")
-      ).flatten.mkString(" ").replaceAllLiterally(" ?", "?")
+      ).flatten.mkString(" ").replace(" ?", "?")
 
     case TsMemberTypeMapped(_, l, readonly, key, from, as, optionalize, to) =>
       List[Option[String]](
@@ -105,7 +105,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
         Some(apply(to))
       ).flatten
         .mkString(" ")
-        .replaceAllLiterally(" ?", "?")
+        .replace(" ?", "?")
   }
 
   def lit(lit: TsLiteral): String = lit match {

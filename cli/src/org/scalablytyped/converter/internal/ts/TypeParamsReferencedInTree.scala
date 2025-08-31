@@ -31,7 +31,7 @@ object TypeParamsReferencedInTree {
     val fromBounds: IArray[TsIdent] =
       TsTreeTraverse.collectIArray(IArray.fromOptions(inScope.collect {
         case (k, v) if referencedInTree.contains(k) => v.upperBound
-      }.toSeq: _*)) {
+      }.toSeq*)) {
         case TsTypeRef(_, TsQIdent(IArray.exactlyOne(unprefixedName)), _) if inScope.contains(unprefixedName) =>
           unprefixedName
       }

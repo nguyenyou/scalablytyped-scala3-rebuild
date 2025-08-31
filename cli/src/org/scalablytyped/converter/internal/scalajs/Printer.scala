@@ -254,7 +254,7 @@ object Printer {
         ss.foreach(w.print(indent))
 
       def println(ss: String*): Unit = {
-        print(ss: _*)
+        print(ss*)
         print("\n")
       }
 

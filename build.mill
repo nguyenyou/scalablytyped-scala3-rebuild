@@ -13,7 +13,7 @@ trait Scalafix extends ScalafixModule {
 }
 
 object Versions {
-    val scala2 = "3.3.6"
+    val scala2 = "3.7.2"
     val sjs = "1.19.0"
     val sourcecode = "0.4.3-M5"
     val fansi = "0.5.1"
@@ -54,5 +54,13 @@ object cli extends BaseModule with BuildInfo {
   def buildInfoMembers = Seq(
     BuildInfo.Value("gitSha", os.proc("git", "rev-parse", "HEAD").call().out.trim()),
     BuildInfo.Value("version", "0.1.0"),
+  )
+
+  def scalacOptions = Seq(
+    "-rewrite",
+    "-source", "3.7-migration",
+    "-feature",
+    "-deprecation",
+    "-language:implicitConversions"
   )
 }

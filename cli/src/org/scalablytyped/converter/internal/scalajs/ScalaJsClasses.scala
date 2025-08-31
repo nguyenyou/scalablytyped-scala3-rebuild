@@ -62,7 +62,7 @@ object ScalaJsClasses {
   }
 
   val ScalaJsTypes: Map[QualifiedName, Tree] =
-    (precomputed ++ hardcoded).collect { case x: Tree with HasCodePath => x.codePath -> x }.toMap
+    (precomputed ++ hardcoded).collect { case x: (Tree & HasCodePath) => x.codePath -> x }.toMap
 
   val jsObjectMembers: IArray[Tree] = {
     IArray(

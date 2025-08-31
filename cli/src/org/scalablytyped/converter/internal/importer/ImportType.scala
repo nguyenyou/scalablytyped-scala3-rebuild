@@ -29,7 +29,7 @@ class ImportType(stdNames: QualifiedName.StdNames) {
     val StringM   = RefMapping(TypeRef(stdNames.String), TypeRef(stdNames.String), TypeRef.String)
     val BigIntM   = RefMapping(TypeRef(stdNames.BigInt), TypeRef(stdNames.BigInt), TypeRef.JsBigInt)
 
-    Map[TsQIdent, Mapping[_]](
+    Map[TsQIdent, Mapping[?]](
       TsQIdent.Array             -> ArrayM,
       TsQIdent.bigint            -> BigIntM,
       TsQIdent.BigInt            -> BigIntM,
@@ -106,7 +106,7 @@ class ImportType(stdNames: QualifiedName.StdNames) {
         val (numbers, strings, Empty) = ms.partitionCollect2(
           { case x @ TsMemberIndex(_, _, _, Indexing.Dict(_, TsTypeRef.number), _) => x },
           { case x @ TsMemberIndex(_, _, _, Indexing.Dict(_, _), _) => x }
-        )
+        ): @unchecked
 
         val translatedStrings = strings.collect { case TsMemberIndex(cs, _, _, Indexing.Dict(_, _), valueType) =>
           (cs, orAny(scope, importName)(valueType))

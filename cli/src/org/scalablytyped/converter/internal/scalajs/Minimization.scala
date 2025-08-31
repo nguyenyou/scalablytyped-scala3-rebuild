@@ -81,7 +81,7 @@ object Minimization {
 
     packagesWithShouldMinimize.foreach { case (pkg, shouldMinimize) =>
       TreeTraverse.foreach(pkg) {
-        case tree: Tree with HasCodePath =>
+        case tree: (Tree & HasCodePath) =>
           tree.comments.extract { case Marker.MinimizationKeep(related) =>
             expand(tree.codePath)
             TreeTraverse.foreach(related) {

@@ -52,7 +52,7 @@ object CastConversion {
 
     def maybeRewrite(original: TypeRef, scope: TreeScope): Option[TypeRef] =
       conversionsForTypeName.get(original.typeName).map { case CastConversion(_, to, tparams @ _*) =>
-        val targs = IArray(tparams.map(tp => visitTypeRef(scope)(tp.eval(original.targs))): _*)
+        val targs = IArray(tparams.map(tp => visitTypeRef(scope)(tp.eval(original.targs)))*)
         original.copy(typeName = to, targs = targs)
       }
 

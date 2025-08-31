@@ -29,7 +29,7 @@ object CreatorMethod {
       updaters.partitionCollect2(
         { case x: ObjectUpdater.Mutator => x },
         { case x: ObjectUpdater.Initializer => x }
-      )
+      ): @unchecked
 
     val params: IArray[ParamTree] =
       interpretedProps.collect { case Provide(_, param) => param }

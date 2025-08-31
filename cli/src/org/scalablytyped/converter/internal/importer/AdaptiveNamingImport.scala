@@ -45,7 +45,7 @@ object AdaptiveNamingImport {
           case x: CodePath.Has                                             => x.codePath.forceHasPath.codePath.parts
         }
         .distinct
-        .sorted(ShortestAndLowercaseFirst)
+        .sorted(using ShortestAndLowercaseFirst)
 
     val registeredReferences =
       mutable.Map[IArray[TsIdent], QualifiedName](IArray.Empty -> QualifiedName(IArray(outputPkg)))

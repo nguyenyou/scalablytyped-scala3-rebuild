@@ -133,7 +133,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
       owner.exports.exists {
         case TsExport(_, _, _, TsExportee.Tree(_: TsDeclInterface | _: TsDeclTypeAlias)) => false
         case _: TsExport                                                                 => true
-        case _                                                                           => false
+        case null                                                                        => false
       }
 
     decl match {

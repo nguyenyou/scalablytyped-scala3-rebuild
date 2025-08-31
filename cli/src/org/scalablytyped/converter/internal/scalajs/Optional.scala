@@ -37,7 +37,7 @@ object Optionality {
       case TypeRef.Union(types, cs) =>
         types.partition(Optional.isOptional) match {
           case (foundNulls, remaining) =>
-            val opt = (foundNulls contains TypeRef.Null, foundNulls contains TypeRef.undefined) match {
+            val opt = (foundNulls `contains` TypeRef.Null, foundNulls `contains` TypeRef.undefined) match {
               case (true, true)   => NullOrUndef
               case (true, false)  => Null
               case (false, true)  => Undef

@@ -30,7 +30,7 @@ object Picker {
       t match {
         case _: TsDeclModule    => None
         case other: TsNamedDecl => Some(other)
-        case _                  => None
+        case null               => None
       }
   }
 
@@ -39,13 +39,13 @@ object Picker {
       t match {
         case _: TsDeclClass     => None
         case other: TsNamedDecl => Some(other)
-        case _                  => None
+        case null               => None
       }
   }
 
-  object HasClassMemberss extends Picker[TsNamedDecl with HasClassMembers] {
-    override def unapply(t: TsNamedDecl): Option[TsNamedDecl with HasClassMembers] = t match {
-      case x: TsNamedDecl with HasClassMembers => Some(x)
+  object HasClassMemberss extends Picker[TsNamedDecl & HasClassMembers] {
+    override def unapply(t: TsNamedDecl): Option[TsNamedDecl & HasClassMembers] = t match {
+      case x: (TsNamedDecl & HasClassMembers) => Some(x)
       case _                                   => None
     }
   }

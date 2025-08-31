@@ -30,7 +30,7 @@ object FileLocking {
     def deserialize[T <: Serializable](bytes: Array[Byte]): Try[T] = Try {
       val byteIn = new ByteArrayInputStream(bytes)
       val objIn = new ObjectInputStream(byteIn) { // https://github.com/scala/bug/issues/9777
-        override def resolveClass(desc: ObjectStreamClass): Class[_] =
+        override def resolveClass(desc: ObjectStreamClass): Class[?] =
           Class.forName(desc.getName, false, FileLocking.getClass.getClassLoader)
       }
       val obj = objIn.readObject().asInstanceOf[T]
@@ -94,7 +94,7 @@ object FileLocking {
           if (Files.exists(path)) Array(StandardOpenOption.WRITE, StandardOpenOption.READ)
           else Array(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, StandardOpenOption.READ)
 
-        val channel = FileChannel.open(path, flags: _*)
+        val channel = FileChannel.open(path, flags*)
         try {
           val lock = channel.lock()
           try {

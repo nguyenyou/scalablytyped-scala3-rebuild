@@ -19,7 +19,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
     val (methods, fields, Empty) = s.members.partitionCollect2(
       { case x: MethodTree => x },
       { case x: FieldTree => x }
-    )
+    ): @unchecked
 
     s.copy(
       ctors = ctorHack(scope, s.ctors),
