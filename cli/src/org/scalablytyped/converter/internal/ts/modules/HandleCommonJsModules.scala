@@ -2,11 +2,11 @@ package org.scalablytyped.converter.internal
 package ts
 package modules
 
-import org.scalablytyped.converter.internal.ts.transforms.{QualifyReferences, SetCodePath}
+import org.scalablytyped.converter.internal.ts.transforms.QualifyReferences
+import org.scalablytyped.converter.internal.ts.transforms.SetCodePath
 
-/**
-  * It's really difficult to reconcile two module systems, this is a preparational step which
-  *  helps us enable the following pattern:
+/** It's really difficult to reconcile two module systems, this is a preparational step which helps us enable the
+  * following pattern:
   *
   * ```typescript
   * declare class A {}
@@ -22,8 +22,8 @@ import org.scalablytyped.converter.internal.ts.transforms.{QualifyReferences, Se
   * export = A;
   * ```
   *
-  * The exportees (`class A` here) outside the namespace is handled ok, and end up named `TsIdent.namespaced`
-  *  after we resolve everything.
+  * The exportees (`class A` here) outside the namespace is handled ok, and end up named `TsIdent.namespaced` after we
+  * resolve everything.
   *
   * For the namespace we need to flatten it, and rewrite all references to it.
   *
@@ -38,12 +38,10 @@ import org.scalablytyped.converter.internal.ts.transforms.{QualifyReferences, Se
   * }
   * export type N = number;
   * ```
-  *
   */
 object HandleCommonJsModules extends TreeTransformationScopedChanges {
 
-  /**
-    * If this is a commonjs module we extract the name of the exported thing
+  /** If this is a commonjs module we extract the name of the exported thing
     */
   object EqualsExport {
     def unapply(x: TsDeclModule): Option[((TsExport, IArray[TsIdent]), IArray[TsContainerOrDecl])] = {
@@ -52,7 +50,7 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
               _,
               _,
               ExportType.Namespaced,
-              TsExportee.Names(IArray.exactlyOne((TsQIdent(qident), None)), _),
+              TsExportee.Names(IArray.exactlyOne((TsQIdent(qident), None)), _)
             ) =>
           e -> qident
       }
@@ -65,11 +63,10 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
       case EqualsExport(((exportStatement, IArray.exactlyOne(target)), notExports)) =>
         val (namespaces, toplevel, _rest) = notExports.partitionCollect2(
           { case x: TsDeclNamespace if x.name.value === target.value => x },
-          { case x: TsNamedDecl if x.name === target                 => x },
+          { case x: TsNamedDecl if x.name === target => x }
         )
 
-        /**
-          * Support things like this:
+        /** Support things like this:
           *
           * ```typescript
           * type Err = Error;
@@ -82,9 +79,8 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
           *
           * export = createError;
           * ```
-          * `Err` refers to global error, not the one defined in the namespace.
-          * Note that we cannot do this in arbitrary modules, as we might leave
-          *  conflicting definitions in the same scope (2x `type Props = ...` for instance)
+          * `Err` refers to global error, not the one defined in the namespace. Note that we cannot do this in arbitrary
+          * modules, as we might leave conflicting definitions in the same scope (2x `type Props = ...` for instance)
           */
         val rest = {
           val Q            = new QualifyReferences(skipValidation = true)
@@ -99,7 +95,7 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
             .flatMap(_.members)
             .map {
               case x: TsNamedDecl => TsExport(NoComments, typeOnly = false, ExportType.Named, TsExportee.Tree(x))
-              case other => other
+              case other          => other
             }
             .map(x => SetCodePath.visitTsContainerOrDecl(mod.codePath.forceHasPath)(x))
 
@@ -108,12 +104,12 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
           /* handle (3) */
           val patchedRest = rest.filter {
             case TsDeclTypeAlias(
-                _,
-                _,
-                typeName,
-                Empty,
-                TsTypeRef(_, TsQIdent(IArray.exactlyTwo(`target`, referredName)), Empty),
-                _,
+                  _,
+                  _,
+                  typeName,
+                  Empty,
+                  TsTypeRef(_, TsQIdent(IArray.exactlyTwo(`target`, referredName)), Empty),
+                  _
                 ) =>
               referredName =/= typeName
             case _ => true
@@ -124,16 +120,16 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
           val patchedNewMembers =
             newMembers.map {
               case TsExport(
-                  _,
-                  _,
-                  ExportType.Named,
-                  TsExportee.Tree(
-                    TsImport(
-                      _,
-                      IArray.exactlyOne(TsImported.Ident(newName)),
-                      TsImportee.Local(TsQIdent(IArray.exactlyOne(name))),
-                    ),
-                  ),
+                    _,
+                    _,
+                    ExportType.Named,
+                    TsExportee.Tree(
+                      TsImport(
+                        _,
+                        IArray.exactlyOne(TsImported.Ident(newName)),
+                        TsImportee.Local(TsQIdent(IArray.exactlyOne(name)))
+                      )
+                    )
                   ) if name.value === target.value =>
                 TsExport(
                   NoComments,
@@ -148,9 +144,9 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
                       Some(TsTypeThis()),
                       None,
                       mod.jsLocation + newName,
-                      mod.codePath + newName,
-                    ),
-                  ),
+                      mod.codePath + newName
+                    )
+                  )
                 )
               case other => other
             }

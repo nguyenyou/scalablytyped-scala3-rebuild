@@ -7,24 +7,24 @@ object Hoisting {
   val declared = false
 
   def fromType(
-      scope:    TsTreeScope,
-      ownerCp:  CodePath,
+      scope: TsTreeScope,
+      ownerCp: CodePath,
       ownerLoc: JsLocation,
-      ld:       LoopDetector,
-      tpe:      TsType,
+      ld: LoopDetector,
+      tpe: TsType
   ): IArray[TsNamedValueDecl] =
     tpe match {
-      case ref: TsTypeRef => fromRef(scope, ownerCp, ownerLoc, ld, ref)
+      case ref: TsTypeRef      => fromRef(scope, ownerCp, ownerLoc, ld, ref)
       case TsTypeObject(_, ms) => ms.mapNotNone(memberToDecl(ownerCp, ownerLoc))
       case _                   => Empty
     }
 
   def fromRef(
-      scope:    TsTreeScope,
-      ownerCp:  CodePath,
+      scope: TsTreeScope,
+      ownerCp: CodePath,
       ownerLoc: JsLocation,
-      ld:       LoopDetector,
-      typeRef:  TsTypeRef,
+      ld: LoopDetector,
+      typeRef: TsTypeRef
   ): IArray[TsNamedValueDecl] =
     AllMembersFor(scope, ld)(typeRef).mapNotNone(memberToDecl(ownerCp, ownerLoc))
 

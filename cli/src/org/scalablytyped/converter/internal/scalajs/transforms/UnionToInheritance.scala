@@ -2,8 +2,7 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-/**
-  * Inheritance works better than the userland union types, so we rewrite the latter to the former:
+/** Inheritance works better than the userland union types, so we rewrite the latter to the former:
   *
   * ```scala
   * package thisLib {
@@ -45,7 +44,7 @@ package transforms
   * ```
   *
   * And finally, an even more complicated case where we invert type parameters, barring quite a few restrictions to
-  *  (hopefully) keep the transformations sound:
+  * (hopefully) keep the transformations sound:
   *
   * ```typescript
   * interface Either<L, R> {
@@ -69,8 +68,8 @@ package transforms
 object UnionToInheritance {
   def apply(
       scope: TreeScope,
-      tree:  ContainerTree,
-      inLib: Name,
+      tree: ContainerTree,
+      inLib: Name
   ): ContainerTree = {
     val rewrites = Rewrite.identify(inLib, tree, scope / tree)
 
@@ -78,7 +77,9 @@ object UnionToInheritance {
       rewrites
         .flatMap(InvertingTypeParamRef.apply)
         .groupBy(_._1)
-        .view.mapValues(_.map(_._2).sortBy(_.codePath.parts.last)).toMap
+        .view
+        .mapValues(_.map(_._2).sortBy(_.codePath.parts.last))
+        .toMap
 
     val indexedRewrites: Map[QualifiedName, Rewrite] =
       rewrites.groupBy(_.original.codePath).view.mapValues(_.head).toMap
@@ -90,9 +91,9 @@ object UnionToInheritance {
   }
 
   def typesToInterfaces(
-      c:                    ContainerTree,
-      indexedRewrites:      Map[QualifiedName, Rewrite],
-      newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]],
+      c: ContainerTree,
+      indexedRewrites: Map[QualifiedName, Rewrite],
+      newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]]
   ): ContainerTree = {
     val newMembers = c.members.flatMap {
       case p: ContainerTree =>
@@ -120,7 +121,7 @@ object UnionToInheritance {
               ClassType.Trait,
               isSealed = false,
               ta.comments ++? commentsOpt + Marker.MinimizationRelated(asInheritance) + Marker.WasUnion(asInheritance),
-              ta.codePath,
+              ta.codePath
             )
 
             IArray(cls)
@@ -138,15 +139,15 @@ object UnionToInheritance {
               ClassType.Trait,
               isSealed = false,
               Comments(List(Marker.MinimizationRelated(asInheritance), Marker.WasUnion(asInheritance))),
-              patchedTa.codePath,
+              patchedTa.codePath
             )
             val newTa = ta.copy(
               alias = TypeRef.Union(
                 TypeRef(patchedTa.codePath, TypeParamTree.asTypeArgs(patchedTa.tparams), NoComments) +: noRewrites,
                 NoComments,
-                sort = false,
+                sort = false
               ),
-              comments = ta.comments ++? commentsOpt,
+              comments = ta.comments ++? commentsOpt
             )
             IArray(cls, newTa)
         }
@@ -162,8 +163,8 @@ object UnionToInheritance {
   }
 
   def addedInheritance(
-      c:                    ContainerTree,
-      newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]],
+      c: ContainerTree,
+      newParentsByCodePath: Map[QualifiedName, IArray[InvertingTypeParamRef]]
   ): ContainerTree =
     c.withMembers(c.members.map {
       case p: PackageTree =>
@@ -187,12 +188,12 @@ object UnionToInheritance {
         def legalClassName(name: Name): Boolean =
           p.index(name).forall {
             case _: PackageTree => false
-            case _ => true
+            case _              => true
           }
         p.members.flatMap {
-          case p:  ContainerTree                            => identify(inLib, p, scope / p)
+          case p: ContainerTree                             => identify(inLib, p, scope / p)
           case ta: TypeAliasTree if legalClassName(ta.name) => IArray.fromOption(canRewrite(inLib, ta, scope / ta))
-          case _ => Empty
+          case _                                            => Empty
         }
       }
 
@@ -216,16 +217,16 @@ object UnionToInheritance {
 
     def canRewrite(
         inLib: Name,
-        ta:    TypeAliasTree,
-        scope: TreeScope,
+        ta: TypeAliasTree,
+        scope: TreeScope
     ): Option[Rewrite] =
       ta.alias match {
         case TypeRef.Union(types, _) =>
           def legalTarget(tr: TypeRef): Boolean =
             scope.lookup(tr.typeName).exists {
-              case (_:  ClassTree, _)     => true
+              case (_: ClassTree, _)      => true
               case (ta: TypeAliasTree, _) => canRewrite(inLib, ta, scope).isDefined
-              case _ => false
+              case _                      => false
             }
 
           val InLibrary: PartialFunction[TypeRef, TypeRef] = {
@@ -258,7 +259,7 @@ object UnionToInheritance {
           case (_, Some(idx)) => TypeRef(tparams(idx).name)
           case (_, None)      => TypeRef.Any
         },
-        NoComments,
+        NoComments
       )
   }
 

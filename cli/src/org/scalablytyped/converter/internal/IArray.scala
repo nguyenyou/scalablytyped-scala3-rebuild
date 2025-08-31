@@ -1,12 +1,16 @@
 package org.scalablytyped.converter.internal
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 import org.scalablytyped.converter.internal.IArray.fromArrayAndSize
 
 import java.util
-import scala.collection.immutable.{Range, SortedSet}
-import scala.collection.mutable.ArraySeq.ofRef
-import scala.collection.{IterableOnce, Iterator, immutable, mutable}
+import scala.collection.IterableOnce
+import scala.collection.Iterator
+import scala.collection.immutable
+import scala.collection.immutable.Range
+import scala.collection.immutable.SortedSet
+import scala.collection.mutable
 
 object IArray {
   implicit def IArrayEncoder[T <: AnyRef: Encoder]: Encoder[IArray[T]] =
@@ -32,8 +36,8 @@ object IArray {
 
   def apply[A <: AnyRef](as: A*): IArray[A] =
     as match {
-      case x: mutable.ArraySeq[A]   => fromTraversable(x)
-      case x: IterableOnce[A]       => fromTraversable(x)
+      case x: mutable.ArraySeq[A] => fromTraversable(x)
+      case x: IterableOnce[A]     => fromTraversable(x)
     }
 
   def fromOption[A <: AnyRef](oa: Option[A]): IArray[A] =
@@ -92,7 +96,7 @@ object IArray {
   }
 
   object Builder {
-    def empty[A <: AnyRef]: Builder[A] = new Builder[A](32)
+    def empty[A <: AnyRef]: Builder[A]                       = new Builder[A](32)
     def empty[A <: AnyRef](initialCapacity: Int): Builder[A] = new Builder[A](initialCapacity)
 
     def apply[A <: AnyRef](as: IArray[A], initialCapacity: Int): Builder[A] = {
@@ -217,13 +221,13 @@ object IArray {
 
       (
         fromArrayAndSize[A1](a1s, a1num),
-        fromArrayAndSize[A](rest, restnum),
+        fromArrayAndSize[A](rest, restnum)
       )
     }
 
     def partitionCollect2[A1 <: AnyRef, A2 <: AnyRef](
         t1: PartialFunction[A, A1],
-        t2: PartialFunction[A, A2],
+        t2: PartialFunction[A, A2]
     ): (IArray[A1], IArray[A2], IArray[A]) = {
       val a1s     = Array.ofDim[AnyRef](as.length)
       var a1num   = 0
@@ -251,14 +255,14 @@ object IArray {
       (
         fromArrayAndSize[A1](a1s, a1num),
         fromArrayAndSize[A2](a2s, a2num),
-        fromArrayAndSize[A](rest, restnum),
+        fromArrayAndSize[A](rest, restnum)
       )
     }
 
     def partitionCollect3[A1 <: AnyRef, A2 <: AnyRef, A3 <: AnyRef](
         t1: PartialFunction[A, A1],
         t2: PartialFunction[A, A2],
-        t3: PartialFunction[A, A3],
+        t3: PartialFunction[A, A3]
     ): (IArray[A1], IArray[A2], IArray[A3], IArray[A]) = {
       val a1s     = Array.ofDim[AnyRef](as.length)
       var a1num   = 0
@@ -292,7 +296,7 @@ object IArray {
         fromArrayAndSize[A1](a1s, a1num),
         fromArrayAndSize[A2](a2s, a2num),
         fromArrayAndSize[A3](a3s, a3num),
-        fromArrayAndSize[A](rest, restnum),
+        fromArrayAndSize[A](rest, restnum)
       )
     }
 
@@ -300,7 +304,7 @@ object IArray {
         t1: PartialFunction[A, A1],
         t2: PartialFunction[A, A2],
         t3: PartialFunction[A, A3],
-        t4: PartialFunction[A, A4],
+        t4: PartialFunction[A, A4]
     ): (IArray[A1], IArray[A2], IArray[A3], IArray[A4], IArray[A]) = {
       val a1s     = Array.ofDim[AnyRef](as.length)
       var a1num   = 0
@@ -340,7 +344,7 @@ object IArray {
         fromArrayAndSize[A2](a2s, a2num),
         fromArrayAndSize[A3](a3s, a3num),
         fromArrayAndSize[A4](a4s, a4num),
-        fromArrayAndSize[A](rest, restnum),
+        fromArrayAndSize[A](rest, restnum)
       )
     }
 
@@ -349,7 +353,7 @@ object IArray {
         t2: PartialFunction[A, A2],
         t3: PartialFunction[A, A3],
         t4: PartialFunction[A, A4],
-        t5: PartialFunction[A, A5],
+        t5: PartialFunction[A, A5]
     ): (IArray[A1], IArray[A2], IArray[A3], IArray[A4], IArray[A5], IArray[A]) = {
       val a1s     = Array.ofDim[AnyRef](as.length)
       var a1num   = 0
@@ -395,7 +399,7 @@ object IArray {
         fromArrayAndSize[A3](a3s, a3num),
         fromArrayAndSize[A4](a4s, a4num),
         fromArrayAndSize[A5](a5s, a5num),
-        fromArrayAndSize[A](rest, restnum),
+        fromArrayAndSize[A](rest, restnum)
       )
     }
 
@@ -501,7 +505,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
     var o   = 0
     while (i < length) {
       val bs: IArray[B] = nested(i)
-      var j = 0
+      var j             = 0
       while (j < bs.length) {
         ret(o) = bs(j)
         j += 1
@@ -526,7 +530,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   @inline def reduce[A1 >: A](op: (A1, A1) => A1): A1 = {
     if (isEmpty) sys.error("reduce on empty list")
     var ret: A1 = apply(0)
-    var idx = 1
+    var idx     = 1
     while (idx < length) {
       ret = op(ret, apply(idx))
       idx += 1
@@ -704,7 +708,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
       fromArrayAndSize[A](ret, newLength)
     }
 
-  //prepend
+  // prepend
   def +:[B >: A <: AnyRef](elem: B): IArray[B] = {
     val newLength = length + 1
     val ret       = Array.ofDim[AnyRef](newLength)
@@ -713,7 +717,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
     fromArrayAndSize[B](ret, newLength)
   }
 
-  //append
+  // append
   def :+[B >: A <: AnyRef](elem: B): IArray[B] = {
     val newLength = length + 1
     val ret       = Array.ofDim[AnyRef](newLength)
@@ -841,7 +845,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   }
 
   def iterator: Iterator[A] = new Iterator[A] {
-    var idx = 0
+    var idx                       = 0
     override def hasNext: Boolean = idx < self.length
 
     override def next(): A = {
@@ -880,16 +884,16 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
   @inline def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): A = {
     if (isEmpty) sys.error("maxBy on empty IArray")
 
-    var maxF:    B = null.asInstanceOf[B]
+    var maxF: B    = null.asInstanceOf[B]
     var maxElem: A = null.asInstanceOf[A]
-    var first = true
+    var first      = true
 
     for (elem <- this) {
       val fx = f(elem)
       if (first || cmp.gt(fx, maxF)) {
         maxElem = elem
-        maxF    = fx
-        first   = false
+        maxF = fx
+        first = false
       }
     }
     maxElem

@@ -3,11 +3,11 @@ package ts
 
 import org.scalablytyped.converter.internal.ts.CodePath.NoPath
 
-/**
-  * @deprecated this presumes that parents can always be `IArray[InterfaceOrClass]`.
+/** @deprecated
+  *   this presumes that parents can always be `IArray[InterfaceOrClass]`.
   *
-  * Once we factor in type aliases with arbitrary type manipulations that is hardly true,
-  *  so we'll need a much better approach here
+  * Once we factor in type aliases with arbitrary type manipulations that is hardly true, so we'll need a much better
+  * approach here
   */
 object ParentsResolver {
   type InterfaceOrClass = TsTree with HasClassMembers
@@ -59,7 +59,7 @@ object ParentsResolver {
                   Empty,
                   Empty,
                   x.members,
-                  NoPath,
+                  NoPath
                 )
               case TsTypeUnion(types) =>
                 types.foreach {
@@ -85,11 +85,11 @@ object ParentsResolver {
         tree match {
           case x: TsDeclInterface => x.inheritance
           case x: TsDeclClass     => IArray.fromOption(x.parent) ++ x.implements
-          case _ => Empty
+          case _                  => Empty
         }
 
-      parentRefs.foreach {
-        case TsTypeRef(_, tpe, targs) => innerRecurse(scope, tpe, targs)
+      parentRefs.foreach { case TsTypeRef(_, tpe, targs) =>
+        innerRecurse(scope, tpe, targs)
       }
     }
 

@@ -1,13 +1,13 @@
 package org.scalablytyped.converter.internal
 package importer
 
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.QualifiedName
+import org.scalablytyped.converter.internal.scalajs.ScalaJsClasses
 import org.scalablytyped.converter.internal.scalajs.transforms.CleanIllegalNames
-import org.scalablytyped.converter.internal.scalajs.{Name, QualifiedName, ScalaJsClasses}
-import org.scalablytyped.converter.internal.stringUtils.{
-  joinCamelCase,
-  toCamelCase
-}
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.stringUtils.joinCamelCase
+import org.scalablytyped.converter.internal.stringUtils.toCamelCase
+import org.scalablytyped.converter.internal.ts.*
 
 import scala.collection.mutable
 
@@ -19,7 +19,7 @@ final class AdaptiveNamingImport(private val rewrites: Map[IArray[TsIdent], Qual
     qident match {
       /* hack/shortcut: all qualified idents are fully qualified, which means only abstract things should have length one */
       case TsQIdent(IArray.exactlyOne(one: TsIdentSimple)) => QualifiedName(IArray(ImportName(one)))
-      case TsQIdent(parts) if rewrites.contains(parts) => rewrites(parts)
+      case TsQIdent(parts) if rewrites.contains(parts)     => rewrites(parts)
       /* this branch is mostly for enum members now, which don't have codepaths */
       case TsQIdent(IArray.initLast(parent, current: TsIdentSimple)) => rewrites(parent) + ImportName(current)
     }
@@ -30,12 +30,12 @@ final class AdaptiveNamingImport(private val rewrites: Map[IArray[TsIdent], Qual
 
 object AdaptiveNamingImport {
   def apply(
-      outputPkg:                Name,
-      libraryName:              TsIdentLibrary,
-      library:                  TsParsedFile,
-      depsRewrites:             IArray[AdaptiveNamingImport],
-      cleanIllegalNames:        CleanIllegalNames,
-      useDeprecatedModuleNames: Boolean,
+      outputPkg: Name,
+      libraryName: TsIdentLibrary,
+      library: TsParsedFile,
+      depsRewrites: IArray[AdaptiveNamingImport],
+      cleanIllegalNames: CleanIllegalNames,
+      useDeprecatedModuleNames: Boolean
   ): AdaptiveNamingImport = {
     val allReferences: IArray[IArray[TsIdent]] =
       TsTreeTraverse
@@ -69,7 +69,7 @@ object AdaptiveNamingImport {
           parent.exists(_.isInstanceOf[TsIdentModule]),
           parent.collectFirst { case x: TsIdentLibrary => x },
           illegalNames,
-          useDeprecatedModuleNames,
+          useDeprecatedModuleNames
         )
         var continue = true
         val iter     = variants.iterator
@@ -99,11 +99,11 @@ object AdaptiveNamingImport {
   }
 
   def variantsFor(
-      tsIdent:                  TsIdent,
-      hasModuleParent:          Boolean,
-      inLib:                    Option[TsIdentLibrary],
-      illegalNames:             Set[String],
-      useDeprecatedModuleNames: Boolean,
+      tsIdent: TsIdent,
+      hasModuleParent: Boolean,
+      inLib: Option[TsIdentLibrary],
+      illegalNames: Set[String],
+      useDeprecatedModuleNames: Boolean
   ): Stream[String] = {
     val base = tsIdent match {
       case TsIdent.namespaced                          => Stream(Name.namespaced.unescaped)
@@ -152,7 +152,7 @@ object AdaptiveNamingImport {
         Stream(addMod(joinCamelCase(shortenedFragments.map(toCamelCase))))
 
       case library: TsIdentLibrary => variantsForLibName(library)
-      case _:       TsIdentImport  => sys.error("unexpected")
+      case _: TsIdentImport        => sys.error("unexpected")
     }
 
     base #::: base.map(_ + "_") #::: base.map(_ + "__")
@@ -165,10 +165,8 @@ object AdaptiveNamingImport {
     case nonEmpty => nonEmpty + "Mod"
   }
 
-  /**
-    * The point of preferring lowercase is to choose values before types.
-    * `interface Console{}; declare console: Console` should become
-    * `interface Console_{}; declare console: Console_`
+  /** The point of preferring lowercase is to choose values before types. `interface Console{}; declare console:
+    * Console` should become `interface Console_{}; declare console: Console_`
     */
   private val ShortestAndLowercaseFirst: Ordering[IArray[TsIdent]] =
     new Ordering[IArray[TsIdent]] {

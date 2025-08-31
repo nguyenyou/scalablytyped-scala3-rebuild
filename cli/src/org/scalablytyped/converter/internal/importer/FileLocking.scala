@@ -2,16 +2,18 @@ package org.scalablytyped.converter.internal
 package importer
 
 import org.scalablytyped.converter.internal.logging.Logger
-import java.io._
+
+import java.io.*
 import java.nio.ByteBuffer
-import java.nio.channels.{FileChannel, OverlappingFileLockException}
-import java.nio.file.{
-  FileAlreadyExistsException,
-  Files,
-  Path,
-  StandardOpenOption
-}
-import scala.util.{Failure, Success, Try}
+import java.nio.channels.FileChannel
+import java.nio.channels.OverlappingFileLockException
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 object FileLocking {
 
@@ -67,11 +69,14 @@ object FileLocking {
     withLock(path) { channel =>
       val size = channel.size
       if (size > 0) {
-        onExists(channel, () => {
-          val contents = ByteBuffer.allocate(size.toInt)
-          channel.read(contents)
-          contents
-        })
+        onExists(
+          channel,
+          () => {
+            val contents = ByteBuffer.allocate(size.toInt)
+            channel.read(contents)
+            contents
+          }
+        )
       } else {
         onNotExists(channel)
       }

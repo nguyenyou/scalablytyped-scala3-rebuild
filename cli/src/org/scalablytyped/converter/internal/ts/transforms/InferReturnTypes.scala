@@ -17,13 +17,13 @@ object InferReturnTypes extends TreeTransformationScopedChanges {
             descendant.membersByName.get(x.name).flatMap { sameNames =>
               sameNames.collectFirst {
                 case TsMemberFunction(
-                    _,
-                    _,
-                    _,
-                    MethodType.Normal,
-                    TsFunSig(_, _, thoseParams, Some(resultType)),
-                    _,
-                    _,
+                      _,
+                      _,
+                      _,
+                      MethodType.Normal,
+                      TsFunSig(_, _, thoseParams, Some(resultType)),
+                      _,
+                      _
                     ) if thoseParams.length === params.length =>
                   x.copy(signature = x.signature.copy(resultType = Some(resultType)))
               }
@@ -32,10 +32,10 @@ object InferReturnTypes extends TreeTransformationScopedChanges {
 
         rewrittenOpt match {
           case Some(rewritten) =>
-            scope.logger.debug(s"Inferred return type")
+            scope.logger.debug("Inferred return type")
             rewritten
           case None =>
-            scope.logger.info(s"Could not infer return type")
+            scope.logger.info("Could not infer return type")
             x
         }
       case _ => x

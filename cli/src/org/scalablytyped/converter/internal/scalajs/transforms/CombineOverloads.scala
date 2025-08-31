@@ -2,37 +2,35 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
 
-
-/**
-  * The scala compiler inherits erasure by the JVM, which is not a problem in javascript.
-  * All the overloads we present in typed languages are all backed by one implementation anyway.
+/** The scala compiler inherits erasure by the JVM, which is not a problem in javascript. All the overloads we present
+  * in typed languages are all backed by one implementation anyway.
   *
-  * What we do here is we group methods by what is considered equal types after erasure, and
-  *  combine the parameters with union types.
+  * What we do here is we group methods by what is considered equal types after erasure, and combine the parameters with
+  * union types.
   *
-  * We also detect conflicts (same method with different type parameter sets, non-compatible return types),
-  *  and rename methods when needed.
+  * We also detect conflicts (same method with different type parameter sets, non-compatible return types), and rename
+  * methods when needed.
   */
 class CombineOverloads(erasure: Erasure) extends TreeTransformation {
 
   override def leaveClassTree(scope: TreeScope)(s: ClassTree): ClassTree = {
     val (methods, fields, Empty) = s.members.partitionCollect2(
       { case x: MethodTree => x },
-      { case x: FieldTree  => x },
+      { case x: FieldTree => x }
     )
 
     s.copy(
-      ctors   = ctorHack(scope, s.ctors),
-      members = combineOverloads(scope, methods) ++ unifyFields(fields),
+      ctors = ctorHack(scope, s.ctors),
+      members = combineOverloads(scope, methods) ++ unifyFields(fields)
     )
   }
 
   override def leaveModuleTree(scope: TreeScope)(s: ModuleTree): ModuleTree = {
     val (methods, fields, rest) = s.members.partitionCollect2(
       { case x: MethodTree => x },
-      { case x: FieldTree  => x },
+      { case x: FieldTree => x }
     )
 
     s.copy(members = rest ++ unifyFields(fields) ++ combineOverloads(scope, methods))
@@ -41,35 +39,33 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
   override def leavePackageTree(scope: TreeScope)(s: PackageTree): PackageTree = {
     val (methods, fields, rest) = s.members.partitionCollect2(
       { case x: MethodTree => x },
-      { case x: FieldTree  => x },
+      { case x: FieldTree => x }
     )
     s.copy(members = rest ++ unifyFields(fields) ++ combineOverloads(scope, methods))
   }
 
   private def combineSameErasureSameTypeParams(
-      methods:      IArray[MethodTree],
-      renameSuffix: Option[Suffix],
+      methods: IArray[MethodTree],
+      renameSuffix: Option[Suffix]
   ): MethodTree = {
     if (methods.map(_.params.map(_.length: Integer)).toSet.size =/= 1) {
       sys.error("Methods do not have same shape: " + methods)
     }
 
     val newParamss: IArray[IArray[ParamTree]] =
-      methods.head.params.zipWithIndex.map {
-        case (params, i) =>
-          params.zipWithIndex.map {
-            case (param, j) =>
-              param.copy(tpe = asUnionType(methods.map(_.params(i)(j).tpe)))
-          }
+      methods.head.params.zipWithIndex.map { case (params, i) =>
+        params.zipWithIndex.map { case (param, j) =>
+          param.copy(tpe = asUnionType(methods.map(_.params(i)(j).tpe)))
+        }
       }
 
     val combined = methods.head.copy(
-      params   = newParamss,
-      comments = Comments.flatten(methods)(_.comments),
+      params = newParamss,
+      comments = Comments.flatten(methods)(_.comments)
     )
 
-    renameSuffix.foldLeft(combined) {
-      case (ret, suffix) => ret.withSuffix(suffix)
+    renameSuffix.foldLeft(combined) { case (ret, suffix) =>
+      ret.withSuffix(suffix)
     }
   }
 
@@ -89,7 +85,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
         .mapNotNone {
           case (_, methods) if methods.head.name === Name.APPLY || methods.head.name === Name.namespaced =>
             scope.logger.info(
-              s"Dropping ${methods.length} incompatible `apply` overloads (have no way to express this) at $scope",
+              s"Dropping ${methods.length} incompatible `apply` overloads (have no way to express this) at $scope"
             )
             None
           case ((tparamNames, retType), methods) =>
@@ -125,7 +121,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
         TypeRef.Union(
           types.groupBy(_.typeName).mapToIArray { case (_, v) => asUnionType(v) },
           NoComments,
-          sort = true,
+          sort = true
         )
     }
 
@@ -159,8 +155,7 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
     if (newMethods.length =/= methods.length) combineOverloads(scope, newMethods) else newMethods
   }
 
-  /**
-    * Ctors are methods...ish. This was easier than refactoring
+  /** Ctors are methods...ish. This was easier than refactoring
     */
   def ctorHack(scope: TreeScope, members: IArray[CtorTree]): IArray[CtorTree] = {
     val asMethods: IArray[MethodTree] =
@@ -176,13 +171,12 @@ class CombineOverloads(erasure: Erasure) extends TreeTransformation {
           isOverride = false,
           ctor.comments,
           QualifiedName(IArray.Empty),
-          isImplicit = false,
+          isImplicit = false
         ),
       )
     val ret = combineOverloads(scope, asMethods)
-    ret.map {
-      case MethodTree(_, level, _, _, params, _, _, _, comments, _, _) =>
-        CtorTree(level, params.head, comments)
+    ret.map { case MethodTree(_, level, _, _, params, _, _, _, comments, _, _) =>
+      CtorTree(level, params.head, comments)
     }
   }
 

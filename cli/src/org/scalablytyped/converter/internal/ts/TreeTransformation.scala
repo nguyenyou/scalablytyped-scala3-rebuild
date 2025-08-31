@@ -5,88 +5,88 @@ package ts
 trait TreeTransformation[T] { self =>
   def withTree(t: T, tree: TsTree): T
 
-  def enterTsDeclClass(t:            T)(x: TsDeclClass):             TsDeclClass             = x
-  def enterTsDeclEnum(t:             T)(x: TsDeclEnum):              TsDeclEnum              = x
-  def enterTsDeclFunction(t:         T)(x: TsDeclFunction):          TsDeclFunction          = x
-  def enterTsGlobal(t:               T)(x: TsGlobal):                TsGlobal                = x
-  def enterTsDeclInterface(t:        T)(x: TsDeclInterface):         TsDeclInterface         = x
-  def enterTsDeclModule(t:           T)(x: TsDeclModule):            TsDeclModule            = x
-  def enterTsAugmentedModule(t:      T)(x: TsAugmentedModule):       TsAugmentedModule       = x
-  def enterTsDeclNamespace(t:        T)(x: TsDeclNamespace):         TsDeclNamespace         = x
-  def enterTsDeclTypeAlias(t:        T)(x: TsDeclTypeAlias):         TsDeclTypeAlias         = x
-  def enterTsDeclVar(t:              T)(x: TsDeclVar):               TsDeclVar               = x
-  def enterTsEnumMember(t:           T)(x: TsEnumMember):            TsEnumMember            = x
-  def enterTsExportAsNamespace(t:    T)(x: TsExportAsNamespace):     TsExportAsNamespace     = x
-  def enterTsExporteeNames(t:        T)(x: TsExportee.Names):        TsExportee.Names        = x
-  def enterTsExporteeStar(t:         T)(x: TsExportee.Star):         TsExportee.Star         = x
-  def enterTsExporteeTree(t:         T)(x: TsExportee.Tree):         TsExportee.Tree         = x
-  def enterTsExport(t:               T)(x: TsExport):                TsExport                = x
-  def enterTsFunParam(t:             T)(x: TsFunParam):              TsFunParam              = x
-  def enterTsFunSig(t:               T)(x: TsFunSig):                TsFunSig                = x
+  def enterTsDeclClass(t: T)(x: TsDeclClass): TsDeclClass                                    = x
+  def enterTsDeclEnum(t: T)(x: TsDeclEnum): TsDeclEnum                                       = x
+  def enterTsDeclFunction(t: T)(x: TsDeclFunction): TsDeclFunction                           = x
+  def enterTsGlobal(t: T)(x: TsGlobal): TsGlobal                                             = x
+  def enterTsDeclInterface(t: T)(x: TsDeclInterface): TsDeclInterface                        = x
+  def enterTsDeclModule(t: T)(x: TsDeclModule): TsDeclModule                                 = x
+  def enterTsAugmentedModule(t: T)(x: TsAugmentedModule): TsAugmentedModule                  = x
+  def enterTsDeclNamespace(t: T)(x: TsDeclNamespace): TsDeclNamespace                        = x
+  def enterTsDeclTypeAlias(t: T)(x: TsDeclTypeAlias): TsDeclTypeAlias                        = x
+  def enterTsDeclVar(t: T)(x: TsDeclVar): TsDeclVar                                          = x
+  def enterTsEnumMember(t: T)(x: TsEnumMember): TsEnumMember                                 = x
+  def enterTsExportAsNamespace(t: T)(x: TsExportAsNamespace): TsExportAsNamespace            = x
+  def enterTsExporteeNames(t: T)(x: TsExportee.Names): TsExportee.Names                      = x
+  def enterTsExporteeStar(t: T)(x: TsExportee.Star): TsExportee.Star                         = x
+  def enterTsExporteeTree(t: T)(x: TsExportee.Tree): TsExportee.Tree                         = x
+  def enterTsExport(t: T)(x: TsExport): TsExport                                             = x
+  def enterTsFunParam(t: T)(x: TsFunParam): TsFunParam                                       = x
+  def enterTsFunSig(t: T)(x: TsFunSig): TsFunSig                                             = x
   def enterTsImportedDestructured(t: T)(x: TsImported.Destructured): TsImported.Destructured = x
-  def enterTsImportedIdent(t:        T)(x: TsImported.Ident):        TsImported.Ident        = x
-  def enterTsImportedStar(t:         T)(x: TsImported.Star):         TsImported.Star         = x
-  def enterTsImporteeFrom(t:         T)(x: TsImportee.From):         TsImportee.From         = x
-  def enterTsImporteeLocal(t:        T)(x: TsImportee.Local):        TsImportee.Local        = x
-  def enterTsImporteeRequired(t:     T)(x: TsImportee.Required):     TsImportee.Required     = x
-  def enterTsImport(t:               T)(x: TsImport):                TsImport                = x
-  def enterTsLiteralBoolean(t:       T)(x: TsLiteral.Bool):          TsLiteral.Bool          = x
-  def enterTsLiteralNumber(t:        T)(x: TsLiteral.Num):           TsLiteral.Num           = x
-  def enterTsLiteralString(t:        T)(x: TsLiteral.Str):           TsLiteral.Str           = x
-  def enterTsMemberCall(t:           T)(x: TsMemberCall):            TsMemberCall            = x
-  def enterTsMemberCtor(t:           T)(x: TsMemberCtor):            TsMemberCtor            = x
-  def enterTsMemberFunction(t:       T)(x: TsMemberFunction):        TsMemberFunction        = x
-  def enterTsMemberIndex(t:          T)(x: TsMemberIndex):           TsMemberIndex           = x
-  def enterTsMemberProperty(t:       T)(x: TsMemberProperty):        TsMemberProperty        = x
-  def enterTsMemberTypeMapped(t:     T)(x: TsMemberTypeMapped):      TsMemberTypeMapped      = x
-  def enterTsParsedFile(t:           T)(x: TsParsedFile):            TsParsedFile            = x
-  def enterTsQIdent(t:               T)(x: TsQIdent):                TsQIdent                = x
-  def enterTsTypeAsserts(t:          T)(x: TsTypeAsserts):           TsTypeAsserts           = x
-  def enterTsTypeConstructor(t:      T)(x: TsTypeConstructor):       TsTypeConstructor       = x
-  def enterTsTypeConditional(t:      T)(x: TsTypeConditional):       TsTypeConditional       = x
-  def enterTsTypeExtends(t:          T)(x: TsTypeExtends):           TsTypeExtends           = x
-  def enterTsTypeFunction(t:         T)(x: TsTypeFunction):          TsTypeFunction          = x
-  def enterTsTypeKeyOf(t:            T)(x: TsTypeKeyOf):             TsTypeKeyOf             = x
-  def enterTsTypeIntersect(t:        T)(x: TsTypeIntersect):         TsTypeIntersect         = x
-  def enterTsTypeIs(t:               T)(x: TsTypeIs):                TsTypeIs                = x
-  def enterTsTypeInfer(t:            T)(x: TsTypeInfer):             TsTypeInfer             = x
-  def enterTsTypeLiteral(t:          T)(x: TsTypeLiteral):           TsTypeLiteral           = x
-  def enterTsTypeLookup(t:           T)(x: TsTypeLookup):            TsTypeLookup            = x
-  def enterTsTypeObject(t:           T)(x: TsTypeObject):            TsTypeObject            = x
-  def enterTsTypeParam(t:            T)(x: TsTypeParam):             TsTypeParam             = x
-  def enterTsTypeQuery(t:            T)(x: TsTypeQuery):             TsTypeQuery             = x
-  def enterTsTypeRef(t:              T)(x: TsTypeRef):               TsTypeRef               = x
-  def enterTsTypeRepeated(t:         T)(x: TsTypeRepeated):          TsTypeRepeated          = x
-  def enterTsTypeThis(t:             T)(x: TsTypeThis):              TsTypeThis              = x
-  def enterTsTypeTuple(t:            T)(x: TsTypeTuple):             TsTypeTuple             = x
-  def enterTsTypeUnion(t:            T)(x: TsTypeUnion):             TsTypeUnion             = x
-  def enterIndexingDict(t:           T)(x: Indexing.Dict):           Indexing.Dict           = x
-  def enterIndexingSingle(t:         T)(x: Indexing.Single):         Indexing.Single         = x
+  def enterTsImportedIdent(t: T)(x: TsImported.Ident): TsImported.Ident                      = x
+  def enterTsImportedStar(t: T)(x: TsImported.Star): TsImported.Star                         = x
+  def enterTsImporteeFrom(t: T)(x: TsImportee.From): TsImportee.From                         = x
+  def enterTsImporteeLocal(t: T)(x: TsImportee.Local): TsImportee.Local                      = x
+  def enterTsImporteeRequired(t: T)(x: TsImportee.Required): TsImportee.Required             = x
+  def enterTsImport(t: T)(x: TsImport): TsImport                                             = x
+  def enterTsLiteralBoolean(t: T)(x: TsLiteral.Bool): TsLiteral.Bool                         = x
+  def enterTsLiteralNumber(t: T)(x: TsLiteral.Num): TsLiteral.Num                            = x
+  def enterTsLiteralString(t: T)(x: TsLiteral.Str): TsLiteral.Str                            = x
+  def enterTsMemberCall(t: T)(x: TsMemberCall): TsMemberCall                                 = x
+  def enterTsMemberCtor(t: T)(x: TsMemberCtor): TsMemberCtor                                 = x
+  def enterTsMemberFunction(t: T)(x: TsMemberFunction): TsMemberFunction                     = x
+  def enterTsMemberIndex(t: T)(x: TsMemberIndex): TsMemberIndex                              = x
+  def enterTsMemberProperty(t: T)(x: TsMemberProperty): TsMemberProperty                     = x
+  def enterTsMemberTypeMapped(t: T)(x: TsMemberTypeMapped): TsMemberTypeMapped               = x
+  def enterTsParsedFile(t: T)(x: TsParsedFile): TsParsedFile                                 = x
+  def enterTsQIdent(t: T)(x: TsQIdent): TsQIdent                                             = x
+  def enterTsTypeAsserts(t: T)(x: TsTypeAsserts): TsTypeAsserts                              = x
+  def enterTsTypeConstructor(t: T)(x: TsTypeConstructor): TsTypeConstructor                  = x
+  def enterTsTypeConditional(t: T)(x: TsTypeConditional): TsTypeConditional                  = x
+  def enterTsTypeExtends(t: T)(x: TsTypeExtends): TsTypeExtends                              = x
+  def enterTsTypeFunction(t: T)(x: TsTypeFunction): TsTypeFunction                           = x
+  def enterTsTypeKeyOf(t: T)(x: TsTypeKeyOf): TsTypeKeyOf                                    = x
+  def enterTsTypeIntersect(t: T)(x: TsTypeIntersect): TsTypeIntersect                        = x
+  def enterTsTypeIs(t: T)(x: TsTypeIs): TsTypeIs                                             = x
+  def enterTsTypeInfer(t: T)(x: TsTypeInfer): TsTypeInfer                                    = x
+  def enterTsTypeLiteral(t: T)(x: TsTypeLiteral): TsTypeLiteral                              = x
+  def enterTsTypeLookup(t: T)(x: TsTypeLookup): TsTypeLookup                                 = x
+  def enterTsTypeObject(t: T)(x: TsTypeObject): TsTypeObject                                 = x
+  def enterTsTypeParam(t: T)(x: TsTypeParam): TsTypeParam                                    = x
+  def enterTsTypeQuery(t: T)(x: TsTypeQuery): TsTypeQuery                                    = x
+  def enterTsTypeRef(t: T)(x: TsTypeRef): TsTypeRef                                          = x
+  def enterTsTypeRepeated(t: T)(x: TsTypeRepeated): TsTypeRepeated                           = x
+  def enterTsTypeThis(t: T)(x: TsTypeThis): TsTypeThis                                       = x
+  def enterTsTypeTuple(t: T)(x: TsTypeTuple): TsTypeTuple                                    = x
+  def enterTsTypeUnion(t: T)(x: TsTypeUnion): TsTypeUnion                                    = x
+  def enterIndexingDict(t: T)(x: Indexing.Dict): Indexing.Dict                               = x
+  def enterIndexingSingle(t: T)(x: Indexing.Single): Indexing.Single                         = x
 
-  def enterTsTree(t:            T)(x: TsTree):            TsTree            = x
-  def enterTsDecl(t:            T)(x: TsDecl):            TsDecl            = x
-  def enterTsNamedDecl(t:       T)(x: TsNamedDecl):       TsNamedDecl       = x
-  def enterTsContainer(t:       T)(x: TsContainer):       TsContainer       = x
+  def enterTsTree(t: T)(x: TsTree): TsTree                                  = x
+  def enterTsDecl(t: T)(x: TsDecl): TsDecl                                  = x
+  def enterTsNamedDecl(t: T)(x: TsNamedDecl): TsNamedDecl                   = x
+  def enterTsContainer(t: T)(x: TsContainer): TsContainer                   = x
   def enterTsContainerOrDecl(t: T)(x: TsContainerOrDecl): TsContainerOrDecl = x
-  def enterTsLiteral(t:         T)(x: TsLiteral):         TsLiteral         = x
-  def enterTsType(t:            T)(x: TsType):            TsType            = x
-  def enterTsMember(t:          T)(x: TsMember):          TsMember          = x
-  def enterTsImported(t:        T)(x: TsImported):        TsImported        = x
-  def enterTsImportee(t:        T)(x: TsImportee):        TsImportee        = x
-  def enterTsExportee(t:        T)(x: TsExportee):        TsExportee        = x
-  def enterIndexing(t:          T)(x: Indexing):          Indexing          = x
+  def enterTsLiteral(t: T)(x: TsLiteral): TsLiteral                         = x
+  def enterTsType(t: T)(x: TsType): TsType                                  = x
+  def enterTsMember(t: T)(x: TsMember): TsMember                            = x
+  def enterTsImported(t: T)(x: TsImported): TsImported                      = x
+  def enterTsImportee(t: T)(x: TsImportee): TsImportee                      = x
+  def enterTsExportee(t: T)(x: TsExportee): TsExportee                      = x
+  def enterIndexing(t: T)(x: Indexing): Indexing                            = x
 
-  //lazy
-  def leaveTsParsedFile(t:      T)(x: TsParsedFile):      TsParsedFile      = x
-  def leaveTsDeclModule(t:      T)(x: TsDeclModule):      TsDeclModule      = x
-  def leaveTsDeclClass(t:       T)(x: TsDeclClass):       TsDeclClass       = x
-  def leaveTsDeclInterface(t:   T)(x: TsDeclInterface):   TsDeclInterface   = x
+  // lazy
+  def leaveTsParsedFile(t: T)(x: TsParsedFile): TsParsedFile                = x
+  def leaveTsDeclModule(t: T)(x: TsDeclModule): TsDeclModule                = x
+  def leaveTsDeclClass(t: T)(x: TsDeclClass): TsDeclClass                   = x
+  def leaveTsDeclInterface(t: T)(x: TsDeclInterface): TsDeclInterface       = x
   def leaveTsAugmentedModule(t: T)(x: TsAugmentedModule): TsAugmentedModule = x
-  def leaveTsDeclNamespace(t:   T)(x: TsDeclNamespace):   TsDeclNamespace   = x
-  def leaveTsGlobal(t:          T)(x: TsGlobal):          TsGlobal          = x
-  def leaveTsType(t:            T)(x: TsType):            TsType            = x
-  def leaveTsTypeRef(t:         T)(x: TsTypeRef):         TsTypeRef         = x
-  def leaveTsTypeObject(t:      T)(x: TsTypeObject):      TsTypeObject      = x
+  def leaveTsDeclNamespace(t: T)(x: TsDeclNamespace): TsDeclNamespace       = x
+  def leaveTsGlobal(t: T)(x: TsGlobal): TsGlobal                            = x
+  def leaveTsType(t: T)(x: TsType): TsType                                  = x
+  def leaveTsTypeRef(t: T)(x: TsTypeRef): TsTypeRef                         = x
+  def leaveTsTypeObject(t: T)(x: TsTypeObject): TsTypeObject                = x
 
   final def visitTsDeclClass(t: T)(x: TsDeclClass): TsDeclClass = {
     val xx = enterTsDeclClass(withTree(t, x))(x)
@@ -103,7 +103,7 @@ trait TreeTransformation[T] { self =>
           _7.map(visitTsTypeRef(tt)),
           _8.map(visitTsMember(tt)),
           _9,
-          _10,
+          _10
         )
     }
     leaveTsDeclClass(tt)(xxx)
@@ -145,7 +145,7 @@ trait TreeTransformation[T] { self =>
           _4.map(visitTsTypeParam(tt)),
           _5.map(visitTsTypeRef(tt)),
           _6.map(visitTsMember(tt)),
-          _7,
+          _7
         )
     }
     leaveTsDeclInterface(tt)(xxx)
@@ -330,7 +330,7 @@ trait TreeTransformation[T] { self =>
           visitTsType(tt)(_5),
           _6.map(visitTsType(tt)),
           _7,
-          visitTsType(tt)(_8),
+          visitTsType(tt)(_8)
         )
     }
   }

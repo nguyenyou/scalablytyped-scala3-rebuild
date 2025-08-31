@@ -1,30 +1,32 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.importer.LibTsSource.{FromFolder, StdLibSource}
-import org.scalablytyped.converter.internal.seqs._
-import org.scalablytyped.converter.internal.ts.{TsIdent, TsIdentLibrary}
+import org.scalablytyped.converter.internal.importer.LibTsSource.FromFolder
+import org.scalablytyped.converter.internal.importer.LibTsSource.StdLibSource
+import org.scalablytyped.converter.internal.seqs.*
+import org.scalablytyped.converter.internal.ts.TsIdent
+import org.scalablytyped.converter.internal.ts.TsIdentLibrary
 
 import scala.collection.immutable.SortedSet
 
 object Bootstrap {
 
-  /**
-    * At this point we have scanned node_modules (and DT, if in CI) and know the location ([[LibTsSource]])
-    *  of all libraries it's possible to import.
+  /** At this point we have scanned node_modules (and DT, if in CI) and know the location ([[LibTsSource]]) of all
+    * libraries it's possible to import.
     *
-    * @param initialLibs determines if all the libraries explicitly wanted by the user were available
+    * @param initialLibs
+    *   determines if all the libraries explicitly wanted by the user were available
     */
   case class Bootstrapped(
-      inputFolders:    IArray[InFolder],
+      inputFolders: IArray[InFolder],
       libraryResolver: LibraryResolver,
-      initialLibs:     Either[Unresolved, Vector[LibTsSource]],
+      initialLibs: Either[Unresolved, Vector[LibTsSource]]
   )
 
   def fromNodeModules(
       fromFolder: InFolder,
       conversion: ConversionOptions,
-      wantedLibs: SortedSet[TsIdentLibrary],
+      wantedLibs: SortedSet[TsIdentLibrary]
   ): Bootstrapped = {
     val stdLibSource = {
       val folder = fromFolder.path / "typescript" / "lib"
@@ -35,7 +37,7 @@ object Bootstrap {
       StdLibSource(
         InFolder(folder),
         IArray.fromTraversable(conversion.stdLibs.map(s => InFile(folder / s"lib.$s.d.ts"))),
-        TsIdent.std,
+        TsIdent.std
       )
     }
 
@@ -60,12 +62,11 @@ object Bootstrap {
   }
 
   def findSources(folders: IArray[InFolder]): IArray[LibTsSource.FromFolder] =
-    folders.foldLeft[IArray[LibTsSource.FromFolder]](IArray.Empty) {
-      case (foundSources, next) =>
-        val foundNames = foundSources.map(_.libName).toSet
-        val newSources = forFolder(next).filterNot(s => foundNames(s.libName))
+    folders.foldLeft[IArray[LibTsSource.FromFolder]](IArray.Empty) { case (foundSources, next) =>
+      val foundNames = foundSources.map(_.libName).toSet
+      val newSources = forFolder(next).filterNot(s => foundNames(s.libName))
 
-        foundSources ++ newSources
+      foundSources ++ newSources
     }
 
   private def forFolder(folder: InFolder): IArray[LibTsSource.FromFolder] =
@@ -81,16 +82,19 @@ object Bootstrap {
                 .map(nestedPath => FromFolder(InFolder(nestedPath), TsIdentLibrary(s"${path.last}/${nestedPath.last}")))
           case path => List(FromFolder(InFolder(path), TsIdentLibrary(path.last)))
         }
-        .filter(s => LibTsSource.hasTypescriptSources(s.folder)),
+        .filter(s => LibTsSource.hasTypescriptSources(s.folder))
     )
 
   def resolveAll(
       libraryResolver: LibraryResolver,
-      libs:            SortedSet[TsIdentLibrary],
+      libs: SortedSet[TsIdentLibrary]
   ): Either[Unresolved, Vector[LibTsSource]] =
     libs.toVector
       .map(libraryResolver.library)
-      .partitionCollect2({ case LibraryResolver.Found(x) => x }, { case LibraryResolver.NotAvailable(name) => name }) match {
+      .partitionCollect2(
+        { case LibraryResolver.Found(x) => x },
+        { case LibraryResolver.NotAvailable(name) => name }
+      ) match {
       case (allFound, Seq(), _) => Right(allFound)
       case (_, notAvailable, _) => Left(Unresolved(notAvailable))
     }

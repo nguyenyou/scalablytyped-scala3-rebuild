@@ -1,15 +1,13 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs.{
-  Annotation,
-  Name,
-  QualifiedName
-}
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.scalajs.Annotation
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.QualifiedName
+import org.scalablytyped.converter.internal.ts.*
 
 object ImportName {
-  def skipConversion(i:     TsIdent):  Name          = Name(i.value)
+  def skipConversion(i: TsIdent): Name               = Name(i.value)
   def skipConversion(ident: TsQIdent): QualifiedName = QualifiedName(ident.parts.map(skipConversion))
 
   def unapply(x: TsIdentSimple): Some[Name] =

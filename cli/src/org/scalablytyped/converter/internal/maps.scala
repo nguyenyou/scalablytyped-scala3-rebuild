@@ -1,7 +1,8 @@
 package org.scalablytyped.converter.internal
 
 import scala.collection.BuildFrom
-import scala.collection.immutable.{SortedMap, TreeMap}
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.TreeMap
 import scala.collection.mutable
 
 object maps {
@@ -17,8 +18,8 @@ object maps {
   }
 
   def smash[K, V](ms: IArray[Map[K, V]]): Map[K, V] =
-    ms.foldLeft(Map.empty[K, V]) {
-      case (acc, current) => acc ++ current
+    ms.foldLeft(Map.empty[K, V]) { case (acc, current) =>
+      acc ++ current
     }
 
   def combine[K, V <: AnyRef](ms: IArray[Map[K, IArray[V]]]): Map[K, IArray[V]] = {
@@ -82,7 +83,7 @@ object maps {
     }
 
     @inline def mapNotNone[VV](
-        f:          (K, V) => Option[VV],
+        f: (K, V) => Option[VV]
     )(implicit cbf: BuildFrom[M[K, V], (K, VV), M[K, VV]]): M[K, VV] = {
       val b  = cbf.newBuilder(m)
       val it = m.toIterator

@@ -2,14 +2,19 @@ package org.scalablytyped.converter.internal
 package importer
 
 import org.scalablytyped.converter.Selection
-import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
-import org.scalablytyped.converter.internal.maps._
-import org.scalablytyped.converter.internal.phases.{GetDeps, IsCircular, Phase, PhaseRes}
+import org.scalablytyped.converter.internal.logging.Formatter
+import org.scalablytyped.converter.internal.logging.Logger
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.phases.GetDeps
+import org.scalablytyped.converter.internal.phases.IsCircular
+import org.scalablytyped.converter.internal.phases.Phase
+import org.scalablytyped.converter.internal.phases.PhaseRes
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
 import org.scalablytyped.converter.internal.ts.modules.ModuleAsGlobalNamespace
-import org.scalablytyped.converter.internal.ts.{transforms => T, _}
+import org.scalablytyped.converter.internal.ts.{transforms as T, *}
 
-import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
 import scala.collection.mutable
 
 /** This phase parses files, implements the module system, and "implements" a bunch of typescript features by rewriting
@@ -77,7 +82,7 @@ class Phase1ReadTypescript(
                     val deps = Set.newBuilder[LibTsSource]
 
                     val fileLogger = logger.withContext(file)
-                    fileLogger.info(s"Preprocessing")
+                    fileLogger.info("Preprocessing")
 
                     val toInline: IArray[Either[Directive.Ref, InFile]] =
                       parsed.directives.collect {
@@ -240,7 +245,7 @@ class Phase1ReadTypescript(
                   SortedMap.newBuilder[InFile, (TsParsedFile, Set[LibTsSource])]
                 files.foreach { file =>
                   for {
-                    found <- preparingFiles.get(file)
+                    found     <- preparingFiles.get(file)
                     evaluated <- found.get
                   } b += ((file, evaluated))
                 }
@@ -385,7 +390,7 @@ object Phase1ReadTypescript {
       modules.MoveGlobals.apply,
       FlattenTrees.apply,
       (
-        T.DefaultedTypeArguments >> // after FlattenTrees
+        T.DefaultedTypeArguments >>  // after FlattenTrees
           T.TypeAliasIntersection >> // before ExpandTypeMappings
           T.RejiggerIntersections
       ).visitTsParsedFile(scope.caching),

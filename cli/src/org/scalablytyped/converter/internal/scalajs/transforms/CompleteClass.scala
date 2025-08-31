@@ -2,19 +2,16 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import org.scalablytyped.converter.internal.scalajs.transforms.CompleteClass._
-import org.scalablytyped.converter.internal.maps._
-/**
-  * With @ScalaJSDefined traits we don't implement members.
-  * Scalac complains about that for classes, so we provide implementations.
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.scalajs.transforms.CompleteClass.*
+
+/** With @ScalaJSDefined traits we don't implement members. Scalac complains about that for classes, so we provide
+  * implementations.
   *
-  * We lookup all parents until we reach a class, because at that point
-  * we know everything will be implemented.
+  * We lookup all parents until we reach a class, because at that point we know everything will be implemented.
   *
-  * We also forward constructors from parent class, as in typescript
-  * it seems you can instantiate a class with a parents constructor,
-  * weirdly enough.
-  *
+  * We also forward constructors from parent class, as in typescript it seems you can instantiate a class with a parents
+  * constructor, weirdly enough.
   */
 class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVersion: Versions.Scala)
     extends TreeTransformation {
@@ -29,9 +26,9 @@ class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVer
   }
 
   private def implementations(
-      scope:   TreeScope,
-      c:       InheritanceTree,
-      parents: ParentsResolver.Parents,
+      scope: TreeScope,
+      c: InheritanceTree,
+      parents: ParentsResolver.Parents
   ): IArray[MemberTree] = {
 
     val allInherited: IArray[Tree] =
@@ -45,8 +42,8 @@ class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVer
 
           x.copy(
             isOverride = isOverride,
-            impl       = ExprTree.native,
-            comments   = x.comments + Comment("/* CompleteClass */\n"),
+            impl = ExprTree.native,
+            comments = x.comments + Comment("/* CompleteClass */\n")
           )
       }
 
@@ -65,9 +62,9 @@ class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVer
             Some(
               x.copy(
                 isOverride = true,
-                impl       = ExprTree.native,
-                comments   = x.comments + Comment("/* CompleteClass */\n"),
-              ),
+                impl = ExprTree.native,
+                comments = x.comments + Comment("/* CompleteClass */\n")
+              )
             )
 
         case _ => None
@@ -84,18 +81,20 @@ class CompleteClass(erasure: Erasure, parentsResolver: ParentsResolver, scalaVer
 object CompleteClass {
   object SetterFor {
     def unapply(m: MethodTree): Option[Name] =
-      if (m.name.unescaped.endsWith("_=") &&
-          m.params.foldLeft(0)(_ + _.length) === 1 &&
-          m.resultType === TypeRef.Unit) {
+      if (
+        m.name.unescaped.endsWith("_=") &&
+        m.params.foldLeft(0)(_ + _.length) === 1 &&
+        m.resultType === TypeRef.Unit
+      ) {
         Some(Name(m.name.unescaped.dropRight(2)))
       } else None
   }
 
   def isAlreadyImplemented(
-      erasure:   Erasure,
-      scope:     TreeScope,
+      erasure: Erasure,
+      scope: TreeScope,
       potential: MethodTree,
-      existing:  Option[IArray[Tree]],
+      existing: Option[IArray[Tree]]
   ): Boolean = {
     lazy val currentErasure = erasure.base(scope)(potential)
     existing match {
@@ -103,7 +102,7 @@ object CompleteClass {
       case Some(existings) =>
         existings.exists {
           case xx: MethodTree if erasure.base(scope)(xx) === currentErasure => true
-          case _ => false
+          case _                                                            => false
         }
     }
   }

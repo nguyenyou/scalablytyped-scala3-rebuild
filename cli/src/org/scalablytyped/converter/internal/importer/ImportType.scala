@@ -1,27 +1,25 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.importer.ImportType.{
-  IsInheritance,
-  Mapping,
-  NameMapping,
-  RefMapping
-}
-import org.scalablytyped.converter.internal.scalajs._
+import org.scalablytyped.converter.internal.importer.ImportType.IsInheritance
+import org.scalablytyped.converter.internal.importer.ImportType.Mapping
+import org.scalablytyped.converter.internal.importer.ImportType.NameMapping
+import org.scalablytyped.converter.internal.importer.ImportType.RefMapping
+import org.scalablytyped.converter.internal.scalajs.*
+import org.scalablytyped.converter.internal.ts.*
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
-import org.scalablytyped.converter.internal.ts._
 import org.scalablytyped.converter.internal.ts.transforms.ExtractInterfaces
 
-import scala.util.{Success, Try}
+import scala.util.Success
+import scala.util.Try
 
 class ImportType(stdNames: QualifiedName.StdNames) {
 
   def orAny(scope: TsTreeScope, importName: AdaptiveNamingImport)(ott: Option[TsType]): TypeRef =
     ott.map(apply(scope, importName)).getOrElse(TypeRef.Any)
 
-  /**
-    * The point here? Dont inherit from sealed classes in scala.js, but otherwise
-    * prefer types from there. Handle resolved and unresolved qidents
+  /** The point here? Dont inherit from sealed classes in scala.js, but otherwise prefer types from there. Handle
+    * resolved and unresolved qidents
     */
   private val Mappings = {
     val ArrayM    = NameMapping(stdNames.Array, stdNames.Array, QualifiedName.JsArray)
@@ -32,30 +30,30 @@ class ImportType(stdNames: QualifiedName.StdNames) {
     val BigIntM   = RefMapping(TypeRef(stdNames.BigInt), TypeRef(stdNames.BigInt), TypeRef.JsBigInt)
 
     Map[TsQIdent, Mapping[_]](
-      TsQIdent.Array -> ArrayM,
-      TsQIdent.bigint -> BigIntM,
-      TsQIdent.BigInt -> BigIntM,
-      TsQIdent.boolean -> BooleanM,
-      TsQIdent.Boolean -> BooleanM,
-      TsQIdent.Function -> FunctionM,
-      TsQIdent.never -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Nothing),
-      TsQIdent.`null` -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Null),
-      TsQIdent.number -> RefMapping(TypeRef(stdNames.Number), TypeRef(stdNames.Number), TypeRef.Double),
-      TsQIdent.`object` -> ObjectM,
-      TsQIdent.Object -> ObjectM,
-      TsQIdent.Std.Array -> ArrayM,
-      TsQIdent.Std.Boolean -> BooleanM,
-      TsQIdent.Std.BigInt -> BigIntM,
-      TsQIdent.Std.ConcatArray -> NameMapping(stdNames.ConcatArray, stdNames.ConcatArray, QualifiedName.JsArray),
-      TsQIdent.Std.Function -> FunctionM,
-      TsQIdent.Std.Object -> ObjectM,
+      TsQIdent.Array             -> ArrayM,
+      TsQIdent.bigint            -> BigIntM,
+      TsQIdent.BigInt            -> BigIntM,
+      TsQIdent.boolean           -> BooleanM,
+      TsQIdent.Boolean           -> BooleanM,
+      TsQIdent.Function          -> FunctionM,
+      TsQIdent.never             -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Nothing),
+      TsQIdent.`null`            -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Null),
+      TsQIdent.number            -> RefMapping(TypeRef(stdNames.Number), TypeRef(stdNames.Number), TypeRef.Double),
+      TsQIdent.`object`          -> ObjectM,
+      TsQIdent.Object            -> ObjectM,
+      TsQIdent.Std.Array         -> ArrayM,
+      TsQIdent.Std.Boolean       -> BooleanM,
+      TsQIdent.Std.BigInt        -> BigIntM,
+      TsQIdent.Std.ConcatArray   -> NameMapping(stdNames.ConcatArray, stdNames.ConcatArray, QualifiedName.JsArray),
+      TsQIdent.Std.Function      -> FunctionM,
+      TsQIdent.Std.Object        -> ObjectM,
       TsQIdent.Std.ReadonlyArray -> NameMapping(stdNames.ReadonlyArray, stdNames.ReadonlyArray, QualifiedName.JsArray),
-      TsQIdent.Std.String -> StringM,
-      TsQIdent.string -> StringM,
-      TsQIdent.String -> StringM,
-      TsQIdent.symbol -> RefMapping(TypeRef(stdNames.Symbol), TypeRef(stdNames.Symbol), TypeRef.JsSymbol),
-      TsQIdent.undefined -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Unit),
-      TsQIdent.void -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Unit),
+      TsQIdent.Std.String        -> StringM,
+      TsQIdent.string            -> StringM,
+      TsQIdent.String            -> StringM,
+      TsQIdent.symbol            -> RefMapping(TypeRef(stdNames.Symbol), TypeRef(stdNames.Symbol), TypeRef.JsSymbol),
+      TsQIdent.undefined         -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Unit),
+      TsQIdent.void              -> RefMapping(TypeRef.Any, TypeRef.Any, TypeRef.Unit)
     )
   }
 
@@ -65,7 +63,7 @@ class ImportType(stdNames: QualifiedName.StdNames) {
       case TsTypeRef(cs, TsQIdent.Std.Readonly, IArray.exactlyOne(one)) =>
         val withComments = one match {
           case ref: TsTypeRef => ref.copy(comments = cs ++ ref.comments)
-          case other => other
+          case other          => other
         }
 
         apply(scope, importName)(withComments)
@@ -74,7 +72,7 @@ class ImportType(stdNames: QualifiedName.StdNames) {
         def willBeVal: Boolean =
           outerScope.stack.headOption match {
             case Some(_: TsDeclVar) => true
-            case _ => false
+            case _                  => false
           }
 
         base match {
@@ -107,12 +105,11 @@ class ImportType(stdNames: QualifiedName.StdNames) {
       case TsTypeObject(_, ms) if ExtractInterfaces.isDictionary(ms) =>
         val (numbers, strings, Empty) = ms.partitionCollect2(
           { case x @ TsMemberIndex(_, _, _, Indexing.Dict(_, TsTypeRef.number), _) => x },
-          { case x @ TsMemberIndex(_, _, _, Indexing.Dict(_, _), _)                => x },
+          { case x @ TsMemberIndex(_, _, _, Indexing.Dict(_, _), _) => x }
         )
 
-        val translatedStrings = strings.collect {
-          case TsMemberIndex(cs, _, _, Indexing.Dict(_, _), valueType) =>
-            (cs, orAny(scope, importName)(valueType))
+        val translatedStrings = strings.collect { case TsMemberIndex(cs, _, _, Indexing.Dict(_, _), valueType) =>
+          (cs, orAny(scope, importName)(valueType))
         }
         val stringDict = translatedStrings match {
           case Empty => None
@@ -121,8 +118,8 @@ class ImportType(stdNames: QualifiedName.StdNames) {
               TypeRef
                 .StringDictionary(
                   TypeRef.Intersection(some.map(_._2), NoComments),
-                  Comments.flatten(some.map(_._1))(identity),
-                ),
+                  Comments.flatten(some.map(_._1))(identity)
+                )
             )
         }
         val translatedNumbers = numbers.collect {
@@ -136,8 +133,8 @@ class ImportType(stdNames: QualifiedName.StdNames) {
               TypeRef
                 .NumberDictionary(
                   TypeRef.Intersection(some.map(_._2), NoComments),
-                  Comments.flatten(some.map(_._1))(identity),
-                ),
+                  Comments.flatten(some.map(_._1))(identity)
+                )
             )
         }
         TypeRef.Intersection(IArray.fromOptions(stringDict, numberDict), NoComments)
@@ -159,7 +156,7 @@ class ImportType(stdNames: QualifiedName.StdNames) {
             thisType,
             restParams.map(funParam(scope, importName)),
             orAny(scope, importName)(newSig.resultType),
-            newSig.comments,
+            newSig.comments
           )
         }
       case TsTypeUnion(types) =>
@@ -217,19 +214,19 @@ class ImportType(stdNames: QualifiedName.StdNames) {
           case (IArray.first((repeatedElem, repeated)), rest) =>
             ts.FollowAliases(scope)(repeated) match {
               case TsTypeRef(
-                  _,
-                  TsQIdent.Std.Array | TsQIdent.Std.ReadonlyArray | TsQIdent.Array | TsQIdent.ReadonlyArray,
-                  IArray.exactlyOne(tpe),
+                    _,
+                    TsQIdent.Std.Array | TsQIdent.Std.ReadonlyArray | TsQIdent.Array | TsQIdent.ReadonlyArray,
+                    IArray.exactlyOne(tpe)
                   ) =>
                 TypeRef(
                   importName(TsQIdent.Array),
                   IArray(apply(scope, importName)(TsTypeUnion(rest.map(_.tpe) :+ tpe))).distinct,
-                  labelComment(repeatedElem),
+                  labelComment(repeatedElem)
                 )
               case other =>
                 val c = Comment.warning(s"repeated non-array type: ${TsTypeFormatter(other)}")
                 apply(scope, importName)(
-                  TsTypeRef(Comments(c) ++ labelComment(repeatedElem), TsQIdent.Array, IArray(other)),
+                  TsTypeRef(Comments(c) ++ labelComment(repeatedElem), TsQIdent.Array, IArray(other))
                 )
             }
           case (_, nonRepeating) =>
@@ -271,9 +268,8 @@ class ImportType(stdNames: QualifiedName.StdNames) {
 
   private val toIgnore = Set[TsType](TsTypeRef.never, TsTypeRef.any, TsTypeRef.`object`)
 
-  /**
-    * TsTypeUnion.simplified simplifies a set of types into a union types, a normal type, or `never`.
-    *    The latter is the least useful, so let's rewrite it to any
+  /** TsTypeUnion.simplified simplifies a set of types into a union types, a normal type, or `never`. The latter is the
+    * least useful, so let's rewrite it to any
     */
   def unify(types: IArray[TsType]): TsType =
     TsTypeUnion.simplified(types.filterNot(toIgnore)) match {
@@ -282,10 +278,10 @@ class ImportType(stdNames: QualifiedName.StdNames) {
     }
 
   def newableFunction(
-      scope:      TsTreeScope.Scoped,
+      scope: TsTreeScope.Scoped,
       importName: AdaptiveNamingImport,
-      _sig:       TsFunSig,
-      comments:   Comments,
+      _sig: TsFunSig,
+      comments: Comments
   ): TypeRef = {
     /* get rid of type parameters and fill them with bound / object */
     val targs = _sig.tparams.map(p => p.upperBound.getOrElse(TsTypeRef.`object`))
@@ -308,13 +304,13 @@ class ImportType(stdNames: QualifiedName.StdNames) {
 
     if (sig.params.length > 22)
       TypeRef.Any.withComments(
-        Comments(s"/* untranslatable newable function with more than 22 parameters: ${TsTypeFormatter.sig(_sig)} */"),
+        Comments(s"/* untranslatable newable function with more than 22 parameters: ${TsTypeFormatter.sig(_sig)} */")
       )
     else
       TypeRef(
         QualifiedName.Instantiable(sig.params.length),
         params :+ ret,
-        comments,
+        comments
       )
   }
 
@@ -326,7 +322,7 @@ object ImportType {
   sealed trait Mapping[T] {
     val inTraitInheritance: T
     val inClassInheritance: T
-    val normal:             T
+    val normal: T
     def pick(isInheritance: IsInheritance): T =
       isInheritance match {
         case IsInheritance.InClass => inClassInheritance
@@ -343,7 +339,7 @@ object ImportType {
   object IsInheritance {
     case object InClass extends IsInheritance
     case object InTrait extends IsInheritance
-    case object Not extends IsInheritance
+    case object Not     extends IsInheritance
 
     def apply(tpe: TsQIdent, scope: TsTreeScope): IsInheritance =
       scope.stack match {
@@ -408,7 +404,7 @@ object ImportType {
   }
 
   object ShouldWiden {
-    val No:  ShouldWiden = _ => false
+    val No: ShouldWiden  = _ => false
     val Yes: ShouldWiden = _ => true
 
     // it's hard to say when keeping it as a literal is beneficial.

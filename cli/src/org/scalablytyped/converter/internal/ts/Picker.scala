@@ -13,7 +13,7 @@ object Picker {
     override def unapply(t: TsNamedDecl): Option[TsDeclVar] =
       t match {
         case v: TsDeclVar => Some(v)
-        case _ => None
+        case _            => None
       }
   }
 
@@ -21,39 +21,39 @@ object Picker {
     override def unapply(t: TsNamedDecl): Option[TsNamedValueDecl] =
       t match {
         case other: TsNamedValueDecl => Some(other)
-        case _ => None
+        case _                       => None
       }
   }
 
   object NotModules extends Picker[TsNamedDecl] {
     override def unapply(t: TsNamedDecl): Option[TsNamedDecl] =
       t match {
-        case _:     TsDeclModule => None
-        case other: TsNamedDecl  => Some(other)
-        case _ => None
+        case _: TsDeclModule    => None
+        case other: TsNamedDecl => Some(other)
+        case _                  => None
       }
   }
 
   object NotClasses extends Picker[TsNamedDecl] {
     override def unapply(t: TsNamedDecl): Option[TsNamedDecl] =
       t match {
-        case _:     TsDeclClass => None
+        case _: TsDeclClass     => None
         case other: TsNamedDecl => Some(other)
-        case _ => None
+        case _                  => None
       }
   }
 
   object HasClassMemberss extends Picker[TsNamedDecl with HasClassMembers] {
     override def unapply(t: TsNamedDecl): Option[TsNamedDecl with HasClassMembers] = t match {
       case x: TsNamedDecl with HasClassMembers => Some(x)
-      case _ => None
+      case _                                   => None
     }
   }
 
   object Namespaces extends Picker[TsDeclNamespace] {
     override def unapply(t: TsNamedDecl): Option[TsDeclNamespace] = t match {
       case x: TsDeclNamespace => Some(x)
-      case _ => None
+      case _                  => None
     }
   }
 
@@ -64,7 +64,7 @@ object Picker {
         case x: TsDeclInterface => Some(x)
         case x: TsDeclTypeAlias => Some(x)
         case x: TsDeclEnum      => Some(x)
-        case _ => None
+        case _                  => None
       }
   }
 

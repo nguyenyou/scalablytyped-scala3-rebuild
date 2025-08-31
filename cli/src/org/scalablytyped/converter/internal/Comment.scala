@@ -1,7 +1,10 @@
 package org.scalablytyped.converter.internal
 
-import io.circe.{Decoder, Encoder}
-import org.scalablytyped.converter.internal.scalajs.{ExprTree, QualifiedName, TypeRef}
+import io.circe.Decoder
+import io.circe.Encoder
+import org.scalablytyped.converter.internal.scalajs.ExprTree
+import org.scalablytyped.converter.internal.scalajs.QualifiedName
+import org.scalablytyped.converter.internal.scalajs.TypeRef
 import org.scalablytyped.converter.internal.ts.TsIdentModule
 
 sealed trait Comment
@@ -14,16 +17,16 @@ sealed trait Marker extends Comment
 
 object Marker {
   case object CouldBeScalaJsDefined extends Marker
-  case object IsTrivial extends Marker
-  case object ExpandedCallables extends Marker
-  case object ExpandedClass extends Marker
-  case object EnumObject extends Marker
-  case object HasClassParent extends Marker
+  case object IsTrivial             extends Marker
+  case object ExpandedCallables     extends Marker
+  case object ExpandedClass         extends Marker
+  case object EnumObject            extends Marker
+  case object HasClassParent        extends Marker
 
-  case class NameHint(value:        String) extends Marker
+  case class NameHint(value: String)                       extends Marker
   case class ModuleAliases(aliases: IArray[TsIdentModule]) extends Marker
-  case class WasLiteral(lit:        ExprTree.Lit) extends Marker
-  case class WasUnion(related:      IArray[TypeRef]) extends Marker
+  case class WasLiteral(lit: ExprTree.Lit)                 extends Marker
+  case class WasUnion(related: IArray[TypeRef])            extends Marker
 
   /* Disable the minimizer for object with this marker */
   final case class MinimizationKeep(related: IArray[TypeRef]) extends Marker
@@ -33,7 +36,7 @@ object Marker {
 
   case class WasDefaulted(among: Set[QualifiedName]) extends Marker
 
-  case object ManglerLeaveAlone extends Marker
+  case object ManglerLeaveAlone  extends Marker
   case object ManglerWasJsNative extends Marker
 }
 

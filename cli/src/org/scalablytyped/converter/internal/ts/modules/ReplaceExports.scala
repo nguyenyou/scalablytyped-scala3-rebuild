@@ -32,12 +32,12 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
             case namedExport: TsNamedDecl =>
               `export`(
                 x.codePath.forceHasPath,
-                _ => x.jsLocation / namedExport, //todo
+                _ => x.jsLocation / namedExport, // todo
                 scope,
                 ExportType.Named,
                 namedExport,
                 None,
-                loopDetector,
+                loopDetector
               )
 
             case TsImport(_, IArray.exactlyOne(TsImported.Ident(to)), TsImportee.Local(from)) =>
@@ -85,7 +85,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
 
   override def leaveTsParsedFile(t: TsTreeScope)(x: TsParsedFile): TsParsedFile =
     x.copy(members = x.members.mapNotNone {
-      case _: TsImport => None
+      case _: TsImport                           => None
       case TsExport(_, _, _, TsExportee.Tree(x)) => Some(x)
       case other                                 => Some(other)
     })
@@ -109,10 +109,10 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
   case class CanBeShadowed(maybe: Boolean, trees: IArray[TsContainerOrDecl])
 
   def newMembers(
-      scope:      TsTreeScope,
-      owner:      TsDeclNamespaceOrModule,
+      scope: TsTreeScope,
+      owner: TsDeclNamespaceOrModule,
       jsLocation: ModuleSpec => JsLocation,
-      trees:      IArray[TsContainerOrDecl],
+      trees: IArray[TsContainerOrDecl]
   ): IArray[TsContainerOrDecl] = {
     val (canBeShadowed, canNotBe) = trees.map(newMember(scope, owner, jsLocation)).partition(_.maybe)
     val keep                      = canNotBe.flatMap(_.trees)
@@ -120,20 +120,20 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
       val takenName = keep.collect { case x: TsNamedDecl => x.name }.toSet
       canBeShadowed.flatMap(_.trees.filter {
         case x: TsNamedDecl => !takenName(x.name)
-        case _ => true
+        case _              => true
       })
     }
     keepMaybe ++ keep
   }
 
   def newMember(scope: TsTreeScope, owner: TsDeclNamespaceOrModule, jsLocation: ModuleSpec => JsLocation)(
-      decl:            TsContainerOrDecl,
+      decl: TsContainerOrDecl
   ): CanBeShadowed = {
     lazy val hasExportedValues: Boolean =
       owner.exports.exists {
         case TsExport(_, _, _, TsExportee.Tree(_: TsDeclInterface | _: TsDeclTypeAlias)) => false
-        case _: TsExport => true
-        case _ => false
+        case _: TsExport                                                                 => true
+        case _                                                                           => false
       }
 
     decl match {
@@ -162,10 +162,9 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
       case g @ TsGlobal(_, _, ms, _) =>
         val ret: IArray[TsNamedDecl] =
           ms.collect {
-              case x: TsNamedDecl => x
-              case TsExport(_, _, _, TsExportee.Tree(x: TsNamedDecl)) => x
-            }
-            .map(x => Utils.withJsLocation(x, JsLocation.Global(TsQIdent.of(x.name))))
+            case x: TsNamedDecl                                     => x
+            case TsExport(_, _, _, TsExportee.Tree(x: TsNamedDecl)) => x
+          }.map(x => Utils.withJsLocation(x, JsLocation.Global(TsQIdent.of(x.name))))
 
         CanBeShadowed(maybe = false, IArray(g.copy(members = ret)))
 
@@ -175,7 +174,7 @@ class ReplaceExports(loopDetector: LoopDetector) extends TreeTransformationScope
       case x: TsDeclTypeAlias => CanBeShadowed(maybe = true, IArray(x))
       case x: TsNamedValueDecl =>
         if (hasExportedValues) CanBeShadowed(maybe = false, IArray.fromOption(KeepTypesOnly(x)))
-        else CanBeShadowed(maybe                   = false, IArray(x))
+        else CanBeShadowed(maybe = false, IArray(x))
       case x => CanBeShadowed(maybe = false, IArray(x))
     }
   }

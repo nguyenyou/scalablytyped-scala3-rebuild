@@ -1,42 +1,46 @@
 package org.scalablytyped.converter.cli
 
-import org.scalablytyped.converter.{Flavour, Selection}
-import org.scalablytyped.converter.internal.importer.{
-  Bootstrap,
-  ConversionOptions,
-  EnabledTypeMappingExpansion,
-  LibScalaJs,
-  LibTsSource,
-  PersistingParser,
-  Phase1ReadTypescript,
-  Phase2ToScalaJs,
-  PhaseFlavour
-}
-import org.scalablytyped.converter.internal.scalajs.{
-  Minimization,
-  Name,
-  PackageTree,
-  ParentsResolver,
-  Printer,
-  QualifiedName,
-  TreeScope,
-  Versions
-}
-import org.scalablytyped.converter.internal.ts.{PackageJson, TsIdentLibrary}
-import org.scalablytyped.converter.internal.{InFolder, Json, constants, files}
-import org.scalablytyped.converter.internal.logging._
-import org.scalablytyped.converter.internal.phases.{PhaseListener, PhaseRes, PhaseRunner, RecPhase}
+import org.scalablytyped.converter.Flavour
+import org.scalablytyped.converter.Selection
+import org.scalablytyped.converter.internal.IArray
+import org.scalablytyped.converter.internal.InFolder
+import org.scalablytyped.converter.internal.Json
+import org.scalablytyped.converter.internal.constants
+import org.scalablytyped.converter.internal.files
+import org.scalablytyped.converter.internal.importer.Bootstrap
+import org.scalablytyped.converter.internal.importer.ConversionOptions
+import org.scalablytyped.converter.internal.importer.EnabledTypeMappingExpansion
+import org.scalablytyped.converter.internal.importer.LibScalaJs
+import org.scalablytyped.converter.internal.importer.LibTsSource
+import org.scalablytyped.converter.internal.importer.PersistingParser
+import org.scalablytyped.converter.internal.importer.Phase1ReadTypescript
+import org.scalablytyped.converter.internal.importer.Phase2ToScalaJs
+import org.scalablytyped.converter.internal.importer.PhaseFlavour
+import org.scalablytyped.converter.internal.logging.*
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.phases.PhaseListener
+import org.scalablytyped.converter.internal.phases.PhaseRes
+import org.scalablytyped.converter.internal.phases.PhaseRunner
+import org.scalablytyped.converter.internal.phases.RecPhase
+import org.scalablytyped.converter.internal.scalajs.Minimization
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.PackageTree
+import org.scalablytyped.converter.internal.scalajs.ParentsResolver
+import org.scalablytyped.converter.internal.scalajs.Printer
+import org.scalablytyped.converter.internal.scalajs.QualifiedName
+import org.scalablytyped.converter.internal.scalajs.TreeScope
+import org.scalablytyped.converter.internal.scalajs.Versions
 import org.scalablytyped.converter.internal.ts.CalculateLibraryVersion.PackageJsonOnly
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.ts.PackageJson
+import org.scalablytyped.converter.internal.ts.TsIdentLibrary
 
 import scala.collection.immutable.SortedSet
-import org.scalablytyped.converter.internal.IArray
 
 object Tracing {
   private val inDirectory = os.pwd
-  val sourceOutputDir = os.pwd / "generated-sources"
-  lazy val paths = new Paths(inDirectory)
-  val parseCachePath = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
+  val sourceOutputDir     = os.pwd / "generated-sources"
+  lazy val paths          = new Paths(inDirectory)
+  val parseCachePath      = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
 
   val logger: Logger[(Array[Logger.Stored], Unit)] =
     storing().zipWith(stdout.filter(LogLevel.warn))
@@ -68,7 +72,7 @@ object Tracing {
       require(fromPackageJson.nonEmpty, "No libraries found in package.json")
       val ret = fromPackageJson -- DefaultOptions.ignoredLibs
       println(s"DEBUG: Libraries after filtering ignored: ${ret.map(_.value).mkString(", ")}")
-      require(ret.nonEmpty, s"All libraries in package.json ignored")
+      require(ret.nonEmpty, "All libraries in package.json ignored")
       ret
     }
 

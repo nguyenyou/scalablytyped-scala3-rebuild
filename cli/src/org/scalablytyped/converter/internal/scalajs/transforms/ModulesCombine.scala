@@ -13,7 +13,7 @@ object ModulesCombine extends TreeTransformation {
       case (name, sameName) =>
         sameName.partitionCollect3({ case x: ModuleTree => x }, { case x: FieldTree => x }, { case x: MethodTree => x }) match {
           case (IArray.headTail(baseModule, restModules), fields, methods, rest)
-              if fields.nonEmpty || methods.nonEmpty || restModules.nonEmpty =>
+            if fields.nonEmpty || methods.nonEmpty || restModules.nonEmpty =>
             val asHats: IArray[FieldTree] =
               fields.map(f =>
                 f.copy(
@@ -57,19 +57,19 @@ object ModulesCombine extends TreeTransformation {
 
           case (IArray.exactlyOne(ModuleTree(annotations @ Legal(), level, name, parents, Empty, comments, codePath, isOverride)), Empty, Empty, rest) if parents.nonEmpty =>
             // format: on
-          val asField = FieldTree(
-            annotations,
-            level,
-            name,
-            tpe        = TypeRef.Intersection(parents, NoComments),
-            impl       = ExprTree.native,
-            isReadOnly = true,
-            isOverride = isOverride,
-            comments   = comments,
-            codePath   = codePath,
-          )
+            val asField = FieldTree(
+              annotations,
+              level,
+              name,
+              tpe        = TypeRef.Intersection(parents, NoComments),
+              impl       = ExprTree.native,
+              isReadOnly = true,
+              isOverride = isOverride,
+              comments   = comments,
+              codePath   = codePath,
+            )
 
-          rest :+ asField
+            rest :+ asField
 
           case (Empty, Empty, methods, rest) if methods.nonEmpty && rest.exists(_.isInstanceOf[ClassTree]) =>
             val asApplies: IArray[MethodTree] =

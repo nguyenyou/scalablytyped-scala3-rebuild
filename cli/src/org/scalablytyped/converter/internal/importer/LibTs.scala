@@ -1,14 +1,15 @@
 package org.scalablytyped.converter.internal.importer
 
 import org.scalablytyped.converter.internal.LibraryVersion
-import org.scalablytyped.converter.internal.ts.{TsIdentLibrary, TsParsedFile}
+import org.scalablytyped.converter.internal.ts.TsIdentLibrary
+import org.scalablytyped.converter.internal.ts.TsParsedFile
 
 import scala.collection.immutable.SortedMap
 
 case class LibTs(source: LibTsSource)(
-    val version:         LibraryVersion,
-    val parsed:          TsParsedFile,
-    val dependencies:    SortedMap[LibTsSource, LibTs],
+    val version: LibraryVersion,
+    val parsed: TsParsedFile,
+    val dependencies: SortedMap[LibTsSource, LibTs]
 ) {
   def name: TsIdentLibrary = source.libName
 

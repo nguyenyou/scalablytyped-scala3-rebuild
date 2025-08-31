@@ -9,16 +9,16 @@ object FakeLiterals {
     LiteralRewriter(outputPkg, illegalNames, tree, scope).output
 
   private case class LiteralRewriter(
-      outputPkg:    Name,
+      outputPkg: Name,
       illegalNames: CleanIllegalNames,
-      tree:         ContainerTree,
-      scope:        TreeScope,
+      tree: ContainerTree,
+      scope: TreeScope
   ) extends TreeTransformation {
 
     val stringsByLowercase: Map[String, IArray[String]] =
       TreeTraverse
-        .collect(tree) {
-          case TypeRef.StringLiteral(underlying) => cleanName(underlying)
+        .collect(tree) { case TypeRef.StringLiteral(underlying) =>
+          cleanName(underlying)
         }
         .groupBy(_.toLowerCase)
         .map { case (k, v) => (k, v.distinct.sorted) }
@@ -49,43 +49,42 @@ object FakeLiterals {
       if (collected.isEmpty) None
       else {
         val members =
-          collected.zipWithIndex.flatMap {
-            case ((name, underlying: ExprTree.Lit), idx) =>
-              val codePath = tree.codePath + moduleName + name
-              val `trait` =
-                ClassTree(
-                  isImplicit = false,
-                  IArray(Annotation.JsNative),
-                  ProtectionLevel.Public,
-                  name,
-                  Empty,
-                  Empty,
-                  Empty,
-                  Empty,
-                  ClassType.Trait,
-                  isSealed = true,
-                  NoComments,
-                  codePath,
-                )
+          collected.zipWithIndex.flatMap { case ((name, underlying: ExprTree.Lit), idx) =>
+            val codePath = tree.codePath + moduleName + name
+            val `trait` =
+              ClassTree(
+                isImplicit = false,
+                IArray(Annotation.JsNative),
+                ProtectionLevel.Public,
+                name,
+                Empty,
+                Empty,
+                Empty,
+                Empty,
+                ClassType.Trait,
+                isSealed = true,
+                NoComments,
+                codePath
+              )
 
-              def `def` =
-                MethodTree(
-                  IArray(Annotation.Inline),
-                  ProtectionLevel.Public,
-                  name,
-                  Empty,
-                  Empty,
-                  ExprTree.AsInstanceOf(underlying, TypeRef(name)),
-                  TypeRef(QualifiedName(IArray(name)), Empty, NoComments),
-                  isOverride = false,
-                  comments   = NoComments,
-                  codePath,
-                  isImplicit = false,
-                )
+            def `def` =
+              MethodTree(
+                IArray(Annotation.Inline),
+                ProtectionLevel.Public,
+                name,
+                Empty,
+                Empty,
+                ExprTree.AsInstanceOf(underlying, TypeRef(name)),
+                TypeRef(QualifiedName(IArray(name)), Empty, NoComments),
+                isOverride = false,
+                comments = NoComments,
+                codePath,
+                isImplicit = false
+              )
 
-              // for instance @expo/vector-icons has 11500 different literal strings,
-              // and it causes: Class too large: typings/expoVectorIcons/expoVectorIconsStrings
-              if (idx <= 10000) List(`trait`, `def`) else List(`trait`)
+            // for instance @expo/vector-icons has 11500 different literal strings,
+            // and it causes: Class too large: typings/expoVectorIcons/expoVectorIconsStrings
+            if (idx <= 10000) List(`trait`, `def`) else List(`trait`)
           }
 
         Some(
@@ -97,8 +96,8 @@ object FakeLiterals {
             IArray.fromTraversable(members),
             NoComments,
             tree.codePath + moduleName,
-            isOverride = false,
-          ),
+            isOverride = false
+          )
         )
       }
 
@@ -111,7 +110,7 @@ object FakeLiterals {
           TypeRef(
             QualifiedName(IArray(outputPkg, tree.name, StringModuleName, name)),
             Empty,
-            Comments(Marker.WasLiteral(lit)),
+            Comments(Marker.WasLiteral(lit))
           )
 
         case TypeRef.BooleanLiteral(underlying) =>
@@ -121,7 +120,7 @@ object FakeLiterals {
           TypeRef(
             QualifiedName(IArray(outputPkg, tree.name, BooleansModuleName, name)),
             Empty,
-            Comments(Marker.WasLiteral(lit)),
+            Comments(Marker.WasLiteral(lit))
           )
 
         case TypeRef.DoubleLiteral(underlying) =>
@@ -131,7 +130,7 @@ object FakeLiterals {
           TypeRef(
             QualifiedName(IArray(outputPkg, tree.name, DoublesModuleName, name)),
             Empty,
-            Comments(Marker.WasLiteral(lit)),
+            Comments(Marker.WasLiteral(lit))
           )
 
         case TypeRef.IntLiteral(underlying) =>
@@ -141,7 +140,7 @@ object FakeLiterals {
           TypeRef(
             QualifiedName(IArray(outputPkg, tree.name, IntsModuleName, name)),
             Empty,
-            Comments(Marker.WasLiteral(lit)),
+            Comments(Marker.WasLiteral(lit))
           )
 
         case other =>

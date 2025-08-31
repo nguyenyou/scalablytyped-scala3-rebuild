@@ -2,8 +2,7 @@ package org.scalablytyped.converter.internal
 package ts
 package modules
 
-/**
-  * Move globals into their own namespace:
+/** Move globals into their own namespace:
   *
   * given a file like this:
   * ```typescript
@@ -32,8 +31,8 @@ object MoveGlobals {
     val (globals, modules, named, rest) =
       file.members.partitionCollect3(
         { case x: TsDeclNamespace if x.name === TsIdent.Global => x },
-        { case x: TsDeclModuleLike                             => x },
-        { case x: TsNamedValueDecl                             => x },
+        { case x: TsDeclModuleLike => x },
+        { case x: TsNamedValueDecl => x }
       )
 
     val globalCp = file.codePath.forceHasPath + TsIdent.Global
@@ -46,9 +45,9 @@ object MoveGlobals {
     else {
       val global =
         globals.foldLeft(
-          TsDeclNamespace(NoComments, declared = false, TsIdent.Global, globalMembers, globalCp, JsLocation.Zero),
-        ) {
-          case (one, two) => FlattenTrees.mergeNamespaces(one, two)
+          TsDeclNamespace(NoComments, declared = false, TsIdent.Global, globalMembers, globalCp, JsLocation.Zero)
+        ) { case (one, two) =>
+          FlattenTrees.mergeNamespaces(one, two)
         }
 
       file.copy(members = modules ++ rest ++ keepToplevel :+ global)

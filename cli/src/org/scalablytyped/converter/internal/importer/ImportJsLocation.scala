@@ -1,8 +1,9 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs._
-import org.scalablytyped.converter.internal.ts.{JsLocation, ModuleSpec}
+import org.scalablytyped.converter.internal.scalajs.*
+import org.scalablytyped.converter.internal.ts.JsLocation
+import org.scalablytyped.converter.internal.ts.ModuleSpec
 
 object ImportJsLocation {
 
@@ -28,9 +29,9 @@ object ImportJsLocation {
         case ModuleSpec.Namespaced => Annotation.JsImport(modName.value, Imported.Namespace, globalOpt)
         case ModuleSpec.Specified(idents) =>
           Annotation.JsImport(
-            module   = modName.value,
+            module = modName.value,
             imported = Imported.Named(idents.map(ImportName.skipConversion)),
-            global   = globalOpt,
+            global = globalOpt
           )
       }
   }

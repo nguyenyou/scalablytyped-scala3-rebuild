@@ -8,13 +8,13 @@ object GenPromiseOps extends TreeTransformation {
       val newCompanions = IArray
         .fromOptions(
           flaff(s, Name("Promise")),
-          flaff(s, Name("PromiseLike")),
+          flaff(s, Name("PromiseLike"))
         )
         .toMap
 
       val filteredMembers = s.members.filter {
         case x: ModuleTree if newCompanions.contains(x.name) => false
-        case _ => true
+        case _                                               => true
       }
       s.withMembers(filteredMembers ++ IArray.fromTraversable(newCompanions.values))
     } else s
@@ -29,14 +29,14 @@ object GenPromiseOps extends TreeTransformation {
         val mod = existingModule.headOption.getOrElse(
           ModuleTree(
             Empty,
-            level      = ProtectionLevel.Public,
-            name       = cls.name,
-            parents    = Empty,
-            members    = Empty,
-            comments   = NoComments,
-            codePath   = cls.codePath,
-            isOverride = false,
-          ),
+            level = ProtectionLevel.Public,
+            name = cls.name,
+            parents = Empty,
+            members = Empty,
+            comments = NoComments,
+            codePath = cls.codePath,
+            isOverride = false
+          )
         )
         val ops  = genPromiseOps(cls, mod)
         val mod1 = mod.copy(members = mod.members :+ ops)
@@ -55,16 +55,16 @@ object GenPromiseOps extends TreeTransformation {
       val tpe  = TypeRef(QualifiedName.JsPromise, TypeParamTree.asTypeArgs(cls.tparams), NoComments)
       MethodTree(
         annotations = Empty,
-        level       = ProtectionLevel.Public,
-        name        = name,
-        tparams     = Empty,
-        params      = Empty,
-        impl        = ExprTree.AsInstanceOf(ExprTree.Ref(paramName), tpe),
-        resultType  = tpe,
-        isOverride  = false,
-        comments    = NoComments,
-        codePath    = OpsCP + name,
-        isImplicit  = false,
+        level = ProtectionLevel.Public,
+        name = name,
+        tparams = Empty,
+        params = Empty,
+        impl = ExprTree.AsInstanceOf(ExprTree.Ref(paramName), tpe),
+        resultType = tpe,
+        isOverride = false,
+        comments = NoComments,
+        codePath = OpsCP + name,
+        isImplicit = false
       )
     }
 
@@ -73,50 +73,50 @@ object GenPromiseOps extends TreeTransformation {
       val tpe = TypeRef(
         QualifiedName(IArray(Name.scala, Name("concurrent"), Name("Future"))),
         TypeParamTree.asTypeArgs(cls.tparams),
-        NoComments,
+        NoComments
       )
       MethodTree(
         annotations = Empty,
-        level       = ProtectionLevel.Public,
-        name        = name,
-        tparams     = Empty,
-        params      = Empty,
-        impl        = ExprTree.Select(ExprTree.Ref(toPromise.name), Name("toFuture")),
-        resultType  = tpe,
-        isOverride  = false,
-        comments    = NoComments,
-        codePath    = OpsCP + name,
-        isImplicit  = false,
+        level = ProtectionLevel.Public,
+        name = name,
+        tparams = Empty,
+        params = Empty,
+        impl = ExprTree.Select(ExprTree.Ref(toPromise.name), Name("toFuture")),
+        resultType = tpe,
+        isOverride = false,
+        comments = NoComments,
+        codePath = OpsCP + name,
+        isImplicit = false
       )
     }
     ClassTree(
-      isImplicit  = true,
+      isImplicit = true,
       annotations = IArray(Annotation.Inline),
-      level       = ProtectionLevel.Public,
-      name        = Ops,
-      tparams     = cls.tparams,
-      parents     = IArray(TypeRef.AnyVal),
+      level = ProtectionLevel.Public,
+      name = Ops,
+      tparams = cls.tparams,
+      parents = IArray(TypeRef.AnyVal),
       ctors = IArray(
         CtorTree(
           ProtectionLevel.Public,
           IArray(
             ParamTree(
-              name       = paramName,
+              name = paramName,
               isImplicit = false,
-              isVal      = true,
-              tpe        = TypeRef(cls.codePath, TypeParamTree.asTypeArgs(cls.tparams), NoComments),
-              default    = NotImplemented,
-              comments   = NoComments,
-            ),
+              isVal = true,
+              tpe = TypeRef(cls.codePath, TypeParamTree.asTypeArgs(cls.tparams), NoComments),
+              default = NotImplemented,
+              comments = NoComments
+            )
           ),
-          NoComments,
-        ),
+          NoComments
+        )
       ),
-      members   = IArray(toPromise, toFuture),
+      members = IArray(toPromise, toFuture),
       classType = ClassType.Class,
-      isSealed  = false,
-      comments  = NoComments,
-      codePath  = OpsCP,
+      isSealed = false,
+      comments = NoComments,
+      codePath = OpsCP
     )
   }
 }

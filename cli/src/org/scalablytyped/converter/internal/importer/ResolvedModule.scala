@@ -8,6 +8,6 @@ sealed trait ResolvedModule {
 }
 
 object ResolvedModule {
-  case class Local(inFile:    InFile, moduleName:      TsIdentModule) extends ResolvedModule
+  case class Local(inFile: InFile, moduleName: TsIdentModule)         extends ResolvedModule
   case class NotLocal(source: LibTsSource, moduleName: TsIdentModule) extends ResolvedModule
 }

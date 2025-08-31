@@ -1,6 +1,7 @@
 package org.scalablytyped.converter
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 
 sealed abstract class Flavour(val id: String)
 

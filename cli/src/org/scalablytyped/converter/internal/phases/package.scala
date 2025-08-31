@@ -2,7 +2,8 @@ package org.scalablytyped.converter.internal
 
 import org.scalablytyped.converter.internal.logging.Logger
 
-import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
 
 package object phases {
   type IsCircular       = Boolean

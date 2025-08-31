@@ -16,7 +16,7 @@ object ScalaNameEscape {
     ident match {
       case "^"                                             => false
       case str if str.isEmpty                              => true
-      case str if str.endsWith("_=") && !str.contains("-") => false //lets say this is good enough
+      case str if str.endsWith("_=") && !str.contains("-") => false // lets say this is good enough
       case str if isScalaKeyword(str)                      => true
       case str                                             => !isValidIdentifier(str)
     }
@@ -57,7 +57,7 @@ object ScalaNameEscape {
       "return",
       "sealed",
       "super",
-      "then", //not keyword but gives warning
+      "then", // not keyword but gives warning
       "this",
       "throw",
       "trait",
@@ -80,6 +80,6 @@ object ScalaNameEscape {
       "<%",
       ">:",
       "#",
-      "@",
+      "@"
     )
 }

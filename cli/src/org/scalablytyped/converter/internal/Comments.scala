@@ -1,7 +1,8 @@
 package org.scalablytyped.converter.internal
 
-import io.circe.{Decoder, Encoder}
-import org.scalablytyped.converter.internal.seqs._
+import io.circe.Decoder
+import io.circe.Encoder
+import org.scalablytyped.converter.internal.seqs.*
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -21,7 +22,7 @@ sealed class Comments(val cs: List[Comment]) extends Serializable {
   def has[T <: Marker: ClassTag]: Boolean =
     cs.exists {
       case _: T => true
-      case _ => false
+      case _    => false
     }
 
   override val hashCode: Int = 0
@@ -102,8 +103,8 @@ object Comments {
       .map { raw =>
         stringUtils.formatComment(
           stringUtils.escapeUnicodeEscapes(
-            stringUtils.escapeNestedComments(raw),
-          ),
+            stringUtils.escapeNestedComments(raw)
+          )
         )
       }
       .mkString("")

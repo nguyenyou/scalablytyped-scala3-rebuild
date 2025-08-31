@@ -3,9 +3,9 @@ package ts
 package parser
 
 import scala.collection.immutable.HashSet
-import scala.util.parsing.combinator._
-import scala.util.parsing.combinator.lexical._
-import scala.util.parsing.combinator.token._
+import scala.util.parsing.combinator.*
+import scala.util.parsing.combinator.lexical.*
+import scala.util.parsing.combinator.token.*
 import scala.util.parsing.input.CharArrayReader.EofCh
 
 object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitConversions {
@@ -13,7 +13,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   sealed trait CommentToken extends Token {
     def chars: String
   }
-  final case class CommentLineToken(chars:  String) extends CommentToken
+  final case class CommentLineToken(chars: String)  extends CommentToken
   final case class CommentBlockToken(chars: String) extends CommentToken
 
   final case class DirectiveToken(name: String, key: String, value: String) extends Token {
@@ -60,9 +60,8 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   val pseudoChar: Parser[Char] = {
     '\\' ~> (
       'x' ~> hexDigit ~ hexDigit ^^ { case d1 ~ d0 => (16 * d1 + d0).toChar } |
-        'u' ~> hexDigit ~ hexDigit ~ hexDigit ~ hexDigit ^^ {
-          case d3 ~ d2 ~ d1 ~ d0 =>
-            (4096 * d3 + 256 * d2 + 16 * d1 + d0).toChar
+        'u' ~> hexDigit ~ hexDigit ~ hexDigit ~ hexDigit ^^ { case d3 ~ d2 ~ d1 ~ d0 =>
+          (4096 * d3 + 256 * d2 + 16 * d1 + d0).toChar
         } |
         elem("", _ => true) ^^ {
           case '0' => '\u0000'
@@ -102,7 +101,7 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
 
     val hexNumericLiteral: Parser[NumericLit] =
       '0' ~> (Parser('x') | 'X') ~> stringOf1(
-        digit | 'a' | 'A' | 'b' | 'B' | 'c' | 'C' | 'd' | 'D' | 'e' | 'E' | 'f' | 'F',
+        digit | 'a' | 'A' | 'b' | 'B' | 'c' | 'C' | 'd' | 'D' | 'e' | 'E' | 'f' | 'F'
       ) ^^ (s => NumericLit("0x" + s))
 
     val decimal = stringOf1(digit | '.' | '-' | 'e' | '+') <~ 'n'.? ^^ NumericLit // yeah yeah, good enough for us
@@ -121,10 +120,10 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   }
 
   lazy val stringTemplateLiteral: Parser[StringTemplateLiteral] = {
-    val templateQuote = '`'
+    val templateQuote                    = '`'
     val interpolationStart: Parser[Char] = '$' ~> '{'
-    val interpolationEnd:   Parser[Char] = '}'
-    val nonInterpolationEndToken = token.filter { case Keyword("}") => false; case _ => true }
+    val interpolationEnd: Parser[Char]   = '}'
+    val nonInterpolationEndToken         = token.filter { case Keyword("}") => false; case _ => true }
 
     val either: Parser[Either[Char, List[Token]]] =
       interpolationStart.flatMap(_ => (rep(nonInterpolationEndToken) <~ interpolationEnd).map(Right.apply)) |
@@ -160,8 +159,8 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
   private val newLine: Parser[Char] =
     '\n'
 
-  /** A character-parser that matches a white-space character (and returns it).
-    * We don't ignore newlines */
+  /** A character-parser that matches a white-space character (and returns it). We don't ignore newlines
+    */
   override val whitespaceChar: Parser[Char] = {
     elem("space char", ch => ch <= ' ' && ch != EofCh && ch != '\n')
   }
@@ -174,37 +173,39 @@ object TsLexer extends Lexical with StdTokens with ParserHelpers with ImplicitCo
       ('\'': Parser[Char]) | '"'
 
     val asd: Parser[List[Char] ~ List[Char] ~ List[Char]] =
-      '/' ~> '/' ~> '/' ~> whitespace.? ~> '<' ~> chrExcept(' ').* ~ (' ' ~> chrExcept('=').* <~ '=' <~ quote) ~ chrExcept(
+      '/' ~> '/' ~> '/' ~> whitespace.? ~> '<' ~> chrExcept(' ').* ~ (' ' ~> chrExcept(
+        '='
+      ).* <~ '=' <~ quote) ~ chrExcept(
         '"',
-        '\'',
+        '\''
       ).* <~ quote <~ ' '.? <~ '/' <~ '>'
 
-    asd ^^ {
-      case c1 ~ c2 ~ c3 =>
-        DirectiveToken(chars2string(c1), chars2string(c2), chars2string(c3))
+    asd ^^ { case c1 ~ c2 ~ c3 =>
+      DirectiveToken(chars2string(c1), chars2string(c2), chars2string(c3))
     }
   }
 
   val comment: Parser[CommentToken] = {
     val oneLine: Parser[CommentLineToken] =
-      (whitespaceChar.* ~ '/' ~ '/' ~ rep(chrExcept(EofCh, '\n'))) ^^ {
-        case cs1 ~ c1 ~ c2 ~ cs2 =>
-          CommentLineToken(s"${chars2string(cs1)}$c1$c2${chars2string(cs2)}\n")
+      (whitespaceChar.* ~ '/' ~ '/' ~ rep(chrExcept(EofCh, '\n'))) ^^ { case cs1 ~ c1 ~ c2 ~ cs2 =>
+        CommentLineToken(s"${chars2string(cs1)}$c1$c2${chars2string(cs2)}\n")
       }
 
     val block: Parser[CommentBlockToken] =
-      (whitespaceChar.* ~ '/' ~ '*' ~ rep(not('*' ~ '/') ~> chrExcept(EofCh)) ~ '*' ~ '/' ~ whitespaceChar.* ~ newLine.*) ^^ {
-        case cs1 ~ c1 ~ c2 ~ cs2 ~ c3 ~ c4 ~ cs3 ~ cs4 =>
-          CommentBlockToken(
-            s"${chars2string(cs1)}$c1$c2${chars2string(cs2)}$c3$c4${chars2string(cs3)}${chars2string(cs4)}",
-          )
+      (whitespaceChar.* ~ '/' ~ '*' ~ rep(
+        not('*' ~ '/') ~> chrExcept(EofCh)
+      ) ~ '*' ~ '/' ~ whitespaceChar.* ~ newLine.*) ^^ { case cs1 ~ c1 ~ c2 ~ cs2 ~ c3 ~ c4 ~ cs3 ~ cs4 =>
+        CommentBlockToken(
+          s"${chars2string(cs1)}$c1$c2${chars2string(cs2)}$c3$c4${chars2string(cs3)}${chars2string(cs4)}"
+        )
       }
 
     not(directive) ~> oneLine | block
   }
 
   override lazy val token: Parser[Token] = {
-    val base = identifier | directive | comment | numericLiteral | stringLiteral | stringTemplateLiteral | delim | shebang | EofCh ^^^ EOF
+    val base =
+      identifier | directive | comment | numericLiteral | stringLiteral | stringTemplateLiteral | delim | shebang | EofCh ^^^ EOF
 
     val ignore = (newLine | whitespaceChar).*
 

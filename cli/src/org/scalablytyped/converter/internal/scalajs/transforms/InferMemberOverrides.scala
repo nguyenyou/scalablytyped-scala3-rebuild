@@ -2,11 +2,9 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
 
-/**
-  * When a class inherits the same method/field from two ancestors,
-  * we need to provide an override
+/** When a class inherits the same method/field from two ancestors, we need to provide an override
   */
 class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) extends TreeTransformation {
 
@@ -25,7 +23,7 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
 
     val (methods, fields, _) = members.partitionCollect2(
       { case x: MethodTree => x },
-      { case x: FieldTree  => x },
+      { case x: FieldTree => x }
     )
     val fieldsByName: Map[Name, IArray[FieldTree]] =
       fields.groupBy(_.name)
@@ -36,12 +34,12 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
     val inheritedFields: Map[Name, IArray[(FieldTree, TypeRef)]] =
       sum(
         root.directParents.map { branch =>
-          branch.transitiveParents.flatMap {
-            case (parentRef, p) => p.members.collect { case c: FieldTree => c.name -> (c -> parentRef) }.toMap
+          branch.transitiveParents.flatMap { case (parentRef, p) =>
+            p.members.collect { case c: FieldTree => c.name -> (c -> parentRef) }.toMap
           }
-        },
-      ).filter {
-        case (_, containedFields) => containedFields.map(_._2).distinct.length > 1
+        }
+      ).filter { case (_, containedFields) =>
+        containedFields.map(_._2).distinct.length > 1
       }
 
     val addedFields: IArray[FieldTree] =
@@ -53,13 +51,13 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
 
             head.copy(
               isOverride = true,
-              tpe        = newType,
+              tpe = newType,
               isReadOnly = fs.forall { case (f, _) => f.isReadOnly },
-              impl       = updatedImpl(fs.map(_._1.impl), Some(newType), tree.isScalaJsDefined),
-              comments   = head.comments + Comment("/* InferMemberOverrides */\n"),
+              impl = updatedImpl(fs.map(_._1.impl), Some(newType), tree.isScalaJsDefined),
+              comments = head.comments + Comment("/* InferMemberOverrides */\n")
             )
         },
-        keep = { case (name, _) => !fieldsByName.contains(name) },
+        keep = { case (name, _) => !fieldsByName.contains(name) }
       )
 
     val inheritedMethods: IArray[MethodTree] =
@@ -71,8 +69,8 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
           fs.head.copy(
             isOverride = true,
             resultType = TypeRef.Intersection(fs.map(_.resultType), NoComments),
-            impl       = updatedImpl(fs.map(_.impl), None, tree.isScalaJsDefined),
-            comments   = fs.head.comments + Comment("/* InferMemberOverrides */\n"),
+            impl = updatedImpl(fs.map(_.impl), None, tree.isScalaJsDefined),
+            comments = fs.head.comments + Comment("/* InferMemberOverrides */\n")
           )
       }
 
@@ -95,15 +93,15 @@ class InferMemberOverrides(erasure: Erasure, parentsResolver: ParentsResolver) e
     }
 
   private def updatedImpl(
-      fieldTypes:       IArray[ImplTree],
-      typeOpt:          Option[TypeRef],
-      isScalaJsDefined: Boolean,
+      fieldTypes: IArray[ImplTree],
+      typeOpt: Option[TypeRef],
+      isScalaJsDefined: Boolean
   ): ImplTree =
     if (isScalaJsDefined) {
       fieldTypes.partitionCollect3(
-        { case ExprTree.`native`    => ExprTree.native },
-        { case NotImplemented       => NotImplemented },
-        { case ExprTree.`undefined` => ExprTree.undefined },
+        { case ExprTree.`native` => ExprTree.native },
+        { case NotImplemented => NotImplemented },
+        { case ExprTree.`undefined` => ExprTree.undefined }
       ) match {
         case (Empty, _, Empty, Empty)                                   => NotImplemented
         case (Empty, _, _, Empty) if typeOpt.fold(true)(canBeUndefined) => ExprTree.undefined

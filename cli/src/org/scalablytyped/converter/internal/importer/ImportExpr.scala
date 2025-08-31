@@ -1,8 +1,9 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs.{ExprTree, QualifiedName}
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.scalajs.ExprTree
+import org.scalablytyped.converter.internal.scalajs.QualifiedName
+import org.scalablytyped.converter.internal.ts.*
 
 class ImportExpr(importType: ImportType, importName: AdaptiveNamingImport) {
   def apply(tsExpr: TsExpr, scope: TsTreeScope, shouldWiden: ImportType.ShouldWiden): ExprTree =

@@ -1,31 +1,29 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs._
+import org.scalablytyped.converter.internal.scalajs.*
 
-/**
-  * Account for an... interesting case of piece of modelling. We'll fix it some day, but for now I doubled down on it.
+/** Account for an... interesting case of piece of modelling. We'll fix it some day, but for now I doubled down on it.
   * There are reasons for this, most notably in the implementation of the module system.
   *
-  * On the typescript side we merge different syntactical entities by using the `namespaced` name.
-  * `{function a(): void; namespace a {const b: number}` =>
-  * `{namespace a {function ^(): void, const b: number}`.
+  * On the typescript side we merge different syntactical entities by using the `namespaced` name. `{function a(): void;
+  * namespace a {const b: number}` => `{namespace a {function ^(): void, const b: number}`.
   *
   * This undoes the damage.
   */
 object RewriteNamespaceMembers {
   def apply(original: IArray[Tree]): (IArray[TypeRef], IArray[MemberTree], IArray[Tree], Comments) =
     original.partitionCollect4(
-      { case x: FieldTree if x.name === Name.namespaced     => x },
-      { case x: MethodTree if x.name === Name.namespaced    => x },
+      { case x: FieldTree if x.name === Name.namespaced => x },
+      { case x: MethodTree if x.name === Name.namespaced => x },
       { case x: ContainerTree if x.name === Name.namespaced => x },
-      { case x: MemberTree                                  => x },
+      { case x: MemberTree => x }
     ) match {
       case (namespacedFields, namespacedMethods, namespacedContainers, memberTrees, remaining) =>
         val inheritance: IArray[TypeRef] = {
           val fromFields = namespacedFields.map(x => x.tpe)
           val fromContainers = namespacedContainers.flatMap {
-            case _: PackageTree => Empty
+            case _: PackageTree                           => Empty
             case ModuleTree(_, _, _, parents, _, _, _, _) => parents
           }
 

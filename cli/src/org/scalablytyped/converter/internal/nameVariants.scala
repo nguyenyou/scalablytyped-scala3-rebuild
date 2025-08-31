@@ -2,9 +2,9 @@ package org.scalablytyped.converter.internal
 
 object nameVariants {
   sealed trait NameVariant
-  case object Clean extends NameVariant
+  case object Clean                extends NameVariant
   case class KeepSymbolNum(n: Int) extends NameVariant
-  case object Unchanged extends NameVariant
+  case object Unchanged            extends NameVariant
 
   /* you would be surprised what shows up */
   private val WordBoundary = Set[Char]('.', ',', ':', ';', '?', '!', ' ', '\t', '\n', '-', '_', '/')
@@ -46,7 +46,7 @@ object nameVariants {
 
     variant match {
       case Unchanged        => value
-      case Clean            => keepSymbolNum(-1) //remove all symbols
+      case Clean            => keepSymbolNum(-1) // remove all symbols
       case KeepSymbolNum(n) => keepSymbolNum(n)
     }
   }

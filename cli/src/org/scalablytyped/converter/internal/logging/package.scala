@@ -1,9 +1,13 @@
 package org.scalablytyped.converter.internal
 
 import fansi.Str
-import org.scalablytyped.converter.internal.logging.Logger.{AppendableLogger, Stored, StoringLogger, WriterLogger}
+import org.scalablytyped.converter.internal.logging.Logger.AppendableLogger
+import org.scalablytyped.converter.internal.logging.Logger.Stored
+import org.scalablytyped.converter.internal.logging.Logger.StoringLogger
+import org.scalablytyped.converter.internal.logging.Logger.WriterLogger
 
-import java.io.{StringWriter, Writer}
+import java.io.StringWriter
+import java.io.Writer
 
 package object logging {
   type Ctx = Map[Str, Str]
@@ -15,15 +19,15 @@ package object logging {
 
   def appendable[A <: Appendable](
       appendable: A,
-      pattern:    Pattern = Pattern.default,
-      ctx:        Ctx = emptyContext,
+      pattern: Pattern = Pattern.default,
+      ctx: Ctx = emptyContext
   ): Logger[A] =
     new AppendableLogger(appendable, pattern, ctx)
 
   def writer[W <: Writer](
-      writer:  W       = new java.io.PrintWriter(System.out),
+      writer: W = new java.io.PrintWriter(System.out),
       pattern: Pattern = Pattern.default,
-      ctx:     Ctx     = emptyContext,
+      ctx: Ctx = emptyContext
   ): Logger[W] =
     new WriterLogger(new AppendableLogger(writer, pattern, ctx))
 

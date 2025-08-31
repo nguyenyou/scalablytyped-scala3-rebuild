@@ -1,6 +1,5 @@
 package org.scalablytyped.converter.internal
 import java.net.URLEncoder
-
 import scala.annotation.switch
 
 object stringUtils {
@@ -10,9 +9,8 @@ object stringUtils {
   def quote(s: String): String =
     s"$Quote${EscapeStrings.java(s)}$Quote"
 
-  /**
-   * pff, scala apparently cares about nested comments, especially when they're not balanced
-   */
+  /** pff, scala apparently cares about nested comments, especially when they're not balanced
+    */
   def escapeNestedComments(s: String): String =
     (s.indexOf("/*"), s.lastIndexOf("*/")) match {
       case (-1, _) => s
@@ -62,9 +60,8 @@ object stringUtils {
     sb.toString()
   }
 
-  /**
-   * Apparently scala cares and typescript doesn't
-   */
+  /** Apparently scala cares and typescript doesn't
+    */
   def escapeUnicodeEscapes(s: String): String =
     s.replaceAll("\\\\u", "\\\\\\\\u")
 
@@ -82,7 +79,7 @@ object stringUtils {
       .filterNot(_.isEmpty)
       .zipWithIndex
       .map {
-        case (x, 0) if x.length > 2 && x(0).isUpper && x(1).isUpper => x.toLowerCase //avoid things like dOM...
+        case (x, 0) if x.length > 2 && x(0).isUpper && x(1).isUpper => x.toLowerCase // avoid things like dOM...
         case (x, 0)                                                 => stringUtils.unCapitalize(x)
         case (x, _)                                                 => x.capitalize
       }

@@ -2,14 +2,13 @@ package org.scalablytyped.converter.internal
 package scalajs
 package flavours
 
-import org.scalablytyped.converter.internal.maps._
-import org.scalablytyped.converter.internal.scalajs.ExprTree._
-import org.scalablytyped.converter.internal.scalajs.flavours.FindProps.Res
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.scalajs.ExprTree.*
 import org.scalablytyped.converter.internal.scalajs.TypeParamTree.asTypeArgs
+import org.scalablytyped.converter.internal.scalajs.flavours.FindProps.Res
 import org.scalablytyped.converter.internal.scalajs.transforms.ModulesCombine
 
-/**
-  * Add a companion object to `@ScalaJSDefined` traits for creating instances with method syntax
+/** Add a companion object to `@ScalaJSDefined` traits for creating instances with method syntax
   */
 final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) extends TreeTransformation {
   override def leaveContainerTree(scope: TreeScope)(container: ContainerTree): ContainerTree =
@@ -28,11 +27,11 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
           if (enableLongApplyMethod) None
           else {
             findProps.forClassTree(
-              cls                = cls,
-              scope              = scope / cls,
-              maxNum             = Int.MaxValue,
+              cls = cls,
+              scope = scope / cls,
+              maxNum = Int.MaxValue,
               acceptNativeTraits = false,
-              selfRef            = clsRef,
+              selfRef = clsRef
             ) match {
               case Res.One(_, props) if props.nonEmpty => GenBuilderClass(cls, props, cls.codePath)
               case _                                   => None
@@ -40,15 +39,17 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
           }
         val hasImplementation: Boolean = {
 
-          /** When we rewrite type unions to inheritance we might produce two companions in the same scope, see `echarts` test.
-            *  This test catches a bit too much (meaning we might not generate some companions), but it should be fairly safe */
+          /** When we rewrite type unions to inheritance we might produce two companions in the same scope, see
+            * `echarts` test. This test catches a bit too much (meaning we might not generate some companions), but it
+            * should be fairly safe
+            */
           if (cls.comments.has[Marker.WasUnion])
             container.index(cls.name).length > 1
           else
             container.index(cls.name).exists {
               case c: ContainerTree => c.index.contains(Name.APPLY)
               case _: MemberTree    => true
-              case _ => false
+              case _                => false
             }
         }
 
@@ -56,11 +57,11 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
           if (hasImplementation) Empty
           else
             findProps.forClassTree(
-              cls                = cls,
-              scope              = scope / cls,
-              maxNum             = FindProps.MaxParamsForMethod,
+              cls = cls,
+              scope = scope / cls,
+              maxNum = FindProps.MaxParamsForMethod,
               acceptNativeTraits = false,
-              selfRef            = clsRef,
+              selfRef = clsRef
             ) match {
               case Res.Error(_) =>
                 Empty
@@ -72,7 +73,7 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
                 IArray.fromOptions(
                   Some(generateCreator(Name.APPLY, cm, cls.codePath, cls.tparams))
                     .filter(_.params.nonEmpty)
-                    .filter(ensureNotTooManyStrings(scope)),
+                    .filter(ensureNotTooManyStrings(scope))
                 )
 
               case Res.Many(propsMap) =>
@@ -102,7 +103,7 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
               some,
               dontMinimize,
               cls.codePath,
-              isOverride = false,
+              isOverride = false
             )
             Some(mod)
         }
@@ -110,10 +111,8 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
       case _ => None
     }
 
-  /**
-    * Avoid errors like this
-    * [E] [E-1] Error while emitting typingsJapgolly/csstype/csstypeMod/StandardLonghandPropertiesHyphenFallback$
-    * [E]       UTF8 string too large
+  /** Avoid errors like this [E] [E-1] Error while emitting
+    * typingsJapgolly/csstype/csstypeMod/StandardLonghandPropertiesHyphenFallback$ [E] UTF8 string too large
     */
   def ensureNotTooManyStrings(scope: TreeScope)(mod: MethodTree): Boolean = {
     val MaxWeight = 32768 // an estimate. If you see the error again, decrease this
@@ -122,7 +121,7 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
       override def leaveTypeRef(scope: TreeScope)(s: TypeRef): TypeRef = FollowAliases(scope)(s)
 
       // ignore implementations
-      override def leaveExprTree(scope:    TreeScope)(s: ExprTree):     ExprTree     = ExprTree.Null
+      override def leaveExprTree(scope: TreeScope)(s: ExprTree): ExprTree            = ExprTree.Null
       override def leaveExprRefTree(scope: TreeScope)(s: ExprTree.Ref): ExprTree.Ref = ExprTree.native
     }
 
@@ -138,10 +137,10 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
   }
 
   def generateCreator(
-      name:          Name,
+      name: Name,
       creatorMethod: CreatorMethod,
-      typeCp:        QualifiedName,
-      typeTparams:   IArray[TypeParamTree],
+      typeCp: QualifiedName,
+      typeTparams: IArray[TypeParamTree]
   ): MethodTree = {
 
     val ret = TypeRef(typeCp, asTypeArgs(typeTparams), NoComments)
@@ -152,26 +151,26 @@ final class GenCompanions(findProps: FindProps, enableLongApplyMethod: Boolean) 
         IArray(
           Val(
             objName,
-            Call(Ref(QualifiedName.JsDynamic).select("literal"), IArray(creatorMethod.initializers.map(_.value))),
-          ),
+            Call(Ref(QualifiedName.JsDynamic).select("literal"), IArray(creatorMethod.initializers.map(_.value)))
+          )
         ),
         creatorMethod.mutators.map(f => f.value(Ref(objName))),
-        IArray(AsInstanceOf(Ref(QualifiedName(IArray(objName))), ret)),
+        IArray(AsInstanceOf(Ref(QualifiedName(IArray(objName))), ret))
       )
     }
 
     MethodTree(
       annotations = IArray(Annotation.Inline),
-      level       = ProtectionLevel.Public,
-      name        = name,
-      tparams     = typeTparams,
-      params      = IArray(creatorMethod.params),
-      impl        = impl,
-      resultType  = ret,
-      isOverride  = false,
-      comments    = NoComments,
-      codePath    = typeCp + name,
-      isImplicit  = false,
+      level = ProtectionLevel.Public,
+      name = name,
+      tparams = typeTparams,
+      params = IArray(creatorMethod.params),
+      impl = impl,
+      resultType = ret,
+      isOverride = false,
+      comments = NoComments,
+      codePath = typeCp + name,
+      isImplicit = false
     )
   }
 }

@@ -1,16 +1,16 @@
 package org.scalablytyped.converter.internal
 package phases
 
-/**
-  * A representation of a computation of a set of elements which is done in phases.
-  * Each phase can both compute and express a new set of dependencies needed for the next
-  * phase.
+/** A representation of a computation of a set of elements which is done in phases. Each phase can both compute and
+  * express a new set of dependencies needed for the next phase.
   *
-  * Each element passing through a phase is guaranteed to be passed its dependencies
-  * after having passed through that given phase.
+  * Each element passing through a phase is guaranteed to be passed its dependencies after having passed through that
+  * given phase.
   *
-  * @tparam Id Every element and dependency must have an id
-  * @tparam T The type of the element at the current stage of the computation
+  * @tparam Id
+  *   Every element and dependency must have an id
+  * @tparam T
+  *   The type of the element at the current stage of the computation
   */
 sealed abstract class RecPhase[Id, T] {
   final type _Id = Id
@@ -32,10 +32,10 @@ object RecPhase {
   final case class Initial[Id]() extends RecPhase[Id, Id]
 
   final case class Next[Id, T, TT](
-      prev:  RecPhase[Id, T],
+      prev: RecPhase[Id, T],
       trans: Phase[Id, T, TT],
       cache: PhaseCache[Id, TT],
-      name:  String,
+      name: String
   ) extends RecPhase[Id, TT] {
     type _TT = TT
   }

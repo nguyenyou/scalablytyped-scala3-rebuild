@@ -48,43 +48,43 @@ object LibrarySpecific {
 
   object semanticUiReact extends Named {
     override val libName: TsIdentLibrary = TsIdentLibrarySimple("semantic-ui-react")
-    val stdLib                 = TsQIdent(IArray(TsIdent.std))
-    val reactMod               = TsQIdent(IArray(react.libName, TsIdentModule(None, List("react"))))
-    val AllHTMLAttributes      = reactMod + TsIdent("AllHTMLAttributes")
-    val InputHTMLAttributes    = reactMod + TsIdent("InputHTMLAttributes")
-    val HTMLInputElement       = stdLib + TsIdent("HTMLInputElement")
-    val TextareaHTMLAttributes = reactMod + TsIdent("TextareaHTMLAttributes")
-    val HTMLTextareaElement    = stdLib + TsIdent("HTMLTextAreaElement")
-    val FormHTMLAttributes     = reactMod + TsIdent("FormHTMLAttributes")
-    val HTMLFormElement        = stdLib + TsIdent("HTMLFormElement")
-    val ButtonHTMLAttributes   = reactMod + TsIdent("ButtonHTMLAttributes")
-    val HTMLButtonElement      = stdLib + TsIdent("HTMLButtonElement")
-    val TdHTMLAttributes       = reactMod + TsIdent("TdHTMLAttributes")
-    val HTMLTableCellElement   = stdLib + TsIdent("HTMLTableCellElement")
+    val stdLib                           = TsQIdent(IArray(TsIdent.std))
+    val reactMod                         = TsQIdent(IArray(react.libName, TsIdentModule(None, List("react"))))
+    val AllHTMLAttributes                = reactMod + TsIdent("AllHTMLAttributes")
+    val InputHTMLAttributes              = reactMod + TsIdent("InputHTMLAttributes")
+    val HTMLInputElement                 = stdLib + TsIdent("HTMLInputElement")
+    val TextareaHTMLAttributes           = reactMod + TsIdent("TextareaHTMLAttributes")
+    val HTMLTextareaElement              = stdLib + TsIdent("HTMLTextAreaElement")
+    val FormHTMLAttributes               = reactMod + TsIdent("FormHTMLAttributes")
+    val HTMLFormElement                  = stdLib + TsIdent("HTMLFormElement")
+    val ButtonHTMLAttributes             = reactMod + TsIdent("ButtonHTMLAttributes")
+    val HTMLButtonElement                = stdLib + TsIdent("HTMLButtonElement")
+    val TdHTMLAttributes                 = reactMod + TsIdent("TdHTMLAttributes")
+    val HTMLTableCellElement             = stdLib + TsIdent("HTMLTableCellElement")
 
     def event(name: TsQIdent, of: TsQIdent) =
       TsTypeRef(NoComments, name, IArray(TsTypeRef(NoComments, of, Empty)))
 
     val addDomProps = Map[TsIdent, TsTypeRef](
-      TsIdentSimple("StrictInputProps") -> event(InputHTMLAttributes, HTMLInputElement),
-      TsIdentSimple("StrictTextAreaProps") -> event(TextareaHTMLAttributes, HTMLTextareaElement),
-      TsIdentSimple("StrictCheckboxProps") -> event(InputHTMLAttributes, HTMLInputElement),
-      TsIdentSimple("StrictFormProps") -> event(FormHTMLAttributes, HTMLFormElement),
-      TsIdentSimple("StrictButtonProps") -> event(ButtonHTMLAttributes, HTMLButtonElement),
-      TsIdentSimple("StrictTableCellProps") -> event(TdHTMLAttributes, HTMLTableCellElement),
+      TsIdentSimple("StrictInputProps")     -> event(InputHTMLAttributes, HTMLInputElement),
+      TsIdentSimple("StrictTextAreaProps")  -> event(TextareaHTMLAttributes, HTMLTextareaElement),
+      TsIdentSimple("StrictCheckboxProps")  -> event(InputHTMLAttributes, HTMLInputElement),
+      TsIdentSimple("StrictFormProps")      -> event(FormHTMLAttributes, HTMLFormElement),
+      TsIdentSimple("StrictButtonProps")    -> event(ButtonHTMLAttributes, HTMLButtonElement),
+      TsIdentSimple("StrictTableCellProps") -> event(TdHTMLAttributes, HTMLTableCellElement)
     )
     val removeIndex = Set[TsIdent](
       TsIdentSimple("InputProps"),
       TsIdentSimple("TextAreaProps"),
       TsIdentSimple("FormProps"),
       TsIdentSimple("ButtonProps"),
-      TsIdentSimple("TableCellProps"),
+      TsIdentSimple("TableCellProps")
     )
 
     override def enterTsParsedFile(t: TsTreeScope)(x: TsParsedFile): TsParsedFile =
       x.copy(members = x.members.filter {
         case xx: TsDeclModule => !xx.name.fragments.contains("src")
-        case _ => true
+        case _                => true
       })
 
     override def enterTsDeclInterface(t: TsTreeScope)(x: TsDeclInterface): TsDeclInterface =
@@ -96,7 +96,7 @@ object LibrarySpecific {
             case (_, true) =>
               val newMembers = members.filter {
                 case _: TsMemberIndex => false
-                case _ => true
+                case _                => true
               }
               i.copy(members = newMembers)
             case _ => i
@@ -113,8 +113,8 @@ object LibrarySpecific {
     val CSSProperties = TsIdent("CSSProperties")
     val Readonly      = TsQIdent(IArray(TsIdent("Readonly")))
 
-    //Somewhere in here we need to take a look at the component, and if it has an "as" member with a known mapping and we don't have
-    //an inheritance tree already, we should add that.
+    // Somewhere in here we need to take a look at the component, and if it has an "as" member with a known mapping and we don't have
+    // an inheritance tree already, we should add that.
 
     override def enterTsDeclInterface(t: TsTreeScope)(x: TsDeclInterface): TsDeclInterface =
       x.name match {
@@ -127,7 +127,7 @@ object LibrarySpecific {
             Some(TsTypeUnion(IArray(TsTypeRef.any, TsTypeRef.undefined))),
             None,
             false,
-            true,
+            true
           )
           x.copy(members = x.members :+ hack)
 
@@ -137,16 +137,15 @@ object LibrarySpecific {
           new TypeRewriter(newX)
             .visitTsDeclInterface(TsTypeParam.asTypeArgs(x.tparams).map(_ -> TsTypeRef.any).toMap)(newX)
 
-        /**
-          * hack: react exposes just too many props for intrinsics (`div`, `a`, etc) to cross the 254
-          * parameter limit for *many* components. I've personally never needed the `*Capture` props,
-          * and they are easy to filter out en masse.
+        /** hack: react exposes just too many props for intrinsics (`div`, `a`, etc) to cross the 254 parameter limit
+          * for *many* components. I've personally never needed the `*Capture` props, and they are easy to filter out en
+          * masse.
           */
         case DOMAttributes =>
           val newMembers = x.members.filter {
             case x: TsMemberFunction => !x.name.value.endsWith("Capture")
             case x: TsMemberProperty => !x.name.value.endsWith("Capture")
-            case _ => true
+            case _                   => true
           }
           x.copy(members = newMembers)
         case _ => x

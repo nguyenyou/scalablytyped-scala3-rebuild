@@ -1,7 +1,8 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
+import org.scalablytyped.converter.internal.logging.Formatter
+import org.scalablytyped.converter.internal.logging.Logger
 import org.scalablytyped.converter.internal.scalajs.TypeRef.ThisType
 
 sealed abstract class TreeScope { outer =>
@@ -9,19 +10,19 @@ sealed abstract class TreeScope { outer =>
   val libName: Name
   def tparams: Map[Name, TypeParamTree]
   def _lookup(fragments: IArray[Name]): IArray[(Tree, TreeScope)]
-  def logger:   Logger[Unit]
+  def logger: Logger[Unit]
   def pedantic: Boolean
   val outputPkg: Name
 
   final def `..` : TreeScope =
     this match {
-      case root:   TreeScope.Root   => root
+      case root: TreeScope.Root     => root
       case scoped: TreeScope.Scoped => scoped.outer
     }
   final def root: TreeScope.Root =
     this match {
-      case root: TreeScope.Root   => root
-      case x:    TreeScope.Scoped => x.outer.root
+      case root: TreeScope.Root => root
+      case x: TreeScope.Scoped  => x.outer.root
     }
 
   final def lookup(wanted: QualifiedName): IArray[(Tree, TreeScope)] =
@@ -30,7 +31,7 @@ sealed abstract class TreeScope { outer =>
     else if (Name.Internal(wanted.parts.last)) Empty
     else {
       var searchFrom: TreeScope = this
-      var continue = true
+      var continue              = true
       while (continue) {
         searchFrom match {
           case _: TreeScope.Root =>
@@ -77,7 +78,7 @@ sealed abstract class TreeScope { outer =>
   override def equals(obj: Any): Boolean =
     obj match {
       case that: TreeScope if root.libName === that.root.libName && hashCode === that.hashCode => stack === that.stack
-      case _ => false
+      case _                                                                                   => false
     }
 
   def owner: Option[InheritanceTree] =
@@ -92,10 +93,10 @@ object TreeScope {
 
   class Root(
       val outputPkg: Name,
-      val libName:   Name,
+      val libName: Name,
       _dependencies: Map[Name, ContainerTree],
-      val logger:    Logger[Unit],
-      val pedantic:  Boolean,
+      val logger: Logger[Unit],
+      val pedantic: Boolean
   ) extends TreeScope {
 
     lazy val dependencies: Map[Name, TreeScope] =
@@ -143,7 +144,7 @@ object TreeScope {
           case x: ClassTree     => x.tparams
           case x: TypeAliasTree => x.tparams
           case x: MethodTree    => x.tparams
-          case _ => Empty
+          case _                => Empty
         }
 
       outer.tparams ++ newTParams.map(x => x.name -> x).toMap
@@ -182,7 +183,7 @@ object TreeScope {
   }
 
   trait Lib {
-    def packageTree:  ContainerTree
+    def packageTree: ContainerTree
     def dependencies: Map[_, Lib]
   }
 }

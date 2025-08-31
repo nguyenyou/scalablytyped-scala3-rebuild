@@ -8,7 +8,7 @@ sealed trait CodePath {
   def get: Option[CodePath.HasPath] =
     this match {
       case hp: CodePath.HasPath => Some(hp)
-      case CodePath.NoPath => None
+      case CodePath.NoPath      => None
     }
 
   def replaceLast(newLast: TsIdent): CodePath =

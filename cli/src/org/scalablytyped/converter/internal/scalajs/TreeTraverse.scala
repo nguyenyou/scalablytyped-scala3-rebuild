@@ -20,11 +20,11 @@ object TreeTraverse {
 
     def rec(a: Any): Unit =
       a match {
-        case x:  Tree if x ne tree  => go(extract, buf)(x)
+        case x: Tree if x ne tree   => go(extract, buf)(x)
         case xs: TraversableOnce[_] => xs.foreach(rec)
         case xs: IArray[_]          => xs.foreach(rec)
-        case p:  Product            => p.productIterator.foreach(rec)
-        case _ => ()
+        case p: Product             => p.productIterator.foreach(rec)
+        case _                      => ()
       }
 
     rec(tree)
@@ -35,11 +35,11 @@ object TreeTraverse {
 
     def rec(a: Any): Unit =
       a match {
-        case x:  AnyRef if x ne tree => foreach(x)(run)
-        case xs: TraversableOnce[_]  => xs.foreach(rec)
-        case xs: IArray[_]           => xs.foreach(rec)
-        case p:  Product             => p.productIterator.foreach(rec)
-        case _ => ()
+        case x: AnyRef if x ne tree => foreach(x)(run)
+        case xs: TraversableOnce[_] => xs.foreach(rec)
+        case xs: IArray[_]          => xs.foreach(rec)
+        case p: Product             => p.productIterator.foreach(rec)
+        case _                      => ()
       }
 
     rec(tree)

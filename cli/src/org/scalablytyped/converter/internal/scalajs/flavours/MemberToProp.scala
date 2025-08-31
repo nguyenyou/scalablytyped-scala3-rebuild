@@ -2,7 +2,7 @@ package org.scalablytyped.converter.internal
 package scalajs
 package flavours
 
-import org.scalablytyped.converter.internal.scalajs.ExprTree._
+import org.scalablytyped.converter.internal.scalajs.ExprTree.*
 
 trait MemberToProp {
   def apply(scope: TreeScope, x: MemberTree, isInherited: Boolean): Option[Prop]
@@ -24,10 +24,10 @@ object MemberToProp {
               else if (paramTypes.length > 22) None
               else {
                 val main = Prop.Variant(
-                  tpe           = TypeRef.ScalaFunction(paramTypes, retType, NoComments),
-                  asExpr        = ref => Call(Ref(QualifiedName.AnyFromFunction(paramTypes.length)), IArray(IArray(ref))),
-                  isRewritten   = true,
-                  extendsAnyVal = false,
+                  tpe = TypeRef.ScalaFunction(paramTypes, retType, NoComments),
+                  asExpr = ref => Call(Ref(QualifiedName.AnyFromFunction(paramTypes.length)), IArray(IArray(ref))),
+                  isRewritten = true,
+                  extendsAnyVal = false
                 )
                 Some(Prop.Normal(main, isInherited, optionality, Empty, f))
               }
@@ -49,7 +49,7 @@ object MemberToProp {
                       .mapNotNone(tpe => apply(scope, f.copy(tpe = tpe), isInherited))
                       .flatMap {
                         case x: Prop.Normal => x.allVariants
-                        case _ => Empty
+                        case _              => Empty
                       }
 
                   case TypeRef(QualifiedName.JsArray, IArray.exactlyOne(t), _) =>
@@ -57,18 +57,18 @@ object MemberToProp {
                       Prop.Variant(
                         TypeRef.Repeated(t, NoComments),
                         e => Call(Ref(QualifiedName.JsArray), IArray(IArray(`:_*`(e)))),
-                        isRewritten   = true,
-                        extendsAnyVal = false,
-                      ),
+                        isRewritten = true,
+                        extendsAnyVal = false
+                      )
                     )
                   case _ => Empty
                 }
 
               val main = Prop.Variant(
-                tpe           = tpe,
-                asExpr        = ref => AsInstanceOf(ref, TypeRef.JsAny),
-                isRewritten   = wasRewritten,
-                extendsAnyVal = TypeRef.Primitive(FollowAliases(scope / x)(dealiased)),
+                tpe = tpe,
+                asExpr = ref => AsInstanceOf(ref, TypeRef.JsAny),
+                isRewritten = wasRewritten,
+                extendsAnyVal = TypeRef.Primitive(FollowAliases(scope / x)(dealiased))
               )
               Some(Prop.Normal(main, isInherited, optionality, variants, f))
           }
@@ -81,10 +81,10 @@ object MemberToProp {
           else if (flattenedParams.length > 22) None
           else {
             val main = Prop.Variant(
-              tpe           = TypeRef.ScalaFunction(flattenedParams.map(p => p.tpe), m.resultType, NoComments),
-              asExpr        = ref => Call(Ref(QualifiedName.AnyFromFunction(flattenedParams.length)), IArray(IArray(ref))),
-              isRewritten   = true,
-              extendsAnyVal = false,
+              tpe = TypeRef.ScalaFunction(flattenedParams.map(p => p.tpe), m.resultType, NoComments),
+              asExpr = ref => Call(Ref(QualifiedName.AnyFromFunction(flattenedParams.length)), IArray(IArray(ref))),
+              isRewritten = true,
+              extendsAnyVal = false
             )
             Some(Prop.Normal(main, isInherited, Optionality.No, Empty, m))
           }

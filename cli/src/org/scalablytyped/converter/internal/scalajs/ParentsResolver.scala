@@ -1,12 +1,12 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import org.scalablytyped.converter.internal.scalajs.ParentsResolver._
+import org.scalablytyped.converter.internal.scalajs.ParentsResolver.*
 
 import scala.collection.mutable
 
-/**
-  * @deprecated This doesn't handle any of `Name.Internal`.
+/** @deprecated
+  *   This doesn't handle any of `Name.Internal`.
   *
   * Ideally we'll handle all of that on the typescript side, but we don't yet
   */
@@ -16,29 +16,29 @@ object ParentsResolver {
     lazy val transitiveParents: Map[TypeRef, ClassTree] =
       this match {
         case Parents(ps, _) => maps.smash(ps.map(_.transitiveParents))
-        case x: Parent => x.refs.map(_ -> x.classTree).toMap ++ maps.smash(x.parents.map(_.transitiveParents))
+        case x: Parent      => x.refs.map(_ -> x.classTree).toMap ++ maps.smash(x.parents.map(_.transitiveParents))
       }
 
     lazy val transitiveUnresolved: IArray[TypeRef] =
       this match {
         case Parents(ps, us) => us ++ ps.flatMap(_.transitiveUnresolved)
-        case x: Parent => x.unresolved ++ x.parents.flatMap(_.transitiveUnresolved)
+        case x: Parent       => x.unresolved ++ x.parents.flatMap(_.transitiveUnresolved)
       }
   }
 
   case class Parent(refs: IArray[TypeRef])(
-      val classTree:      ClassTree,
-      val foundIn:        TreeScope,
-      val parents:        IArray[Parent],
-      val unresolved:     IArray[TypeRef],
+      val classTree: ClassTree,
+      val foundIn: TreeScope,
+      val parents: IArray[Parent],
+      val unresolved: IArray[TypeRef]
   ) extends ParentTree {
 
     lazy val members: IArray[Tree] =
       parents.flatMap(_.members) ++ classTree.members
 
     lazy val fields: IArray[FieldTree] =
-      members.collect {
-        case x: FieldTree => x
+      members.collect { case x: FieldTree =>
+        x
       }
   }
 
@@ -69,20 +69,18 @@ object ParentsResolver {
 
   sealed trait Res
 
-  /**
-    * Result of conversion error.
-    * We handle it since it's not necessary to fail a whole library if one exists
+  /** Result of conversion error. We handle it since it's not necessary to fail a whole library if one exists
     */
-  case object Circular extends Res
+  case object Circular            extends Res
   case class Resolved(nr: Parent) extends Res
   /* A primitive doesn't resolve to a `ClassTree`, for instance */
   case class Unresolved(tr: IArray[TypeRef]) extends Res
 
   private def recurse(
-      scope:      TreeScope,
-      typeRefs:   List[TypeRef],
-      ld:         LoopDetector,
-      newTParams: IArray[TypeParamTree],
+      scope: TreeScope,
+      typeRefs: List[TypeRef],
+      ld: LoopDetector,
+      newTParams: IArray[TypeParamTree]
   ): Res =
     ld.including(typeRefs.head.typeName.parts, scope) match {
       case Left(()) =>
@@ -105,8 +103,8 @@ object ParentsResolver {
                     rewritten,
                     foundInScope,
                     parents.map(_.nr),
-                    unresolved.flatMap(_.tr),
-                  ),
+                    unresolved.flatMap(_.tr)
+                  )
                 )
 
             case (ta: TypeAliasTree, foundInScope) =>

@@ -1,21 +1,21 @@
 package org.scalablytyped.converter.internal
 
-import java.io._
-import java.nio.file.StandardOpenOption.{CREATE, TRUNCATE_EXISTING}
-import java.nio.file.{Files, Path}
+import io.circe.Decoder
+import io.circe.Encoder
+
+import java.io.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption.CREATE
+import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.util
-
-import io.circe.{Decoder, Encoder}
-import org.scalablytyped.converter.internal.environment.OpSystem
-
-import scala.util.Try
 
 sealed trait Synced
 object Synced {
-  case object New extends Synced
-  case object Changed extends Synced
+  case object New       extends Synced
+  case object Changed   extends Synced
   case object Unchanged extends Synced
-  case object Deleted extends Synced
+  case object Deleted   extends Synced
 }
 
 final case class InFile(path: os.Path) {

@@ -2,9 +2,12 @@ package org.scalablytyped.converter
 package internal
 package importer
 
-import io.circe.{Decoder, Encoder}
-import org.scalablytyped.converter.internal.scalajs.flavours.{FlavourImpl, NormalFlavour}
-import org.scalablytyped.converter.internal.scalajs.{Name, Versions}
+import io.circe.Decoder
+import io.circe.Encoder
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.Versions
+import org.scalablytyped.converter.internal.scalajs.flavours.FlavourImpl
+import org.scalablytyped.converter.internal.scalajs.flavours.NormalFlavour
 import org.scalablytyped.converter.internal.ts.TsIdentLibrary
 
 import scala.collection.immutable.SortedSet
@@ -13,17 +16,17 @@ import scala.collection.immutable.SortedSet
 implicit val listStringOrdering: Ordering[List[String]] = Ordering.by(_.mkString("/"))
 
 case class ConversionOptions(
-    useScalaJsDomTypes:       Boolean,
-    flavour:                  Flavour,
-    outputPackage:            Name,
-    stdLibs:                  SortedSet[String],
-    enableScalaJsDefined:     Selection[TsIdentLibrary],
-    expandTypeMappings:       Selection[TsIdentLibrary],
-    ignored:                  SortedSet[String],
-    versions:                 Versions,
-    enableLongApplyMethod:    Boolean,
-    privateWithin:            Option[Name],
-    useDeprecatedModuleNames: Boolean,
+    useScalaJsDomTypes: Boolean,
+    flavour: Flavour,
+    outputPackage: Name,
+    stdLibs: SortedSet[String],
+    enableScalaJsDefined: Selection[TsIdentLibrary],
+    expandTypeMappings: Selection[TsIdentLibrary],
+    ignored: SortedSet[String],
+    versions: Versions,
+    enableLongApplyMethod: Boolean,
+    privateWithin: Option[Name],
+    useDeprecatedModuleNames: Boolean
 ) {
   val ignoredLibs: Set[TsIdentLibrary] =
     ignored.map(TsIdentLibrary.apply)

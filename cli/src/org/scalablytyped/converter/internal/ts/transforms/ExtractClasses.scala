@@ -2,7 +2,7 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
 
 object ExtractClasses extends TransformLeaveMembers {
@@ -10,23 +10,23 @@ object ExtractClasses extends TransformLeaveMembers {
     val findName = FindAvailableName(x, scope)
 
     val rewrittenNameds: IArray[TsNamedDecl] =
-      x.membersByName.flatMapToIArray {
-        case (_, sameName) => extractClasses(scope, sameName, findName).getOrElse(sameName)
+      x.membersByName.flatMapToIArray { case (_, sameName) =>
+        extractClasses(scope, sameName, findName).getOrElse(sameName)
       }
 
     x.unnamed ++ rewrittenNameds
   }
 
   def extractClasses(
-      scope:    TsTreeScope,
+      scope: TsTreeScope,
       sameName: IArray[TsNamedDecl],
-      findName: FindAvailableName,
+      findName: FindAvailableName
   ): Option[IArray[TsNamedDecl]] = {
     val (vars, namespaces, classes, rest: IArray[TsNamedDecl]) =
       sameName.partitionCollect3(
-        { case x: TsDeclVar       => x },
+        { case x: TsDeclVar => x },
         { case x: TsDeclNamespace => x },
-        { case x: TsDeclClass     => x },
+        { case x: TsDeclClass => x }
       )
 
     vars match {
@@ -51,38 +51,37 @@ object ExtractClasses extends TransformLeaveMembers {
         val clsOpt: Option[TsDeclClass] =
           AnalyzedCtors.from(scope, tpe).flatMap {
             case AnalyzedCtors(longestTParams, resultType, ctors) =>
-              findName(name).map {
-                case (clsName, wasBackup) =>
-                  val realCtors: IArray[TsMemberFunction] =
-                    ctors.map(ctor =>
-                      TsMemberFunction(
-                        ctor.comments,
-                        TsProtectionLevel.Default,
-                        TsIdent.constructor,
-                        MethodType.Normal,
-                        TsFunSig(NoComments, Empty, ctor.params, None),
-                        isStatic   = false,
-                        isReadOnly = false,
-                      ),
-                    )
-
-                  val clsCodePath = clsName match {
-                    case TsIdent.namespaced => cp
-                    case other              => cp.replaceLast(other)
-                  }
-
-                  TsDeclClass(
-                    comments   = commentFor(wasBackup),
-                    declared   = declared,
-                    isAbstract = false,
-                    name       = clsName,
-                    tparams    = longestTParams,
-                    parent     = Some(FollowAliases.typeRef(scope)(resultType)),
-                    implements = Empty,
-                    members    = realCtors,
-                    jsLocation = jsLocation,
-                    codePath   = clsCodePath,
+              findName(name).map { case (clsName, wasBackup) =>
+                val realCtors: IArray[TsMemberFunction] =
+                  ctors.map(ctor =>
+                    TsMemberFunction(
+                      ctor.comments,
+                      TsProtectionLevel.Default,
+                      TsIdent.constructor,
+                      MethodType.Normal,
+                      TsFunSig(NoComments, Empty, ctor.params, None),
+                      isStatic = false,
+                      isReadOnly = false
+                    ),
                   )
+
+                val clsCodePath = clsName match {
+                  case TsIdent.namespaced => cp
+                  case other              => cp.replaceLast(other)
+                }
+
+                TsDeclClass(
+                  comments = commentFor(wasBackup),
+                  declared = declared,
+                  isAbstract = false,
+                  name = clsName,
+                  tparams = longestTParams,
+                  parent = Some(FollowAliases.typeRef(scope)(resultType)),
+                  implements = Empty,
+                  members = realCtors,
+                  jsLocation = jsLocation,
+                  codePath = clsCodePath
+                )
               }
             case _ => None
           }
@@ -104,44 +103,41 @@ object ExtractClasses extends TransformLeaveMembers {
   }
 
   def extractClassFromMember(
-      scope:    TsTreeScope,
+      scope: TsTreeScope,
       findName: FindAvailableName,
       ownerLoc: JsLocation,
-      ownerCp:  CodePath,
-  )(member:     TsMember): Option[TsDeclClass] =
+      ownerCp: CodePath
+  )(member: TsMember): Option[TsDeclClass] =
     member match {
       case TsMemberProperty(cs, level, origName, Some(tpe), None, isStatic, isReadOnly) =>
-        AnalyzedCtors.from(scope, tpe).flatMap {
-          case AnalyzedCtors(longestTParams, resultType, ctors) =>
-            findName(origName).map {
-              case (name, wasBackup) =>
-                val realCtors: IArray[TsMemberFunction] =
-                  ctors.map {
-                    case TsFunSig(cs1, _, params, _) =>
-                      TsMemberFunction(
-                        comments   = cs1,
-                        level      = level,
-                        name       = TsIdent.constructor,
-                        methodType = MethodType.Normal,
-                        signature  = TsFunSig(NoComments, Empty, params, None),
-                        isStatic   = isStatic,
-                        isReadOnly = isReadOnly,
-                      )
-                  }
-
-                TsDeclClass(
-                  comments   = cs ++ commentFor(wasBackup),
-                  declared   = false,
-                  isAbstract = false,
-                  name       = name,
-                  tparams    = longestTParams,
-                  parent     = Some(FollowAliases.typeRef(scope)(resultType)),
-                  implements = Empty,
-                  members    = realCtors,
-                  jsLocation = ownerLoc + origName,
-                  codePath   = ownerCp + name,
+        AnalyzedCtors.from(scope, tpe).flatMap { case AnalyzedCtors(longestTParams, resultType, ctors) =>
+          findName(origName).map { case (name, wasBackup) =>
+            val realCtors: IArray[TsMemberFunction] =
+              ctors.map { case TsFunSig(cs1, _, params, _) =>
+                TsMemberFunction(
+                  comments = cs1,
+                  level = level,
+                  name = TsIdent.constructor,
+                  methodType = MethodType.Normal,
+                  signature = TsFunSig(NoComments, Empty, params, None),
+                  isStatic = isStatic,
+                  isReadOnly = isReadOnly
                 )
-            }
+              }
+
+            TsDeclClass(
+              comments = cs ++ commentFor(wasBackup),
+              declared = false,
+              isAbstract = false,
+              name = name,
+              tparams = longestTParams,
+              parent = Some(FollowAliases.typeRef(scope)(resultType)),
+              implements = Empty,
+              members = realCtors,
+              jsLocation = ownerLoc + origName,
+              codePath = ownerCp + name
+            )
+          }
         }
       case _ => None
     }
@@ -202,7 +198,7 @@ object ExtractClasses extends TransformLeaveMembers {
               }
           }
         case x: TsTypeObject => from(x)
-        case _ => Empty
+        case _               => Empty
       }
     }
 
@@ -248,7 +244,7 @@ object ExtractClasses extends TransformLeaveMembers {
             case _: TsDeclInterface => true;
             case _: TsDeclClass     => true;
             case _: TsDeclTypeAlias => true
-            case _ => false
+            case _                  => false
           }
           if (isCollision) None else Some((potentialName, wasBackup))
       }

@@ -2,12 +2,11 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-/**
-  * This is the first part of a two step process to rid ourselves of the myriad of
-  *  type aliases and interfaces resulting from the resolution of modules.
+/** This is the first part of a two step process to rid ourselves of the myriad of type aliases and interfaces resulting
+  * from the resolution of modules.
   *
-  *  We need to do the removal in scala.js (`CleanupTypeAliases`) to ensure that
-  *  all dependencies can also resolve all their uses of the intermediate type aliases.
+  * We need to do the removal in scala.js (`CleanupTypeAliases`) to ensure that all dependencies can also resolve all
+  * their uses of the intermediate type aliases.
   */
 object InlineTrivial extends TreeTransformationScopedChanges {
   override def enterTsTypeRef(scope: TsTreeScope)(x: TsTypeRef): TsTypeRef =

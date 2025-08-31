@@ -1,11 +1,12 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 import org.scalablytyped.converter.internal.stringUtils.quote
 
 sealed trait Dep {
-  def org:     String
+  def org: String
   def version: String
 
   def for3Use2_13(is3: Boolean): Dep =
@@ -59,15 +60,15 @@ object Dep {
     override def mangledArtifact: String = name
   }
   case class For3Use2_13(dep: Dep) extends Dep {
-    override def org:     String = dep.org
+    override def org: String     = dep.org
     override def version: String = dep.version
   }
-  case class Scala(org:            String, name: String, version: String) extends Dep
+  case class Scala(org: String, name: String, version: String)            extends Dep
   case class ScalaFullVersion(org: String, name: String, version: String) extends Dep
-  case class ScalaJs(org:          String, name: String, version: String) extends Dep
+  case class ScalaJs(org: String, name: String, version: String)          extends Dep
 
   case class Mangled(mangledArtifact: String, dep: Dep) extends Concrete {
-    override def org:     String = dep.org
+    override def org: String     = dep.org
     override def version: String = dep.version
   }
 

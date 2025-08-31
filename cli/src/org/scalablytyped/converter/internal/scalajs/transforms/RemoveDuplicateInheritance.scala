@@ -4,10 +4,8 @@ package transforms
 
 import scala.collection.mutable
 
-/**
-  * Scala is again more strict with inheritance with differing type parameters,
-  * and we only augment the problem by freely tagging things as instantiatable and
-  * dictionaries in the import.
+/** Scala is again more strict with inheritance with differing type parameters, and we only augment the problem by
+  * freely tagging things as instantiatable and dictionaries in the import.
   *
   * todo: merge with `RemoveMultipleInheritance`?
   */
@@ -26,13 +24,12 @@ class RemoveDuplicateInheritance(parentsResolver: ParentsResolver) extends TreeT
   def resolved(parents: IArray[TypeRef], conflicts: Map[QualifiedName, IArray[TypeRef]]): IArray[TypeRef] = {
     val resolved: Map[QualifiedName, TypeRef] =
       conflicts
-        .map {
-          case (name, sameParentRef: IArray[TypeRef]) =>
-            name -> TypeRef(
-              name,
-              sameParentRef.map(_.targs).transpose.map(ts => TypeRef.Union(ts, NoComments, true)),
-              Comments.flatten(sameParentRef)(_.comments),
-            )
+        .map { case (name, sameParentRef: IArray[TypeRef]) =>
+          name -> TypeRef(
+            name,
+            sameParentRef.map(_.targs).transpose.map(ts => TypeRef.Union(ts, NoComments, true)),
+            Comments.flatten(sameParentRef)(_.comments)
+          )
         }
 
     /* take care to keep original order in spite of using a map above */
@@ -49,18 +46,15 @@ class RemoveDuplicateInheritance(parentsResolver: ParentsResolver) extends TreeT
     }
   }
 
-  /**
-    *
-    * Say we get `FooBar` here. Given a conflict like this:
+  /** Say we get `FooBar` here. Given a conflict like this:
     * ```typescript
     *   interface Foo extends I<number> {}
     *   interface FooBar extends Foo, I<string>
     * ```
     * we have no choice other than to drop the second dependency upon `I` entirely.
     *
-    * Note that:
-    * 1) we depend upon parent references to be fully qualified for now
-    * 2) type params of the conflicts might be compatible, but we remove anyway
+    * Note that: 1) we depend upon parent references to be fully qualified for now 2) type params of the conflicts might
+    * be compatible, but we remove anyway
     */
   def dropInheritedConflicts(scope: TreeScope, cls: ClassTree): ClassTree = {
     val allParentRefs: Set[TypeRef] =
@@ -71,7 +65,7 @@ class RemoveDuplicateInheritance(parentsResolver: ParentsResolver) extends TreeT
       case (Empty, _) => cls
       case (dropped, keep) =>
         scope.logger.info(
-          s"Dropped parents ${dropped.map(_.typeName).mkString(",")} at $scope because allParentRefs = $allParentRefs",
+          s"Dropped parents ${dropped.map(_.typeName).mkString(",")} at $scope because allParentRefs = $allParentRefs"
         )
         cls.copy(parents = keep)
     }

@@ -1,8 +1,10 @@
 package org.scalablytyped.converter
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 
-import scala.collection.immutable.{SortedSet, TreeSet}
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.TreeSet
 
 sealed trait Selection[T] {
   def &&(other: Selection[T]): Selection[T] =
@@ -52,10 +54,10 @@ object Selection {
   implicit def encodes[T: Encoder: Ordering]: Encoder[Selection[T]] = {
     import io.circe.syntax._
     Encoder.instance {
-      case AllExcept(values) => Map("AllExcept" -> values.asJson).asJson
+      case AllExcept(values)  => Map("AllExcept" -> values.asJson).asJson
       case NoneExcept(values) => Map("NoneExcept" -> values.asJson).asJson
-      case And(_1, _2) => Map("And" -> Map("_1" -> _1.asJson, "_2" -> _2.asJson)).asJson
-      case Or(_1, _2) => Map("Or" -> Map("_1" -> _1.asJson, "_2" -> _2.asJson)).asJson
+      case And(_1, _2)        => Map("And" -> Map("_1" -> _1.asJson, "_2" -> _2.asJson)).asJson
+      case Or(_1, _2)         => Map("Or" -> Map("_1" -> _1.asJson, "_2" -> _2.asJson)).asJson
     }
   }
 

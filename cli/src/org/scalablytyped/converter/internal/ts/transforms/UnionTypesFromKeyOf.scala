@@ -8,9 +8,8 @@ object UnionTypesFromKeyOf extends TreeTransformationScopedChanges {
       case TsTypeKeyOf(TsTypeRef(_, key, Empty)) if !scope.isAbstract(key) =>
         scope.lookup(key).headOption match {
           case Some(TsDeclInterface(_, _, _, _, _, members, _)) =>
-            val literals = members.collect {
-              case TsMemberProperty(_, _, TsIdent(name), _, _, _, _) =>
-                TsTypeLiteral(TsLiteral.Str(name))
+            val literals = members.collect { case TsMemberProperty(_, _, TsIdent(name), _, _, _, _) =>
+              TsTypeLiteral(TsLiteral.Str(name))
             }
 
             literals.length match {

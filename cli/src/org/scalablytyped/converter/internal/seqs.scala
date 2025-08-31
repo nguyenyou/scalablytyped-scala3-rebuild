@@ -1,6 +1,6 @@
 package org.scalablytyped.converter.internal
 
-import scala.collection.{BuildFrom, IterableOps}
+import scala.collection.BuildFrom
 
 object seqs {
   @inline final implicit class TraversableOps[CC[_], T](private val ts: CC[T])(implicit ev: CC[T] <:< Iterable[T]) {
@@ -15,9 +15,9 @@ object seqs {
       None
     }
 
-    def partitionCollect[T1](t1: PartialFunction[T, T1])(
-        implicit cbfT:           BuildFrom[CC[T], T, CC[T]],
-        cbfT1:                   BuildFrom[CC[T], T1, CC[T1]],
+    def partitionCollect[T1](t1: PartialFunction[T, T1])(implicit
+        cbfT: BuildFrom[CC[T], T, CC[T]],
+        cbfT1: BuildFrom[CC[T], T1, CC[T1]]
     ): (CC[T1], CC[T]) = {
 
       val t1s  = cbfT1.newBuilder(ts)
@@ -31,10 +31,10 @@ object seqs {
       (t1s.result(), rest.result())
     }
 
-    def partitionCollect2[T1, T2](t1: PartialFunction[T, T1], t2: PartialFunction[T, T2])(
-        implicit cbfT:                BuildFrom[CC[T], T, CC[T]],
-        cbfT1:                        BuildFrom[CC[T], T1, CC[T1]],
-        cbfT2:                        BuildFrom[CC[T], T2, CC[T2]],
+    def partitionCollect2[T1, T2](t1: PartialFunction[T, T1], t2: PartialFunction[T, T2])(implicit
+        cbfT: BuildFrom[CC[T], T, CC[T]],
+        cbfT1: BuildFrom[CC[T], T1, CC[T1]],
+        cbfT2: BuildFrom[CC[T], T2, CC[T2]]
     ): (CC[T1], CC[T2], CC[T]) = {
       val t1s  = cbfT1.newBuilder(ts)
       val t2s  = cbfT2.newBuilder(ts)
@@ -52,12 +52,12 @@ object seqs {
     def partitionCollect3[T1, T2, T3](
         t1: PartialFunction[T, T1],
         t2: PartialFunction[T, T2],
-        t3: PartialFunction[T, T3],
-    )(
-        implicit cbfT: BuildFrom[CC[T], T, CC[T]],
-        cbfT1:         BuildFrom[CC[T], T1, CC[T1]],
-        cbfT2:         BuildFrom[CC[T], T2, CC[T2]],
-        cbfT3:         BuildFrom[CC[T], T3, CC[T3]],
+        t3: PartialFunction[T, T3]
+    )(implicit
+        cbfT: BuildFrom[CC[T], T, CC[T]],
+        cbfT1: BuildFrom[CC[T], T1, CC[T1]],
+        cbfT2: BuildFrom[CC[T], T2, CC[T2]],
+        cbfT3: BuildFrom[CC[T], T3, CC[T3]]
     ): (CC[T1], CC[T2], CC[T3], CC[T]) = {
 
       val t1s  = cbfT1.newBuilder(ts)
@@ -79,13 +79,13 @@ object seqs {
         t1: PartialFunction[T, T1],
         t2: PartialFunction[T, T2],
         t3: PartialFunction[T, T3],
-        t4: PartialFunction[T, T4],
-    )(
-        implicit cbfT: BuildFrom[CC[T], T, CC[T]],
-        cbfT1:         BuildFrom[CC[T], T1, CC[T1]],
-        cbfT2:         BuildFrom[CC[T], T2, CC[T2]],
-        cbfT3:         BuildFrom[CC[T], T3, CC[T3]],
-        cbfT4:         BuildFrom[CC[T], T4, CC[T4]],
+        t4: PartialFunction[T, T4]
+    )(implicit
+        cbfT: BuildFrom[CC[T], T, CC[T]],
+        cbfT1: BuildFrom[CC[T], T1, CC[T1]],
+        cbfT2: BuildFrom[CC[T], T2, CC[T2]],
+        cbfT3: BuildFrom[CC[T], T3, CC[T3]],
+        cbfT4: BuildFrom[CC[T], T4, CC[T4]]
     ): (CC[T1], CC[T2], CC[T3], CC[T4], CC[T]) = {
 
       val t1s  = cbfT1.newBuilder(ts)
@@ -110,14 +110,14 @@ object seqs {
         t2: PartialFunction[T, T2],
         t3: PartialFunction[T, T3],
         t4: PartialFunction[T, T4],
-        t5: PartialFunction[T, T5],
-    )(
-        implicit cbfT: BuildFrom[CC[T], T, CC[T]],
-        cbfT1:         BuildFrom[CC[T], T1, CC[T1]],
-        cbfT2:         BuildFrom[CC[T], T2, CC[T2]],
-        cbfT3:         BuildFrom[CC[T], T3, CC[T3]],
-        cbfT4:         BuildFrom[CC[T], T4, CC[T4]],
-        cbfT5:         BuildFrom[CC[T], T5, CC[T5]],
+        t5: PartialFunction[T, T5]
+    )(implicit
+        cbfT: BuildFrom[CC[T], T, CC[T]],
+        cbfT1: BuildFrom[CC[T], T1, CC[T1]],
+        cbfT2: BuildFrom[CC[T], T2, CC[T2]],
+        cbfT3: BuildFrom[CC[T], T3, CC[T3]],
+        cbfT4: BuildFrom[CC[T], T4, CC[T4]],
+        cbfT5: BuildFrom[CC[T], T5, CC[T5]]
     ): (CC[T1], CC[T2], CC[T3], CC[T4], CC[T5], CC[T]) = {
 
       val t1s  = cbfT1.newBuilder(ts)

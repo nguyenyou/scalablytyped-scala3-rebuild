@@ -1,8 +1,6 @@
 package org.scalablytyped.converter.internal
 package ts
 
-import org.scalablytyped.converter.internal.ts.parser.TsParser
-
 package object parser {
   val BOM = "\uFEFF"
 
@@ -16,7 +14,7 @@ package object parser {
 
   def parseFileContent(inFile: InFile, bytes: Array[Byte]): Either[String, TsParsedFile] = {
     val str = cleanedString(new String(bytes, constants.Utf8))
-    val p = new TsParser(Some((inFile.path, str.length)))
+    val p   = new TsParser(Some((inFile.path, str.length)))
 
     p.phrase(p.parsedTsFile)(new TsParser.lexical.Scanner(str)) match {
       case p.Success(t, _) =>
@@ -29,7 +27,7 @@ package object parser {
 
   def parseFileStringContent(fileName: String, content: String): Either[String, TsParsedFile] = {
     val str = cleanedString(content)
-    val p = new TsParser(None)
+    val p   = new TsParser(None)
 
     p.phrase(p.parsedTsFile)(new TsParser.lexical.Scanner(str)) match {
       case p.Success(t, _) =>

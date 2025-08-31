@@ -1,6 +1,8 @@
 package org.scalablytyped.converter.internal.importer
 
-import org.scalablytyped.converter.internal.{IArray, InFile, InFolder}
+import org.scalablytyped.converter.internal.IArray
+import org.scalablytyped.converter.internal.InFile
+import org.scalablytyped.converter.internal.InFolder
 
 object PathsFromTsLibSource {
   val V  = "v[\\d\\.]+".r
@@ -29,7 +31,7 @@ object PathsFromTsLibSource {
       os.walk(bound.path, skip)
         .filter(path => path.last.endsWith(".d.ts") && os.isFile(path))
         .filterNot(_.last.contains(".src.")) // filter out files like highlight.src.d.ts,
-        .map(InFile.apply),
+        .map(InFile.apply)
     )
   }
 }

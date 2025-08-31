@@ -1,7 +1,8 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 
 sealed trait ClassType {
   import ClassType._

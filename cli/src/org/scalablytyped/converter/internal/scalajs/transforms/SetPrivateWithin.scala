@@ -5,7 +5,7 @@ package transforms
 class SetPrivateWithin(within: Name) extends TreeTransformation {
   require(
     !within.unescaped.contains("."),
-    s"stPrivateWithin cannot be fully qualified: specify `${within.unescaped.split("\\.").last}` instead of `${within.unescaped}`",
+    s"stPrivateWithin cannot be fully qualified: specify `${within.unescaped.split("\\.").last}` instead of `${within.unescaped}`"
   )
 
   val p = ProtectionLevel.Private(Some(within))
@@ -15,7 +15,7 @@ class SetPrivateWithin(within: Name) extends TreeTransformation {
     while (idx < scope.stack.length) {
       scope.stack(idx) match {
         case _: InheritanceTree => return true
-        case _ =>
+        case _                  =>
       }
       idx += 1
     }

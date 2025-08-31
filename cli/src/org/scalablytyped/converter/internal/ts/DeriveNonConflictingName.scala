@@ -1,19 +1,16 @@
 package org.scalablytyped.converter.internal
 package ts
 
-import seqs._
+import seqs.*
 
-/**
-  * Sometimes we need to name things in Scala where they were anonymous in Typescript.
+/** Sometimes we need to name things in Scala where they were anonymous in Typescript.
   *
-  * This tries to look at the contents of the code and name it based on member names first,
-  *  and then whatever other strings it can find. We try to make the names as short as
-  *  possible, and only generate longer names on conflict.
+  * This tries to look at the contents of the code and name it based on member names first, and then whatever other
+  * strings it can find. We try to make the names as short as possible, and only generate longer names on conflict.
   *
   * This means that our naming is order-dependent, which... might not be good at all.
   *
-  * If the algorithm is unable to come up with a non-conflicting name, it adds the hashCode()
-  * of the members.
+  * If the algorithm is unable to come up with a non-conflicting name, it adds the hashCode() of the members.
   */
 object DeriveNonConflictingName {
   val Anon          = ""
@@ -26,12 +23,12 @@ object DeriveNonConflictingName {
         case Empty => None
         case calls =>
           val longest = calls.maxBy(_.params.length)
-          Some(Detail(s"Call", s"Call${longest.params.map(_.name.value.capitalize).mkString}"))
+          Some(Detail("Call", s"Call${longest.params.map(_.name.value.capitalize).mkString}"))
       }
     }
 
-    /** note, we sort below. This is beneficial from a consistency perspective, and
-      *  negative for the number of names we can generate. Prefer the former for now
+    /** note, we sort below. This is beneficial from a consistency perspective, and negative for the number of names we
+      * can generate. Prefer the former for now
       */
     val fromMembers: IArray[Detail] =
       members.collect {
@@ -45,24 +42,22 @@ object DeriveNonConflictingName {
       }
 
     val fromInstantiable: Option[Detail] =
-      members.collectFirst {
-        case TsMemberCtor(_, _, signature) =>
-          val short = "Instantiable"
-          Detail(
-            short,
-            IArray.fromOptions(Some(short), Detail.prettyType(signature.resultType)).mkString,
-          )
+      members.collectFirst { case TsMemberCtor(_, _, signature) =>
+        val short = "Instantiable"
+        Detail(
+          short,
+          IArray.fromOptions(Some(short), Detail.prettyType(signature.resultType)).mkString
+        )
       }
 
     val fromDict: Option[Detail] =
       members
-        .collectFirst {
-          case TsMemberIndex(_, _, _, Indexing.Dict(name, inType), outType) =>
-            val short = Detail.pretty("Dict" + name.value)
-            val long = IArray
-              .fromOptions(Some(short), Some(Detail.prettyType(inType)), Detail.prettyType(outType))
-              .mkString
-            Detail(short, long)
+        .collectFirst { case TsMemberIndex(_, _, _, Indexing.Dict(name, inType), outType) =>
+          val short = Detail.pretty("Dict" + name.value)
+          val long = IArray
+            .fromOptions(Some(short), Some(Detail.prettyType(inType)), Detail.prettyType(outType))
+            .mkString
+          Detail(short, long)
         }
 
     val details = IArray.fromOptions(fromCalls, fromInstantiable, fromDict) ++ fromMembers.sorted.distinct
@@ -70,8 +65,8 @@ object DeriveNonConflictingName {
     val nameVariants: Stream[String] =
       for {
         longVersion <- Stream(false, true)
-        amount <- Stream.range(if (isMeaningless(prefix)) 1 else 0, details.length + 1)
-        idx <- Stream.range(0, details.length)
+        amount      <- Stream.range(if (isMeaningless(prefix)) 1 else 0, details.length + 1)
+        idx         <- Stream.range(0, details.length)
       } yield {
         val pick = details.drop(idx).take(amount)
         prefix + pick.map(_.pick(longVersion)).mkString("")

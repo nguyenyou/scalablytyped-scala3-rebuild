@@ -1,37 +1,35 @@
 package org.scalablytyped.converter.internal
 
-import java.io.File
-import java.nio.file.{Files, Path}
-
 import cats.data.ValidatedNel
-import io.circe._
-import io.circe.syntax._
+import io.circe.*
 
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import scala.io.Source
 import scala.util.control.NonFatal
 
 object Json {
 
-  /** Using circe's built-in parser instead of Jackson for Scala 3 compatibility.
-   *  Note: This loses some lenient parsing features (comments, trailing commas, etc.)
-   *  but provides better Scala 3 support.
-   */
+  /** Using circe's built-in parser instead of Jackson for Scala 3 compatibility. Note: This loses some lenient parsing
+    * features (comments, trailing commas, etc.) but provides better Scala 3 support.
+    */
   object CustomCirceParser extends Parser {
 
     // Simple preprocessing to handle some common non-standard JSON features
     private def preprocessJson(input: String): String = {
       // First pass: remove comments and trailing commas
       val withoutComments = input
-        .replaceAll("//.*", "") // Remove single-line comments
+        .replaceAll("//.*", "")               // Remove single-line comments
         .replaceAll("/\\*[\\s\\S]*?\\*/", "") // Remove multi-line comments
-        .replaceAll(",\\s*}", "}") // Remove trailing commas in objects
-        .replaceAll(",\\s*]", "]") // Remove trailing commas in arrays
+        .replaceAll(",\\s*}", "}")            // Remove trailing commas in objects
+        .replaceAll(",\\s*]", "]")            // Remove trailing commas in arrays
 
       // Second pass: properly escape control characters in JSON strings
-      val result = new StringBuilder()
+      val result   = new StringBuilder()
       var inString = false
-      var escaped = false
-      var i = 0
+      var escaped  = false
+      var i        = 0
 
       while (i < withoutComments.length) {
         val char = withoutComments.charAt(i)
@@ -48,13 +46,13 @@ object Json {
         } else if (inString) {
           // We're inside a string, escape control characters
           char match {
-            case '\n' => result.append("\\n")
-            case '\r' => result.append("\\r")
-            case '\t' => result.append("\\t")
-            case '\b' => result.append("\\b")
-            case '\f' => result.append("\\f")
+            case '\n'             => result.append("\\n")
+            case '\r'             => result.append("\\r")
+            case '\t'             => result.append("\\t")
+            case '\b'             => result.append("\\b")
+            case '\f'             => result.append("\\f")
             case c if c.isControl => result.append(f"\\u${c.toInt}%04x")
-            case c => result.append(c)
+            case c                => result.append(c)
           }
         } else {
           result.append(char)
@@ -70,7 +68,7 @@ object Json {
       // First try parsing without preprocessing
       io.circe.parser.parse(input) match {
         case success @ Right(_) => success
-        case Left(_) =>
+        case Left(_)            =>
           // If that fails, try with preprocessing
           io.circe.parser.parse(preprocessJson(input))
       }

@@ -1,16 +1,17 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 
-import scala.util.hashing.MurmurHash3.productHash
 import scala.language.implicitConversions
+import scala.util.hashing.MurmurHash3.productHash
 
 sealed trait Tree extends Product with Serializable {
-  val name:     Name
+  val name: Name
   val comments: Comments
   override def canEqual(that: Any): Boolean = that.## == ##
-  override lazy val hashCode: Int = productHash(this)
+  override lazy val hashCode: Int           = productHash(this)
 }
 
 object Tree {
@@ -36,8 +37,8 @@ sealed trait HasAnnotations { self: Tree =>
       .getOrElse(name)
 
   final def location: Option[LocationAnnotation] =
-    annotations.collectFirst {
-      case x: LocationAnnotation => x
+    annotations.collectFirst { case x: LocationAnnotation =>
+      x
     }
 }
 
@@ -56,7 +57,7 @@ sealed trait ContainerTree extends Tree with HasCodePath with HasAnnotations wit
 }
 
 sealed trait InheritanceTree extends Tree with HasCodePath with HasAnnotations with HasMembers {
-  def isScalaJsDefined:  Boolean = annotations contains Annotation.ScalaJSDefined
+  def isScalaJsDefined: Boolean  = annotations contains Annotation.ScalaJSDefined
   def receivesCompanion: Boolean = isScalaJsDefined || comments.has[Marker.CouldBeScalaJsDefined.type]
 
   def isNative: Boolean =
@@ -69,46 +70,46 @@ sealed trait InheritanceTree extends Tree with HasCodePath with HasAnnotations w
 
 final case class PackageTree(
     annotations: IArray[Annotation],
-    name:        Name,
-    members:     IArray[Tree],
-    comments:    Comments,
-    codePath:    QualifiedName,
+    name: Name,
+    members: IArray[Tree],
+    comments: Comments,
+    codePath: QualifiedName
 ) extends ContainerTree
 
 final case class ClassTree(
-    isImplicit:  Boolean,
+    isImplicit: Boolean,
     annotations: IArray[Annotation],
-    level:       ProtectionLevel,
-    name:        Name,
-    tparams:     IArray[TypeParamTree],
-    parents:     IArray[TypeRef],
-    ctors:       IArray[CtorTree],
-    members:     IArray[Tree],
-    classType:   ClassType,
-    isSealed:    Boolean,
-    comments:    Comments,
-    codePath:    QualifiedName,
+    level: ProtectionLevel,
+    name: Name,
+    tparams: IArray[TypeParamTree],
+    parents: IArray[TypeRef],
+    ctors: IArray[CtorTree],
+    members: IArray[Tree],
+    classType: ClassType,
+    isSealed: Boolean,
+    comments: Comments,
+    codePath: QualifiedName
 ) extends InheritanceTree
 
 final case class ModuleTree(
     annotations: IArray[Annotation],
-    level:       ProtectionLevel,
-    name:        Name,
-    parents:     IArray[TypeRef],
-    members:     IArray[Tree],
-    comments:    Comments,
-    codePath:    QualifiedName,
-    isOverride:  Boolean,
+    level: ProtectionLevel,
+    name: Name,
+    parents: IArray[TypeRef],
+    members: IArray[Tree],
+    comments: Comments,
+    codePath: QualifiedName,
+    isOverride: Boolean
 ) extends ContainerTree
     with InheritanceTree
 
 final case class TypeAliasTree(
-    name:     Name,
-    level:    ProtectionLevel,
-    tparams:  IArray[TypeParamTree],
-    alias:    TypeRef,
+    name: Name,
+    level: ProtectionLevel,
+    tparams: IArray[TypeParamTree],
+    alias: TypeRef,
     comments: Comments,
-    codePath: QualifiedName,
+    codePath: QualifiedName
 ) extends Tree
     with HasCodePath
 
@@ -129,24 +130,24 @@ sealed trait MemberTree extends Tree with HasCodePath with HasAnnotations {
 
 final case class FieldTree(
     annotations: IArray[Annotation],
-    level:       ProtectionLevel,
-    name:        Name,
-    tpe:         TypeRef,
-    impl:        ImplTree,
-    isReadOnly:  Boolean,
-    isOverride:  Boolean,
-    comments:    Comments,
-    codePath:    QualifiedName,
+    level: ProtectionLevel,
+    name: Name,
+    tpe: TypeRef,
+    impl: ImplTree,
+    isReadOnly: Boolean,
+    isOverride: Boolean,
+    comments: Comments,
+    codePath: QualifiedName
 ) extends MemberTree {
   def withSuffix[T: ToSuffix](t: T): FieldTree =
     renamed(name.withSuffix(t))
 
   def renamed(newName: Name): FieldTree =
     copy(
-      name        = newName,
+      name = newName,
       annotations = Annotation.renamedFrom(name)(annotations),
-      isOverride  = false,
-      codePath    = QualifiedName(codePath.parts.init :+ newName),
+      isOverride = false,
+      codePath = QualifiedName(codePath.parts.init :+ newName)
     )
 
   def withCodePath(newCodePath: QualifiedName): FieldTree = copy(codePath = newCodePath)
@@ -154,26 +155,26 @@ final case class FieldTree(
 
 final case class MethodTree(
     annotations: IArray[Annotation],
-    level:       ProtectionLevel,
-    name:        Name,
-    tparams:     IArray[TypeParamTree],
-    params:      IArray[IArray[ParamTree]],
-    impl:        ImplTree,
-    resultType:  TypeRef,
-    isOverride:  Boolean,
-    comments:    Comments,
-    codePath:    QualifiedName,
-    isImplicit:  Boolean,
+    level: ProtectionLevel,
+    name: Name,
+    tparams: IArray[TypeParamTree],
+    params: IArray[IArray[ParamTree]],
+    impl: ImplTree,
+    resultType: TypeRef,
+    isOverride: Boolean,
+    comments: Comments,
+    codePath: QualifiedName,
+    isImplicit: Boolean
 ) extends MemberTree {
   def withSuffix[T: ToSuffix](t: T): MethodTree =
     renamed(name.withSuffix(t))
 
   def renamed(newName: Name): MethodTree =
     copy(
-      name        = newName,
+      name = newName,
       annotations = Annotation.renamedFrom(name)(annotations),
-      isOverride  = false,
-      codePath    = QualifiedName(codePath.parts.init :+ newName),
+      isOverride = false,
+      codePath = QualifiedName(codePath.parts.init :+ newName)
     )
 
   def withCodePath(newCodePath: QualifiedName): MethodTree = copy(codePath = newCodePath)
@@ -192,29 +193,29 @@ object CtorTree {
 }
 
 final case class TypeParamTree(
-    name:        Name,
-    params:      IArray[TypeParamTree],
-    upperBound:  Option[TypeRef],
-    comments:    Comments,
-    ignoreBound: Boolean, // we ignore all bounds for code coming from typescript
+    name: Name,
+    params: IArray[TypeParamTree],
+    upperBound: Option[TypeRef],
+    comments: Comments,
+    ignoreBound: Boolean // we ignore all bounds for code coming from typescript
 ) extends Tree
 
 object TypeParamTree {
   def asTypeArgs(tps: IArray[TypeParamTree]): IArray[TypeRef] =
     tps.map(x => TypeRef(x.name))
 
-  implicit val suffix:  ToSuffix[TypeParamTree] = tp => ToSuffix(tp.name) +? tp.upperBound
-  implicit val encodes: Encoder[TypeParamTree]  = io.circe.generic.semiauto.deriveEncoder
-  implicit val decodes: Decoder[TypeParamTree]  = io.circe.generic.semiauto.deriveDecoder
+  implicit val suffix: ToSuffix[TypeParamTree] = tp => ToSuffix(tp.name) +? tp.upperBound
+  implicit val encodes: Encoder[TypeParamTree] = io.circe.generic.semiauto.deriveEncoder
+  implicit val decodes: Decoder[TypeParamTree] = io.circe.generic.semiauto.deriveDecoder
 }
 
 final case class ParamTree(
-    name:       Name,
+    name: Name,
     isImplicit: Boolean,
-    isVal:      Boolean,
-    tpe:        TypeRef,
-    default:    ImplTree,
-    comments:   Comments,
+    isVal: Boolean,
+    tpe: TypeRef,
+    default: ImplTree,
+    comments: Comments
 ) extends Tree
 
 object ParamTree {
@@ -233,9 +234,9 @@ final case class TypeRef(typeName: QualifiedName, targs: IArray[TypeRef], commen
 }
 
 object TypeRef {
-  implicit val suffix:       ToSuffix[TypeRef] = t => ToSuffix(t.typeName) ++ t.targs
-  implicit lazy val encodes: Encoder[TypeRef]  = io.circe.generic.semiauto.deriveEncoder
-  implicit lazy val decodes: Decoder[TypeRef]  = io.circe.generic.semiauto.deriveDecoder
+  implicit val suffix: ToSuffix[TypeRef]      = t => ToSuffix(t.typeName) ++ t.targs
+  implicit lazy val encodes: Encoder[TypeRef] = io.circe.generic.semiauto.deriveEncoder
+  implicit lazy val decodes: Decoder[TypeRef] = io.circe.generic.semiauto.deriveDecoder
 
   def apply(n: Name): TypeRef =
     TypeRef(QualifiedName(IArray(n)), Empty, NoComments)
@@ -309,7 +310,11 @@ object TypeRef {
     private val F = "Function(\\d+)".r
 
     def unapply(tr: TypeRef): Option[(IArray[TypeRef], TypeRef)] =
-      if (tr.typeName.startsWith(QualifiedName.scala_js) && tr.typeName.parts.length === QualifiedName.scala_js.parts.length + 1) {
+      if (
+        tr.typeName.startsWith(
+          QualifiedName.scala_js
+        ) && tr.typeName.parts.length === QualifiedName.scala_js.parts.length + 1
+      ) {
         tr.typeName.parts.last.unescaped match {
           case F(_) => Some((tr.targs.init, tr.targs.last))
           case _    => None
@@ -417,11 +422,10 @@ object TypeRef {
         case other                                  => IArray(other)
       }
 
-    /**
-      * @param sort matters surprisingly much, since union types dont commute.
-      * The best would be to always sort, but it's difficult because of subtyping.
-      * What we do for now is that when we construct a union type it's sorted (for consistent builds),
-      *  and when we encounter an existing we don't change it
+    /** @param sort
+      *   matters surprisingly much, since union types dont commute. The best would be to always sort, but it's
+      *   difficult because of subtyping. What we do for now is that when we construct a union type it's sorted (for
+      *   consistent builds), and when we encounter an existing we don't change it
       */
     def apply(types: IArray[TypeRef], comments: Comments, sort: Boolean): TypeRef = {
       val flattened: IArray[TypeRef] =
@@ -434,15 +438,14 @@ object TypeRef {
       val compressed: IArray[TypeRef] = {
         val byName = flattened.filterNot(tr => Name.Internal(tr.name)).groupBy(_.typeName)
 
-        flattened.zipWithIndex.mapNotNone {
-          case (tr, idx) =>
-            byName.get(tr.typeName) match {
-              case Some(more) if more.length > 1 =>
-                val isFirst = flattened.indexWhere(_.typeName === tr.typeName) === idx
-                if (isFirst) Some(tr.copy(targs = more.map(_.targs).transpose.map(Union(_, NoComments, sort = true))))
-                else None
-              case _ => Some(tr)
-            }
+        flattened.zipWithIndex.mapNotNone { case (tr, idx) =>
+          byName.get(tr.typeName) match {
+            case Some(more) if more.length > 1 =>
+              val isFirst = flattened.indexWhere(_.typeName === tr.typeName) === idx
+              if (isFirst) Some(tr.copy(targs = more.map(_.targs).transpose.map(Union(_, NoComments, sort = true))))
+              else None
+            case _ => Some(tr)
+          }
         }.distinct
       }
 
@@ -474,9 +477,9 @@ object TypeRef {
         case _ => None
       }
   }
-  object StringLiteral extends LiteralCompanion(QualifiedName.STRING_LITERAL)
-  object DoubleLiteral extends LiteralCompanion(QualifiedName.DOUBLE_LITERAL)
-  object IntLiteral extends LiteralCompanion(QualifiedName.INT_LITERAL)
+  object StringLiteral  extends LiteralCompanion(QualifiedName.STRING_LITERAL)
+  object DoubleLiteral  extends LiteralCompanion(QualifiedName.DOUBLE_LITERAL)
+  object IntLiteral     extends LiteralCompanion(QualifiedName.INT_LITERAL)
   object BooleanLiteral extends LiteralCompanion(QualifiedName.BOOLEAN_LITERAL)
   object Literal {
     def unapply(typeRef: TypeRef): Boolean =
@@ -529,7 +532,7 @@ object TypeRef {
 }
 
 sealed trait ImplTree extends Tree {
-  override val name:     Name     = Name("ImplTree")
+  override val name: Name         = Name("ImplTree")
   override val comments: Comments = NoComments
 }
 object ImplTree {
@@ -549,19 +552,19 @@ object ExprTree {
 
   val native = Ref(QualifiedName.scala_js + Name("native"))
 
-  case class BinaryOp(one:          ExprTree, op: String, two: ExprTree) extends ExprTree
-  case class Block(expressions:     IArray[ExprTree]) extends ExprTree
-  case class Call(function:         ExprTree, params: IArray[IArray[Arg]]) extends ExprTree
-  case class `:_*`(e:               ExprTree) extends ExprTree
-  case class If(pred:               ExprTree, ifTrue: ExprTree, ifFalse: Option[ExprTree]) extends ExprTree
-  case class Lambda(params:         IArray[ParamTree], body: ExprTree) extends ExprTree
-  case class New(expr:              TypeRef, params: IArray[ExprTree]) extends ExprTree
-  case class Ref(value:             QualifiedName) extends ExprTree
-  case class Select(from:           ExprTree, path: Name) extends ExprTree
-  case class TApply(ref:            ExprTree, targs: IArray[TypeRef]) extends ExprTree
-  case class Unary(op:              String, expr: ExprTree) extends ExprTree
-  case class Val(override val name: Name, value: ExprTree) extends ExprTree
-  case class Throw(expr:            ExprTree) extends ExprTree
+  case class BinaryOp(one: ExprTree, op: String, two: ExprTree)              extends ExprTree
+  case class Block(expressions: IArray[ExprTree])                            extends ExprTree
+  case class Call(function: ExprTree, params: IArray[IArray[Arg]])           extends ExprTree
+  case class `:_*`(e: ExprTree)                                              extends ExprTree
+  case class If(pred: ExprTree, ifTrue: ExprTree, ifFalse: Option[ExprTree]) extends ExprTree
+  case class Lambda(params: IArray[ParamTree], body: ExprTree)               extends ExprTree
+  case class New(expr: TypeRef, params: IArray[ExprTree])                    extends ExprTree
+  case class Ref(value: QualifiedName)                                       extends ExprTree
+  case class Select(from: ExprTree, path: Name)                              extends ExprTree
+  case class TApply(ref: ExprTree, targs: IArray[TypeRef])                   extends ExprTree
+  case class Unary(op: String, expr: ExprTree)                               extends ExprTree
+  case class Val(override val name: Name, value: ExprTree)                   extends ExprTree
+  case class Throw(expr: ExprTree)                                           extends ExprTree
 
   def IsInstanceOf(target: ExprTree, of: TypeRef): ExprTree =
     TApply(Select(target, Name("isInstanceOf")), IArray(of))
@@ -583,25 +586,25 @@ object ExprTree {
   }
 
   case class BooleanLit(value: Boolean) extends Lit
-  case class IntLit(value:     String) extends Lit
-  case class DoubleLit(value:  String) extends Lit
-  case class StringLit(value:  String) extends Lit
-  case object undefined extends Lit
-  case object Null extends Lit
+  case class IntLit(value: String)      extends Lit
+  case class DoubleLit(value: String)   extends Lit
+  case class StringLit(value: String)   extends Lit
+  case object undefined                 extends Lit
+  case object Null                      extends Lit
 
   sealed trait Arg extends ExprTree
   object Arg {
     case class Named(override val name: Name, expr: ExprTree) extends Arg
-    case class Pos(expr:                ExprTree) extends Arg
-    case class Variable(expr:           ExprTree) extends Arg
-    implicit def fromExpr(expr: ExprTree):         Arg = Pos(expr)
-    implicit def fromTuple(t:   (Name, ExprTree)): Arg = Named(t._1, t._2)
-    implicit val encodes: Encoder[Arg] = io.circe.generic.semiauto.deriveEncoder
-    implicit val decodes: Decoder[Arg] = io.circe.generic.semiauto.deriveDecoder
+    case class Pos(expr: ExprTree)                            extends Arg
+    case class Variable(expr: ExprTree)                       extends Arg
+    implicit def fromExpr(expr: ExprTree): Arg       = Pos(expr)
+    implicit def fromTuple(t: (Name, ExprTree)): Arg = Named(t._1, t._2)
+    implicit val encodes: Encoder[Arg]               = io.circe.generic.semiauto.deriveEncoder
+    implicit val decodes: Decoder[Arg]               = io.circe.generic.semiauto.deriveDecoder
   }
 
   object Block {
-    def apply(es:   ExprTree*)         = new Block(IArray.fromTraversable(es))
+    def apply(es: ExprTree*)           = new Block(IArray.fromTraversable(es))
     def flatten(es: IArray[ExprTree]*) = new Block(IArray.fromTraversable(es).flatten)
   }
 

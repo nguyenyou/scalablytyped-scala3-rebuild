@@ -8,10 +8,10 @@ sealed trait ExpandedMod {
 
 object ExpandedMod {
   final case class Whole(
-      defaults:   IArray[TsNamedDecl],
+      defaults: IArray[TsNamedDecl],
       namespaced: IArray[TsNamedDecl],
-      rest:       IArray[TsNamedDecl],
-      scope:      TsTreeScope,
+      rest: IArray[TsNamedDecl],
+      scope: TsTreeScope
   ) extends ExpandedMod {
     override def nonEmpty: Boolean = defaults.nonEmpty || namespaced.nonEmpty || rest.nonEmpty
   }

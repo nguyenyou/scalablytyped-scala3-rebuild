@@ -2,19 +2,17 @@ package org.scalablytyped.converter.internal
 package ts
 package modules
 
-import org.scalablytyped.converter.internal.ts.TsTreeScope.{
-  ImportCacheKey,
-  LoopDetector
-}
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.ts.*
+import org.scalablytyped.converter.internal.ts.TsTreeScope.ImportCacheKey
+import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
 
 object Imports {
   def lookupFromImports[T <: TsNamedDecl](
-      scope:        TsTreeScope.Scoped,
-      Pick:         Picker[T],
-      wanted:       IArray[TsIdent],
+      scope: TsTreeScope.Scoped,
+      Pick: Picker[T],
+      wanted: IArray[TsIdent],
       loopDetector: LoopDetector,
-      imports:      IArray[TsImport],
+      imports: IArray[TsImport]
   ): IArray[(T, TsTreeScope)] = {
     lazy val key = ImportCacheKey(scope, Pick, wanted)
 
@@ -40,7 +38,7 @@ object Imports {
                     renamed,
                     rest ++ defaults,
                     CodePath.NoPath,
-                    JsLocation.Zero,
+                    JsLocation.Zero
                   )
 
                   ns +: namespaceds.map(n => n.withName(renamed))
@@ -72,7 +70,7 @@ object Imports {
                     ident,
                     rest,
                     CodePath.NoPath,
-                    JsLocation.Zero,
+                    JsLocation.Zero
                   )
                   namespaceds.map(_.withName(ident)) :+ ns
               }
@@ -99,8 +97,8 @@ object Imports {
                     /* complain i guess? */
                     other
                 }
-                Utils.searchAmong(scope, Pick, newWanted, all, loopDetector).map {
-                  case (t, s) => t.withName(renamed).asInstanceOf[T] -> s
+                Utils.searchAmong(scope, Pick, newWanted, all, loopDetector).map { case (t, s) =>
+                  t.withName(renamed).asInstanceOf[T] -> s
                 }
             }
         }
@@ -139,7 +137,7 @@ object Imports {
 
             val (namespaceds, rest, _) = withAugmented.members.partitionCollect2(
               { case x: TsNamedDecl if x.name === TsIdent.namespaced => x },
-              { case x: TsNamedDecl                                  => DeriveCopy(x, CodePath.NoPath, None) },
+              { case x: TsNamedDecl => DeriveCopy(x, CodePath.NoPath, None) }
             )
 
             ExpandedMod.Whole(Empty, namespaceds, rest.flatten, modScope)
@@ -165,14 +163,14 @@ object Imports {
               }
 
             val (defaults, namespaceds, rest, _) = withAugmented.members.partitionCollect3(
-              { case x: TsNamedDecl if x.name === TsIdent.default    => x },
+              { case x: TsNamedDecl if x.name === TsIdent.default => x },
               { case x: TsNamedDecl if x.name === TsIdent.namespaced => x },
-              { case x: TsNamedDecl                                  => x },
+              { case x: TsNamedDecl => x }
             )
 
             ExpandedMod.Whole(defaults, namespaceds, rest, modScope)
           case _ =>
-            //scope.logger.fatalMaybe(s"Couldn't find expected module $fromModule", constants.Pedantic)
+            // scope.logger.fatalMaybe(s"Couldn't find expected module $fromModule", constants.Pedantic)
             ExpandedMod.Picked(Empty)
         }
 

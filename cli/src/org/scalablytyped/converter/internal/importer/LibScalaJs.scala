@@ -1,18 +1,20 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs.{Name, PackageTree, TreeScope}
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.PackageTree
+import org.scalablytyped.converter.internal.scalajs.TreeScope
 
 import scala.collection.immutable.SortedMap
 
 case class LibScalaJs(source: LibTsSource)(
-    val libName:              String,
-    val scalaName:            Name,
-    val libVersion:           LibraryVersion,
-    val packageTree:          PackageTree,
-    val dependencies:         Map[LibTsSource, LibScalaJs],
-    val isStdLib:             Boolean,
-    val names:                AdaptiveNamingImport,
+    val libName: String,
+    val scalaName: Name,
+    val libVersion: LibraryVersion,
+    val packageTree: PackageTree,
+    val dependencies: Map[LibTsSource, LibScalaJs],
+    val isStdLib: Boolean,
+    val names: AdaptiveNamingImport
 ) extends TreeScope.Lib
 
 object LibScalaJs {

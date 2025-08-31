@@ -31,27 +31,27 @@ object RewriteTypeThis extends TreeTransformationScopedChanges {
     stack.exists {
       case owner: TsDeclInterface if ownerName.parts.last === owner.name => true
       case owner: TsDeclClass if ownerName.parts.last === owner.name     => true
-      case _ => false
+      case _                                                             => false
     }
 
   def isReferencedInFunction(stack: List[TsTree]): Boolean =
     stack.exists {
       case _: TsTypeFunction => true
-      case _ => false
+      case _                 => false
     }
 
   def isReferencedInConstructor(stack: List[TsTree]): Boolean =
     stack.exists {
-      case _:     TsTypeConstructor                                      => true
+      case _: TsTypeConstructor                                          => true
       case owner: TsMemberFunction if owner.name === TsIdent.constructor => true
-      case _:     TsMemberCtor                                           => true
-      case _ => false
+      case _: TsMemberCtor                                               => true
+      case _                                                             => false
     }
 
   def isReferencedInTypeLookup(stack: List[TsTree]): Boolean =
     stack.exists {
       case _: TsTypeLookup => true
-      case _ => false
+      case _               => false
     }
 
   def isReferencedInIndexType(stack: List[TsTree]): Boolean =

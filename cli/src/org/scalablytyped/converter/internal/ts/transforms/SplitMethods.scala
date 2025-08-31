@@ -67,9 +67,9 @@ object SplitMethods extends TransformMembers with TransformClassMembers {
 
   @tailrec
   private def generateNewSignatures(
-      origin:     TsFunSig,
+      origin: TsFunSig,
       newParamss: IArray[IArray[TsFunParam]],
-      remaining:  IArray[IArray[TsFunParam]],
+      remaining: IArray[IArray[TsFunParam]]
   ): IArray[TsFunSig] =
     remaining match {
       case Empty => newParamss.map(currents => origin.copy(params = currents))
@@ -77,7 +77,7 @@ object SplitMethods extends TransformMembers with TransformClassMembers {
         generateNewSignatures(
           origin,
           heads.flatMap(head => newParamss.map(_ :+ head)),
-          tail,
+          tail
         )
     }
 
@@ -87,7 +87,7 @@ object SplitMethods extends TransformMembers with TransformClassMembers {
   def isRepeated(x: TsType): Boolean =
     x match {
       case _: TsTypeRepeated => true
-      case _ => false
+      case _                 => false
     }
 
   def collectRightWhile[T <: AnyRef, U <: AnyRef](ts: IArray[T])(pf: PartialFunction[T, U]): (IArray[T], IArray[U]) = {

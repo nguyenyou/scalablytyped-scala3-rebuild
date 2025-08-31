@@ -7,7 +7,7 @@ class QualifyReferences(skipValidation: Boolean) extends TreeTransformationScope
   override def enterTsType(scope: TsTreeScope)(x: TsType): TsType =
     x match {
       case x: TsTypeRef => TsTypeIntersect.simplified(resolveTypeRef(scope, x, None))
-      case other => other
+      case other        => other
     }
 
   override def enterTsTypeRef(scope: TsTreeScope)(x: TsTypeRef): TsTypeRef =
@@ -37,8 +37,8 @@ class QualifyReferences(skipValidation: Boolean) extends TreeTransformationScope
     val all: IArray[TsTypeRef] =
       x.parent.foldRight(x.implements)(_ +: _)
 
-    /** Special case because sometimes classes inherit from an interface with the same name
-      * We'll just merge them instead
+    /** Special case because sometimes classes inherit from an interface with the same name We'll just merge them
+      * instead
       */
     val filtered: IArray[TsTypeRef] =
       all.filter {
@@ -53,9 +53,9 @@ class QualifyReferences(skipValidation: Boolean) extends TreeTransformationScope
   }
 
   def resolveTypeRef(
-      scope:       TsTreeScope,
-      tr:          TsTypeRef,
-      maybeFilter: Option[TsNamedDecl => Boolean],
+      scope: TsTreeScope,
+      tr: TsTypeRef,
+      maybeFilter: Option[TsNamedDecl => Boolean]
   ): IArray[TsTypeRef] =
     if (shouldQualify(tr.name, scope)) {
       val all: IArray[TsNamedDecl] =

@@ -3,18 +3,16 @@ package ts
 package modules
 
 import org.scalablytyped.converter.internal.logging.Logger
-import org.scalablytyped.converter.internal.sets._
+import org.scalablytyped.converter.internal.sets.*
 
-/**
-  * There is a tendency to use node things (at least, so far) without
-  *  declaring it. This infers such use
+/** There is a tendency to use node things (at least, so far) without declaring it. This infers such use
   */
 object InferredDependency {
   def apply(
-      libName:            TsIdentLibrary,
-      file:               TsParsedFile,
+      libName: TsIdentLibrary,
+      file: TsParsedFile,
       nonResolvedModules: Set[TsIdentModule],
-      logger:             Logger[Unit],
+      logger: Logger[Unit]
   ): Set[TsIdentLibrary] =
     Set.empty[TsIdentLibrary] ++ inferNode(nonResolvedModules) ++ inferFromPrefixes(file) - libName match {
       case e @ EmptySet() => e
@@ -37,16 +35,16 @@ object InferredDependency {
     }
 
   private val libraryPrefix = Map[TsIdent, TsIdentLibrary](
-    TsIdent("React") -> TsIdentLibrarySimple("react"),
-    TsIdent("ng") -> TsIdentLibrarySimple("angular"),
-    TsIdent("angular") -> TsIdentLibrarySimple("angular"),
-    TsIdent("NodeJS") -> TsIdentLibrarySimple("node"),
-    TsIdent("Buffer") -> TsIdentLibrarySimple("node"),
-    TsIdent("global") -> TsIdentLibrarySimple("node"),
-    TsIdent("moment") -> TsIdentLibrarySimple("moment"),
+    TsIdent("React")    -> TsIdentLibrarySimple("react"),
+    TsIdent("ng")       -> TsIdentLibrarySimple("angular"),
+    TsIdent("angular")  -> TsIdentLibrarySimple("angular"),
+    TsIdent("NodeJS")   -> TsIdentLibrarySimple("node"),
+    TsIdent("Buffer")   -> TsIdentLibrarySimple("node"),
+    TsIdent("global")   -> TsIdentLibrarySimple("node"),
+    TsIdent("moment")   -> TsIdentLibrarySimple("moment"),
     TsIdent("Backbone") -> TsIdentLibrarySimple("backbone"),
-    TsIdent("Leaflet") -> TsIdentLibrarySimple("leaflet"),
-    TsIdent("Plotly") -> TsIdentLibrarySimple("plotly.js"),
+    TsIdent("Leaflet")  -> TsIdentLibrarySimple("leaflet"),
+    TsIdent("Plotly")   -> TsIdentLibrarySimple("plotly.js")
   )
 
   private val NodeModules: Set[TsIdentModule] = Set(
@@ -84,6 +82,6 @@ object InferredDependency {
     "timers",
     "console",
     "async_hooks",
-    "http2",
+    "http2"
   ).map(TsIdentModule.simple)
 }

@@ -1,31 +1,30 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.scalajs._
+import org.scalablytyped.converter.internal.scalajs.*
 import org.scalablytyped.converter.internal.scalajs.transforms.CleanIllegalNames
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.ts.*
 
 object ImportEnum {
   def underlyingType(e: TsDeclEnum): TypeRef = {
-    val found = e.members.collect {
-      case TsEnumMember(_, _, Some(TsExpr.Literal(lit))) =>
-        lit match {
-          case _: TsLiteral.Str  => TypeRef.String
-          case _: TsLiteral.Num  => TypeRef.Double
-          case _: TsLiteral.Bool => TypeRef.Boolean
-        }
+    val found = e.members.collect { case TsEnumMember(_, _, Some(TsExpr.Literal(lit))) =>
+      lit match {
+        case _: TsLiteral.Str  => TypeRef.String
+        case _: TsLiteral.Num  => TypeRef.Double
+        case _: TsLiteral.Bool => TypeRef.Boolean
+      }
     }
     TypeRef.Union(found, NoComments, sort = true)
   }
 
   def apply(
-      e:            TsDeclEnum,
-      anns:         IArray[Annotation],
-      scope:        TsTreeScope,
-      importName:   AdaptiveNamingImport,
-      importType:   ImportType,
+      e: TsDeclEnum,
+      anns: IArray[Annotation],
+      scope: TsTreeScope,
+      importName: AdaptiveNamingImport,
+      importType: ImportType,
       illegalNames: CleanIllegalNames,
-      importExpr:   ImportExpr,
+      importExpr: ImportExpr
   ): IArray[Tree] =
     e match {
       /* exported const enum? type alias */
@@ -33,42 +32,41 @@ object ImportEnum {
         val tpe        = importType(scope, importName)(exportedFrom)
         val importedCp = importName(codePath)
         IArray(
-          TypeAliasTree(importedCp.parts.last, ProtectionLevel.Public, Empty, tpe, cs + Marker.IsTrivial, importedCp),
+          TypeAliasTree(importedCp.parts.last, ProtectionLevel.Public, Empty, tpe, cs + Marker.IsTrivial, importedCp)
         )
 
       /* normal const enum? type alias. And output a scala object with values if possible, otherwise a comment */
       case TsDeclEnum(cs, _, true, _, members, _, None, _, codePath) =>
         val importedCodePath = importName(codePath)
         val ta = TypeAliasTree(
-          name     = importedCodePath.parts.last,
-          level    = ProtectionLevel.Public,
-          tparams  = Empty,
-          alias    = importType(scope, importName)(TsTypeUnion(e.members.map(m => TsExpr.typeOfOpt(m.expr)))),
+          name = importedCodePath.parts.last,
+          level = ProtectionLevel.Public,
+          tparams = Empty,
+          alias = importType(scope, importName)(TsTypeUnion(e.members.map(m => TsExpr.typeOfOpt(m.expr)))),
           comments = cs,
-          codePath = importedCodePath,
+          codePath = importedCodePath
         )
 
         def module = {
           val newMembers = members
-            .map {
-              case TsEnumMember(memberCs, ImportName(memberName), exprOpt) =>
-                val expr            = exprOpt.getOrElse(sys.error("Expression cannot be empty here"))
-                val tpe             = importType(scope, importName)(TsExpr.typeOf(expr))
-                val memberNameFixed = if (illegalNames.Illegal(memberName)) memberName.withSuffix("") else memberName
+            .map { case TsEnumMember(memberCs, ImportName(memberName), exprOpt) =>
+              val expr            = exprOpt.getOrElse(sys.error("Expression cannot be empty here"))
+              val tpe             = importType(scope, importName)(TsExpr.typeOf(expr))
+              val memberNameFixed = if (illegalNames.Illegal(memberName)) memberName.withSuffix("") else memberName
 
-                MethodTree(
-                  IArray(Annotation.Inline),
-                  ProtectionLevel.Public,
-                  memberNameFixed,
-                  Empty,
-                  Empty,
-                  ExprTree.AsInstanceOf(importExpr(expr, scope, ImportType.ShouldWiden.No), tpe),
-                  tpe,
-                  isOverride = false,
-                  memberCs,
-                  importedCodePath + memberNameFixed,
-                  isImplicit = false,
-                )
+              MethodTree(
+                IArray(Annotation.Inline),
+                ProtectionLevel.Public,
+                memberNameFixed,
+                Empty,
+                Empty,
+                ExprTree.AsInstanceOf(importExpr(expr, scope, ImportType.ShouldWiden.No), tpe),
+                tpe,
+                isOverride = false,
+                memberCs,
+                importedCodePath + memberNameFixed,
+                isImplicit = false
+              )
             }
             .distinctBy(_.name.unescaped)
 
@@ -82,7 +80,7 @@ object ImportEnum {
             newMembers,
             related,
             importedCodePath,
-            isOverride = false,
+            isOverride = false
           )
         }
 
@@ -95,7 +93,7 @@ object ImportEnum {
 
         val baseInterface: TypeRef =
           importType(scope, importName)(
-            TsTypeRef(NoComments, exportedFrom.fold(codePath.forceHasPath.codePath)(_.name), Empty),
+            TsTypeRef(NoComments, exportedFrom.fold(codePath.forceHasPath.codePath)(_.name), Empty)
           )
 
         val underlying = underlyingType(e)
@@ -104,27 +102,27 @@ object ImportEnum {
           exportedFrom match {
             case Some(ef) =>
               TypeAliasTree(
-                name     = enumName,
-                level    = ProtectionLevel.Public,
-                tparams  = Empty,
-                alias    = importType(scope, importName)(TsTypeRef(NoComments, ef.name, Empty)),
+                name = enumName,
+                level = ProtectionLevel.Public,
+                tparams = Empty,
+                alias = importType(scope, importName)(TsTypeRef(NoComments, ef.name, Empty)),
                 comments = Comments(Marker.IsTrivial),
-                codePath = importedCodePath,
+                codePath = importedCodePath
               )
             case None =>
               ClassTree(
-                isImplicit  = false,
+                isImplicit = false,
                 annotations = IArray(Annotation.JsNative),
-                level       = ProtectionLevel.Public,
-                name        = enumName,
-                tparams     = Empty,
-                parents     = Empty,
-                ctors       = Empty,
-                members     = Empty,
-                classType   = ClassType.Trait,
-                isSealed    = true,
-                comments    = NoComments,
-                codePath    = importedCodePath,
+                level = ProtectionLevel.Public,
+                name = enumName,
+                tparams = Empty,
+                parents = Empty,
+                ctors = Empty,
+                members = Empty,
+                classType = ClassType.Trait,
+                isSealed = true,
+                comments = NoComments,
+                codePath = importedCodePath
               )
           }
 
@@ -136,82 +134,81 @@ object ImportEnum {
               Some(
                 MethodTree(
                   annotations = IArray(Annotation.JsBracketAccess),
-                  level       = ProtectionLevel.Public,
-                  name        = Name.APPLY,
-                  tparams     = Empty,
-                  params      = IArray(IArray(applyParam)),
-                  impl        = ExprTree.native,
-                  resultType  = TypeRef.Intersection(IArray(baseInterface, underlying), NoComments).withOptional(true),
-                  isOverride  = false,
-                  comments    = NoComments,
-                  codePath    = importedCodePath + Name.APPLY,
-                  isImplicit  = false,
-                ),
+                  level = ProtectionLevel.Public,
+                  name = Name.APPLY,
+                  tparams = Empty,
+                  params = IArray(IArray(applyParam)),
+                  impl = ExprTree.native,
+                  resultType = TypeRef.Intersection(IArray(baseInterface, underlying), NoComments).withOptional(true),
+                  isOverride = false,
+                  comments = NoComments,
+                  codePath = importedCodePath + Name.APPLY,
+                  isImplicit = false
+                )
               )
             } else None
 
           val membersSyms: IArray[Tree] =
-            members.flatMap {
-              case TsEnumMember(memberCs, ImportName(memberName), exprOpt) =>
-                val memberType: Option[ClassTree] =
-                  if (exportedFrom.nonEmpty) None
-                  else
-                    Some(
-                      ClassTree(
-                        isImplicit  = false,
-                        annotations = IArray(Annotation.JsNative),
-                        level       = ProtectionLevel.Public,
-                        name        = memberName,
-                        tparams     = Empty,
-                        parents     = IArray(baseInterface),
-                        ctors       = Empty,
-                        members     = Empty,
-                        classType   = ClassType.Trait,
-                        isSealed    = true,
-                        comments    = memberCs,
-                        codePath    = importedCodePath + memberName,
-                      ),
+            members.flatMap { case TsEnumMember(memberCs, ImportName(memberName), exprOpt) =>
+              val memberType: Option[ClassTree] =
+                if (exportedFrom.nonEmpty) None
+                else
+                  Some(
+                    ClassTree(
+                      isImplicit = false,
+                      annotations = IArray(Annotation.JsNative),
+                      level = ProtectionLevel.Public,
+                      name = memberName,
+                      tparams = Empty,
+                      parents = IArray(baseInterface),
+                      ctors = Empty,
+                      members = Empty,
+                      classType = ClassType.Trait,
+                      isSealed = true,
+                      comments = memberCs,
+                      codePath = importedCodePath + memberName
                     )
+                  )
 
-                val memberTypeRef = baseInterface.copy(typeName = baseInterface.typeName + memberName)
+              val memberTypeRef = baseInterface.copy(typeName = baseInterface.typeName + memberName)
 
-                val memberValue: Option[Tree] =
-                  if (isValue) {
-                    val (anns, name) =
-                      if (illegalNames.Illegal(memberName) || ScalaJsClasses.jsObjectMembersByName.contains(memberName))
-                        (IArray(Annotation.JsName(memberName)), memberName.withSuffix(""))
-                      else (Empty, memberName)
+              val memberValue: Option[Tree] =
+                if (isValue) {
+                  val (anns, name) =
+                    if (illegalNames.Illegal(memberName) || ScalaJsClasses.jsObjectMembersByName.contains(memberName))
+                      (IArray(Annotation.JsName(memberName)), memberName.withSuffix(""))
+                    else (Empty, memberName)
 
-                    val comments =
-                      exprOpt.fold(Comments(Nil))(expr => Comments(Comment(s"/* ${TsExpr.format(expr)} */ ")))
+                  val comments =
+                    exprOpt.fold(Comments(Nil))(expr => Comments(Comment(s"/* ${TsExpr.format(expr)} */ ")))
 
-                    Some(
-                      FieldTree(
-                        annotations = anns,
-                        level       = ProtectionLevel.Public,
-                        name        = name,
-                        tpe         = TypeRef.Intersection(IArray(memberTypeRef, underlying), NoComments),
-                        impl        = ExprTree.native,
-                        isReadOnly  = true,
-                        isOverride  = false,
-                        comments    = comments,
-                        codePath    = importedCodePath + memberName,
-                      ),
+                  Some(
+                    FieldTree(
+                      annotations = anns,
+                      level = ProtectionLevel.Public,
+                      name = name,
+                      tpe = TypeRef.Intersection(IArray(memberTypeRef, underlying), NoComments),
+                      impl = ExprTree.native,
+                      isReadOnly = true,
+                      isOverride = false,
+                      comments = comments,
+                      codePath = importedCodePath + memberName
                     )
-                  } else None
+                  )
+                } else None
 
-                IArray.fromOptions(memberType, memberValue)
+              IArray.fromOptions(memberType, memberValue)
             }
 
           ModuleTree(
             annotations = anns,
-            level       = ProtectionLevel.Public,
-            name        = enumName,
-            parents     = Empty,
-            members     = membersSyms ++ IArray.fromOption(applyMethod),
-            comments    = cs + Marker.EnumObject,
-            codePath    = importedCodePath,
-            isOverride  = false,
+            level = ProtectionLevel.Public,
+            name = enumName,
+            parents = Empty,
+            members = membersSyms ++ IArray.fromOption(applyMethod),
+            comments = cs + Marker.EnumObject,
+            codePath = importedCodePath,
+            isOverride = false
           )
         }
 

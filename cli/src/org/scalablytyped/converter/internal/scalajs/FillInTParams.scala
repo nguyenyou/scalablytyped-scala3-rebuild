@@ -3,52 +3,55 @@ package scalajs
 
 object FillInTParams {
   def apply(
-      cls:             ClassTree,
-      scope:           TreeScope,
+      cls: ClassTree,
+      scope: TreeScope,
       providedTParams: IArray[TypeRef],
-      newTParams:      IArray[TypeParamTree],
+      newTParams: IArray[TypeParamTree]
   ): ClassTree =
     if (providedTParams.isEmpty) cls
-    else {
-      val rewriter = TypeRewriter(rewrites(cls.tparams, providedTParams))
-      val newCls   = rewriter.visitClassTree(scope)(cls)
+    else
+      {
+        val rewriter = TypeRewriter(rewrites(cls.tparams, providedTParams))
+        val newCls   = rewriter.visitClassTree(scope)(cls)
 
-      newCls.comments.extract { case Marker.WasUnion(related) => related } match {
-        case None                  => newCls
-        case Some((related, rest)) =>
-          // https://en.wikipedia.org/wiki/Leaky_abstraction
-          val newRelated = Marker.WasUnion(related.map(rewriter.visitTypeRef(scope)))
-          newCls.copy(comments = rest + newRelated)
-      }
-    }.copy(tparams = newTParams)
+        newCls.comments.extract { case Marker.WasUnion(related) => related } match {
+          case None                  => newCls
+          case Some((related, rest)) =>
+            // https://en.wikipedia.org/wiki/Leaky_abstraction
+            val newRelated = Marker.WasUnion(related.map(rewriter.visitTypeRef(scope)))
+            newCls.copy(comments = rest + newRelated)
+        }
+      }.copy(tparams = newTParams)
 
   def apply(
-      x:               TypeAliasTree,
-      scope:           TreeScope,
+      x: TypeAliasTree,
+      scope: TreeScope,
       providedTParams: IArray[TypeRef],
-      newTParams:      IArray[TypeParamTree],
+      newTParams: IArray[TypeParamTree]
   ): TypeAliasTree =
     if (providedTParams.isEmpty) x
-    else {
-      val refToRef = rewrites(x.tparams, providedTParams)
-      TypeRewriter(refToRef).visitTypeAliasTree(scope)(x)
-    }.copy(tparams = newTParams)
+    else
+      {
+        val refToRef = rewrites(x.tparams, providedTParams)
+        TypeRewriter(refToRef).visitTypeAliasTree(scope)(x)
+      }.copy(tparams = newTParams)
 
   def apply(
-      x:               MethodTree,
-      scope:           TreeScope,
+      x: MethodTree,
+      scope: TreeScope,
       providedTParams: IArray[TypeRef],
-      newTParams:      IArray[TypeParamTree],
+      newTParams: IArray[TypeParamTree]
   ): MethodTree =
     if (providedTParams.isEmpty) x
-    else {
-      val refToRef = rewrites(x.tparams, providedTParams)
-      TypeRewriter(refToRef).visitMethodTree(scope)(x).copy(tparams = Empty)
-    }.copy(tparams = newTParams)
+    else
+      {
+        val refToRef = rewrites(x.tparams, providedTParams)
+        TypeRewriter(refToRef).visitMethodTree(scope)(x).copy(tparams = Empty)
+      }.copy(tparams = newTParams)
 
   private def rewrites(
       expectedTParams: IArray[TypeParamTree],
-      providedTParams: IArray[TypeRef],
+      providedTParams: IArray[TypeRef]
   ): Map[TypeRef, TypeRef] =
     expectedTParams
       .zip(providedTParams)

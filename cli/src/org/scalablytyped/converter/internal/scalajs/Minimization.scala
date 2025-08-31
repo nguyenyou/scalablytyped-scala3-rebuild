@@ -14,9 +14,9 @@ object Minimization {
   type KeepIndex = Map[QualifiedName, OnlyStatic]
 
   def findReferences(
-      globalScope:                TreeScope,
-      entryPoints:                IArray[QualifiedName],
-      packagesWithShouldMinimize: IArray[(PackageTree, Boolean)],
+      globalScope: TreeScope,
+      entryPoints: IArray[QualifiedName],
+      packagesWithShouldMinimize: IArray[(PackageTree, Boolean)]
   ): KeepIndex = {
 
     val keep = mutable.Map.empty[QualifiedName, OnlyStatic]
@@ -34,17 +34,15 @@ object Minimization {
 
           addStaticParents(parent)
 
-          globalScope.lookup(parent).foreach {
-            case (tree, _) =>
-              tree.comments.extract {
-                case Marker.MinimizationRelated(related) =>
-                  TreeTraverse.foreach(related) {
-                    case TypeRef(typeName, _, _) if typeName =/= parent =>
-                      expand(typeName)
-                    case _ => ()
-                  }
+          globalScope.lookup(parent).foreach { case (tree, _) =>
+            tree.comments.extract { case Marker.MinimizationRelated(related) =>
+              TreeTraverse.foreach(related) {
+                case TypeRef(typeName, _, _) if typeName =/= parent =>
+                  expand(typeName)
+                case _ => ()
               }
-              ()
+            }
+            ()
           }
         }
 
@@ -81,23 +79,21 @@ object Minimization {
 
     entryPoints.foreach(expand)
 
-    packagesWithShouldMinimize.foreach {
-      case (pkg, shouldMinimize) =>
-        TreeTraverse.foreach(pkg) {
-          case tree: Tree with HasCodePath =>
-            tree.comments.extract {
-              case Marker.MinimizationKeep(related) =>
-                expand(tree.codePath)
-                TreeTraverse.foreach(related) {
-                  case TypeRef(typeName, _, _) => expand(typeName)
-                  case _                       => ()
-                }
+    packagesWithShouldMinimize.foreach { case (pkg, shouldMinimize) =>
+      TreeTraverse.foreach(pkg) {
+        case tree: Tree with HasCodePath =>
+          tree.comments.extract { case Marker.MinimizationKeep(related) =>
+            expand(tree.codePath)
+            TreeTraverse.foreach(related) {
+              case TypeRef(typeName, _, _) => expand(typeName)
+              case _                       => ()
             }
-            ()
-          case TypeRef(typeName, _, _) if !shouldMinimize =>
-            expand(typeName)
-          case _ => ()
-        }
+          }
+          ()
+        case TypeRef(typeName, _, _) if !shouldMinimize =>
+          expand(typeName)
+        case _ => ()
+      }
     }
 
     keep.toMap
@@ -124,7 +120,7 @@ object Minimization {
         case x: ClassTree     => keep.contains(x.codePath) && !keep(x.codePath)
         case x: TypeAliasTree => keep.contains(x.codePath) && !keep(x.codePath)
         case x: HasCodePath   => keep.contains(x.codePath)
-        case _ => false
+        case _                => false
       }
   }
 }

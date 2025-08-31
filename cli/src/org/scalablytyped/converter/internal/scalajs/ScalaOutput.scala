@@ -1,8 +1,7 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-/**
-  * Maps the in-memory `Tree` structure to a file structure
+/** Maps the in-memory `Tree` structure to a file structure
   */
 sealed trait ScalaOutput
 
@@ -14,7 +13,7 @@ object ScalaOutput {
     override def equals(obj: Any): Boolean =
       obj match {
         case other: File => name.value.toLowerCase === other.name.value.toLowerCase
-        case _ => false
+        case _           => false
       }
     override lazy val hashCode: Int =
       name.value.toLowerCase.hashCode
@@ -27,6 +26,6 @@ object ScalaOutput {
       case s: PackageTree => Package(s.name)
       case s: ModuleTree  => File(s.name)
       case s: ClassTree   => File(s.name)
-      case _ => PackageObject
+      case _              => PackageObject
     }
 }

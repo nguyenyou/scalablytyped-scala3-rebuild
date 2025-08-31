@@ -6,15 +6,13 @@ import org.scalablytyped.converter.internal.ts.transforms.SetCodePath
 
 import scala.collection.mutable
 
-/**
-  * Here be dragons, i guess. The implementation of augmented modules is the bare minimum to make a few
-  *  key libraries, like lodash, compile. We should really re-do all of this.
+/** Here be dragons, i guess. The implementation of augmented modules is the bare minimum to make a few key libraries,
+  * like lodash, compile. We should really re-do all of this.
   */
 object AugmentModules {
 
-  /** Determine which container to extend.
-    * By default it will be the provided module, but if it has a default or = export
-    *  of a namespace, we put it there instead
+  /** Determine which container to extend. By default it will be the provided module, but if it has a default or =
+    * export of a namespace, we put it there instead
     */
   def target(mod: TsDeclModule, scope: TsTreeScope): CodePath.HasPath = {
     val exportedNamespaceOpt: Option[CodePath] =
@@ -24,8 +22,8 @@ object AugmentModules {
           (scope / mod)
             .lookupBase(Picker.Namespaces, qIdent, skipValidation = true)
             .headOption
-            .map {
-              case (namespace, _) => namespace.codePath
+            .map { case (namespace, _) =>
+              namespace.codePath
             }
         case _ => None
       }
@@ -66,14 +64,14 @@ object AugmentModules {
       override def leaveTsParsedFile(t: Unit)(x: TsParsedFile): TsParsedFile = {
         val newMembers = x.members.filter {
           case aux: TsAugmentedModule if toRemove(aux.codePath) => false
-          case _ => true
+          case _                                                => true
         }
         x.copy(members = newMembers)
       }
       override def leaveTsDeclModule(t: Unit)(x: TsDeclModule): TsDeclModule = {
         val newMembers = x.members.mapNotNone {
           case aux: TsAugmentedModule if toRemove(aux.codePath) => KeepTypesOnly(aux)
-          case other => Some(other)
+          case other                                            => Some(other)
         }
         x.copy(members = newMembers)
       }

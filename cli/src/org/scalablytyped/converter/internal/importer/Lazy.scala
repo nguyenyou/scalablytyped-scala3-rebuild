@@ -66,9 +66,9 @@ object Lazy {
 
   sealed trait State[+T]
   object State {
-    case object Initial extends State[Nothing]
-    case object Computing extends State[Nothing]
-    case class Done[T](value: T) extends State[T]
-    case class Failed(th:     Throwable) extends State[Nothing]
+    case object Initial              extends State[Nothing]
+    case object Computing            extends State[Nothing]
+    case class Done[T](value: T)     extends State[T]
+    case class Failed(th: Throwable) extends State[Nothing]
   }
 }

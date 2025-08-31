@@ -1,10 +1,8 @@
 package org.scalablytyped.converter.internal
 package scalajs
 package transforms
-
-import org.scalablytyped.converter.internal.IArray
-import org.scalablytyped.converter.internal.maps._
-import org.scalablytyped.converter.internal.scalajs._
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.scalajs.*
 
 import scala.collection.mutable
 
@@ -14,7 +12,7 @@ object ShortenNames {
   case class ImportTree(imported: QualifiedName)
 
   def apply(owner: ContainerTree, scope: TreeScope, parentsResolver: ParentsResolver)(
-      members:     IArray[Tree],
+      members: IArray[Tree]
   ): (IArray[ImportTree], IArray[Tree]) = {
     val collectedImports = mutable.Map.empty[Name, QualifiedName]
 
@@ -49,7 +47,7 @@ object ShortenNames {
           }
           def isRef = scope.stack.exists {
             case _: ExprTree.Ref => true
-            case _ => false
+            case _               => false
           }
           isSingleton || isRef
         }
@@ -57,18 +55,20 @@ object ShortenNames {
         val shortName = longName.parts.last
 
         val rewrittenOpt: Option[QualifiedName] = {
-          if (!Name.Internal(shortName) &&
-              longName.parts.head =/= Name.THIS &&
-              longName.parts.head =/= Name.SUPER &&
-              !Forbidden.contains(shortName) &&
-              owner.name =/= shortName &&
-              longName.parts.length > 1 &&
-              /* the printer has special logic for these */
-              longName =/= TypeRef.Nothing.typeName &&
-              !TypeRef.ScalaFunction.is(longName) &&
-              !longName.startsWith(QualifiedName.scala_js) &&
-              /* keep more expensive check last */
-              !nameCollision(scope, parentsResolver, longName, methodsAreConflict = methodsAreConflict)) {
+          if (
+            !Name.Internal(shortName) &&
+            longName.parts.head =/= Name.THIS &&
+            longName.parts.head =/= Name.SUPER &&
+            !Forbidden.contains(shortName) &&
+            owner.name =/= shortName &&
+            longName.parts.length > 1 &&
+            /* the printer has special logic for these */
+            longName =/= TypeRef.Nothing.typeName &&
+            !TypeRef.ScalaFunction.is(longName) &&
+            !longName.startsWith(QualifiedName.scala_js) &&
+            /* keep more expensive check last */
+            !nameCollision(scope, parentsResolver, longName, methodsAreConflict = methodsAreConflict)
+          ) {
 
             collectedImports.get(shortName) match {
               case Some(alreadyImported) =>
@@ -118,7 +118,7 @@ object ShortenNames {
             trees.exists {
               case _: ClassTree     => true
               case _: TypeAliasTree => true
-              case _ => false
+              case _                => false
             }
           case None => false
         }
@@ -127,10 +127,10 @@ object ShortenNames {
 
   object nameCollision {
     def apply(
-        scope:              TreeScope,
-        parentsResolver:    ParentsResolver,
-        longName:           QualifiedName,
-        methodsAreConflict: Boolean,
+        scope: TreeScope,
+        parentsResolver: ParentsResolver,
+        longName: QualifiedName,
+        methodsAreConflict: Boolean
     ): Boolean = {
       val shortName = longName.parts.last
 
@@ -138,11 +138,11 @@ object ShortenNames {
         case x: InheritanceTree =>
           def ctorClash = x match {
             case c: ClassTree => c.ctors.exists(_.params.exists(_.name === shortName))
-            case _ => false
+            case _            => false
           }
           def tparamsClash = x match {
             case cls: ClassTree => cls.tparams.exists(_.name === shortName)
-            case _ => false
+            case _              => false
           }
 
           (x.name === shortName && x.codePath =/= longName) ||
@@ -153,16 +153,16 @@ object ShortenNames {
 
         case x: PackageTree =>
           (x.name === shortName && x.codePath =/= longName) ||
-            among(x.index, longName, methodsAreConflict = true)
+          among(x.index, longName, methodsAreConflict = true)
         case x: TypeAliasTree =>
           (x.name === shortName && x.codePath =/= longName) ||
-            x.tparams.exists(_.name === shortName)
+          x.tparams.exists(_.name === shortName)
         case x: FieldTree =>
           (x.name === shortName && x.codePath =/= longName)
         case x: MethodTree =>
           (x.name === shortName && x.codePath =/= longName) ||
-            (methodsAreConflict && x.params.exists(_.exists(_.name === shortName))) ||
-            x.tparams.exists(_.name === shortName)
+          (methodsAreConflict && x.params.exists(_.exists(_.name === shortName))) ||
+          x.tparams.exists(_.name === shortName)
         case x: ExprTree.Block =>
           x.expressions.exists {
             case ExprTree.Val(name, _) => longName.parts.head === name
@@ -173,14 +173,14 @@ object ShortenNames {
     }
 
     private def amongParents(
-        scope:              TreeScope,
-        parentsResolver:    ParentsResolver,
-        x:                  InheritanceTree,
-        longName:           QualifiedName,
-        methodsAreConflict: Boolean,
+        scope: TreeScope,
+        parentsResolver: ParentsResolver,
+        x: InheritanceTree,
+        longName: QualifiedName,
+        methodsAreConflict: Boolean
     ): Boolean =
-      parentsResolver(scope, x).transitiveParents.exists {
-        case (_, cls) => among(cls.index, longName, methodsAreConflict)
+      parentsResolver(scope, x).transitiveParents.exists { case (_, cls) =>
+        among(cls.index, longName, methodsAreConflict)
       }
 
     private def among(index: Map[Name, IArray[Tree]], longName: QualifiedName, methodsAreConflict: Boolean): Boolean =
@@ -193,7 +193,7 @@ object ShortenNames {
             case x: TypeAliasTree => x.codePath =/= longName
             case x: FieldTree     => x.isReadOnly || methodsAreConflict
             case _: MethodTree    => methodsAreConflict
-            case _ => false
+            case _                => false
           }
         case None => false
       }

@@ -2,7 +2,7 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import org.scalablytyped.converter.internal.scalajs.ExprTree._
+import org.scalablytyped.converter.internal.scalajs.ExprTree.*
 
 object Mangler extends TreeTransformation {
   val WasJsNativeComment = Comments(List(Marker.ManglerWasJsNative))
@@ -10,7 +10,7 @@ object Mangler extends TreeTransformation {
   override def leaveContainerTree(scope: TreeScope)(container: ContainerTree): ContainerTree = {
     val rewrittenMembers = container.members.map {
       case pkg: PackageTree if pkg.comments.has[Marker.ManglerLeaveAlone.type] => pkg
-      case pkg: PackageTree => genPkgForwarders(pkg, Empty)
+      case pkg: PackageTree                                                    => genPkgForwarders(pkg, Empty)
       case mod: ModuleTree if mod.comments.has[Marker.EnumObject.type] =>
         def stripLocationAnns(tree: Tree): Tree = {
           def filterAnns(anns: IArray[Annotation]): IArray[Annotation] =
@@ -40,7 +40,7 @@ object Mangler extends TreeTransformation {
           case Action.ConvertToPackage =>
             genPkgForwarders(
               PackageTree(mod.annotations, mod.name, mod.members, mod.comments, mod.codePath),
-              mod.parents,
+              mod.parents
             )
         }
       case other => other
@@ -50,7 +50,7 @@ object Mangler extends TreeTransformation {
     if (isTopLevel && !container.comments.has[Marker.ManglerLeaveAlone.type])
       genPkgForwarders(
         PackageTree(container.annotations, container.name, rewrittenMembers, container.comments, container.codePath),
-        Empty,
+        Empty
       )
     else
       container.withMembers(rewrittenMembers)
@@ -59,7 +59,7 @@ object Mangler extends TreeTransformation {
   sealed trait Action
 
   object Action {
-    case object RemainModule extends Action
+    case object RemainModule     extends Action
     case object ConvertToPackage extends Action
 
     // Checks if any parent object has a collision with a class.
@@ -71,13 +71,13 @@ object Mangler extends TreeTransformation {
     def parentClassCollision(scope: TreeScope): Option[ClassTree] = {
       def classCollision(scope: TreeScope, name: Name): Option[ClassTree] =
         for {
-          owner <- scope.stack.collectFirst { case x: ContainerTree => x }
+          owner    <- scope.stack.collectFirst { case x: ContainerTree => x }
           sameName <- owner.index.get(name)
-          cls <- sameName.collectFirst { case x: ClassTree => x }
+          cls      <- sameName.collectFirst { case x: ClassTree => x }
         } yield cls
 
       scope match {
-        case _:      TreeScope.Root => None
+        case _: TreeScope.Root => None
         case scoped: TreeScope.Scoped =>
           scoped.current match {
             case tree: ContainerTree =>
@@ -90,7 +90,7 @@ object Mangler extends TreeTransformation {
     def apply(scope: TreeScope, mod: ModuleTree): Action = {
       val containsPackage = mod.members.exists {
         case _: PackageTree => true
-        case _ => false
+        case _              => false
       }
 
       val isCompanion: Option[ClassTree] =
@@ -106,9 +106,9 @@ object Mangler extends TreeTransformation {
       val tooBig = {
         def countClasses(x: ContainerTree): Int =
           x.members.foldLeft(0) {
-            case (n, xx: ContainerTree)   => n + 1 + countClasses(xx)
-            case (n, _:  InheritanceTree) => n + 1
-            case (n, _) => n
+            case (n, xx: ContainerTree)  => n + 1 + countClasses(xx)
+            case (n, _: InheritanceTree) => n + 1
+            case (n, _)                  => n
           }
 
         if (mod.comments.has[Marker.EnumObject.type]) false
@@ -142,7 +142,7 @@ object Mangler extends TreeTransformation {
             case _ =>
               Call(
                 Select(dynamicRef, Name("applyDynamic")),
-                IArray(IArray(StringLit(m.originalName.unescaped)), params),
+                IArray(IArray(StringLit(m.originalName.unescaped)), params)
               )
           }
 
@@ -153,10 +153,10 @@ object Mangler extends TreeTransformation {
           val asApply =
             m.copy(
               annotations = IArray(Annotation.Inline),
-              name        = Name.APPLY,
-              impl        = impl,
-              comments    = m.comments ++ WasJsNativeComment,
-              codePath    = m.codePath + Name.APPLY,
+              name = Name.APPLY,
+              impl = impl,
+              comments = m.comments ++ WasJsNativeComment,
+              codePath = m.codePath + Name.APPLY
             )
 
           IArray(
@@ -168,13 +168,13 @@ object Mangler extends TreeTransformation {
               IArray(asApply),
               NoComments,
               m.codePath,
-              m.isOverride,
-            ),
+              m.isOverride
+            )
           )
 
         } else
           IArray(
-            m.copy(annotations = IArray(Annotation.Inline), impl = impl, comments = m.comments ++ WasJsNativeComment),
+            m.copy(annotations = IArray(Annotation.Inline), impl = impl, comments = m.comments ++ WasJsNativeComment)
           )
 
       case f: FieldTree if f.tpe.typeName === QualifiedName.THIS => Empty
@@ -184,20 +184,20 @@ object Mangler extends TreeTransformation {
         val getter = {
           val impl = AsInstanceOf(
             Call(Select(dynamicRef, Name("selectDynamic")), IArray(IArray(StringLit(f.originalName.unescaped)))),
-            f.tpe,
+            f.tpe
           )
           MethodTree(
             annotations = IArray(Annotation.Inline),
-            level       = ProtectionLevel.Public,
-            name        = f.name,
-            tparams     = Empty,
-            params      = Empty,
-            impl        = impl,
-            resultType  = f.tpe,
-            isOverride  = false,
-            comments    = f.comments ++ WasJsNativeComment,
-            codePath    = f.codePath,
-            isImplicit  = false,
+            level = ProtectionLevel.Public,
+            name = f.name,
+            tparams = Empty,
+            params = Empty,
+            impl = impl,
+            resultType = f.tpe,
+            isOverride = false,
+            comments = f.comments ++ WasJsNativeComment,
+            codePath = f.codePath,
+            isImplicit = false
           )
         }
 
@@ -210,22 +210,22 @@ object Mangler extends TreeTransformation {
               Select(dynamicRef, Name("updateDynamic")),
               IArray(
                 IArray(StringLit(f.originalName.unescaped)),
-                IArray(AsInstanceOf(Ref(xParam.name), TypeRef.JsAny)),
-              ),
+                IArray(AsInstanceOf(Ref(xParam.name), TypeRef.JsAny))
+              )
             )
 
             val m = MethodTree(
               annotations = IArray(Annotation.Inline),
-              level       = ProtectionLevel.Public,
-              name        = Name(f.name.unescaped + "_="),
-              tparams     = Empty,
-              params      = IArray(IArray(xParam)),
-              impl        = impl,
-              resultType  = TypeRef.Unit,
-              isOverride  = false,
-              comments    = WasJsNativeComment,
-              codePath    = f.codePath,
-              isImplicit  = false,
+              level = ProtectionLevel.Public,
+              name = Name(f.name.unescaped + "_="),
+              tparams = Empty,
+              params = IArray(IArray(xParam)),
+              impl = impl,
+              resultType = TypeRef.Unit,
+              isOverride = false,
+              comments = WasJsNativeComment,
+              codePath = f.codePath,
+              isImplicit = false
             )
 
             Some(m)
@@ -245,20 +245,20 @@ object Mangler extends TreeTransformation {
         Some(
           ModuleTree(
             annotations = pkg.annotations,
-            level       = ProtectionLevel.Public,
-            name        = Name.namespaced,
-            parents     = parents,
-            members     = Empty,
-            comments    = NoComments,
-            codePath    = hatCp,
-            isOverride  = false,
-          ),
+            level = ProtectionLevel.Public,
+            name = Name.namespaced,
+            parents = parents,
+            members = Empty,
+            comments = NoComments,
+            codePath = hatCp,
+            isOverride = false
+          )
         )
       }
 
     val comments = {
       val addedRelated: IArray[TypeRef] = IArray.fromOption(
-        hatModuleOpt.map(hat => TypeRef(hat.codePath)),
+        hatModuleOpt.map(hat => TypeRef(hat.codePath))
       )
 
       pkg.comments.extract { case Marker.MinimizationRelated(related) => related } match {
@@ -269,7 +269,7 @@ object Mangler extends TreeTransformation {
     }
 
     ModulesCombine.combineModules(
-      pkg.copy(comments = comments, members = IArray.fromOption(hatModuleOpt) ++ forwarders),
+      pkg.copy(comments = comments, members = IArray.fromOption(hatModuleOpt) ++ forwarders)
     )
   }
 
@@ -295,7 +295,7 @@ object Mangler extends TreeTransformation {
               case _ =>
                 Call(
                   Select(dynamicRef, Name("applyDynamic")),
-                  IArray(IArray(StringLit(m.originalName.unescaped)), params),
+                  IArray(IArray(StringLit(m.originalName.unescaped)), params)
                 )
             }
 
@@ -305,11 +305,11 @@ object Mangler extends TreeTransformation {
           if (mod.index(m.name).exists(_.isInstanceOf[ClassTree])) {
             val asApply =
               m.copy(
-                comments    = m.comments ++ WasJsNativeComment,
+                comments = m.comments ++ WasJsNativeComment,
                 annotations = IArray(Annotation.Inline),
-                name        = Name.APPLY,
-                impl        = impl,
-                codePath    = m.codePath + Name.APPLY,
+                name = Name.APPLY,
+                impl = impl,
+                codePath = m.codePath + Name.APPLY
               )
 
             IArray(
@@ -321,13 +321,13 @@ object Mangler extends TreeTransformation {
                 IArray(asApply),
                 NoComments,
                 m.codePath,
-                m.isOverride,
-              ),
+                m.isOverride
+              )
             )
 
           } else
             IArray(
-              m.copy(annotations = IArray(Annotation.Inline), impl = impl, comments = m.comments ++ WasJsNativeComment),
+              m.copy(annotations = IArray(Annotation.Inline), impl = impl, comments = m.comments ++ WasJsNativeComment)
             )
 
         case f: FieldTree if f.isReadOnly || f.location.isEmpty =>
@@ -346,38 +346,38 @@ object Mangler extends TreeTransformation {
               Select(dynamicRef, Name("updateDynamic")),
               IArray(
                 IArray(StringLit(f.originalName.unescaped)),
-                IArray(AsInstanceOf(Ref(xParam.name), TypeRef.JsAny)),
-              ),
+                IArray(AsInstanceOf(Ref(xParam.name), TypeRef.JsAny))
+              )
             )
 
             MethodTree(
               annotations = IArray(Annotation.Inline),
-              level       = ProtectionLevel.Public,
-              name        = Name(f.name.unescaped + "_="),
-              tparams     = Empty,
-              params      = IArray(IArray(xParam)),
-              impl        = impl,
-              resultType  = TypeRef.Unit,
-              isOverride  = false,
-              comments    = WasJsNativeComment,
-              codePath    = f.codePath,
-              isImplicit  = false,
+              level = ProtectionLevel.Public,
+              name = Name(f.name.unescaped + "_="),
+              tparams = Empty,
+              params = IArray(IArray(xParam)),
+              impl = impl,
+              resultType = TypeRef.Unit,
+              isOverride = false,
+              comments = WasJsNativeComment,
+              codePath = f.codePath,
+              isImplicit = false
             )
           }
 
           val getter =
             MethodTree(
               annotations = f.annotations.filterNot(_.isInstanceOf[Annotation.JsName]),
-              level       = ProtectionLevel.Public,
-              name        = f.name,
-              tparams     = Empty,
-              params      = Empty,
-              impl        = f.impl,
-              resultType  = f.tpe,
-              isOverride  = f.isOverride,
-              comments    = f.comments ++ WasJsNativeComment,
-              codePath    = f.codePath,
-              isImplicit  = false,
+              level = ProtectionLevel.Public,
+              name = f.name,
+              tparams = Empty,
+              params = Empty,
+              impl = f.impl,
+              resultType = f.tpe,
+              isOverride = f.isOverride,
+              comments = f.comments ++ WasJsNativeComment,
+              codePath = f.codePath,
+              isImplicit = false
             )
 
           IArray(getter, setter)
@@ -397,15 +397,15 @@ object Mangler extends TreeTransformation {
         Some(
           FieldTree(
             annotations = mod.annotations,
-            level       = ProtectionLevel.Public,
-            name        = Name.namespaced,
-            tpe         = tpe,
-            impl        = ExprTree.native,
-            isReadOnly  = true,
-            isOverride  = false,
-            comments    = NoComments,
-            codePath    = hatCp,
-          ),
+            level = ProtectionLevel.Public,
+            name = Name.namespaced,
+            tpe = tpe,
+            impl = ExprTree.native,
+            isReadOnly = true,
+            isOverride = false,
+            comments = NoComments,
+            codePath = hatCp
+          )
         )
     }
 
@@ -419,90 +419,90 @@ object Mangler extends TreeTransformation {
 
     val mod1 = mod.copy(
       annotations = Empty,
-      parents     = Empty,
-      members     = rewrittenMembers ++ IArray.fromOption(hatOpt),
-      comments    = mod.comments,
+      parents = Empty,
+      members = rewrittenMembers ++ IArray.fromOption(hatOpt),
+      comments = mod.comments
     )
 
     // plug a hole where if there is a class and multiple functions all with the same name, the functions
     // will all be rewritten to an object. this recombines them
     val mod2 = {
-      val newMembers = IArray.fromTraversable(mod1.index).flatMap {
-        case (_, sameName) =>
-          val (mods, rest) = sameName.partitionCollect { case x: ModuleTree => x }
-          if (mods.length > 1) {
-            val mod = mods.head.copy(members = mods.flatMap(_.members))
-            mod +: rest
-          } else sameName
+      val newMembers = IArray.fromTraversable(mod1.index).flatMap { case (_, sameName) =>
+        val (mods, rest) = sameName.partitionCollect { case x: ModuleTree => x }
+        if (mods.length > 1) {
+          val mod = mods.head.copy(members = mods.flatMap(_.members))
+          mod +: rest
+        } else sameName
       }
       mod1.copy(members = newMembers)
     }
 
-    shortcut.foldLeft(mod2) {
-      case (mod, field) =>
-        // implement the `Shortcut` trait for some nicer syntax
-        val parent = TypeRef(QualifiedName.Shortcut)
-        val to = {
-          val name = Name("_to")
-          MethodTree(
-            Empty,
-            ProtectionLevel.Public,
-            name,
-            Empty,
-            Empty,
-            Ref(field.name),
-            field.tpe,
-            isOverride = true,
-            Comments(
-              Comment(
-                s"/* This means you don't have to write `${field.name.value}`, but can instead just say `${mod.name.value}.foo` */\n",
-              ),
-            ),
-            mod.codePath + name,
-            isImplicit = false,
-          )
+    shortcut.foldLeft(mod2) { case (mod, field) =>
+      // implement the `Shortcut` trait for some nicer syntax
+      val parent = TypeRef(QualifiedName.Shortcut)
+      val to = {
+        val name = Name("_to")
+        MethodTree(
+          Empty,
+          ProtectionLevel.Public,
+          name,
+          Empty,
+          Empty,
+          Ref(field.name),
+          field.tpe,
+          isOverride = true,
+          Comments(
+            Comment(
+              s"/* This means you don't have to write `${field.name.value}`, but can instead just say `${mod.name.value}.foo` */\n"
+            )
+          ),
+          mod.codePath + name,
+          isImplicit = false
+        )
+      }
+
+      val To = {
+        val name = Name("_To")
+        TypeAliasTree(name, ProtectionLevel.Public, Empty, field.tpe, NoComments, mod.codePath + name)
+      }
+
+      val comments = {
+        val addedRelated: IArray[TypeRef] = IArray.fromOptions(
+          Some(TypeRef(to.codePath)),
+          Some(TypeRef(To.codePath)),
+          hatOpt.map(hat => TypeRef(hat.codePath)),
+          shortcut.map(s => TypeRef(s.codePath))
+        )
+
+        mod.comments.extract { case Marker.MinimizationRelated(related) => related } match {
+          case Some((existingRelated, restComments)) =>
+            restComments + Marker.MinimizationRelated(existingRelated ++ addedRelated)
+          case None => mod.comments + Marker.MinimizationRelated(addedRelated)
         }
+      }
 
-        val To = {
-          val name = Name("_To")
-          TypeAliasTree(name, ProtectionLevel.Public, Empty, field.tpe, NoComments, mod.codePath + name)
-        }
-
-        val comments = {
-          val addedRelated: IArray[TypeRef] = IArray.fromOptions(
-            Some(TypeRef(to.codePath)),
-            Some(TypeRef(To.codePath)),
-            hatOpt.map(hat => TypeRef(hat.codePath)),
-            shortcut.map(s => TypeRef(s.codePath)),
-          )
-
-          mod.comments.extract { case Marker.MinimizationRelated(related) => related } match {
-            case Some((existingRelated, restComments)) =>
-              restComments + Marker.MinimizationRelated(existingRelated ++ addedRelated)
-            case None => mod.comments + Marker.MinimizationRelated(addedRelated)
-          }
-        }
-
-        mod.copy(comments = comments, parents = mod.parents :+ parent, members = IArray(to, To) ++ mod.members)
+      mod.copy(comments = comments, parents = mod.parents :+ parent, members = IArray(to, To) ++ mod.members)
     }
   }
 
-  /**
-    * When forwarding from a pure scala function to a javascript function through `js.Dynamic` we need to handle two things
-    * 1) All arguments must extend `js.Any`. We cast to ensure
+  /** When forwarding from a pure scala function to a javascript function through `js.Dynamic` we need to handle two
+    * things 1) All arguments must extend `js.Any`. We cast to ensure
     *
-    * 2) Repeated arguments must be repeated also. this is problematic if there are also non-repeated arguments.
-    *    It is problematic because of a scala limitation in combination with `js.Dynamic`. The error you'll see is this
-    *    {{{
+    * 2) Repeated arguments must be repeated also. this is problematic if there are also non-repeated arguments. It is
+    * problematic because of a scala limitation in combination with `js.Dynamic`. The error you'll see is this
+    * {{{
     *    [E]       Sequence argument type annotation `*` cannot be used here:
     *    [E]       it is not the only argument to be passed to the corresponding repeated parameter scala.scalajs.js.Any*
     *    [E]       L240: org.scalajs.dom.HTMLInputElement] = (typingsSlinky.react.mod.^.asInstanceOf[js.Dynamic].applyDynamic("createElement")(`type`.asInstanceOf[js.Any], props.asInstanceOf[js.Any], children.asInstanceOf[scala.Seq[js.Any]]*)).asInstanceOf[typingsSlinky.react.mod.DetailedReactHTMLElement
-    *   }}}
+    * }}}
     *
-    * So in that case we build a [[scala.List]] with all parameters and apply the method with that list with varargs syntax.
+    * So in that case we build a [[scala.List]] with all parameters and apply the method with that list with varargs
+    * syntax.
     *
-    * @param m the method we're forwarding parameters for
-    * @return list of new arguments to put into a [[Call]]
+    * @param m
+    *   the method we're forwarding parameters for
+    * @return
+    *   list of new arguments to put into a [[Call]]
     */
   private def forwardParams(m: MethodTree): IArray[Arg] =
     m.params.flatten match {
@@ -516,7 +516,7 @@ object Mangler extends TreeTransformation {
           val initialParamsInList: Call =
             Call(
               Ref(QualifiedName.scala + Name("List")),
-              IArray(init.map(p => AsInstanceOf(Ref(p.name), TypeRef.JsAny))),
+              IArray(init.map(p => AsInstanceOf(Ref(p.name), TypeRef.JsAny)))
             )
 
           val concatenated = Call(initialParamsInList.select("++"), IArray(IArray(repeatedAsJsAnySeq)))

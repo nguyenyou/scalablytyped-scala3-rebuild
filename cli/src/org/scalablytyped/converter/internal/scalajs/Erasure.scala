@@ -1,8 +1,7 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-/**
-  * Note, this requires that the method tree has already filled in type params for containing context!
+/** Note, this requires that the method tree has already filled in type params for containing context!
   */
 class Erasure(scalaVersion: Versions.Scala) {
   val ByName: Ordering[QualifiedName] = {
@@ -13,7 +12,7 @@ class Erasure(scalaVersion: Versions.Scala) {
     val newScope = _scope / s
     MethodBase(
       s.name,
-      s.params.flatten.map(param => simplify(newScope, param.tpe)),
+      s.params.flatten.map(param => simplify(newScope, param.tpe))
     )
   }
   def erasure(_scope: TreeScope)(s: MethodTree): MethodErasure = {
@@ -21,7 +20,7 @@ class Erasure(scalaVersion: Versions.Scala) {
     MethodErasure(
       s.name,
       s.params.flatten.map(param => simplify(newScope, param.tpe)),
-      simplify(newScope, s.resultType),
+      simplify(newScope, s.resultType)
     )
   }
 
@@ -82,8 +81,8 @@ class Erasure(scalaVersion: Versions.Scala) {
 
       /* approximate intersections. scalac seems to use the first type, unless that is a supertype of a later mentioned type */
       case QualifiedName.INTERSECTION =>
-        val isPrimitive = tpe.targs.collectFirst {
-          case tr @ (TypeRef.String | TypeRef.Boolean | TypeRef.Double) => tr.typeName
+        val isPrimitive = tpe.targs.collectFirst { case tr @ (TypeRef.String | TypeRef.Boolean | TypeRef.Double) =>
+          tr.typeName
         }
 
         isPrimitive
@@ -92,13 +91,12 @@ class Erasure(scalaVersion: Versions.Scala) {
               tpe.targs.map(t => typeLattice(scope, t))
 
             erasedParentLattices
-              .foldLeft(Empty: IArray[QualifiedName]) {
-                case (nonEmpty, lattice) =>
-                  val latticeSet = lattice.toSet
-                  nonEmpty.filterNot(latticeSet) match {
-                    case Empty => lattice
-                    case other => other
-                  }
+              .foldLeft(Empty: IArray[QualifiedName]) { case (nonEmpty, lattice) =>
+                val latticeSet = lattice.toSet
+                nonEmpty.filterNot(latticeSet) match {
+                  case Empty => lattice
+                  case other => other
+                }
               }
               .headOption
               .getOrElse(QualifiedName.Any)
@@ -141,4 +139,4 @@ class Erasure(scalaVersion: Versions.Scala) {
 }
 
 final case class MethodErasure(name: Name, params: IArray[QualifiedName], ret: QualifiedName)
-final case class MethodBase(name:    Name, params: IArray[QualifiedName])
+final case class MethodBase(name: Name, params: IArray[QualifiedName])

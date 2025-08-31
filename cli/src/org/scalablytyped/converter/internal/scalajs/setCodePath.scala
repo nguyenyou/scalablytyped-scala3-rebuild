@@ -13,7 +13,7 @@ object setCodePath {
       case x: TypeAliasTree => x.copy(codePath = base).asInstanceOf[T]
       case x: FieldTree     => x.copy(codePath = base).asInstanceOf[T]
       case x: MethodTree    => x.copy(codePath = base).asInstanceOf[T]
-      case x => x
+      case x                => x
     }
 
 }

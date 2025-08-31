@@ -2,16 +2,11 @@ package org.scalablytyped.converter.internal
 package scalajs
 package transforms
 
-import org.scalablytyped.converter.internal.scalajs.ParentsResolver.{
-  Parent,
-  Parents
-}
-import org.scalablytyped.converter.internal.seqs._
+import org.scalablytyped.converter.internal.scalajs.ParentsResolver.Parent
+import org.scalablytyped.converter.internal.scalajs.ParentsResolver.Parents
+import org.scalablytyped.converter.internal.seqs.*
 
-
-/**
-  * Sort parents to ensure that if we inherit from a class it
-  * goes first, and traits are mixins
+/** Sort parents to ensure that if we inherit from a class it goes first, and traits are mixins
   */
 class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTransformation {
 
@@ -24,7 +19,7 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
         if (cls.annotations.contains(Annotation.JsNative)) newMembers.map {
           case x: MethodTree => x.copy(impl = ExprTree.native, isOverride = false)
           case x: FieldTree  => x.copy(impl = ExprTree.native, isOverride = false)
-          case other => other
+          case other         => other
         }
         else newMembers
 
@@ -54,10 +49,10 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
 
     val (changes, ps) =
       step(
-        included         = Empty,
-        newParents       = Empty,
-        dropped          = IArray.Empty,
-        remainingParents = remaining,
+        included = Empty,
+        newParents = Empty,
+        dropped = IArray.Empty,
+        remainingParents = remaining
       )
 
     val classParentAnnotation = foundClassParent.map(_ => Marker.HasClassParent)
@@ -77,19 +72,21 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
 
   def parentWithInheritedClass(parents: Parents): Option[Parent] = {
     def go(p: Parent): Option[Parent] =
-      if (p.classTree.classType =/= ClassType.Trait &&
-          p.classTree.codePath =/= QualifiedName.Any &&
-          p.classTree.codePath =/= QualifiedName.JsObject) Some(p)
+      if (
+        p.classTree.classType =/= ClassType.Trait &&
+        p.classTree.codePath =/= QualifiedName.Any &&
+        p.classTree.codePath =/= QualifiedName.JsObject
+      ) Some(p)
       else p.parents.firstDefined(go)
 
     parents.directParents.find(p => go(p).isDefined)
   }
 
   def step(
-      included:         IArray[Parent],
-      newParents:       IArray[TypeRef],
-      dropped:          IArray[Dropped],
-      remainingParents: IArray[Parent],
+      included: IArray[Parent],
+      newParents: IArray[TypeRef],
+      dropped: IArray[Dropped],
+      remainingParents: IArray[Parent]
   ): (IArray[Dropped], IArray[TypeRef]) =
     remainingParents match {
       case IArray.Empty =>
@@ -102,14 +99,14 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
                   c.classType =/= ClassType.Trait &&
                   !included.exists(_.transitiveParents.exists(_._2 === c)) =>
               val includedFields: IArray[Name] =
-                (/* baseMembers ++ */ dropped.flatMap(_.members) ++ included.flatMap(_.fields)).map(_.name)
+                ( /* baseMembers ++ */ dropped.flatMap(_.members) ++ included.flatMap(_.fields)).map(_.name)
 
               val inlined = currentParent.classTree.members.filterNot(m => includedFields.contains(m.name))
 
               Dropped(
                 currentParent.refs.last,
                 s"Inheritance from two classes. Inlined ${inlined.map(_.name.value).mkString(", ")}",
-                inlined,
+                inlined
               )
           }
 
@@ -119,7 +116,7 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
               if (currentParent.refs.exists(_.typeName === i.typeName))
                 Some(Dropped(currentParent.refs.last, "Already inherited", Empty))
               else None,
-            ),
+            )
           )
 
         def alreadyInheritsUnresolved: Option[Dropped] =
@@ -143,7 +140,7 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
                 case Some(existing) =>
                   existing match {
                     case existingField: FieldTree => if (existingField.isReadOnly) Empty else IArray(f)
-                    case _ => IArray(f)
+                    case _                        => IArray(f)
                   }
                 case None => Empty
               }
@@ -159,8 +156,8 @@ class RemoveMultipleInheritance(parentsResolver: ParentsResolver) extends TreeTr
                 Dropped(
                   currentParent.refs.last,
                   s"var conflicts: $conflictString. Inlined ${inlined.map(_.name.value).mkString(", ")}",
-                  inlined,
-                ),
+                  inlined
+                )
               )
           }
         }

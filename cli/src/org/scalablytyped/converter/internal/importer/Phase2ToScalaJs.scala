@@ -3,45 +3,46 @@ package importer
 
 import org.scalablytyped.converter.Selection
 import org.scalablytyped.converter.internal.logging.Logger
-import org.scalablytyped.converter.internal.maps._
-import org.scalablytyped.converter.internal.phases.{GetDeps, IsCircular, Phase, PhaseRes}
-import org.scalablytyped.converter.internal.scalajs.QualifiedName.StdNames
-import org.scalablytyped.converter.internal.scalajs.flavours.FlavourImpl
-import org.scalablytyped.converter.internal.scalajs.transforms.{Adapter, CleanIllegalNames}
-import org.scalablytyped.converter.internal.scalajs.{Name, PackageTree}
-import org.scalablytyped.converter.internal.ts.{TsIdentLibrary, TsTreeTraverse}
-import org.scalablytyped.converter.internal.scalajs.{TreeScope, Versions, transforms => S}
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.phases.GetDeps
+import org.scalablytyped.converter.internal.phases.IsCircular
+import org.scalablytyped.converter.internal.phases.Phase
+import org.scalablytyped.converter.internal.phases.PhaseRes
 import org.scalablytyped.converter.internal.scalajs.CastConversion.TypeRewriterCast
-import org.scalablytyped.converter.internal.scalajs.{
-  Erasure,
-  Name,
-  PackageTree,
-  ParentsResolver,
-  TreeScope,
-  Versions,
-  transforms => S,
-}
+import org.scalablytyped.converter.internal.scalajs.Erasure
+import org.scalablytyped.converter.internal.scalajs.Name
+import org.scalablytyped.converter.internal.scalajs.PackageTree
+import org.scalablytyped.converter.internal.scalajs.ParentsResolver
+import org.scalablytyped.converter.internal.scalajs.QualifiedName.StdNames
+import org.scalablytyped.converter.internal.scalajs.TreeScope
+import org.scalablytyped.converter.internal.scalajs.Versions
+import org.scalablytyped.converter.internal.scalajs.flavours.FlavourImpl
+import org.scalablytyped.converter.internal.scalajs.transforms as S
+import org.scalablytyped.converter.internal.scalajs.transforms.Adapter
+import org.scalablytyped.converter.internal.scalajs.transforms.CleanIllegalNames
+import org.scalablytyped.converter.internal.ts.TsIdentLibrary
+import org.scalablytyped.converter.internal.ts.TsTreeTraverse
+
 import scala.collection.immutable.SortedSet
 
-/**
-  * This phase starts by going from the typescript AST to the scala AST.
-  * Then the phase itself implements a bunch of scala.js limitations, like ensuring no methods erase to the same signature
+/** This phase starts by going from the typescript AST to the scala AST. Then the phase itself implements a bunch of
+  * scala.js limitations, like ensuring no methods erase to the same signature
   */
 class Phase2ToScalaJs(
-    pedantic:                 Boolean,
+    pedantic: Boolean,
     useDeprecatedModuleNames: Boolean,
-    scalaVersion:             Versions.Scala,
-    enableScalaJsDefined:     Selection[TsIdentLibrary],
-    outputPkg:                Name,
-    flavour:                  FlavourImpl,
+    scalaVersion: Versions.Scala,
+    enableScalaJsDefined: Selection[TsIdentLibrary],
+    outputPkg: Name,
+    flavour: FlavourImpl
 ) extends Phase[LibTsSource, LibTs, LibScalaJs] {
 
   override def apply(
-      source:     LibTsSource,
-      tsLibrary:  LibTs,
-      getDeps:    GetDeps[LibTsSource, LibScalaJs],
+      source: LibTsSource,
+      tsLibrary: LibTs,
+      getDeps: GetDeps[LibTsSource, LibScalaJs],
       isCircular: IsCircular,
-      logger:     Logger[Unit],
+      logger: Logger[Unit]
   ): PhaseRes[LibTsSource, LibScalaJs] = {
     val knownLibs = garbageCollectLibs(tsLibrary)
 
@@ -49,11 +50,11 @@ class Phase2ToScalaJs(
       val scalaName = ImportName(tsLibrary.name)
 
       val scope = new TreeScope.Root(
-        libName       = scalaName,
+        libName = scalaName,
         _dependencies = scalaDeps.map { case (_, l) => l.scalaName -> l.packageTree },
-        logger        = logger,
-        pedantic      = pedantic,
-        outputPkg     = outputPkg,
+        logger = logger,
+        pedantic = pedantic,
+        outputPkg = outputPkg
       )
 
       logger.warn(s"Processing ${tsLibrary.name.value}")
@@ -75,15 +76,15 @@ class Phase2ToScalaJs(
           S.Deduplicator).visitPackageTree(scope),
         Adapter(scope)((tree, s) => S.FakeLiterals(outputPkg, s, cleanIllegalNames)(tree)),
         Adapter(scope)((tree, s) => S.UnionToInheritance(s, tree, scalaName)), // after FakeLiterals
-        S.LimitUnionLength.visitPackageTree(scope), // after UnionToInheritance
+        S.LimitUnionLength.visitPackageTree(scope),                            // after UnionToInheritance
         new S.RemoveMultipleInheritance(parentResolver()).visitPackageTree(scope),
         new S.CombineOverloads(erasure())
-          .visitPackageTree(scope), //must have stable types, so FakeLiterals run before
+          .visitPackageTree(scope), // must have stable types, so FakeLiterals run before
         new S.FilterMemberOverrides(erasure(), parentResolver()).visitPackageTree(scope), //
         new S.InferMemberOverrides(erasure(), parentResolver())
-          .visitPackageTree(scope), //runs in phase after FilterMemberOverrides
+          .visitPackageTree(scope), // runs in phase after FilterMemberOverrides
         new S.CompleteClass(erasure(), parentResolver(), scalaVersion)
-          .visitPackageTree(scope), //after FilterMemberOverrides
+          .visitPackageTree(scope) // after FilterMemberOverrides
       )
 
       val importName = AdaptiveNamingImport(
@@ -92,7 +93,7 @@ class Phase2ToScalaJs(
         tsLibrary.parsed,
         scalaDeps.mapToIArray { case (_, v) => v.names },
         cleanIllegalNames,
-        useDeprecatedModuleNames,
+        useDeprecatedModuleNames
       )
 
       val importType = new ImportType(new StdNames(outputPkg))
@@ -103,20 +104,20 @@ class Phase2ToScalaJs(
         cleanIllegalNames,
         new ImportExpr(importType, importName),
         enableScalaJsDefined(tsLibrary.name),
-        scalaVersion,
+        scalaVersion
       )
 
       val scalaTree            = importTree(tsLibrary, logger)
       val transformedScalaTree = ScalaTransforms.foldLeft(scalaTree) { case (acc, f) => f(acc) }
 
       LibScalaJs(tsLibrary.source)(
-        libName      = tsLibrary.name.`__value`.replaceAll("\\.", "_dot_"),
-        scalaName    = scalaName,
-        libVersion   = tsLibrary.version,
-        packageTree  = transformedScalaTree,
+        libName = tsLibrary.name.`__value`.replaceAll("\\.", "_dot_"),
+        scalaName = scalaName,
+        libVersion = tsLibrary.version,
+        packageTree = transformedScalaTree,
         dependencies = scalaDeps,
-        isStdLib     = tsLibrary.parsed.isStdLib,
-        names        = importName,
+        isStdLib = tsLibrary.parsed.isStdLib,
+        names = importName
       )
     }
   }

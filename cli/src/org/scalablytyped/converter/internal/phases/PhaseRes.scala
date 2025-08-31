@@ -4,8 +4,10 @@ package phases
 import org.scalablytyped.converter.internal.logging.Logger
 import org.scalablytyped.converter.internal.logging.Logger.LoggedException
 
-import java.nio.channels.{ClosedByInterruptException, FileLockInterruptionException}
-import scala.collection.immutable.{SortedMap, TreeMap}
+import java.nio.channels.ClosedByInterruptException
+import java.nio.channels.FileLockInterruptionException
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionException
 import scala.util.control.NonFatal
 
@@ -30,8 +32,8 @@ sealed trait PhaseRes[Id, T] extends Product with Serializable {
 }
 
 object PhaseRes {
-  final case class Ok[Id, T](value: T) extends PhaseRes[Id, T]
-  final case class Ignore[Id, T]() extends PhaseRes[Id, T]
+  final case class Ok[Id, T](value: T)                                        extends PhaseRes[Id, T]
+  final case class Ignore[Id, T]()                                            extends PhaseRes[Id, T]
   final case class Failure[Id, T](errors: Map[Id, Either[Throwable, String]]) extends PhaseRes[Id, T]
 
   def fromEither[Id, L, R](id: Id, e: Either[String, R]): PhaseRes[Id, R] =
@@ -65,8 +67,8 @@ object PhaseRes {
   def attempt[Id, T](id: Id, logger: Logger[Unit], t: => PhaseRes[Id, T]): PhaseRes[Id, T] =
     try t
     catch {
-      case x: InterruptedException => throw x
-      case x: ClosedByInterruptException => throw x
+      case x: InterruptedException          => throw x
+      case x: ClosedByInterruptException    => throw x
       case x: FileLockInterruptionException => throw x
       case x: ExecutionException if x.getCause != null =>
         val th = x.getCause

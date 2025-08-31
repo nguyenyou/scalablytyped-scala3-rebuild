@@ -1,10 +1,14 @@
 package org.scalablytyped.converter.internal
 package logging
 
-import fansi.{Color, EscapeAttr, Str}
+import fansi.Color
+import fansi.EscapeAttr
+import fansi.Str
 import sourcecode.Text
 
-import java.io.{File, PrintWriter, StringWriter}
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
 
 trait Pattern {
   def apply[T: Formatter](t: => Text[T], throwable: Option[Throwable], metadata: Metadata, ctx: Ctx): Str
@@ -63,8 +67,8 @@ object Pattern {
           throwable match {
             case None     => ""
             case Some(th) => Subtle(formatThrowable(th))
-          },
-        ),
+          }
+        )
       )
     }
   }

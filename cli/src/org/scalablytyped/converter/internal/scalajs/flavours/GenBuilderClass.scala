@@ -2,11 +2,12 @@ package org.scalablytyped.converter.internal
 package scalajs
 package flavours
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
 import org.scalablytyped.converter.internal.scalajs.TypeParamTree.asTypeArgs
-import ExprTree._
 
 import scala.collection.mutable
+
+import ExprTree.*
 
 object GenBuilderClass {
   def apply(original: ClassTree, props: IArray[Prop], ownerCp: QualifiedName): Option[ClassTree] = {
@@ -18,21 +19,20 @@ object GenBuilderClass {
     /* we need to add a few type parameter names into an unknown set, so this avoids collisions */
     val mutableAllocateTypeName = AvailableName(original.tparams.map(_.name), IArray(original.name))
 
-    /**
-      * We generate a Self type like this:
-      * ```implicit class DOMAttributesOps[Self[t] &lt;: DOMAttributes[t], T] (val x: Self[T])```
-      * because subclasses can use * the methods defined here without losing the type of the subclass
+    /** We generate a Self type like this:
+      * \```implicit class DOMAttributesOps[Self[t] &lt;: DOMAttributes[t], T] (val x: Self[T])``` because subclasses
+      * can use * the methods defined here without losing the type of the subclass
       */
     val SelfName = mutableAllocateTypeName(Name("Self"))
     val selfRef  = TypeRef(QualifiedName(IArray(SelfName)), Empty, NoComments)
 
     val tparams = {
       val selfTParam = TypeParamTree(
-        name        = SelfName,
-        params      = Empty,
-        upperBound  = Some(TypeRef(original.codePath, original.tparams.map(_ => TypeRef.Wildcard), NoComments)),
-        comments    = NoComments,
-        ignoreBound = false,
+        name = SelfName,
+        params = Empty,
+        upperBound = Some(TypeRef(original.codePath, original.tparams.map(_ => TypeRef.Wildcard), NoComments)),
+        comments = NoComments,
+        ignoreBound = false
       )
 
       selfTParam +: original.tparams
@@ -59,21 +59,21 @@ object GenBuilderClass {
             case (methodName, Prop.Variant(tpe, asExpr, _, _)) =>
               val impl = Call(
                 globalSet,
-                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), asExpr(Ref(value)))),
+                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), asExpr(Ref(value))))
               )
               val valueParam = ParamTree(value, isImplicit = false, isVal = false, tpe, NotImplemented, NoComments)
               MethodTree(
                 annotations = IArray(Annotation.Inline),
-                level       = ProtectionLevel.Public,
-                name        = methodName,
-                tparams     = Empty,
-                params      = IArray(IArray(valueParam)),
-                impl        = impl,
-                resultType  = selfRef,
-                isOverride  = false,
-                comments    = NoComments,
-                codePath    = clsCodePath + methodName,
-                isImplicit  = false,
+                level = ProtectionLevel.Public,
+                name = methodName,
+                tparams = Empty,
+                params = IArray(IArray(valueParam)),
+                impl = impl,
+                resultType = selfRef,
+                isOverride = false,
+                comments = NoComments,
+                codePath = clsCodePath + methodName,
+                isImplicit = false
               )
           }
 
@@ -81,23 +81,23 @@ object GenBuilderClass {
             case Optionality.Undef | Optionality.NullOrUndef =>
               val impl = Call(
                 globalSet,
-                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), undefined)),
+                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), undefined))
               )
               val name = Name(s"set${prop.name.unescaped.capitalize}Undefined")
               Some(
                 MethodTree(
                   annotations = IArray(Annotation.Inline),
-                  level       = ProtectionLevel.Public,
-                  name        = name,
-                  tparams     = Empty,
-                  params      = Empty,
-                  impl        = impl,
-                  resultType  = selfRef,
-                  isOverride  = false,
-                  comments    = NoComments,
-                  codePath    = clsCodePath + name,
-                  isImplicit  = false,
-                ),
+                  level = ProtectionLevel.Public,
+                  name = name,
+                  tparams = Empty,
+                  params = Empty,
+                  impl = impl,
+                  resultType = selfRef,
+                  isOverride = false,
+                  comments = NoComments,
+                  codePath = clsCodePath + name,
+                  isImplicit = false
+                )
               )
 
             case _ => None
@@ -107,23 +107,23 @@ object GenBuilderClass {
             case Optionality.Null | Optionality.NullOrUndef =>
               val impl = Call(
                 globalSet,
-                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), Null)),
+                IArray(IArray(Ref(x), StringLit(prop.originalName.unescaped), Null))
               )
               val name = Name(s"set${prop.name.unescaped.capitalize}Null")
               Some(
                 MethodTree(
                   annotations = IArray(Annotation.Inline),
-                  level       = ProtectionLevel.Public,
-                  name        = name,
-                  tparams     = Empty,
-                  params      = Empty,
-                  impl        = impl,
-                  resultType  = selfRef,
-                  isOverride  = false,
-                  comments    = NoComments,
-                  codePath    = clsCodePath + name,
-                  isImplicit  = false,
-                ),
+                  level = ProtectionLevel.Public,
+                  name = name,
+                  tparams = Empty,
+                  params = Empty,
+                  impl = impl,
+                  resultType = selfRef,
+                  isOverride = false,
+                  comments = NoComments,
+                  codePath = clsCodePath + name,
+                  isImplicit = false
+                )
               )
 
             case _ => None
@@ -147,13 +147,13 @@ object GenBuilderClass {
           ParamTree(
             x,
             isImplicit = false,
-            isVal      = true,
-            tpe        = paramType,
-            default    = NotImplemented,
-            comments   = NoComments,
-          ),
+            isVal = true,
+            tpe = paramType,
+            default = NotImplemented,
+            comments = NoComments
+          )
         ),
-        NoComments,
+        NoComments
       )
     }
 
@@ -162,19 +162,19 @@ object GenBuilderClass {
     if (allMembers.nonEmpty)
       Some(
         ClassTree(
-          isImplicit  = true,
+          isImplicit = true,
           annotations = IArray(Annotation.Inline),
-          level       = ProtectionLevel.Public,
-          name        = clsName,
-          tparams     = tparams,
-          parents     = IArray(TypeRef.AnyVal),
-          ctors       = IArray(sugarCtor),
-          members     = allMembers,
-          classType   = ClassType.Class,
-          isSealed    = false,
-          comments    = NoComments,
-          codePath    = clsCodePath,
-        ),
+          level = ProtectionLevel.Public,
+          name = clsName,
+          tparams = tparams,
+          parents = IArray(TypeRef.AnyVal),
+          ctors = IArray(sugarCtor),
+          members = allMembers,
+          classType = ClassType.Class,
+          isSealed = false,
+          comments = NoComments,
+          codePath = clsCodePath
+        )
       )
     else None
   }

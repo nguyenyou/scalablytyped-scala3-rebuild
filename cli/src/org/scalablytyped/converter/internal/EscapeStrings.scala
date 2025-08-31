@@ -1,6 +1,7 @@
 package org.scalablytyped.converter.internal
 
-import java.io.{StringWriter, Writer}
+import java.io.StringWriter
+import java.io.Writer
 import java.util.Locale
 
 /* Borrowed from org/apache/commons/lang/StringEscapeUtils.java */
@@ -17,10 +18,12 @@ object EscapeStrings {
     writer.toString
   }
 
-  /**
-    * @param out                write to receieve the escaped string
-    * @param str                String to escape values in, may be null
-    * @param escapeSingleQuote  escapes single quotes if <code>true</code>
+  /** @param out
+    *   write to receieve the escaped string
+    * @param str
+    *   String to escape values in, may be null
+    * @param escapeSingleQuote
+    *   escapes single quotes if <code>true</code>
     */
   private def go(out: Writer, str: String, escapeSingleQuote: Boolean, escapeForwardSlash: Boolean): Unit = {
     var i = 0
@@ -73,12 +76,12 @@ object EscapeStrings {
     }
   }
 
-  /**
-    * <p>Returns an upper case hexadecimal <code>String</code> for the given
-    * character.</p>
+  /** <p>Returns an upper case hexadecimal <code>String</code> for the given character.</p>
     *
-    * @param ch The character to convert.
-    * @return An upper case hexadecimal <code>String</code>
+    * @param ch
+    *   The character to convert.
+    * @return
+    *   An upper case hexadecimal <code>String</code>
     */
   def hex(ch: Char): String =
     Integer.toHexString(ch.toInt).toUpperCase(Locale.ENGLISH)

@@ -7,11 +7,11 @@ import org.scalablytyped.converter.internal.ts.transforms.SetCodePath
 
 object Exports {
   def expandExport(
-      scope:        TsTreeScope,
-      jsLocation:   ModuleSpec => JsLocation,
-      e:            TsExport,
+      scope: TsTreeScope,
+      jsLocation: ModuleSpec => JsLocation,
+      e: TsExport,
       loopDetector: LoopDetector,
-      owner:        TsDeclNamespaceOrModule,
+      owner: TsDeclNamespaceOrModule
   ): IArray[TsNamedDecl] = {
 
     lazy val key = (scope, e)
@@ -46,7 +46,7 @@ object Exports {
                       ident,
                       rest,
                       CodePath.NoPath,
-                      JsLocation.Zero,
+                      JsLocation.Zero
                     )
                     (defaults ++ namespaceds :+ restNs).flatMap(m =>
                       `export`(codePath, jsLocation, newScope, exportType, m, Some(ident), loopDetector),
@@ -72,18 +72,16 @@ object Exports {
           case None => scope
         }
 
-        idents.flatMap {
-          case (qIdent, asNameOpt) =>
-            val found = newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector)
-            if (found.isEmpty && newScope.root.pedantic) {
-              //for debugging
-              newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector)
-              newScope.logger.warn(s"Could not resolve $qIdent")
-            }
-            found.flatMap {
-              case (found, newNewScope) =>
-                `export`(codePath, jsLocation, newNewScope, exportType, found, asNameOpt, loopDetector)
-            }
+        idents.flatMap { case (qIdent, asNameOpt) =>
+          val found = newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector)
+          if (found.isEmpty && newScope.root.pedantic) {
+            // for debugging
+            newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector)
+            newScope.logger.warn(s"Could not resolve $qIdent")
+          }
+          found.flatMap { case (found, newNewScope) =>
+            `export`(codePath, jsLocation, newNewScope, exportType, found, asNameOpt, loopDetector)
+          }
         }
 
       case TsExport(_, _, exportType, TsExportee.Star(_, from)) =>
@@ -95,7 +93,7 @@ object Exports {
 
             resolvedModule.nameds.flatMap {
               case n if n.name === TsIdent.default => Empty
-              case n                               => `export`(codePath, jsLocation, newScope, exportType, n, None, loopDetector)
+              case n => `export`(codePath, jsLocation, newScope, exportType, n, None, loopDetector)
             }
           case _ =>
             scope.fatalMaybe(s"Couldn't find expected module $from")
@@ -112,13 +110,13 @@ object Exports {
   }
 
   def `export`(
-      ownerCp:      CodePath.HasPath,
-      jsLocation:   ModuleSpec => JsLocation,
-      scope:        TsTreeScope,
-      exportType:   ExportType,
-      _namedDecl:   TsNamedDecl,
-      renamedOpt:   Option[TsIdentSimple],
-      loopDetector: LoopDetector,
+      ownerCp: CodePath.HasPath,
+      jsLocation: ModuleSpec => JsLocation,
+      scope: TsTreeScope,
+      exportType: ExportType,
+      _namedDecl: TsNamedDecl,
+      renamedOpt: Option[TsIdentSimple],
+      loopDetector: LoopDetector
   ): IArray[TsNamedDecl] = {
     val limitedScope = scope match {
       case TsTreeScope.Scoped(outer, `_namedDecl`) => outer
@@ -140,7 +138,7 @@ object Exports {
 
             xx.members.flatMap {
               case xxx: TsNamedDecl => DeriveCopy(xxx, ownerCp, None)
-              case _ => Empty
+              case _                => Empty
             }
 
           case x =>
@@ -159,9 +157,8 @@ object Exports {
 
   case class PickedExport(`export`: TsExport, newWanted: IArray[TsIdent])
 
-  /**
-    * This is used when resolving. If we have an import in current scope which points
-    * to a module, this finds the matching export in the pointee.
+  /** This is used when resolving. If we have an import in current scope which points to a module, this finds the
+    * matching export in the pointee.
     */
   def pickExports(exports: IArray[TsExport], wanted: IArray[TsIdent]): IArray[PickedExport] =
     exports.mapNotNone {
@@ -194,30 +191,28 @@ object Exports {
         }
     }
 
-  /**
-    * Structures which come from an `import` do not have a fixed javascript location, that can
-    *  only be determined once they are exported
+  /** Structures which come from an `import` do not have a fixed javascript location, that can only be determined once
+    * they are exported
     */
   def rewriteLocationToOwner(jsLocation: JsLocation, ms: ModuleSpec): JsLocation =
     (jsLocation, ms) match {
-      case (m: JsLocation.Module, spec) => JsLocation.Module(m.module, spec)
+      case (m: JsLocation.Module, spec)                              => JsLocation.Module(m.module, spec)
       case (JsLocation.Global(jsPath), ModuleSpec.Specified(idents)) => JsLocation.Global(jsPath ++ idents)
       case (JsLocation.Zero, _)                                      => JsLocation.Zero
       case other                                                     => sys.error(s"Unexpected $other")
     }
 
   def lookupExportFrom[T <: TsNamedDecl](
-      scope:        TsTreeScope.Scoped,
-      Pick:         Picker[T],
-      wanted:       IArray[TsIdent],
+      scope: TsTreeScope.Scoped,
+      Pick: Picker[T],
+      wanted: IArray[TsIdent],
       loopDetector: LoopDetector,
-      owner:        TsDeclNamespaceOrModule,
+      owner: TsDeclNamespaceOrModule
   ): IArray[(T, TsTreeScope)] =
-    pickExports(scope.exports, wanted).flatMap {
-      case PickedExport(e, newWanteds) =>
-        val expanded: IArray[TsNamedDecl] =
-          expandExport(scope, ms => rewriteLocationToOwner(owner.jsLocation, ms), e, loopDetector, owner)
+    pickExports(scope.exports, wanted).flatMap { case PickedExport(e, newWanteds) =>
+      val expanded: IArray[TsNamedDecl] =
+        expandExport(scope, ms => rewriteLocationToOwner(owner.jsLocation, ms), e, loopDetector, owner)
 
-        Utils.searchAmong(scope, Pick, newWanteds, expanded, loopDetector)
+      Utils.searchAmong(scope, Pick, newWanteds, expanded, loopDetector)
     }
 }

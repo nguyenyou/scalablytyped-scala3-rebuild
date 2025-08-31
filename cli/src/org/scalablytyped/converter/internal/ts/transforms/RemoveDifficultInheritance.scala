@@ -2,14 +2,12 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
 
-/**
-  * In typescript we can inherit from type references pointing to a pretty much arbitrary shape.
+/** In typescript we can inherit from type references pointing to a pretty much arbitrary shape.
   *
-  * Scala naturally is much more constrained here, so we... drop all the difficult things.
-  * Some information (like from intersections of type objects, for instance) is retrieved
-  * ("lifted", in this code)
+  * Scala naturally is much more constrained here, so we... drop all the difficult things. Some information (like from
+  * intersections of type objects, for instance) is retrieved ("lifted", in this code)
   *
   * We also inline all type aliases in parents.
   *
@@ -21,10 +19,10 @@ object RemoveDifficultInheritance extends TreeTransformationScopedChanges {
     Res.combine(cleaned) match {
       case Res(keep, drop, lifted) =>
         s.copy(
-          parent     = keep.headOption,
+          parent = keep.headOption,
           implements = keep.drop(1),
-          comments   = s.comments +? summarizeChanges(drop, lifted),
-          members    = FlattenTrees.newClassMembers(s.members, lifted.flatMapToIArray { case (_, v) => v }),
+          comments = s.comments +? summarizeChanges(drop, lifted),
+          members = FlattenTrees.newClassMembers(s.members, lifted.flatMapToIArray { case (_, v) => v })
         )
     }
   }
@@ -34,8 +32,8 @@ object RemoveDifficultInheritance extends TreeTransformationScopedChanges {
       case Res(keep, drop, lifted) =>
         s.copy(
           inheritance = keep,
-          comments    = s.comments +? summarizeChanges(drop, lifted),
-          members     = FlattenTrees.newClassMembers(s.members, lifted.flatMapToIArray { case (_, v) => v }),
+          comments = s.comments +? summarizeChanges(drop, lifted),
+          members = FlattenTrees.newClassMembers(s.members, lifted.flatMapToIArray { case (_, v) => v })
         )
     }
 
@@ -45,9 +43,8 @@ object RemoveDifficultInheritance extends TreeTransformationScopedChanges {
     val EmptyRes = Res(Empty, Empty, Map.empty)
 
     def combine(rs: IArray[Res]): Res =
-      rs.foldLeft(EmptyRes) {
-        case (Res(keep1, drop1, lift1), Res(keep2, drop2, lift2)) =>
-          Res(keep1 ++ keep2, drop1 ++ drop2, lift1 ++ lift2)
+      rs.foldLeft(EmptyRes) { case (Res(keep1, drop1, lift1), Res(keep2, drop2, lift2)) =>
+        Res(keep1 ++ keep2, drop1 ++ drop2, lift1 ++ lift2)
       }
   }
 

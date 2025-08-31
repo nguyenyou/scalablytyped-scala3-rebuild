@@ -1,11 +1,16 @@
 //| mill-version: 1.0.4
-//| mvnDeps: ["com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION"]
+//| mvnDeps: ["com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION", "com.goyeau::mill-scalafix::0.6.0"]
 
 import mill.*, scalalib.*
 import os.*
 import mill.contrib.buildinfo.BuildInfo
 import mill.scalajslib.*
 import mill.scalajslib.api.*
+import com.goyeau.mill.scalafix.ScalafixModule
+
+trait Scalafix extends ScalafixModule {
+  def scalacOptions = super.scalacOptions() ++ Seq("-Wunused:all", "-Wunused:imports")
+}
 
 object Versions {
     val scala2 = "3.3.6"
@@ -18,7 +23,7 @@ object Versions {
     val utest = "0.9.1"
 }
 
-trait BaseModule extends ScalaModule {
+trait BaseModule extends ScalaModule, Scalafix {
   def scalaVersion = Versions.scala2
   def mvnDeps = Seq(
     // Core Libraries

@@ -3,9 +3,7 @@ package ts
 
 import org.scalablytyped.converter.internal.ts.transforms.TypeRewriter
 
-/**
-  * For instance: `x: class Foo&lt;T&gt;` and `providedTParams: T = number` => `Foo&lt;number&gt;`
-  * Includes all members
+/** For instance: `x: class Foo&lt;T&gt;` and `providedTParams: T = number` => `Foo&lt;number&gt;` Includes all members
   */
 object FillInTParams {
   def apply(x: TsDeclInterface, providedTParams: IArray[TsType]): TsDeclInterface =
@@ -39,8 +37,8 @@ object FillInTParams {
     val replacements: Map[TsType, TsType] =
       sig.tparams
         .zip(defaulted)
-        .map {
-          case (TsTypeParam(_, name, _, _), tpe) => TsTypeRef(name) -> tpe
+        .map { case (TsTypeParam(_, name, _, _), tpe) =>
+          TsTypeRef(name) -> tpe
         }
         .toMap
 
@@ -51,21 +49,20 @@ object FillInTParams {
 
   private def rewriter(
       expectedTParams: IArray[TsTypeParam],
-      providedTParams: IArray[TsType],
+      providedTParams: IArray[TsType]
   ): Option[Map[TsType, TsType]] =
     if (expectedTParams.isEmpty) None
     else {
       val rewrites: Map[TsType, TsType] =
-        expectedTParams.zipWithIndex.map {
-          case (TsTypeParam(_, expected, _, default), idx) =>
-            val provided =
-              if (providedTParams.lengthCompare(idx) > 0) providedTParams(idx)
-              else
-                default.getOrElse(
-                  TsTypeRef.any.copy(comments = Comments(Comment.warning(s"${expected.value} not provided"))),
-                )
+        expectedTParams.zipWithIndex.map { case (TsTypeParam(_, expected, _, default), idx) =>
+          val provided =
+            if (providedTParams.lengthCompare(idx) > 0) providedTParams(idx)
+            else
+              default.getOrElse(
+                TsTypeRef.any.copy(comments = Comments(Comment.warning(s"${expected.value} not provided")))
+              )
 
-            TsTypeRef(expected) -> provided
+          TsTypeRef(expected) -> provided
         }.toMap
 
       Some(rewrites)

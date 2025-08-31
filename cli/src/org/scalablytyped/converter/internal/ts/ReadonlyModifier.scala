@@ -12,6 +12,6 @@ sealed trait ReadonlyModifier {
 
 object ReadonlyModifier {
   case object Noop extends ReadonlyModifier
-  case object Yes extends ReadonlyModifier
-  case object No extends ReadonlyModifier
+  case object Yes  extends ReadonlyModifier
+  case object No   extends ReadonlyModifier
 }

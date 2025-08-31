@@ -2,8 +2,7 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-/**
-  * Handling diverse constellations of union and intersection types in scala seems impossible.
+/** Handling diverse constellations of union and intersection types in scala seems impossible.
   *
   * Apply some duplication so we get larger types, but easier in the sense that they are plain union types
   *

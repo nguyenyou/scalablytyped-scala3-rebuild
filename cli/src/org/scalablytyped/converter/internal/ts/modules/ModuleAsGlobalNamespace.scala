@@ -4,11 +4,10 @@ package modules
 
 import org.scalablytyped.converter.internal.ts.transforms.SetJsLocation
 
-/**
-  * Implement `export namespace as ...`.
+/** Implement `export namespace as ...`.
   *
-  * It's implemented as reexporting the resulting top-level module to avoid split type hierarchies,
-  *  the other option would be to duplicate all the contents.
+  * It's implemented as reexporting the resulting top-level module to avoid split type hierarchies, the other option
+  * would be to duplicate all the contents.
   */
 object ModuleAsGlobalNamespace {
   def apply(libName: TsIdentLibrary, file: TsParsedFile): TsParsedFile =
@@ -17,8 +16,8 @@ object ModuleAsGlobalNamespace {
       case Some(topLevelModule) =>
         val globalCp = file.codePath.forceHasPath + TsIdent.Global
 
-        /** It feels wrong that the `TsExportAsNamespace` may be placed within `topLevelModule`,
-            but it's the result of [[InferredDefaultModule]].
+        /** It feels wrong that the `TsExportAsNamespace` may be placed within `topLevelModule`, but it's the result of
+          * [[InferredDefaultModule]].
           */
         val globals: IArray[TsNamedDecl] =
           (topLevelModule.members ++ file.members).flatMap {
@@ -34,7 +33,7 @@ object ModuleAsGlobalNamespace {
                       asGlobal,
                       topLevelModule.members,
                       globalCp,
-                      JsLocation.Zero,
+                      JsLocation.Zero
                     )
                   copy(globalCp, asNamespace)
               }
@@ -47,11 +46,11 @@ object ModuleAsGlobalNamespace {
           case some =>
             val ns = TsDeclNamespace(
               NoComments,
-              declared   = false,
-              name       = TsIdent.Global,
-              members    = some,
-              codePath   = globalCp,
-              jsLocation = JsLocation.Zero,
+              declared = false,
+              name = TsIdent.Global,
+              members = some,
+              codePath = globalCp,
+              jsLocation = JsLocation.Zero
             )
             file.copy(members = ns +: file.members)
         }
@@ -60,7 +59,7 @@ object ModuleAsGlobalNamespace {
   def findTopLevelModule(libName: TsIdentLibrary, x: TsParsedFile): Option[TsDeclModule] =
     x.membersByName.get(TsIdentModule.fromLibrary(libName)).flatMap {
       case IArray.first(mod: TsDeclModule) => Some(mod)
-      case _ => None
+      case _                               => None
     }
 
   def copy(codePath: CodePath, decl: TsNamedDecl): IArray[TsNamedDecl] =

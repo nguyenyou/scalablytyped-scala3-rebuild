@@ -19,7 +19,7 @@ object Sorter extends TreeTransformation {
     def has(anns: IArray[Annotation]): Boolean =
       anns.exists {
         case _: LocationAnnotation => true
-        case _ => false
+        case _                     => false
       }
 
     def had(comments: Comments): Boolean =
@@ -29,7 +29,7 @@ object Sorter extends TreeTransformation {
       case tree: ContainerTree => has(tree.annotations) || tree.members.exists(hasNativeLocation) || had(tree.comments)
       case tree: ClassTree     => has(tree.annotations) || had(tree.comments)
       case tree: MemberTree    => has(tree.annotations) || had(tree.comments)
-      case _ => false
+      case _                   => false
     }
   }
   val Unnamed = Set(Name.Default, Name.namespaced, Name.APPLY)
@@ -42,7 +42,7 @@ object Sorter extends TreeTransformation {
     val (_1, _2, _3) = members.partitionCollect2(
       { case x if Unnamed(x.name) => x },
       // getters and setters should be next to each other
-      { case x if nativeValueNamesOrCompanion(x.name.unescaped.replace("_=", "")) => x },
+      { case x if nativeValueNamesOrCompanion(x.name.unescaped.replace("_=", "")) => x }
     )
 
     IArray(_1, _2, _3).map(_.sorted(TreeOrdering)).flatten

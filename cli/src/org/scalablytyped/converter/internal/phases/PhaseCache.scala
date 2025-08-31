@@ -38,7 +38,7 @@ object PhaseCache {
     override def equals(obj: Any): Boolean =
       obj match {
         case that: Ref[_] => that.get == get
-        case _ => false
+        case _            => false
       }
 
     override lazy val hashCode: Int = get.##

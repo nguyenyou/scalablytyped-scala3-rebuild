@@ -13,7 +13,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
     List[Option[String]](
       tparams(sig.tparams)(tparam),
       Some(sig.params.map(param).mkString("(", ", ", ")")),
-      sig.resultType.map(apply).map(": " + _),
+      sig.resultType.map(apply).map(": " + _)
     ).flatten.mkString("")
 
   def tparam(tparam: TsTypeParam): String =
@@ -21,8 +21,8 @@ class TsTypeFormatter(val keepComments: Boolean) {
       case TsTypeParam(_, name, bound, default) =>
         List[Option[String]](
           Some(name.value),
-          bound.map(b   => s"extends ${apply(b)}"),
-          default.map(d => s"= " + apply(d)),
+          bound.map(b => s"extends ${apply(b)}"),
+          default.map(d => "= " + apply(d))
         ).flatten.mkString(" ")
     }
 
@@ -58,7 +58,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
         if (isStatic) Some("static") else None,
         if (isReadOnly) Some("readonly") else None,
         Some(name.value),
-        Some(sig(s)),
+        Some(sig(s))
       ).flatten.mkString(" ")
 
     case TsMemberProperty(_, l, name, tpe, expr, isStatic, isReadOnly) =>
@@ -68,7 +68,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
         Some(if (isReadOnly) "readonly" else ""),
         Some(name.value),
         tpe.map(apply).map(":" + _),
-        expr.map(l => "= " + TsExpr.format(l)),
+        expr.map(l => "= " + TsExpr.format(l))
       ).flatten.mkString(" ")
 
     // lazy
@@ -80,7 +80,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
           case Indexing.Dict(name, tpe) => s"[${name.value}: ${apply(tpe)}]"
           case Indexing.Single(name)    => s"[${qident(name)}]"
         }),
-        valueType.map(tpe => s": ${apply(tpe)}"),
+        valueType.map(tpe => s": ${apply(tpe)}")
       ).flatten.mkString(" ").replaceAllLiterally(" ?", "?")
 
     case TsMemberTypeMapped(_, l, readonly, key, from, as, optionalize, to) =>
@@ -102,7 +102,7 @@ class TsTypeFormatter(val keepComments: Boolean) {
           case OptionalModifier.Optionalize   => Some("?")
           case OptionalModifier.Deoptionalize => Some("-?")
         },
-        Some(apply(to)),
+        Some(apply(to))
       ).flatten
         .mkString(" ")
         .replaceAllLiterally(" ?", "?")
@@ -123,21 +123,21 @@ class TsTypeFormatter(val keepComments: Boolean) {
     tpe match {
       case TsTypeRef(cs, name, ts) =>
         Comments.format(cs, keepComments) + qident(name) + tparams(ts)(apply).getOrElse("")
-      case TsTypeLiteral(l)                         => lit(l)
-      case TsTypeObject(cs, members)                => Comments.format(cs, keepComments) + s"{${members.map(member).mkString(", ")}}"
-      case TsTypeFunction(s)                        => s"${sig(s)}"
-      case TsTypeConstructor(true, f)               => s"abstract new ${apply(f)}"
-      case TsTypeConstructor(false, f)              => s"new ${apply(f)}"
-      case TsTypeIs(ident, x)                       => s"${ident.value} is ${apply(x)}"
-      case TsTypeTuple(elems)                       => s"[${elems.map(tupleElement).mkString(", ")}]"
-      case TsTypeQuery(expr)                        => s"typeof ${qident(expr)}"
-      case TsTypeRepeated(underlying)               => s"...${apply(underlying)}"
-      case TsTypeKeyOf(key)                         => s"keyof ${apply(key)}"
-      case TsTypeLookup(from, key)                  => s"${apply(from)}[${apply(key)}]"
-      case TsTypeThis()                             => "this"
-      case TsTypeAsserts(ident, isOpt)              => "asserts " + ident.value + isOpt.fold("")("is " + _)
-      case TsTypeUnion(types)                       => types.map(apply).mkString(" | ")
-      case TsTypeIntersect(types)                   => types.map(apply).mkString(" & ")
+      case TsTypeLiteral(l)            => lit(l)
+      case TsTypeObject(cs, members)   => Comments.format(cs, keepComments) + s"{${members.map(member).mkString(", ")}}"
+      case TsTypeFunction(s)           => s"${sig(s)}"
+      case TsTypeConstructor(true, f)  => s"abstract new ${apply(f)}"
+      case TsTypeConstructor(false, f) => s"new ${apply(f)}"
+      case TsTypeIs(ident, x)          => s"${ident.value} is ${apply(x)}"
+      case TsTypeTuple(elems)          => s"[${elems.map(tupleElement).mkString(", ")}]"
+      case TsTypeQuery(expr)           => s"typeof ${qident(expr)}"
+      case TsTypeRepeated(underlying)  => s"...${apply(underlying)}"
+      case TsTypeKeyOf(key)            => s"keyof ${apply(key)}"
+      case TsTypeLookup(from, key)     => s"${apply(from)}[${apply(key)}]"
+      case TsTypeThis()                => "this"
+      case TsTypeAsserts(ident, isOpt) => "asserts " + ident.value + isOpt.fold("")("is " + _)
+      case TsTypeUnion(types)          => types.map(apply).mkString(" | ")
+      case TsTypeIntersect(types)      => types.map(apply).mkString(" & ")
       case TsTypeConditional(pred, ifTrue, ifFalse) => s"${apply(pred)} ? ${apply(ifTrue)} : ${apply(ifFalse)}"
       case TsTypeExtends(one, two)                  => s"${apply(one)} extends ${apply(two)}"
       case TsTypeInfer(tparam)                      => s"infer ${tparam.name.value}"

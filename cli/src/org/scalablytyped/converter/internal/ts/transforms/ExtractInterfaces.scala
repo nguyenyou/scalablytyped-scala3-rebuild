@@ -2,7 +2,8 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-import org.scalablytyped.converter.internal.maps._
+import org.scalablytyped.converter.internal.maps.*
+
 import scala.collection.mutable
 
 object ExtractInterfaces {
@@ -13,15 +14,16 @@ object ExtractInterfaces {
     store.interfaces.toIArrayValues match {
       case Empty => newFile
       case nonEmpty =>
-        newFile.copy(members = newFile.members :+
-          TsDeclNamespace(
-            NoComments,
-            declared = false,
-            into,
-            nonEmpty,
-            CodePath.HasPath(inLibrary, TsQIdent.of(into)),
-            JsLocation.Zero,
-          ),
+        newFile.copy(members =
+          newFile.members :+
+            TsDeclNamespace(
+              NoComments,
+              declared = false,
+              into,
+              nonEmpty,
+              CodePath.HasPath(inLibrary, TsQIdent.of(into)),
+              JsLocation.Zero
+            )
         )
     }
   }
@@ -30,12 +32,12 @@ object ExtractInterfaces {
     val interfaces = mutable.Map.empty[TsIdent, TsDeclInterface]
 
     def addInterface(
-        scope:             TsTreeScope,
-        prefix:            String,
-        members:           IArray[TsMember],
-        referencedTparams: IArray[TsTypeParam],
+        scope: TsTreeScope,
+        prefix: String,
+        members: IArray[TsMember],
+        referencedTparams: IArray[TsTypeParam]
     )(
-        construct: TsIdentSimple => TsDeclInterface,
+        construct: TsIdentSimple => TsDeclInterface
     ): CodePath.HasPath = {
       val interface = DeriveNonConflictingName(prefix, members) {
         case conflict if referencedTparams.exists(_.name === conflict) => None
@@ -59,7 +61,7 @@ object ExtractInterfaces {
     stack.exists {
       case _: TsMemberTypeMapped => true
       case _: TsTypePredicate    => true
-      case _ => false
+      case _                     => false
     } || TsType.isTypeMapping(obj.members)
 
   def isDictionary(members: IArray[TsMember]): Boolean =
@@ -83,7 +85,7 @@ object ExtractInterfaces {
             def isFunction =
               obj.members.forall {
                 case _: TsMemberCall => true
-                case _ => false
+                case _               => false
               }
 
             obj.comments.extract { case Marker.NameHint(hint) => hint } match {
@@ -101,7 +103,7 @@ object ExtractInterfaces {
               referencedTparams,
               Empty,
               obj.members,
-              CodePath.NoPath,
+              CodePath.NoPath
             )
           }
 
@@ -114,6 +116,6 @@ object ExtractInterfaces {
   def shouldBeExtracted(t: TsTreeScope): Boolean =
     t.stack match {
       case _ :: (_: TsDeclVar) :: _ => false
-      case _ => true
+      case _                        => true
     }
 }

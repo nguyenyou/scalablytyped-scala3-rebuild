@@ -1,40 +1,41 @@
 package org.scalablytyped.converter.internal
 package phases
 
-import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
+import org.scalablytyped.converter.internal.logging.Formatter
+import org.scalablytyped.converter.internal.logging.Logger
 
-import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.immutable.SortedMap
+import scala.collection.immutable.SortedSet
 import scala.util.control.NonFatal
 
-/**
-  * Runs a computation given a sequence of input ids.
+/** Runs a computation given a sequence of input ids.
   */
 object PhaseRunner {
   def apply[Id: Formatter: Ordering, T](
-      phase:     RecPhase[Id, T],
+      phase: RecPhase[Id, T],
       getLogger: Id => Logger[Unit],
-      listener:  PhaseListener[Id],
-  )(initial:     phase._Id): PhaseRes[phase._Id, phase._T] =
+      listener: PhaseListener[Id]
+  )(initial: phase._Id): PhaseRes[phase._Id, phase._T] =
     go(phase, initial, Nil, getLogger, listener)
 
   def go[Id: Formatter: Ordering, TT](
-      phase:          RecPhase[Id, TT],
-      id:             Id,
+      phase: RecPhase[Id, TT],
+      id: Id,
       circuitBreaker: List[Id],
-      getLogger:      Id => Logger[Unit],
-      listener:       PhaseListener[Id],
+      getLogger: Id => Logger[Unit],
+      listener: PhaseListener[Id]
   ): PhaseRes[Id, TT] =
     phase match {
-      case _:    RecPhase.Initial[Id]     => PhaseRes.Ok[Id, TT](id)
+      case _: RecPhase.Initial[Id]        => PhaseRes.Ok[Id, TT](id)
       case next: RecPhase.Next[Id, t, TT] => doNext[Id, t, TT](next, id, circuitBreaker, getLogger, listener)
     }
 
   def doNext[Id: Formatter: Ordering, T, TT](
-      next:           RecPhase.Next[Id, T, TT],
-      id:             Id,
+      next: RecPhase.Next[Id, T, TT],
+      id: Id,
       circuitBreaker: List[Id],
-      getLogger:      Id => Logger[Unit],
-      listener:       PhaseListener[Id],
+      getLogger: Id => Logger[Unit],
+      listener: PhaseListener[Id]
   ): PhaseRes[Id, TT] = {
 
     val isCircular = circuitBreaker contains id

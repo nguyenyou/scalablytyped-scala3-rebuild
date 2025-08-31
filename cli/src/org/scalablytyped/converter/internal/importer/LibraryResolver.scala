@@ -1,14 +1,14 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.importer.LibraryResolver._
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.importer.LibraryResolver.*
+import org.scalablytyped.converter.internal.ts.*
 import os./
 
 class LibraryResolver(
     val stdLib: LibTsSource.StdLibSource,
     allSources: IArray[LibTsSource.FromFolder],
-    ignored:    Set[TsIdentLibrary],
+    ignored: Set[TsIdentLibrary]
 ) {
   private val byName: Map[TsIdentLibrary, LibTsSource] =
     allSources.groupBy(_.libName).view.mapValues(_.head).toMap.updated(TsIdent.std, stdLib)
@@ -47,13 +47,13 @@ object LibraryResolver {
       }
     def map[U](f: T => U): Res[U] =
       this match {
-        case Found(source) => Found(f(source))
+        case Found(source)   => Found(f(source))
         case x: Ignored      => x
         case x: NotAvailable => x
       }
   }
-  case class Found[T](source:   T) extends Res[T]
-  case class Ignored(name:      TsIdentLibrary) extends Res[Nothing]
+  case class Found[T](source: T)                extends Res[T]
+  case class Ignored(name: TsIdentLibrary)      extends Res[Nothing]
   case class NotAvailable(name: TsIdentLibrary) extends Res[Nothing]
 
   def moduleNameFor(source: LibTsSource, file: InFile): IArray[TsIdentModule] = {
@@ -75,7 +75,7 @@ object LibraryResolver {
 
       ModuleNameParser(
         source.libName.`__value` +: file.path.relativeTo(source.folder.path).segments.to(List),
-        keepIndexPath,
+        keepIndexPath
       )
     }
 

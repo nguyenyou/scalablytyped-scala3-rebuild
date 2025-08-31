@@ -1,19 +1,17 @@
 package org.scalablytyped.converter.internal
 package importer
 
+import org.scalablytyped.converter.internal.ts.*
 import org.scalablytyped.converter.internal.ts.ParentsResolver.WithParents
-import org.scalablytyped.converter.internal.ts._
 
-/**
-  * This is a heuristic.
+/** This is a heuristic.
   *
   * For our purposes, there are two kind of javascript objects:
-  * - code (implementation of libraries)
-  * - data (may be implemented by user)
+  *   - code (implementation of libraries)
+  *   - data (may be implemented by user)
   *
-  * For the latter, we want to provide different ways of instantiating an instance of the structure,
-  *  either through mutable builders or `@ScalaJSDefined` traits.
-  *
+  * For the latter, we want to provide different ways of instantiating an instance of the structure, either through
+  * mutable builders or `@ScalaJSDefined` traits.
   */
 object IsUserImplementable {
   def apply(interface: WithParents[TsDeclInterface]): Boolean =
@@ -25,11 +23,11 @@ object IsUserImplementable {
 
   def pred(x: HasClassMembers): Boolean =
     x match {
-      case _:   TsDeclClass => false
+      case _: TsDeclClass                                                    => false
       case int: TsDeclInterface if TsQIdent.Function.parts.head === int.name => false
       case int: TsDeclInterface =>
         val fromUnnamed = int.unnamed.forall {
-          case _: TsMemberTypeMapped => false
+          case _: TsMemberTypeMapped                         => false
           case TsMemberIndex(_, _, _, Indexing.Single(_), _) => false
           case _                                             => true
         }
@@ -52,14 +50,14 @@ object IsUserImplementable {
               case IArray.exactlyOne(one) =>
                 one match {
                   case _: TsMemberCtor | _: TsMemberCall => false
-                  case x: TsMemberProperty => !x.isStatic && legalName(x.name)
+                  case x: TsMemberProperty               => !x.isStatic && legalName(x.name)
                   case x: TsMemberFunction => !x.isStatic && legalName(x.name) && x.methodType === MethodType.Normal
-                  case _ => true
+                  case _                   => true
                 }
               case many =>
                 many.forall {
                   case x: TsMemberProperty => !x.isStatic // will combine later
-                  case _ => false
+                  case _                   => false
                 }
             }
         }

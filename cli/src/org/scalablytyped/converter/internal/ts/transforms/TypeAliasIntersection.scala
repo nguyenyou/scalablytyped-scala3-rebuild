@@ -9,7 +9,7 @@ object TypeAliasIntersection extends TreeTransformationScopedChanges {
         types.partitionCollect2(
           // avoid inheritance of union types for instance
           { case x: TsTypeRef if !scope.isAbstract(x.name) && legalInheritance(FollowAliases(scope)(x)) => x },
-          { case x: TsTypeObject if legalInheritance(x)                                                 => x },
+          { case x: TsTypeObject if legalInheritance(x) => x }
         ) match {
           // note: this is too broad, but in part reverted by `PreferTypeAlias`
           case (inheritance, objects, Empty) =>

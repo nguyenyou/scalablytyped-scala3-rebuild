@@ -20,7 +20,7 @@ object ModuleSpec {
       case other              => Specified(IArray(other))
     }
 
-  case object Defaulted extends ModuleSpec
-  case object Namespaced extends ModuleSpec
+  case object Defaulted                                 extends ModuleSpec
+  case object Namespaced                                extends ModuleSpec
   final case class Specified(tsIdents: IArray[TsIdent]) extends ModuleSpec
 }

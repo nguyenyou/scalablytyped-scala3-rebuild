@@ -1,7 +1,8 @@
 package org.scalablytyped.converter.internal
 package scalajs
 
-import io.circe.{Decoder, Encoder}
+import io.circe.Decoder
+import io.circe.Encoder
 
 object Versions {
   val sbtVersion = "1.9.6"
@@ -28,7 +29,7 @@ object Versions {
       else None
 
     val binVersion: String = scalaVersion match {
-      case Version("3", _, _)     => s"3"
+      case Version("3", _, _)     => "3"
       case Version("2", minor, _) => s"2.$minor"
       case other                  => other
     }
@@ -85,7 +86,7 @@ case class Versions(scala: Versions.Scala, scalaJs: Versions.ScalaJs) {
         "-language:higherKinds",
         "-language:existentials",
         "-no-indent",
-        "-source:future",
+        "-source:future"
 //        "-Yexplicit-nulls"
       )
     else
@@ -96,7 +97,7 @@ case class Versions(scala: Versions.Scala, scalaJs: Versions.ScalaJs) {
         "-g:notailcalls",
         "-language:implicitConversions",
         "-language:higherKinds",
-        "-language:existentials",
+        "-language:existentials"
       )
 
   val scalaJsLibrary: Dep =

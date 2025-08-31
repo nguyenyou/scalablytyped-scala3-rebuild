@@ -2,33 +2,33 @@ package org.scalablytyped.converter.internal
 package importer
 
 import org.scalablytyped.converter.internal.logging.Logger
-import org.scalablytyped.converter.internal.maps._
-import org.scalablytyped.converter.internal.ts._
+import org.scalablytyped.converter.internal.maps.*
+import org.scalablytyped.converter.internal.ts.*
 
 import scala.collection.mutable
 
 object ResolveExternalReferences {
 
   case class Result(
-      rewritten:         TsParsedFile,
-      resolvedModules:   Set[ResolvedModule],
-      unresolvedModules: Set[TsIdentModule],
+      rewritten: TsParsedFile,
+      resolvedModules: Set[ResolvedModule],
+      unresolvedModules: Set[TsIdentModule]
   )
 
   def apply(
-      resolve:      LibraryResolver,
-      source:       LibTsSource,
-      folder:       InFolder,
+      resolve: LibraryResolver,
+      source: LibTsSource,
+      folder: InFolder,
       tsParsedFile: TsParsedFile,
-      logger:       Logger[Unit],
+      logger: Logger[Unit]
   ): Result = {
     val imported: Set[TsIdentModule] = {
       val fromImports = tsParsedFile.imports.collect {
         case TsImport(_, _, TsImportee.From(from))     => from
         case TsImport(_, _, TsImportee.Required(from)) => from
       }
-      val fromExports = tsParsedFile.exports.collect {
-        case TsExport(_, _, _, TsExportee.Names(_, Some(from))) => from
+      val fromExports = tsParsedFile.exports.collect { case TsExport(_, _, _, TsExportee.Names(_, Some(from))) =>
+        from
       }
       fromImports.toSet ++ fromExports.toSet
     }
@@ -38,9 +38,8 @@ object ResolveExternalReferences {
     val after   = visitor.visitTsParsedFile(root)(tsParsedFile)
 
     val newImports: IArray[TsImport] =
-      visitor.importTypes.mapToIArray {
-        case (TsIdentImport(from), name) =>
-          TsImport(typeOnly = false, IArray(TsImported.Star(Some(name))), TsImportee.From(from))
+      visitor.importTypes.mapToIArray { case (TsIdentImport(from), name) =>
+        TsImport(typeOnly = false, IArray(TsImported.Star(Some(name))), TsImportee.From(from))
       }
 
     Result(after.withMembers(after.members ++ newImports), visitor.resolvedModules.to(Set), visitor.notFound.to(Set))
@@ -52,10 +51,8 @@ object ResolveExternalReferences {
     val notFound        = mutable.Set.empty[TsIdentModule]
     val importTypes     = mutable.Map.empty[TsIdentImport, TsIdentSimple]
 
-    /**
-      * Todo: `InferredDependency` takes care of undeclared node dependency.
-      * However, that is not solid enough when there actually exists a library
-      * with the same name as the requested module.
+    /** Todo: `InferredDependency` takes care of undeclared node dependency. However, that is not solid enough when
+      * there actually exists a library with the same name as the requested module.
       */
     def doResolve(mod: TsIdentModule): Option[ResolvedModule] = mod match {
       case TsIdentModule(None, "events" :: Nil) => None
@@ -86,7 +83,7 @@ object ResolveExternalReferences {
 
           val isWithinModule = t.`..`.stack.exists {
             case _: TsDeclModule => true
-            case _ => false
+            case _               => false
           }
 
           if (newName.isDefined || imported(m.name) || isWithinModule) {

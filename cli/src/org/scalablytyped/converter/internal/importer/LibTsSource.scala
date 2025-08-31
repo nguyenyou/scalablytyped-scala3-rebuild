@@ -1,20 +1,22 @@
 package org.scalablytyped.converter.internal
 package importer
 
-import org.scalablytyped.converter.internal.ts._
 import org.scalablytyped.converter.internal.logging.Formatter
+import org.scalablytyped.converter.internal.ts.*
 
 sealed trait LibTsSource extends TsTreeScope.TsLib {
   final def path: os.Path = folder.path
-  def folder:  InFolder
+  def folder: InFolder
   def libName: TsIdentLibrary
 
   private val pathString: String = path.toString
 
   override lazy val packageJsonOpt: Option[PackageJson] =
-    Json.opt[PackageJson](folder.path / "package.json").orElse /* discover stdlib package.json as well */ (
-      Json.opt[PackageJson](folder.path / os.up / "package.json"),
-    )
+    Json
+      .opt[PackageJson](folder.path / "package.json")
+      .orElse /* discover stdlib package.json as well */ (
+        Json.opt[PackageJson](folder.path / os.up / "package.json")
+      )
 
   lazy val tsConfig: Option[TsConfig] =
     Json.opt[TsConfig](folder.path / "tsconfig.json")
@@ -50,7 +52,7 @@ object LibTsSource {
 
     def fromModuleDeclaration(
         fromFolder: LibTsSource.FromFolder,
-        files:      Option[Map[String, String]],
+        files: Option[Map[String, String]]
     ): IArray[InFile] = {
       val files1 = files match {
         case Some(files) => IArray.fromTraversable(files.values)
@@ -71,7 +73,7 @@ object LibTsSource {
         val fromTypings =
           IArray(
             fromFileEntry(f, f.packageJsonOpt.flatMap(_.parsedTypes).orElse(f.packageJsonOpt.flatMap(_.parsedTypings))),
-            fromTypingsJson(f, f.packageJsonOpt.flatMap(_.parsedTypings)),
+            fromTypingsJson(f, f.packageJsonOpt.flatMap(_.parsedTypings))
           ).flatten
 
         if (fromTypings.nonEmpty) fromTypings

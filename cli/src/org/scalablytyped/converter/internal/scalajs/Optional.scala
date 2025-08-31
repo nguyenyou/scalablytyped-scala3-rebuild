@@ -19,9 +19,9 @@ object Optional {
 sealed trait Optionality
 
 object Optionality {
-  case object No extends Optionality
-  case object Null extends Optionality
-  case object Undef extends Optionality
+  case object No          extends Optionality
+  case object Null        extends Optionality
+  case object Undef       extends Optionality
   case object NullOrUndef extends Optionality
 
   val All: IArray[Optionality] = IArray(No, Null, Undef, NullOrUndef)

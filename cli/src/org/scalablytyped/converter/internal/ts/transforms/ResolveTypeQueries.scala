@@ -3,10 +3,8 @@ package ts
 package transforms
 
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
-import org.scalablytyped.converter.internal.ts.modules.{
-  DeriveCopy,
-  ReplaceExports
-}
+import org.scalablytyped.converter.internal.ts.modules.DeriveCopy
+import org.scalablytyped.converter.internal.ts.modules.ReplaceExports
 
 import scala.collection.mutable
 
@@ -22,7 +20,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
             Some(tpe @ TsTypeQuery(wanted)),
             None,
             isStatic,
-            isReadOnly,
+            isReadOnly
           ) if !TsQIdent.Primitive(wanted) =>
         val note = Comment(s"/* was `${TsTypeFormatter(tpe)}` */\n")
 
@@ -38,7 +36,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
                 MethodType.Normal,
                 found.signature,
                 isStatic,
-                isReadOnly,
+                isReadOnly
               )
             case (found, newScope) =>
               target.copy(tpe = typeOf(found, newScope, LoopDetector.initial), comments = target.comments + note)
@@ -66,7 +64,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
 
         lazy val ownerLoc = tree match {
           case x: JsLocation.Has => x.jsLocation
-          case _ => JsLocation.Zero
+          case _                 => JsLocation.Zero
         }
 
         val founds = lookup(scope, Picker.NamedValues, expr).flatMap {
@@ -103,7 +101,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
     else {
       rewritten.filter {
         case x: TsDeclTypeAlias => !addedClasses(x.name)
-        case _ => true
+        case _                  => true
       }
     }
   }
@@ -111,7 +109,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
   override def leaveTsType(t: TsTreeScope)(x: TsType): TsType =
     x match {
       case xx: TsTypeQuery => resolve(t, xx, LoopDetector.initial)
-      case other => other
+      case other           => other
     }
 
   private case class P(x: TsTypeQuery) extends Picker[TsNamedValueDecl] {
@@ -119,7 +117,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
       t match {
         case v: TsDeclVar        => if (v.tpe.exists(_ eq x)) None else Some(v)
         case x: TsNamedValueDecl => Some(x)
-        case _ => None
+        case _                   => None
       }
   }
 
@@ -130,17 +128,17 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
         TsTypeFunction(
           TsFunSig(
             comments = cs,
-            params   = params,
-            tparams  = cls.tparams,
+            params = params,
+            tparams = cls.tparams,
             resultType = Some(
               TsTypeRef(
                 NoComments,
                 cls.codePath.forceHasPath.codePath,
-                TsTypeParam.asTypeArgs(cls.tparams),
-              ),
-            ),
-          ),
-        ),
+                TsTypeParam.asTypeArgs(cls.tparams)
+              )
+            )
+          )
+        )
       )
 
     def unapply(decl: TsContainerOrDecl): Option[(TsDeclClass, TsType)] =
@@ -152,7 +150,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
                 TsTypeRef(tp.name) -> TsTypeRef.any
                   .copy(comments = Comments(Comment.warning(s"was tparam ${tp.name.value}"))),
               )
-              .toMap,
+              .toMap
           )(_cls)
 
           val existingCtorOpt: Option[TsTypeConstructor] =
@@ -179,9 +177,9 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
                   cls,
                   TsTypeObject(
                     nameHint,
-                    some :+ TsMemberCtor(NoComments, TsProtectionLevel.Default, ctor.signature.signature),
-                  ),
-                ),
+                    some :+ TsMemberCtor(NoComments, TsProtectionLevel.Default, ctor.signature.signature)
+                  )
+                )
               )
           }
 
@@ -224,8 +222,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
 
           case wanted if TsQIdent.Primitive(wanted) => TsTypeRef(NoComments, wanted, Empty)
           case wanted =>
-            val found = lookup(scope, P(target), wanted).mapNotNone {
-              case (x, newScope) => typeOf(x, newScope, loopDetector)
+            val found = lookup(scope, P(target), wanted).mapNotNone { case (x, newScope) =>
+              typeOf(x, newScope, loopDetector)
             }
 
             found match {
@@ -244,7 +242,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
                     val overloads =
                       TsTypeObject(
                         NoComments,
-                        fns.map(fn => TsMemberCall(NoComments, TsProtectionLevel.Default, fn.signature)),
+                        fns.map(fn => TsMemberCall(NoComments, TsProtectionLevel.Default, fn.signature))
                       )
                     overloads +: rest
                 }
@@ -263,8 +261,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
           ns.name,
           nonEmptyTypeObject(ns),
           None,
-          isStatic   = false,
-          isReadOnly = true,
+          isStatic = false,
+          isReadOnly = true
         )
       case TsDeclFunction(cs, _, name, sig, _, _) =>
         TsMemberFunction(
@@ -273,8 +271,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
           name,
           MethodType.Normal,
           sig,
-          isStatic   = false,
-          isReadOnly = true,
+          isStatic = false,
+          isReadOnly = true
         )
       case TsDeclVar(cs, _, isReadOnly, name, tpe, lit, _, _) =>
         TsMemberProperty(
@@ -283,8 +281,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
           name,
           tpe,
           lit,
-          isStatic   = false,
-          isReadOnly = isReadOnly,
+          isStatic = false,
+          isReadOnly = isReadOnly
         )
       case RewrittenClass((cls, tpe)) =>
         TsMemberProperty(
@@ -293,8 +291,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
           cls.name,
           Some(tpe),
           None,
-          isStatic   = false,
-          isReadOnly = false,
+          isStatic = false,
+          isReadOnly = false
         )
     }
     if (rewritten.isEmpty) None
@@ -314,7 +312,7 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
       case Empty =>
         val patchedWanted = wanted.parts match {
           case IArray.headTail(lib: TsIdentLibrary, rest) => IArray(lib, TsIdent.Global) ++ rest
-          case unqualified => TsIdent.Global +: unqualified
+          case unqualified                                => TsIdent.Global +: unqualified
         }
 
         scope.lookupInternal(picker, patchedWanted, LoopDetector.initial)
@@ -322,8 +320,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
     }
 
     all.partitionCollect2(
-      { case x @ (_: TsDeclVar, _)      => x },
-      { case x @ (_: TsDeclFunction, _) => x },
+      { case x @ (_: TsDeclVar, _) => x },
+      { case x @ (_: TsDeclFunction, _) => x }
     ) match {
       case (vs, _, _) if vs.nonEmpty => vs
       case (_, fs, _) if fs.nonEmpty => fs
