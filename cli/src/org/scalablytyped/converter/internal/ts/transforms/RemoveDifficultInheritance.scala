@@ -40,7 +40,7 @@ object RemoveDifficultInheritance extends TreeTransformationScopedChanges {
   final case class Res(keep: IArray[TsTypeRef], drop: IArray[TsType], lift: Map[TsTypeRef, IArray[TsMember]])
 
   object Res {
-    val EmptyRes = Res(Empty, Empty, Map.empty)
+    private val EmptyRes = Res(Empty, Empty, Map.empty)
 
     def combine(rs: IArray[Res]): Res =
       rs.foldLeft(EmptyRes) { case (Res(keep1, drop1, lift1), Res(keep2, drop2, lift2)) =>

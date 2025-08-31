@@ -27,20 +27,20 @@ object RewriteTypeThis extends TreeTransformationScopedChanges {
       case other => other
     }
 
-  def isReferenceToOwner(stack: List[TsTree], ownerName: TsQIdent): Boolean =
+  private def isReferenceToOwner(stack: List[TsTree], ownerName: TsQIdent): Boolean =
     stack.exists {
       case owner: TsDeclInterface if ownerName.parts.last === owner.name => true
       case owner: TsDeclClass if ownerName.parts.last === owner.name     => true
       case _                                                             => false
     }
 
-  def isReferencedInFunction(stack: List[TsTree]): Boolean =
+  private def isReferencedInFunction(stack: List[TsTree]): Boolean =
     stack.exists {
       case _: TsTypeFunction => true
       case _                 => false
     }
 
-  def isReferencedInConstructor(stack: List[TsTree]): Boolean =
+  private def isReferencedInConstructor(stack: List[TsTree]): Boolean =
     stack.exists {
       case _: TsTypeConstructor                                          => true
       case owner: TsMemberFunction if owner.name === TsIdent.constructor => true
@@ -48,13 +48,13 @@ object RewriteTypeThis extends TreeTransformationScopedChanges {
       case _                                                             => false
     }
 
-  def isReferencedInTypeLookup(stack: List[TsTree]): Boolean =
+  private def isReferencedInTypeLookup(stack: List[TsTree]): Boolean =
     stack.exists {
       case _: TsTypeLookup => true
       case _               => false
     }
 
-  def isReferencedInIndexType(stack: List[TsTree]): Boolean =
+  private def isReferencedInIndexType(stack: List[TsTree]): Boolean =
     stack.exists {
       case TsMemberIndex(_, _, _, Indexing.Dict(_, _), _) => true
       case _                                              => false

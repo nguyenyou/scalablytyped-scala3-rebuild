@@ -52,7 +52,7 @@ class QualifyReferences(skipValidation: Boolean) extends TreeTransformationScope
     x.copy(parent = qualified.headOption, implements = qualified.drop(1))
   }
 
-  def resolveTypeRef(
+  private def resolveTypeRef(
       scope: TsTreeScope,
       tr: TsTypeRef,
       maybeFilter: Option[TsNamedDecl => Boolean]
@@ -79,7 +79,7 @@ class QualifyReferences(skipValidation: Boolean) extends TreeTransformationScope
       many.take(1)
     } else IArray(tr)
 
-  def shouldQualify(name: TsQIdent, scope: TsTreeScope): Boolean =
+  private def shouldQualify(name: TsQIdent, scope: TsTreeScope): Boolean =
     if (TsQIdent.Primitive(name)) false
     else if (name.parts.head.isInstanceOf[TsIdentLibrary]) false
     else if (scope.isAbstract(name)) false

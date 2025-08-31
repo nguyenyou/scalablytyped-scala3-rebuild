@@ -9,9 +9,6 @@ sealed trait Dep {
   def org: String
   def version: String
 
-  def for3Use2_13(is3: Boolean): Dep =
-    if (is3) Dep.For3Use2_13(this) else this
-
   private def concrete(versions: Versions): Dep.Concrete =
     this match {
       case concrete: Dep.Concrete => concrete

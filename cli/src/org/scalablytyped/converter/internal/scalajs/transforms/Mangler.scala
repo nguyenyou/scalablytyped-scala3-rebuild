@@ -68,7 +68,7 @@ object Mangler extends TreeTransformation {
     //  a rewrite and a type alias with a "companion package"
     //
     // todo: This is pretty wacko and slow, but it's because we evaluate depth first. Should rewrite and do manual traversal
-    def parentClassCollision(scope: TreeScope): Option[ClassTree] = {
+    private def parentClassCollision(scope: TreeScope): Option[ClassTree] = {
       def classCollision(scope: TreeScope, name: Name): Option[ClassTree] =
         for {
           owner    <- scope.stack.collectFirst { case x: ContainerTree => x }

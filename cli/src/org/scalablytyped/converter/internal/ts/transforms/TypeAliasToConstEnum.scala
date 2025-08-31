@@ -32,7 +32,7 @@ object TypeAliasToConstEnum extends TreeTransformationScopedChanges {
       case _ => x
     }
 
-  def extractOnlyLiterals(scope: TsTreeScope, x: TsDecl): Option[IArray[TsLiteral]] =
+  private def extractOnlyLiterals(scope: TsTreeScope, x: TsDecl): Option[IArray[TsLiteral]] =
     x match {
       case TsDeclTypeAlias(_, _, _, Empty, TsTypeUnion(types), _) =>
         types.partitionCollect2(

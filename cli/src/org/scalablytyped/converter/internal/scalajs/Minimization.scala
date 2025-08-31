@@ -9,7 +9,7 @@ object Minimization {
   val KeepMarker = Comments(Marker.MinimizationKeep(Empty))
 
   /* some refs we only keep when they refer to objects/packages */
-  type OnlyStatic = Boolean
+  private type OnlyStatic = Boolean
 
   type KeepIndex = Map[QualifiedName, OnlyStatic]
 
@@ -115,7 +115,7 @@ object Minimization {
     override def leavePackageTree(scope: TreeScope)(s: PackageTree): PackageTree =
       s.copy(members = filterMembers(s.members))
 
-    def filterMembers(members: IArray[Tree]): IArray[Tree] =
+    private def filterMembers(members: IArray[Tree]): IArray[Tree] =
       members.filter {
         case x: ClassTree     => keep.contains(x.codePath) && !keep(x.codePath)
         case x: TypeAliasTree => keep.contains(x.codePath) && !keep(x.codePath)

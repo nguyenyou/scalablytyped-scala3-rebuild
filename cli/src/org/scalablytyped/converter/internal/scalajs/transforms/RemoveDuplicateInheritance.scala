@@ -18,7 +18,7 @@ class RemoveDuplicateInheritance(parentsResolver: ParentsResolver) extends TreeT
   override def leaveModuleTree(scope: TreeScope)(s: ModuleTree): ModuleTree =
     conflicts(s.parents).fold(s)(conflicts => s.copy(parents = resolved(s.parents, conflicts)))
 
-  def conflicts(parents: IArray[TypeRef]): Option[Map[QualifiedName, IArray[TypeRef]]] =
+  private def conflicts(parents: IArray[TypeRef]): Option[Map[QualifiedName, IArray[TypeRef]]] =
     Option(parents.groupBy(_.typeName).filter(_._2.lengthCompare(1) > 0)).filter(_.nonEmpty)
 
   def resolved(parents: IArray[TypeRef], conflicts: Map[QualifiedName, IArray[TypeRef]]): IArray[TypeRef] = {

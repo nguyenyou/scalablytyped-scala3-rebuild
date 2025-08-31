@@ -125,7 +125,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
         case Problems(_) => false
       }
 
-    def withIsRewritten(wasRewritten: Boolean): Res[T] =
+    private def withIsRewritten(wasRewritten: Boolean): Res[T] =
       this match {
         case Ok(value, _) => Ok(value, wasRewritten)
         case p: Problems  => p
@@ -162,7 +162,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
   }
 
   case class Ok[T](value: T, wasRewritten: Boolean) extends Res[T]
-  case class Problems(problems: IArray[Problem])    extends Res[Nothing]
+  private case class Problems(problems: IArray[Problem])    extends Res[Nothing]
 
   object Res {
     def ofOpt[T](ot: Option[T], wasRewritten: Boolean, p: Problem): Res[T] =
@@ -187,23 +187,23 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
 
   sealed trait Problem
 
-  case class NotStatic(scope: TsTreeScope, ref: TsTypeRef) extends Problem
+  private case class NotStatic(scope: TsTreeScope, ref: TsTypeRef) extends Problem
 
-  case class InvalidType(scope: TsTreeScope, tpe: TsType) extends Problem
+  private case class InvalidType(scope: TsTreeScope, tpe: TsType) extends Problem
 
-  case class Loop(scope: TsTreeScope) extends Problem
+  private case class Loop(scope: TsTreeScope) extends Problem
 
-  case class TypeNotFound(scope: TsTreeScope, ref: TsTypeRef) extends Problem
+  private case class TypeNotFound(scope: TsTreeScope, ref: TsTypeRef) extends Problem
 
-  case class NotKeysFromTarget(scope: TsTreeScope, ref: TsType) extends Problem
+  private case class NotKeysFromTarget(scope: TsTreeScope, ref: TsType) extends Problem
 
   case class NoMembers(scope: TsTreeScope, tm: TsMemberTypeMapped) extends Problem
 
   case class UnsupportedTM(scope: TsTreeScope, tm: TsMemberTypeMapped) extends Problem
   case class CouldNotPickKeys(scope: TsTreeScope, keys: Set[String])   extends Problem
-  case class UnsupportedPredicate(e: TsType)                           extends Problem
+  private case class UnsupportedPredicate(e: TsType)                           extends Problem
 
-  final case class Replace(key: TsType, name: TsLiteral, ld: LoopDetector) extends TreeTransformationScopedChanges {
+  private final case class Replace(key: TsType, name: TsLiteral, ld: LoopDetector) extends TreeTransformationScopedChanges {
     override def enterTsType(scope: TsTreeScope)(x: TsType): TsType =
       x match {
         case `key` => TsTypeLiteral(name)
@@ -299,7 +299,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
 
   /** This is obviously not much of an implementation, just enough to get @material-ui/core running
     */
-  def evaluatePredicate(x: TsType): Res[Boolean] =
+  private def evaluatePredicate(x: TsType): Res[Boolean] =
     x match {
       case TsTypeExtends(_, TsTypeRef.any) => Ok(true, wasRewritten = false)
       case other                           => Problems(IArray(UnsupportedPredicate(other)))
@@ -391,7 +391,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
         case x: TsMemberProperty if wanted(x.name.value) => x
       }.nonEmptyOpt
 
-    def limitInlining[T <: AnyRef](scope: TsTreeScope, parent: TsTypeRef, res: Res[IArray[T]]): Res[IArray[T]] =
+    private def limitInlining[T <: AnyRef](scope: TsTreeScope, parent: TsTypeRef, res: Res[IArray[T]]): Res[IArray[T]] =
       res match {
         case res @ Ok(value, true) =>
           val allAbstract = parent.tparams.forall {
@@ -455,7 +455,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
       }
   }
 
-  def pointsToConcreteType(scope: TsTreeScope, alias: TsType): Boolean =
+  private def pointsToConcreteType(scope: TsTreeScope, alias: TsType): Boolean =
     alias match {
       case x: TsTypeRef =>
         scope.lookupType(x.name).exists {
@@ -466,7 +466,7 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
       case _ => false
     }
 
-  object IsTypeMapping {
+  private object IsTypeMapping {
     def unapply(tpe: TsType): Option[TsMemberTypeMapped] =
       tpe match {
         case TsTypeObject(_, IArray.exactlyOne(x: TsMemberTypeMapped)) => Some(x)

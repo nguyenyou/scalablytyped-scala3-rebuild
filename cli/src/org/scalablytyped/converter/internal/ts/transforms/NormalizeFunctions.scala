@@ -20,7 +20,7 @@ package transforms
   * Also rewrite optional methods to properties, since scala has no such concept
   */
 object NormalizeFunctions extends TransformMembers with TransformClassMembers {
-  object ToRewrite {
+  private object ToRewrite {
     def unapply(tpe: TsType): Option[IArray[TsFunSig]] =
       tpe match {
         case TsTypeObject(_, members) if members.nonEmpty =>

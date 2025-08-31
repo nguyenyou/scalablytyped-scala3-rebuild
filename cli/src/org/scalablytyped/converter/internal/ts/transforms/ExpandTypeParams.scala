@@ -71,7 +71,7 @@ object ExpandTypeParams extends TransformMembers with TransformClassMembers {
       case other => IArray(other)
     }
 
-  def expandTParams(scope: TsTreeScope, sig: TsFunSig): Option[IArray[TsFunSig]] = {
+  private def expandTParams(scope: TsTreeScope, sig: TsFunSig): Option[IArray[TsFunSig]] = {
     val expandables = sig.tparams.mapNotNone(expandable(scope, sig))
     val expanded = expandables
       .foldLeft(IArray(sig)) { case (currentSigs, exp) =>
@@ -118,17 +118,17 @@ object ExpandTypeParams extends TransformMembers with TransformClassMembers {
       toExpand: IArray[Either[TsTypeRef, TsTypeKeyOf]]
   )
 
-  val KeyOf: PartialFunction[TsType, Right[TsTypeRef, TsTypeKeyOf]] = { case x @ TsTypeKeyOf(_: TsTypeRef) =>
+  private val KeyOf: PartialFunction[TsType, Right[TsTypeRef, TsTypeKeyOf]] = { case x @ TsTypeKeyOf(_: TsTypeRef) =>
     Right(x)
   }
 
-  val isAny = Set[TsType](TsTypeRef.any, TsTypeRef.`object`)
+  private val isAny = Set[TsType](TsTypeRef.any, TsTypeRef.`object`)
 
   def TypeRef(scope: TsTreeScope): PartialFunction[TsType, Left[TsTypeRef, TsTypeKeyOf]] = {
     case tr: TsTypeRef if tr.tparams.forall(x => !isAny(x)) && !isAny(tr) && !scope.isAbstract(tr.name) => Left(tr)
   }
 
-  def expandSignature(scope: TsTreeScope, exp: ExpandableTypeParam)(sig: TsFunSig): IArray[TsFunSig] = {
+  private def expandSignature(scope: TsTreeScope, exp: ExpandableTypeParam)(sig: TsFunSig): IArray[TsFunSig] = {
 
     val keptInBounds: Option[TsFunSig] =
       exp.toKeepInBounds.map { types =>
@@ -174,6 +174,6 @@ object ExpandTypeParams extends TransformMembers with TransformClassMembers {
 
   /** Since we inline the `T` also erase references to it \```typescript <T extends (Array<T> | number)>(t: T): T`
     */
-  def clearCircularRef(self: TsIdent, tr: TsTypeRef): TsTypeRef =
+  private def clearCircularRef(self: TsIdent, tr: TsTypeRef): TsTypeRef =
     new TypeRewriter(tr).visitTsTypeRef(Map(TsTypeRef(self) -> TsTypeRef.any))(tr)
 }

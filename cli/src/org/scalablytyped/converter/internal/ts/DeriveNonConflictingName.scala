@@ -15,7 +15,7 @@ import seqs.*
 object DeriveNonConflictingName {
   val Anon          = ""
   val Fn            = "Fn"
-  val isMeaningless = Set(Anon, Fn)
+  private val isMeaningless = Set(Anon, Fn)
 
   def apply[T](prefix: String, members: IArray[TsMember])(tryCreate: TsIdentSimple => Option[T]): T = {
     val fromCalls: Option[Detail] = {

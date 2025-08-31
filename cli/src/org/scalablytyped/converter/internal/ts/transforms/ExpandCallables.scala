@@ -68,10 +68,10 @@ object ExpandCallables extends TransformClassMembers {
       else Noop
     }
   }
-  case class Expand(callables: IArray[(Comments, TsFunSig)], keepOriginalMember: Boolean) extends Result
+  private case class Expand(callables: IArray[(Comments, TsFunSig)], keepOriginalMember: Boolean) extends Result
   case object Noop                                                                        extends Result
 
-  def callableTypes(scope: TsTreeScope)(tpe: TsType): Result =
+  private def callableTypes(scope: TsTreeScope)(tpe: TsType): Result =
     tpe match {
       case x: TsTypeFunction  => Expand(IArray((NoComments, x.signature)), keepOriginalMember = false)
       case x: TsTypeIntersect => Result.combine(x.types.map(callableTypes(scope)))

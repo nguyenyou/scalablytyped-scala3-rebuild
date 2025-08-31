@@ -5,7 +5,7 @@ package transforms
 import scala.annotation.tailrec
 
 object SplitMethods extends TransformMembers with TransformClassMembers {
-  val MaxNum = 50
+  private val MaxNum = 50
 
   override def newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray[TsMember] =
     x.members.flatMap {
@@ -81,7 +81,7 @@ object SplitMethods extends TransformMembers with TransformClassMembers {
         )
     }
 
-  def hasUnionType(params: IArray[TsFunParam]): Boolean =
+  private def hasUnionType(params: IArray[TsFunParam]): Boolean =
     params.exists(_.tpe.exists(_.isInstanceOf[TsTypeUnion]))
 
   def isRepeated(x: TsType): Boolean =

@@ -9,7 +9,7 @@ import org.scalablytyped.converter.internal.ts.modules.ReplaceExports
 import scala.collection.mutable
 
 object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembers {
-  val GlobalThis = TsQIdent.of("globalThis")
+  private val GlobalThis = TsQIdent.of("globalThis")
 
   override def newClassMembersLeaving(scope: TsTreeScope, tree: HasClassMembers): IArray[TsMember] =
     tree.members.flatMap {
@@ -121,8 +121,8 @@ object ResolveTypeQueries extends TransformMembers with TransformLeaveClassMembe
       }
   }
 
-  object RewrittenClass {
-    def asTypeCtor(cls: TsDeclClass, cs: Comments, params: IArray[TsFunParam]) =
+  private object RewrittenClass {
+    private def asTypeCtor(cls: TsDeclClass, cs: Comments, params: IArray[TsFunParam]) =
       TsTypeConstructor(
         isAbstract = false,
         TsTypeFunction(
