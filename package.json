@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "generate": "./mill cli.runMain org.scalablytyped.converter.cli.Tracing"
+    "generate": "rm -rf generated-sources && ./mill cli.runMain org.scalablytyped.converter.cli.Tracing"
   },
   "devDependencies": {
     "@types/bun": "latest",
