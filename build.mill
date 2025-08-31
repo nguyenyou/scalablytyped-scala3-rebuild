@@ -48,40 +48,11 @@ trait BaseModule extends ScalaModule, Scalafix {
   }
 }
 
-object core extends BaseModule
-object logging extends BaseModule
-object ts extends BaseModule {
-  def moduleDeps = Seq(core, logging)
-}
-
-object scalajs extends BaseModule {
-  def moduleDeps = Seq(core, logging)
-}
-
-object phases extends BaseModule {
-  def moduleDeps = Seq(core, logging)
-}
-
-object `importer-portable` extends BaseModule with BuildInfo {
-  def moduleDeps = Seq(phases, ts, scalajs)
-
+object cli extends BaseModule with BuildInfo {
   val buildInfoPackageName = "org.scalablytyped.converter.internal"
 
   def buildInfoMembers = Seq(
     BuildInfo.Value("gitSha", os.proc("git", "rev-parse", "HEAD").call().out.trim()),
     BuildInfo.Value("version", "0.1.0"),
   )
-}
-
-object importer extends BaseModule {
-  def moduleDeps = Seq(`importer-portable`)
-}
-
-object runtime extends ScalaJSModule {
-  def scalaVersion = Versions.scala2
-  def scalaJSVersion = Versions.sjs
-}
-
-object cli extends BaseModule {
-  def moduleDeps = Seq(importer)
 }
