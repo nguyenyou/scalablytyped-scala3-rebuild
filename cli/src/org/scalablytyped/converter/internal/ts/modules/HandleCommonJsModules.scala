@@ -43,7 +43,7 @@ object HandleCommonJsModules extends TreeTransformationScopedChanges {
 
   /** If this is a commonjs module we extract the name of the exported thing
     */
-  object EqualsExport {
+  private object EqualsExport {
     def unapply(x: TsDeclModule): Option[((TsExport, IArray[TsIdent]), IArray[TsContainerOrDecl])] = {
       val (es, rest) = x.members.partitionCollect {
         case e @ TsExport(

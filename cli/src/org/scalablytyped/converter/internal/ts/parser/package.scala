@@ -4,7 +4,7 @@ package ts
 package object parser {
   val BOM = "\uFEFF"
 
-  def cleanedString(s1: String): String = {
+  private def cleanedString(s1: String): String = {
     val s2 = if (s1.startsWith(BOM)) s1.replace(BOM, "") else s1
     val s3 = s2.replace("\r\n", "\n").trim
     s3
@@ -25,7 +25,7 @@ package object parser {
     }
   }
 
-  def parseFileStringContent(fileName: String, content: String): Either[String, TsParsedFile] = {
+  private def parseFileStringContent(fileName: String, content: String): Either[String, TsParsedFile] = {
     val str = cleanedString(content)
     val p   = new TsParser(None)
 

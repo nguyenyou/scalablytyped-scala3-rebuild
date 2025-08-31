@@ -155,7 +155,7 @@ object Exports {
     }
   }
 
-  case class PickedExport(`export`: TsExport, newWanted: IArray[TsIdent])
+  private case class PickedExport(`export`: TsExport, newWanted: IArray[TsIdent])
 
   /** This is used when resolving. If we have an import in current scope which points to a module, this finds the
     * matching export in the pointee.
