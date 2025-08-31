@@ -12,3 +12,4 @@ node_modules
 my-sources
 generated-sources
 dist
+.scala-build
