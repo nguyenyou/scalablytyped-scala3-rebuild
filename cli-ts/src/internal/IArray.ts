@@ -689,7 +689,7 @@ export class IArray<T> {
     return this.toArray();
   }
 
-  private toArray(): T[] {
+  toArray(): T[] {
     return this.array.length === this.length
       ? [...this.array]
       : this.array.slice(0, this.length);

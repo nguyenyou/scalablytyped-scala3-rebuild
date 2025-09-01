@@ -1059,12 +1059,12 @@ export namespace TsIdentLibrary {
   /**
    * Parses a string into a library identifier. Handles both simple names and scoped packages.
    */
-  export function apply(str: string): TsIdentLibrary {
+  export function construct(str: string): TsIdentLibrary {
     const scopedMatch = str.match(Scoped);
     if (scopedMatch && scopedMatch[1] && scopedMatch[2]) {
       const [, scope, name] = scopedMatch;
       if (scope === 'types') {
-        return apply(name); // @types/babel__core exists
+        return construct(name); // @types/babel__core exists
       }
       return new TsIdentLibraryScoped(scope, name);
     }
@@ -1073,7 +1073,7 @@ export namespace TsIdentLibrary {
     if (scopedInternalMatch && scopedInternalMatch[1] && scopedInternalMatch[2]) {
       const [, scope, name] = scopedInternalMatch;
       if (scope === 'types') {
-        return apply(name);
+        return construct(name);
       }
       return new TsIdentLibraryScoped(scope, name);
     }

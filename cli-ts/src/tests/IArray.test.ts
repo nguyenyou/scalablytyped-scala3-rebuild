@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { IArray, IArrayBuilder, partialFunction } from "../src/internal/IArray";
+import { IArray, IArrayBuilder, partialFunction } from "../internal/IArray";
 
 describe("IArray Tests", () => {
   describe("Construction and Factory Methods", () => {

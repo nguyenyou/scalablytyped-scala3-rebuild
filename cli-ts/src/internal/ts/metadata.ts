@@ -55,18 +55,13 @@ export interface PackageJson {
  * PackageJson utility functions and constants
  * Equivalent to Scala object PackageJson
  */
-export namespace PackageJson {
-  /**
-   * Empty PackageJson instance
-   * Equivalent to Scala val Empty: PackageJson
-   */
-  export const Empty: PackageJson = {};
-
+export class PackageJsonWrapper {
+  
   /**
    * Get all libraries from dependencies based on flags
    * Equivalent to Scala def allLibs(dev: Boolean, peer: Boolean): SortedMap[TsIdentLibrary, String]
    */
-  export function allLibs(
+  allLibs(
     packageJson: PackageJson,
     dev: boolean,
     peer: boolean
@@ -100,7 +95,7 @@ export namespace PackageJson {
    * Parse types field from JSON
    * Equivalent to Scala def parsedTypes: Option[IArray[String]]
    */
-  export function parsedTypes(packageJson: PackageJson): IArray<string> | undefined {
+  parsedTypes(packageJson: PackageJson): IArray<string> | undefined {
     if (!packageJson.types) {
       return undefined;
     }
@@ -128,7 +123,7 @@ export namespace PackageJson {
    * Parse typings field from JSON
    * Equivalent to Scala def parsedTypings: Option[IArray[String]]
    */
-  export function parsedTypings(packageJson: PackageJson): IArray<string> | undefined {
+  parsedTypings(packageJson: PackageJson): IArray<string> | undefined {
     if (!packageJson.typings) {
       return undefined;
     }
@@ -156,7 +151,7 @@ export namespace PackageJson {
    * Parse module field from JSON
    * Equivalent to Scala def parsedModules: Option[Map[String, String]]
    */
-  export function parsedModules(packageJson: PackageJson): Map<string, string> | undefined {
+  parsedModules(packageJson: PackageJson): Map<string, string> | undefined {
     if (!packageJson.module) {
       return undefined;
     }
@@ -190,7 +185,7 @@ export namespace PackageJson {
    * Parse exports field from JSON
    * Equivalent to Scala def parsedExported: Option[Map[String, String]]
    */
-  export function parsedExported(packageJson: PackageJson): Map<string, string> | undefined {
+  parsedExported(packageJson: PackageJson): Map<string, string> | undefined {
     if (!packageJson.exports) {
       return undefined;
     }

@@ -11,6 +11,8 @@ import { Paths } from '../utils/paths.js';
 import type { PackageJson } from 'type-fest'
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import {InFolder} from "@/internal/files.ts";
+import {TsIdentLibrary} from "@/internal/ts/trees.ts";
 
 /**
  * Main conversion command - equivalent to Scala Tracing.scala
@@ -23,8 +25,7 @@ export class TracingCommand extends BaseCommand {
 
   constructor(options: CommandOptions) {
     super(options);
-    const root = process.cwd()
-    this.inDirectory = root;
+    this.inDirectory = process.cwd();
     this.sourceOutputDir = path.resolve(options.output || './generated-sources');
     this.paths = new Paths(this.inDirectory);
   }
@@ -39,42 +40,15 @@ export class TracingCommand extends BaseCommand {
       // Step 1: Load configuration
       const { packageJson, wantedLibs } = await this.loadConfiguration();
       console.log(wantedLibs)
-      return
 
       // Step 2: Bootstrap from node_modules
       this.startSpinner('Bootstrapping from node_modules...');
       const bootstrapped = await Bootstrap.fromNodeModules(
-        this.paths.nodeModules,
+        new InFolder(this.paths.nodeModules),
         this.getDefaultOptions(),
         wantedLibs
       );
       this.succeedSpinner(`Bootstrap completed, found ${bootstrapped.libraryResolver.stdLib.libName} as stdlib`);
-
-      // Step 3: Get initial sources
-      const sources = bootstrapped.getInitialLibs();
-      this.info(`Initial sources from bootstrap: ${sources.map(s => s.libName).join(', ')}`);
-      this.info(`Converting ${sources.map(s => s.libName).join(', ')} to scalajs...`);
-
-      // Step 4: Set up parser with caching
-      const cachedParser = new PersistingParser(
-        this.options.cache ? path.resolve(this.options.cache) : undefined,
-        bootstrapped.inputFolders
-      );
-
-      // Step 5: Create transformation pipeline
-      this.startSpinner('Creating conversion pipeline...');
-      const pipeline = this.createPipeline(bootstrapped, cachedParser);
-      this.succeedSpinner('Pipeline created');
-
-      // Step 6: Process libraries through pipeline
-      this.startSpinner('Processing libraries through pipeline...');
-      const importedLibs = await this.processLibraries(sources, pipeline);
-      this.succeedSpinner(`Successfully processed ${importedLibs.size} libraries`);
-
-      // Step 7: Generate and write files
-      await this.generateFiles(importedLibs);
-
-      this.success(`✓ Successfully generated Scala source files to ${this.sourceOutputDir}`);
 
     } catch (error) {
       this.failSpinner('Conversion failed');
@@ -92,18 +66,48 @@ export class TracingCommand extends BaseCommand {
     }
   }
 
-  private async loadConfiguration(): Promise<{ packageJson: PackageJson; wantedLibs: Set<string> }> {
+  private async loadConfiguration(): Promise<{ packageJson: PackageJson; wantedLibs: Set<TsIdentLibrary> }> {
     const packageJson = await fs.readJson(this.paths.packageJson) as PackageJson;
-    
-    // Extract wanted libraries from dependencies
-    const wantedLibs = new Set<string>();
-    
+
+    // Extract wanted libraries from dependencies (equivalent to Scala packageJson.allLibs(false, peer = true).keySet)
+    const fromPackageJson = new Set<TsIdentLibrary>();
+
+    // Add regular dependencies
     if (packageJson.dependencies) {
-      Object.keys(packageJson.dependencies).forEach(dep => wantedLibs.add(dep));
+      Object.keys(packageJson.dependencies).forEach(dep => {
+        fromPackageJson.add(TsIdentLibrary.construct(dep));
+      });
     }
-   
-    this.debug(`Wanted libraries: ${Array.from(wantedLibs).join(', ')}`);
-    
+
+    // Add peer dependencies (matching Scala implementation with peer = true)
+    if (packageJson.peerDependencies) {
+      Object.keys(packageJson.peerDependencies).forEach(dep => {
+        fromPackageJson.add(TsIdentLibrary.construct(dep));
+      });
+    }
+
+    this.debug(`Libraries found in package.json: ${Array.from(fromPackageJson).map(lib => lib.value).join(', ')}`);
+
+    if (fromPackageJson.size === 0) {
+      throw new Error('No libraries found in package.json');
+    }
+
+    // Filter out ignored libraries (equivalent to Scala: fromPackageJson -- DefaultOptions.ignoredLibs)
+    const defaultOptions = this.getDefaultOptions();
+    const wantedLibs = new Set<TsIdentLibrary>();
+
+    for (const lib of fromPackageJson) {
+      if (!defaultOptions.ignored.has(lib.value)) {
+        wantedLibs.add(lib);
+      }
+    }
+
+    this.debug(`Libraries after filtering ignored: ${Array.from(wantedLibs).map(lib => lib.value).join(', ')}`);
+
+    if (wantedLibs.size === 0) {
+      throw new Error('All libraries in package.json ignored');
+    }
+
     return { packageJson, wantedLibs };
   }
 

@@ -4,7 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run dev convert --output ./my-sources",
     "generate": "rm -rf generated-sources && ./mill cli.runMain org.scalablytyped.converter.cli.Tracing",
     "cli:fix": "./mill cli.fix",
     "cli:fmt": "./mill mill.scalalib.scalafmt.ScalafmtModule/ cli.sources"

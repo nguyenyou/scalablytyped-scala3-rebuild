@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import { TsIdent, TsIdentLibrary, IArray } from '../types/ts-ast.js';
 import { ConversionOptions } from '../types/conversion-options.js';
+import {InFile, InFolder} from "@/internal/files.ts";
 
 /**
  * File system utilities
@@ -26,34 +27,6 @@ export namespace Files {
     } catch {
       return [];
     }
-  }
-}
-
-/**
- * Represents an input file
- * Equivalent to Scala InFile
- */
-export class InFile {
-  constructor(public readonly path: string) {}
-
-  get folder(): InFolder {
-    return new InFolder(path.dirname(this.path));
-  }
-
-  toString(): string {
-    return this.path;
-  }
-}
-
-/**
- * Represents an input folder
- * Equivalent to Scala InFolder
- */
-export class InFolder {
-  constructor(public readonly path: string) {}
-
-  get name(): string {
-    return path.basename(this.path);
   }
 }
 
