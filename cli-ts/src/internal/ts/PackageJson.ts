@@ -1,5 +1,8 @@
 import { IArray } from '../IArray.js';
 import { TsIdentLibrary } from './trees.js';
+import * as O from 'fp-ts/Option';
+import * as E from 'fp-ts/Either';
+import { pipe } from 'fp-ts/function';
 
 // JSON utility type for flexible JSON values
 type Json = string | number | boolean | null | JsonObject | JsonArray;
@@ -15,15 +18,12 @@ export const Json = {
   obj: (obj: { [key: string]: Json }): Json => obj,
   arr: (...values: Json[]): Json => values,
   
-  // JSON parsing utilities
-  apply: <T>(jsonStr: string): { success: true; value: T } | { success: false; error: string } => {
-    try {
-      const parsed = JSON.parse(jsonStr);
-      return { success: true, value: parsed };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown parsing error' };
-    }
-  },
+  // JSON parsing utilities with fp-ts Either
+  apply: <T>(jsonStr: string): E.Either<string, T> =>
+    E.tryCatch(
+      () => JSON.parse(jsonStr),
+      (error) => error instanceof Error ? error.message : 'Unknown parsing error'
+    ),
   
   // JSON folding utility (similar to Scala's Json.fold)
   fold: <T>(
@@ -119,215 +119,317 @@ export interface PackageJsonDist {
 
 class PackageJson {
   constructor(
-    public readonly version?: string,
-    public readonly dependencies?: Map<TsIdentLibrary, string>,
-    public readonly devDependencies?: Map<TsIdentLibrary, string>,
-    public readonly peerDependencies?: Map<TsIdentLibrary, string>,
-    public readonly typings?: Json,
-    public readonly module?: Json,
-    public readonly types?: Json,
-    public readonly files?: IArray<string>,
-    public readonly dist?: PackageJsonDist,
-    public readonly exports?: Json
-  ) {}
+    version?: string,
+    dependencies?: Map<TsIdentLibrary, string>,
+    devDependencies?: Map<TsIdentLibrary, string>,
+    peerDependencies?: Map<TsIdentLibrary, string>,
+    typings?: Json,
+    module?: Json,
+    types?: Json,
+    files?: IArray<string>,
+    dist?: PackageJsonDist,
+    exports?: Json
+  ) {
+    this._version = O.fromNullable(version);
+    this._dependencies = O.fromNullable(dependencies);
+    this._devDependencies = O.fromNullable(devDependencies);
+    this._peerDependencies = O.fromNullable(peerDependencies);
+    // For JSON fields, preserve null as a valid value, only convert undefined to None
+    this._typings = typings === undefined ? O.none : O.some(typings);
+    this._module = module === undefined ? O.none : O.some(module);
+    this._types = types === undefined ? O.none : O.some(types);
+    this._files = O.fromNullable(files);
+    this._dist = O.fromNullable(dist);
+    this._exports = exports === undefined ? O.none : O.some(exports);
+  }
+
+  private readonly _version: O.Option<string>;
+  private readonly _dependencies: O.Option<Map<TsIdentLibrary, string>>;
+  private readonly _devDependencies: O.Option<Map<TsIdentLibrary, string>>;
+  private readonly _peerDependencies: O.Option<Map<TsIdentLibrary, string>>;
+  private readonly _typings: O.Option<Json>;
+  private readonly _module: O.Option<Json>;
+  private readonly _types: O.Option<Json>;
+  private readonly _files: O.Option<IArray<string>>;
+  private readonly _dist: O.Option<PackageJsonDist>;
+  private readonly _exports: O.Option<Json>;
+
+  // Backward compatibility getters that return undefined for None
+  get version(): string | undefined {
+    return O.toUndefined(this._version);
+  }
+
+  get dependencies(): Map<TsIdentLibrary, string> | undefined {
+    return O.toUndefined(this._dependencies);
+  }
+
+  get devDependencies(): Map<TsIdentLibrary, string> | undefined {
+    return O.toUndefined(this._devDependencies);
+  }
+
+  get peerDependencies(): Map<TsIdentLibrary, string> | undefined {
+    return O.toUndefined(this._peerDependencies);
+  }
+
+  get typings(): Json | undefined {
+    return O.toUndefined(this._typings);
+  }
+
+  get module(): Json | undefined {
+    return O.toUndefined(this._module);
+  }
+
+  get types(): Json | undefined {
+    return O.toUndefined(this._types);
+  }
+
+  get files(): IArray<string> | undefined {
+    return O.toUndefined(this._files);
+  }
+
+  get dist(): PackageJsonDist | undefined {
+    return O.toUndefined(this._dist);
+  }
+
+  get exports(): Json | undefined {
+    return O.toUndefined(this._exports);
+  }
 
   allLibs(dev: boolean, peer: boolean): Map<TsIdentLibrary, string> {
     const deps: IArray<Map<TsIdentLibrary, string>> = IArray.fromOptions(
-      this.dependencies,
-      dev ? this.devDependencies : undefined,
-      peer ? this.peerDependencies : undefined
+      this._dependencies,
+      dev ? this._devDependencies : O.none,
+      peer ? this._peerDependencies : O.none
     );
     return toSorted(maps.smash(deps));
   }
 
   get parsedTypes(): IArray<string> | undefined {
-    if (!this.types) return undefined;
-    
-    const result = Json.fold(
-      this.types,
-      () => IArray.Empty as IArray<string>,
-      (_) => { throw new Error(`unexpected boolean in types structure: ${JSON.stringify(this.types)}`); },
-      (_) => { throw new Error(`unexpected number in types structure: ${JSON.stringify(this.types)}`); },
-      (str) => IArray.apply(str),
-      (arr) => IArray.fromTraversable(arr).mapNotNone(item => 
-        typeof item === 'string' ? item : undefined
-      ),
-      (_) => { throw new Error(`unexpected object in types structure: ${JSON.stringify(this.types)}`); }
+    return O.toUndefined(
+      pipe(
+        this._types,
+        O.chain(types => {
+          const result = Json.fold(
+            types,
+            () => IArray.Empty as IArray<string>,
+            (_) => { throw new Error(`unexpected boolean in types structure: ${JSON.stringify(types)}`); },
+            (_) => { throw new Error(`unexpected number in types structure: ${JSON.stringify(types)}`); },
+            (str) => IArray.apply(str),
+            (arr) => IArray.fromTraversable(arr).mapNotNone(item =>
+              typeof item === 'string' ? item : undefined
+            ),
+            (_) => { throw new Error(`unexpected object in types structure: ${JSON.stringify(types)}`); }
+          );
+
+          return result.nonEmpty ? O.some(result) : O.none;
+        })
+      )
     );
-    
-    return result.nonEmpty ? result : undefined;
   }
 
   get parsedTypings(): IArray<string> | undefined {
-    if (!this.typings) return undefined;
-    
-    const result = Json.fold(
-      this.typings,
-      () => IArray.Empty as IArray<string>,
-      (_) => { throw new Error(`unexpected boolean in typings structure: ${JSON.stringify(this.typings)}`); },
-      (_) => { throw new Error(`unexpected number in typings structure: ${JSON.stringify(this.typings)}`); },
-      (str) => IArray.apply(str),
-      (arr) => IArray.fromTraversable(arr).mapNotNone(item => 
-        typeof item === 'string' ? item : undefined
-      ),
-      (_) => { throw new Error(`unexpected object in typings structure: ${JSON.stringify(this.typings)}`); }
+    return O.toUndefined(
+      pipe(
+        this._typings,
+        O.chain(typings => {
+          const result = Json.fold(
+            typings,
+            () => IArray.Empty as IArray<string>,
+            (_) => { throw new Error(`unexpected boolean in typings structure: ${JSON.stringify(typings)}`); },
+            (_) => { throw new Error(`unexpected number in typings structure: ${JSON.stringify(typings)}`); },
+            (str) => IArray.apply(str),
+            (arr) => IArray.fromTraversable(arr).mapNotNone(item =>
+              typeof item === 'string' ? item : undefined
+            ),
+            (_) => { throw new Error(`unexpected object in typings structure: ${JSON.stringify(typings)}`); }
+          );
+
+          return result.nonEmpty ? O.some(result) : O.none;
+        })
+      )
     );
-    
-    return result.nonEmpty ? result : undefined;
   }
 
   get parsedModules(): Map<string, string> | undefined {
-    if (!this.module) return undefined;
-    
-    const look = (json: Json): Map<string, string> => {
-      return Json.fold(
-        json,
-        () => new Map(),
-        (_) => new Map(),
-        (_) => new Map(),
-        (str) => new Map([['', str]]),
-        (_) => new Map(),
-        (obj) => {
-          const result = new Map<string, string>();
-          for (const [name, value] of Object.entries(obj)) {
-            if (typeof value === 'string') {
-              result.set(name, value);
-            }
-          }
-          return result;
-        }
-      );
-    };
-    
-    const result = look(this.module);
-    return result.size > 0 ? result : undefined;
+    return O.toUndefined(
+      pipe(
+        this._module,
+        O.chain(module => {
+          const look = (json: Json): Map<string, string> => {
+            return Json.fold(
+              json,
+              () => new Map(),
+              (_) => new Map(),
+              (_) => new Map(),
+              (str) => new Map([['', str]]),
+              (_) => new Map(),
+              (obj) => {
+                const result = new Map<string, string>();
+                for (const [name, value] of Object.entries(obj)) {
+                  if (typeof value === 'string') {
+                    result.set(name, value);
+                  }
+                }
+                return result;
+              }
+            );
+          };
+
+          const result = look(module);
+          return result.size > 0 ? O.some(result) : O.none;
+        })
+      )
+    );
   }
 
   // this is an impossibly flexibly defined structure, so we're maximally flexible in this parse step
   // we only extract the `types` information for now
   get parsedExported(): Map<string, string> | undefined {
-    if (!this.exports) return undefined;
-    
-    const look = (json: Json): Map<string, string> => {
-      return Json.fold(
-        json,
-        () => new Map(),
-        (_) => new Map(),
-        (_) => new Map(),
-        (_) => new Map(),
-        (values) => {
-          const maps = values.map(look);
-          return maps.reduce((acc, current) => {
-            for (const [k, v] of current) {
-              acc.set(k, v);
-            }
-            return acc;
-          }, new Map<string, string>());
-        },
-        (obj) => {
-          const result = new Map<string, string>();
-          for (const [name, value] of Object.entries(obj)) {
-            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-              const types = (value as JsonObject).types;
-              if (typeof types === 'string') {
-                result.set(name, types);
+    return O.toUndefined(
+      pipe(
+        this._exports,
+        O.chain(exports => {
+          const look = (json: Json): Map<string, string> => {
+            return Json.fold(
+              json,
+              () => new Map(),
+              (_) => new Map(),
+              (_) => new Map(),
+              (_) => new Map(),
+              (values) => {
+                const maps = values.map(look);
+                return maps.reduce((acc, current) => {
+                  for (const [k, v] of current) {
+                    acc.set(k, v);
+                  }
+                  return acc;
+                }, new Map<string, string>());
+              },
+              (obj) => {
+                const result = new Map<string, string>();
+                for (const [name, value] of Object.entries(obj)) {
+                  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    const types = (value as JsonObject).types;
+                    if (typeof types === 'string') {
+                      result.set(name, types);
+                    }
+                  }
+                }
+                return result;
               }
-            }
-          }
-          return result;
-        }
-      );
-    };
-    
-    const result = look(this.exports);
-    return result.size > 0 ? result : undefined;
+            );
+          };
+
+          const result = look(exports);
+          return result.size > 0 ? O.some(result) : O.none;
+        })
+      )
+    );
   }
 
   static readonly Empty = new PackageJson();
 
-  // JSON serialization/deserialization methods
+  // JSON serialization/deserialization methods with backward compatibility
   static fromJson(jsonStr: string): PackageJson | Error {
-    const parseResult = Json.apply<any>(jsonStr);
-    if (!parseResult.success) {
-      return new Error(parseResult.error);
-    }
-    
-    try {
-      return PackageJson.fromObject(parseResult.value);
-    } catch (error) {
-      return error instanceof Error ? error : new Error('Unknown deserialization error');
-    }
+    const result = pipe(
+      Json.apply<any>(jsonStr),
+      E.chain(parsed =>
+        E.tryCatch(
+          () => PackageJson.fromObject(parsed),
+          (error) => error instanceof Error ? error.message : 'Unknown deserialization error'
+        )
+      )
+    );
+
+    return E.isLeft(result) ? new Error(result.left) : result.right;
+  }
+
+  // fp-ts version for internal use
+  static fromJsonEither(jsonStr: string): E.Either<string, PackageJson> {
+    return pipe(
+      Json.apply<any>(jsonStr),
+      E.chain(parsed =>
+        E.tryCatch(
+          () => PackageJson.fromObject(parsed),
+          (error) => error instanceof Error ? error.message : 'Unknown deserialization error'
+        )
+      )
+    );
   }
   
   static fromObject(obj: any): PackageJson {
-    const parseDependencies = (deps: any): Map<TsIdentLibrary, string> | undefined => {
-      if (!deps || typeof deps !== 'object') return undefined;
+    const parseDependencies = (deps: any): O.Option<Map<TsIdentLibrary, string>> => {
+      if (!deps || typeof deps !== 'object') return O.none;
       const result = new Map<TsIdentLibrary, string>();
       for (const [key, value] of Object.entries(deps)) {
         if (typeof value === 'string') {
           result.set(TsIdentLibrary.construct(key), value);
         }
       }
-      return result.size > 0 ? result : undefined;
+      return result.size > 0 ? O.some(result) : O.none;
     };
-    
-    const parseFiles = (files: any): IArray<string> | undefined => {
-      if (!files) return undefined;
+
+    const parseFiles = (files: any): O.Option<IArray<string>> => {
+      if (!files) return O.none;
       if (Array.isArray(files)) {
         const stringFiles = files.filter((f): f is string => typeof f === 'string');
-        return IArray.fromArray(stringFiles);
+        return O.some(IArray.fromArray(stringFiles));
       }
-      return undefined;
+      return O.none;
     };
-    
-    const parseDist = (dist: any): PackageJsonDist | undefined => {
-      if (!dist || typeof dist !== 'object') return undefined;
+
+    const parseDist = (dist: any): O.Option<PackageJsonDist> => {
+      if (!dist || typeof dist !== 'object') return O.none;
       if (typeof dist.tarball === 'string') {
-        return { tarball: dist.tarball };
+        return O.some({ tarball: dist.tarball });
       }
-      return undefined;
+      return O.none;
     };
-    
+
     return new PackageJson(
       typeof obj.version === 'string' ? obj.version : undefined,
-      parseDependencies(obj.dependencies),
-      parseDependencies(obj.devDependencies),
-      parseDependencies(obj.peerDependencies),
+      O.toUndefined(parseDependencies(obj.dependencies)),
+      O.toUndefined(parseDependencies(obj.devDependencies)),
+      O.toUndefined(parseDependencies(obj.peerDependencies)),
       obj.typings !== undefined ? obj.typings : undefined,
       obj.module !== undefined ? obj.module : undefined,
       obj.types !== undefined ? obj.types : undefined,
-      parseFiles(obj.files),
-      parseDist(obj.dist),
+      O.toUndefined(parseFiles(obj.files)),
+      O.toUndefined(parseDist(obj.dist)),
       obj.exports !== undefined ? obj.exports : undefined
     );
   }
   
   toObject(): any {
-    const serializeDependencies = (deps?: Map<TsIdentLibrary, string>): any => {
-      if (!deps) return undefined;
-      const result: any = {};
-      for (const [lib, version] of deps) {
-        result[lib.value] = version;
-      }
-      return Object.keys(result).length > 0 ? result : undefined;
+    const serializeDependencies = (deps: O.Option<Map<TsIdentLibrary, string>>): any => {
+      return pipe(
+        deps,
+        O.map(depsMap => {
+          const result: any = {};
+          for (const [lib, version] of depsMap) {
+            result[lib.value] = version;
+          }
+          return Object.keys(result).length > 0 ? result : undefined;
+        }),
+        O.getOrElse(() => undefined)
+      );
     };
-    
-    const serializeFiles = (files?: IArray<string>): any => {
-      if (!files) return undefined;
-      return files.toArray();
+
+    const serializeFiles = (files: O.Option<IArray<string>>): any => {
+      return O.toUndefined(O.map((f: IArray<string>) => f.toArray())(files));
     };
-    
+
     return {
-      ...(this.version !== undefined && { version: this.version }),
-      ...(this.dependencies && { dependencies: serializeDependencies(this.dependencies) }),
-      ...(this.devDependencies && { devDependencies: serializeDependencies(this.devDependencies) }),
-      ...(this.peerDependencies && { peerDependencies: serializeDependencies(this.peerDependencies) }),
-      ...(this.typings !== undefined && { typings: this.typings }),
-      ...(this.module !== undefined && { module: this.module }),
-      ...(this.types !== undefined && { types: this.types }),
-      ...(this.files && { files: serializeFiles(this.files) }),
-      ...(this.dist && { dist: this.dist }),
-      ...(this.exports !== undefined && { exports: this.exports })
+      ...(O.isSome(this._version) && { version: this._version.value }),
+      ...(O.isSome(this._dependencies) && { dependencies: serializeDependencies(this._dependencies) }),
+      ...(O.isSome(this._devDependencies) && { devDependencies: serializeDependencies(this._devDependencies) }),
+      ...(O.isSome(this._peerDependencies) && { peerDependencies: serializeDependencies(this._peerDependencies) }),
+      ...(O.isSome(this._typings) && { typings: this._typings.value }),
+      ...(O.isSome(this._module) && { module: this._module.value }),
+      ...(O.isSome(this._types) && { types: this._types.value }),
+      ...(O.isSome(this._files) && { files: serializeFiles(this._files) }),
+      ...(O.isSome(this._dist) && { dist: this._dist.value }),
+      ...(O.isSome(this._exports) && { exports: this._exports.value })
     };
   }
   

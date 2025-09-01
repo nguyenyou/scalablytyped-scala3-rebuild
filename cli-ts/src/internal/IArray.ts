@@ -158,8 +158,23 @@ export class IArray<T> {
     return option !== undefined ? IArray.apply<T>(option) : IArray.Empty;
   }
 
-  static fromOptions<T>(...options: (T | undefined)[]): IArray<T> {
-    return IArray.apply(...options.filter((x): x is T => x !== undefined));
+  static fromOptions<T>(...options: (T | undefined | { _tag: 'Some'; value: T } | { _tag: 'None' })[]): IArray<T> {
+    const values: T[] = [];
+    for (const option of options) {
+      if (option !== undefined) {
+        // Handle fp-ts Option types
+        if (typeof option === 'object' && option !== null && '_tag' in option) {
+          if (option._tag === 'Some') {
+            values.push((option as { _tag: 'Some'; value: T }).value);
+          }
+          // Skip None options
+        } else {
+          // Handle regular values
+          values.push(option as T);
+        }
+      }
+    }
+    return IArray.apply(...values);
   }
 
   static fromArray<T>(array: T[]): IArray<T> {
