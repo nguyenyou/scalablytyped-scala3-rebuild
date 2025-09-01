@@ -256,6 +256,14 @@ export class IArray<T> {
     return current;
   }
 
+  foldRight<Z>(initial: Z, f: (value: T, acc: Z) => Z): Z {
+    let current = initial;
+    for (let i = this.length - 1; i >= 0; i--) {
+      current = f(this.apply(i), current);
+    }
+    return current;
+  }
+
   reduce<U>(op: (acc: T | U, value: T) => U): U {
     if (this.isEmpty) {
       throw new Error("reduce on empty IArray");
@@ -263,6 +271,21 @@ export class IArray<T> {
     let result: T | U = this.apply(0);
     for (let i = 1; i < this.length; i++) {
       result = op(result, this.apply(i));
+    }
+    return result as U;
+  }
+
+  reduceLeft<U>(op: (acc: T | U, value: T) => U): U {
+    return this.reduce(op);
+  }
+
+  reduceRight<U>(op: (value: T, acc: T | U) => U): U {
+    if (this.isEmpty) {
+      throw new Error("reduceRight on empty IArray");
+    }
+    let result: T | U = this.apply(this.length - 1);
+    for (let i = this.length - 2; i >= 0; i--) {
+      result = op(this.apply(i), result);
     }
     return result as U;
   }
@@ -299,6 +322,10 @@ export class IArray<T> {
 
   get tailOption(): IArray<T> | undefined {
     return this.isEmpty ? undefined : this.drop(1);
+  }
+
+  get tailOpt(): IArray<T> | undefined {
+    return this.tailOption;
   }
 
   get tail(): IArray<T> {
@@ -366,6 +393,17 @@ export class IArray<T> {
         return i;
       }
       i++;
+    }
+    return -1;
+  }
+
+  lastIndexOf(elem: T, end: number = this.length - 1): number {
+    let i = Math.min(end, this.length - 1);
+    while (i >= 0) {
+      if (elem === this.apply(i)) {
+        return i;
+      }
+      i--;
     }
     return -1;
   }
@@ -473,7 +511,47 @@ export class IArray<T> {
     return IArray.fromArrayAndSize(result, newLength);
   }
 
+  // Prepend all elements
+  prependedAll<U extends T>(prefix: IArray<U>): IArray<T | U> {
+    if (prefix.isEmpty) return this as IArray<T | U>;
+    if (this.isEmpty) return prefix as IArray<T | U>;
+    
+    const newLength = prefix.length + this.length;
+    const result: (T | U)[] = new Array(newLength);
+    
+    for (let i = 0; i < prefix.length; i++) {
+      result[i] = prefix.apply(i);
+    }
+    for (let i = 0; i < this.length; i++) {
+      result[prefix.length + i] = this.apply(i);
+    }
+    
+    return IArray.fromArrayAndSize(result, newLength);
+  }
+
+  // Append all elements
+  appendedAll<U extends T>(suffix: IArray<U>): IArray<T | U> {
+    return this.concat(suffix);
+  }
+
   // Slice operations
+  slice(from: number, until: number): IArray<T> {
+    if (from < 0) from = 0;
+    if (until < 0) until = 0;
+    if (from >= this.length || from >= until) return IArray.Empty;
+    
+    const actualUntil = Math.min(until, this.length);
+    const newLength = actualUntil - from;
+    
+    if (newLength <= 0) return IArray.Empty;
+    
+    const result: T[] = new Array(newLength);
+    for (let i = 0; i < newLength; i++) {
+      result[i] = this.apply(from + i);
+    }
+    return IArray.fromArrayAndSize(result, newLength);
+  }
+
   take(n: number): IArray<T> {
     if (n < 0) throw new Error("take: n must be non-negative");
     const newLength = Math.min(this.length, n);
@@ -538,7 +616,7 @@ export class IArray<T> {
   }
 
   reverse(): IArray<T> {
-    if (this.isEmpty) return IArray.Empty;
+    if (this.length <= 1) return this;
 
     const result: T[] = new Array(this.length);
     for (let i = 0; i < this.length; i++) {
@@ -589,6 +667,18 @@ export class IArray<T> {
     ];
   }
 
+  span(predicate: (value: T) => boolean): [IArray<T>, IArray<T>] {
+    let i = 0;
+    while (i < this.length && predicate(this.apply(i))) {
+      i++;
+    }
+    return [this.take(i), this.drop(i)];
+  }
+
+  splitAt(index: number): [IArray<T>, IArray<T>] {
+    return [this.take(index), this.drop(index)];
+  }
+
   // Iterator support
   [Symbol.iterator](): Iterator<T> {
     let index = 0;
@@ -606,17 +696,27 @@ export class IArray<T> {
     };
   }
 
-  get indices(): number[] {
+  get indices(): IArray<number> {
     const result: number[] = new Array(this.length);
     for (let i = 0; i < this.length; i++) {
       result[i] = i;
     }
-    return result;
+    return IArray.fromArrayAndSize(result, this.length);
   }
 
   // Sorting operations
-  sortBy<U>(f: (value: T) => U, ordering: Ordering<U>): IArray<T> {
-    return this.sorted((a, b) => ordering.compare(f(a), f(b)));
+  sortBy<U>(f: (value: T) => U): IArray<T> {
+    return this.sorted((a, b) => {
+      const aVal = f(a);
+      const bVal = f(b);
+      if (aVal < bVal) return -1;
+      if (aVal > bVal) return 1;
+      return 0;
+    });
+  }
+
+  sortWith(compareFn: (a: T, b: T) => number): IArray<T> {
+    return this.sorted(compareFn);
   }
 
   sorted(compareFn?: (a: T, b: T) => number): IArray<T> {
@@ -750,16 +850,33 @@ export class IArray<T> {
     return j === that.length;
   }
 
-  mkString(init: string = "", sep: string = "", post: string = ""): string {
-    const parts: string[] = [init];
-    for (let i = 0; i < this.length; i++) {
-      if (i !== 0) {
-        parts.push(sep);
+  mkString(sepOrInit?: string, sep?: string, post?: string): string {
+    if (arguments.length === 1) {
+      // Single argument case: mkString(sep)
+      const separator = sepOrInit || "";
+      const parts: string[] = [];
+      for (let i = 0; i < this.length; i++) {
+        if (i !== 0) {
+          parts.push(separator);
+        }
+        parts.push(String(this.apply(i)));
       }
-      parts.push(String(this.apply(i)));
+      return parts.join("");
+    } else {
+      // Three argument case: mkString(init, sep, post)
+      const init = sepOrInit || "";
+      const separator = sep || "";
+      const postfix = post || "";
+      const parts: string[] = [init];
+      for (let i = 0; i < this.length; i++) {
+        if (i !== 0) {
+          parts.push(separator);
+        }
+        parts.push(String(this.apply(i)));
+      }
+      parts.push(postfix);
+      return parts.join("");
     }
-    parts.push(post);
-    return parts.join("");
   }
 
   updated(index: number, elem: T): IArray<T> {
