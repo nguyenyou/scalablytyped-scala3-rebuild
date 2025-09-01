@@ -459,7 +459,7 @@ final class IArray[+A <: AnyRef](private val array: Array[AnyRef], val length: I
     if (isDefinedAt(x)) apply(x) else default(x)
 
   @inline def isDefinedAt(n: Int): Boolean =
-    n < length
+    n >= 0 && n < length
 
   @inline def map[B <: AnyRef](f: A => B): IArray[B] = {
     if (isEmpty) {

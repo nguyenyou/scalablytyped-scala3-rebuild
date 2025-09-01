@@ -252,7 +252,7 @@ object IArrayTests extends TestSuite {
       // Test indexWhere
       assert(arr.indexWhere(_.startsWith("d")) == 3)
       assert(arr.indexWhere(_.startsWith("z")) == -1)
-      assert(arr.indexWhere(_.length > 5, 2) == 4)
+      assert(arr.indexWhere(_.length > 5, 2) == 2) // "cherry" at index 2 has length 6 > 5
     }
 
     test("Sequence Operations - Take, Drop, Slice") {
