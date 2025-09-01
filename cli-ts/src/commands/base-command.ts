@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import ora from 'ora';
+import ora, { type Ora } from 'ora';
 
 /**
  * Base interface for all CLI commands
@@ -17,7 +17,7 @@ export interface CommandOptions {
  */
 export abstract class BaseCommand {
   protected options: CommandOptions;
-  protected spinner: ora.Ora;
+  protected spinner: Ora;
 
   constructor(options: CommandOptions = {}) {
     this.options = options;
