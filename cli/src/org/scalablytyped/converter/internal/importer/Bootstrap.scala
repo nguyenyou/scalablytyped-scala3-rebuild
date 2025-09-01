@@ -32,7 +32,7 @@ object Bootstrap {
       val folder = fromFolder.path / "typescript" / "lib"
 
       require(files.exists(folder), s"You must add typescript as a dependency. $folder must exist.")
-//      require(!conversion.ignoredLibs.contains(TsIdent.std), "You cannot ignore std")
+      require(!conversion.ignoredLibs.contains(TsIdent.std), "You cannot ignore std")
 
       StdLibSource(
         InFolder(folder),
