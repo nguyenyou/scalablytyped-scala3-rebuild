@@ -1,0 +1,52 @@
+=== ScalablyTyped Converter Execution Log ===
+Started at: 2025-09-01 08:05:58
+Working directory: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild
+Output directory: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources
+==================================================
+
+Step 1: Initializing converter and reading configuration
+  → Found package.json at: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/package.json
+  → Found node_modules at: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/node_modules
+  → Libraries found in package.json: clsx, scroll-into-view-if-needed, tabulator-tables
+  → Libraries after filtering ignored: clsx, scroll-into-view-if-needed, tabulator-tables
+Step 2: Bootstrapping TypeScript environment
+  → Standard library configuration: es6
+  → Bootstrap completed, found std as stdlib
+  → Initial sources from bootstrap: clsx, scroll-into-view-if-needed, tabulator-tables
+  → Converting clsx, scroll-into-view-if-needed, tabulator-tables to scalajs...
+Step 3: Setting up TypeScript parsing phase
+  → TypeScript parsing phase configured
+Step 4: Setting up Scala.js conversion phase
+  → Scala.js conversion phase configured
+Step 5: Setting up flavour transformation phase
+  → Flavour transformation phase configured: <function5>
+Step 6: Creating conversion pipeline
+  → Conversion pipeline created successfully
+Step 7: Processing libraries through pipeline
+  → Processing 3 libraries: clsx, scroll-into-view-if-needed, tabulator-tables
+  → Processing library clsx
+  → Result for clsx: Ok
+  → Processing library scroll-into-view-if-needed
+  → Result for scroll-into-view-if-needed: Ok
+  → Processing library tabulator-tables
+  → Result for tabulator-tables: Ok
+  → Pipeline processing completed. Processed 3 libraries
+  →   clsx -> Ok
+  →   scroll-into-view-if-needed -> Ok
+  →   tabulator-tables -> Ok
+Step 8: Processing results and generating Scala files
+  → Successfully processed 5 libraries
+Step 9: Creating global scope for all libraries
+  → Global scope created successfully
+Step 10: Generating source files
+Step 11: Writing files to disk
+  → Writing tabulator-tables (142 files) to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources/tabulator-tables...
+  → Writing clsx (2 files) to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources/clsx...
+  → Writing minimized compute-scroll-into-view (2 files) to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources/compute-scroll-into-view...
+  → Writing scroll-into-view-if-needed (2 files) to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources/scroll-into-view-if-needed...
+  → Writing minimized std (102 files) to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources/std...
+  → Successfully generated 250 Scala source files to /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/generated-sources
+
+==================================================
+Execution completed successfully at: 2025-09-01 08:06:06
+Total steps executed: 11
