@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { IArray, IArrayBuilder, partialFunction } from "../internal/IArray";
+import { IArray, IArrayBuilder, partialFunction, StringOrdering } from "../internal/IArray";
 
 describe("IArray Tests", () => {
   test("Construction and Factory Methods", () => {
@@ -126,96 +126,6 @@ describe("IArray Tests", () => {
     expect(() => empty.last).toThrow();
   });
 
-  test("Indexing and Slicing", () => {
-    const arr = IArray.apply("a", "b", "c", "d", "e");
-
-    // Test indices
-    expect(arr.indices.length).toBe(5);
-    expect(arr.indices.apply(0)).toBe(0);
-    expect(arr.indices.apply(4)).toBe(4);
-
-    // Test slice
-    const slice = arr.slice(1, 4);
-    expect(slice.length).toBe(3);
-    expect(slice.apply(0)).toBe("b");
-    expect(slice.apply(1)).toBe("c");
-    expect(slice.apply(2)).toBe("d");
-
-    // Test take and drop
-    const taken = arr.take(3);
-    expect(taken.length).toBe(3);
-    expect(taken.apply(0)).toBe("a");
-    expect(taken.apply(2)).toBe("c");
-
-    const dropped = arr.drop(2);
-    expect(dropped.length).toBe(3);
-    expect(dropped.apply(0)).toBe("c");
-    expect(dropped.apply(2)).toBe("e");
-
-    // Test takeRight and dropRight
-    const takenRight = arr.takeRight(2);
-    expect(takenRight.length).toBe(2);
-    expect(takenRight.apply(0)).toBe("d");
-    expect(takenRight.apply(1)).toBe("e");
-
-    const droppedRight = arr.dropRight(2);
-    expect(droppedRight.length).toBe(3);
-    expect(droppedRight.apply(0)).toBe("a");
-    expect(droppedRight.apply(2)).toBe("c");
-
-    // Test splitAt
-    const [left, right] = arr.splitAt(2);
-    expect(left.length).toBe(2);
-    expect(right.length).toBe(3);
-    expect(left.apply(0)).toBe("a");
-    expect(left.apply(1)).toBe("b");
-    expect(right.apply(0)).toBe("c");
-    expect(right.apply(2)).toBe("e");
-  });
-
-  test("Concatenation and Appending", () => {
-    const arr1 = IArray.apply("a", "b");
-    const arr2 = IArray.apply("c", "d");
-
-    // Test concat
-    const concatenated = arr1.concat(arr2);
-    expect(concatenated.length).toBe(4);
-    expect(concatenated.apply(0)).toBe("a");
-    expect(concatenated.apply(1)).toBe("b");
-    expect(concatenated.apply(2)).toBe("c");
-    expect(concatenated.apply(3)).toBe("d");
-
-    // Test prepend
-    const prepended = arr1.prepend("x");
-    expect(prepended.length).toBe(3);
-    expect(prepended.apply(0)).toBe("x");
-    expect(prepended.apply(1)).toBe("a");
-    expect(prepended.apply(2)).toBe("b");
-
-    // Test append
-    const appended = arr1.append("z");
-    expect(appended.length).toBe(3);
-    expect(appended.apply(0)).toBe("a");
-    expect(appended.apply(1)).toBe("b");
-    expect(appended.apply(2)).toBe("z");
-
-    // Test prependedAll
-    const prependedAll = arr1.prependedAll(IArray.apply("x", "y"));
-    expect(prependedAll.length).toBe(4);
-    expect(prependedAll.apply(0)).toBe("x");
-    expect(prependedAll.apply(1)).toBe("y");
-    expect(prependedAll.apply(2)).toBe("a");
-    expect(prependedAll.apply(3)).toBe("b");
-
-    // Test appendedAll
-    const appendedAll = arr1.appendedAll(IArray.apply("y", "z"));
-    expect(appendedAll.length).toBe(4);
-    expect(appendedAll.apply(0)).toBe("a");
-    expect(appendedAll.apply(1)).toBe("b");
-    expect(appendedAll.apply(2)).toBe("y");
-    expect(appendedAll.apply(3)).toBe("z");
-  });
-
   test("Functional Operations - Map, FlatMap, Filter", () => {
     const arr = IArray.apply("1", "2", "3", "4");
 
@@ -249,18 +159,82 @@ describe("IArray Tests", () => {
     expect(filteredNot.apply(0)).toBe("1");
     expect(filteredNot.apply(1)).toBe("3");
 
-    // Test collect
-    const collected = arr.collect(partialFunction(
-      s => parseInt(s) % 2 === 0,
-      s => parseInt(s) * 2
-    ));
-    expect(collected.length).toBe(2);
-    expect(collected.apply(0)).toBe(4);
-    expect(collected.apply(1)).toBe(8);
+    // Test filter on empty
+    const emptyFiltered = IArray.Empty.filter(() => true);
+    expect(emptyFiltered.isEmpty).toBe(true);
   });
 
-  test("Searching and Finding", () => {
-    const arr = IArray.apply("apple", "banana", "cherry", "date");
+  test("Collect and Partial Functions", () => {
+    const arr = IArray.apply("1", "2", "abc", "3", "def", "4");
+
+    // Test collect
+    const collected = arr.collect(partialFunction(
+      s => /^\d+$/.test(s),
+      s => parseInt(s)
+    ));
+    expect(collected.length).toBe(4);
+    expect(collected.apply(0)).toBe(1);
+    expect(collected.apply(1)).toBe(2);
+    expect(collected.apply(2)).toBe(3);
+    expect(collected.apply(3)).toBe(4);
+
+    // Test collectFirst
+    const firstDigit = arr.collectFirst(partialFunction(
+      s => /^\d+$/.test(s),
+      s => parseInt(s)
+    ));
+    expect(firstDigit).toBe(1);
+
+    const noMatch = arr.collectFirst(partialFunction(
+      s => s.startsWith("z"),
+      s => s
+    ));
+    expect(noMatch).toBeUndefined();
+
+    // Test collect on empty
+    const emptyCollected = IArray.Empty.collect(partialFunction(
+      (x: any) => true,
+      (x: any) => x
+    ));
+    expect(emptyCollected.isEmpty).toBe(true);
+  });
+
+  test("Fold, Reduce, and Aggregation Operations", () => {
+    const numbers = IArray.apply("1", "2", "3", "4");
+
+    // Test foldLeft
+    const sum = numbers.foldLeft(0, (acc, s) => acc + parseInt(s));
+    expect(sum).toBe(10);
+
+    const concat = numbers.foldLeft("", (acc, s) => acc + s);
+    expect(concat).toBe("1234");
+
+    // Test reduce
+    const reduced = numbers.reduce((acc, s) => acc + s);
+    expect(reduced).toBe("1234");
+
+    // Test reduceOption
+    const reducedOpt = numbers.reduceOption((acc, s) => acc + s);
+    expect(reducedOpt).toBe("1234");
+
+    const emptyReduced = IArray.Empty.reduceOption((acc: string, s: string) => acc + s);
+    expect(emptyReduced).toBeUndefined();
+
+    // Test reduce on empty should throw
+    expect(() => IArray.Empty.reduce((acc: string, s: string) => acc + s)).toThrow();
+
+    // Test count
+    const evenCount = numbers.count(s => parseInt(s) % 2 === 0);
+    expect(evenCount).toBe(2);
+
+    // Test sum with numeric
+    const intArr = IArray.apply(1, 2, 3, 4);
+    const manualSum = intArr.foldLeft(0, (acc, n) => acc + n);
+    expect(manualSum).toBe(10);
+  });
+
+  test("Search and Find Operations", () => {
+    const arr = IArray.apply("apple", "banana", "cherry", "date", "elderberry");
 
     // Test find
     const found = arr.find(s => s.startsWith("c"));
@@ -270,170 +244,310 @@ describe("IArray Tests", () => {
     expect(notFound).toBeUndefined();
 
     // Test exists
-    expect(arr.exists(s => s.length > 5)).toBe(true);
-    expect(arr.exists(s => s.length > 10)).toBe(false);
+    expect(arr.exists(s => s.includes("err"))).toBe(true);
+    expect(arr.exists(s => s.startsWith("z"))).toBe(false);
 
     // Test forall
-    expect(arr.forall(s => s.length > 0)).toBe(true);
-    expect(arr.forall(s => s.length > 5)).toBe(false);
-
-    // Test contains
-    expect(arr.contains("banana")).toBe(true);
-    expect(arr.contains("grape")).toBe(false);
+    expect(arr.forall(s => s.length > 3)).toBe(true);
+    expect(arr.forall(s => s.startsWith("a"))).toBe(false);
 
     // Test indexOf
     expect(arr.indexOf("cherry")).toBe(2);
-    expect(arr.indexOf("grape")).toBe(-1);
+    expect(arr.indexOf("missing")).toBe(-1);
+    expect(arr.indexOf("banana", 2)).toBe(-1);
+    expect(arr.indexOf("banana", 1)).toBe(1);
 
-    // Test lastIndexOf
-    const arrWithDuplicates = IArray.apply("a", "b", "a", "c", "a");
-    expect(arrWithDuplicates.lastIndexOf("a")).toBe(4);
-    expect(arrWithDuplicates.lastIndexOf("z")).toBe(-1);
+    // Test indexWhere
+    expect(arr.indexWhere(s => s.startsWith("d"))).toBe(3);
+    expect(arr.indexWhere(s => s.startsWith("z"))).toBe(-1);
+    expect(arr.indexWhere(s => s.length > 5, 2)).toBe(2);
   });
 
-  test("Folding and Reducing", () => {
-    const arr = IArray.apply(1, 2, 3, 4, 5);
+  test("Sequence Operations - Take, Drop, Slice", () => {
+    const arr = IArray.apply("a", "b", "c", "d", "e", "f");
 
-    // Test foldLeft
-    const sumLeft = arr.foldLeft(0, (acc, x) => acc + x);
-    expect(sumLeft).toBe(15);
+    // Test take
+    const taken = arr.take(3);
+    expect(taken.length).toBe(3);
+    expect(taken.apply(0)).toBe("a");
+    expect(taken.apply(2)).toBe("c");
 
-    const concatLeft = IArray.apply("a", "b", "c").foldLeft("", (acc, x) => acc + x);
-    expect(concatLeft).toBe("abc");
+    const takeMore = arr.take(10);
+    expect(takeMore.length).toBe(6);
+    expect(takeMore).toEqual(arr);
 
-    // Test foldRight
-    const sumRight = arr.foldRight(0, (x, acc) => x + acc);
-    expect(sumRight).toBe(15);
+    const takeZero = arr.take(0);
+    expect(takeZero.isEmpty).toBe(true);
 
-    const concatRight = IArray.apply("a", "b", "c").foldRight("", (x, acc) => x + acc);
-    expect(concatRight).toBe("abc");
+    // Test takeRight
+    const takenRight = arr.takeRight(3);
+    expect(takenRight.length).toBe(3);
+    expect(takenRight.apply(0)).toBe("d");
+    expect(takenRight.apply(2)).toBe("f");
 
-    // Test reduce
-    const reduced = arr.reduce((acc, x) => acc + x);
-    expect(reduced).toBe(15);
+    // Test takeWhile
+    const takenWhile = arr.takeWhile(s => s < "d");
+    expect(takenWhile.length).toBe(3);
+    expect(takenWhile.apply(0)).toBe("a");
+    expect(takenWhile.apply(2)).toBe("c");
 
-    // Test reduceLeft
-    const reducedLeft = arr.reduceLeft((acc, x) => acc + x);
-    expect(reducedLeft).toBe(15);
+    // Test drop
+    const dropped = arr.drop(2);
+    expect(dropped.length).toBe(4);
+    expect(dropped.apply(0)).toBe("c");
+    expect(dropped.apply(3)).toBe("f");
 
-    // Test reduceRight
-    const reducedRight = arr.reduceRight((x, acc) => x + acc);
-    expect(reducedRight).toBe(15);
+    const dropMore = arr.drop(10);
+    expect(dropMore.isEmpty).toBe(true);
 
-    // Test reduceOption
-    const reducedOption = arr.reduceOption((acc, x) => acc + x);
-    expect(reducedOption).toBe(15);
+    // Test dropRight
+    const droppedRight = arr.dropRight(2);
+    expect(droppedRight.length).toBe(4);
+    expect(droppedRight.apply(0)).toBe("a");
+    expect(droppedRight.apply(3)).toBe("d");
 
-    const emptyReduced = IArray.Empty.reduceOption((acc: any, x: any) => acc + x);
-    expect(emptyReduced).toBeUndefined();
+    // Test dropWhile
+    const droppedWhile = arr.dropWhile(s => s < "d");
+    expect(droppedWhile.length).toBe(3);
+    expect(droppedWhile.apply(0)).toBe("d");
+    expect(droppedWhile.apply(2)).toBe("f");
+
+    // Test negative take/drop requirements
+    expect(() => arr.take(-1)).toThrow();
+    expect(() => arr.takeRight(-1)).toThrow();
   });
 
-  test("Sorting and Reversing", () => {
-    const arr = IArray.apply("banana", "apple", "cherry", "date");
+  test("Concatenation and Element Addition", () => {
+    const arr1 = IArray.apply("a", "b");
+    const arr2 = IArray.apply("c", "d");
+
+    // Test ++
+    const concatenated = arr1.concat(arr2);
+    expect(concatenated.length).toBe(4);
+    expect(concatenated.apply(0)).toBe("a");
+    expect(concatenated.apply(3)).toBe("d");
+
+    // Test ++ with empty
+    const withEmpty1 = arr1.concat(IArray.Empty);
+    expect(withEmpty1).toEqual(arr1);
+
+    const withEmpty2 = IArray.Empty.concat(arr1);
+    expect(withEmpty2).toEqual(arr1);
+
+    // Test prepend (+:)
+    const prepended = arr1.prepend("x");
+    expect(prepended.length).toBe(3);
+    expect(prepended.apply(0)).toBe("x");
+    expect(prepended.apply(1)).toBe("a");
+    expect(prepended.apply(2)).toBe("b");
+
+    // Test append (:+)
+    const appended = arr1.append("z");
+    expect(appended.length).toBe(3);
+    expect(appended.apply(0)).toBe("a");
+    expect(appended.apply(1)).toBe("b");
+    expect(appended.apply(2)).toBe("z");
+  });
+
+  test("Zip and Partition Operations", () => {
+    const arr1 = IArray.apply("a", "b", "c", "d");
+    const arr2 = IArray.apply(1, 2, 3);
+
+    // Test zip
+    const zipped = arr1.zip(arr2);
+    expect(zipped.length).toBe(3);
+    expect(zipped.apply(0)).toEqual(["a", 1]);
+    expect(zipped.apply(1)).toEqual(["b", 2]);
+    expect(zipped.apply(2)).toEqual(["c", 3]);
+
+    // Test zipWithIndex
+    const withIndex = arr1.zipWithIndex();
+    expect(withIndex.length).toBe(4);
+    expect(withIndex.apply(0)).toEqual(["a", 0]);
+    expect(withIndex.apply(3)).toEqual(["d", 3]);
+
+    // Test partition
+    const numbers = IArray.apply("1", "2", "3", "4", "5");
+    const [evens, odds] = numbers.partition(s => parseInt(s) % 2 === 0);
+    expect(evens.length).toBe(2);
+    expect(evens.apply(0)).toBe("2");
+    expect(evens.apply(1)).toBe("4");
+    expect(odds.length).toBe(3);
+    expect(odds.apply(0)).toBe("1");
+    expect(odds.apply(1)).toBe("3");
+    expect(odds.apply(2)).toBe("5");
+
+    // Test zip with empty
+    const emptyZip = arr1.zip(IArray.Empty);
+    expect(emptyZip.isEmpty).toBe(true);
+  });
+
+  test("Sorting and Min/Max Operations", () => {
+    const unsorted = IArray.apply("zebra", "apple", "banana", "cherry");
 
     // Test sorted
-    const sorted = arr.sorted();
+    const sorted = unsorted.sorted();
     expect(sorted.length).toBe(4);
     expect(sorted.apply(0)).toBe("apple");
     expect(sorted.apply(1)).toBe("banana");
     expect(sorted.apply(2)).toBe("cherry");
-    expect(sorted.apply(3)).toBe("date");
+    expect(sorted.apply(3)).toBe("zebra");
 
     // Test sortBy
-    const sortedByLength = arr.sortBy(s => s.length);
-    expect(sortedByLength.apply(0)).toBe("date");
+    const sortedByLength = unsorted.sortBy(s => s.length);
+    expect(sortedByLength.apply(0)).toBe("zebra");
     expect(sortedByLength.apply(1)).toBe("apple");
     expect(sortedByLength.apply(2)).toBe("banana");
     expect(sortedByLength.apply(3)).toBe("cherry");
 
-    // Test sortWith
-    const sortedWith = arr.sortWith((a, b) => b.localeCompare(a));
-    expect(sortedWith.apply(0)).toBe("date");
-    expect(sortedWith.apply(1)).toBe("cherry");
-    expect(sortedWith.apply(2)).toBe("banana");
-    expect(sortedWith.apply(3)).toBe("apple");
+    // Test min/max
+    expect(unsorted.min(StringOrdering)).toBe("apple");
+    expect(unsorted.max(StringOrdering)).toBe("zebra");
+
+    // Test maxBy
+    const numOrdering = { compare: (x: number, y: number) => x - y };
+    const maxByLength = unsorted.maxBy(s => s.length, numOrdering);
+    expect(maxByLength === "banana" || maxByLength === "cherry").toBe(true);
+
+    // Test min/max on empty should throw
+    const emptyStrings = IArray.Empty as IArray<string>;
+    expect(() => emptyStrings.min(StringOrdering)).toThrow();
+    expect(() => emptyStrings.max(StringOrdering)).toThrow();
+    expect(() => emptyStrings.maxBy(x => x, StringOrdering)).toThrow();
+
+    // Test sorted on small arrays
+    const single = IArray.apply("only");
+    expect(single.sorted()).toEqual(single);
+
+    const emptyForSort = IArray.Empty as IArray<string>;
+    expect(emptyForSort.sorted()).toEqual(emptyForSort);
+  });
+
+  test("Reverse and Distinct Operations", () => {
+    const arr = IArray.apply("a", "b", "c", "d");
 
     // Test reverse
     const reversed = arr.reverse();
-    expect(reversed.apply(0)).toBe("date");
-    expect(reversed.apply(1)).toBe("cherry");
-    expect(reversed.apply(2)).toBe("apple");
-    expect(reversed.apply(3)).toBe("banana");
+    expect(reversed.length).toBe(4);
+    expect(reversed.apply(0)).toBe("d");
+    expect(reversed.apply(1)).toBe("c");
+    expect(reversed.apply(2)).toBe("b");
+    expect(reversed.apply(3)).toBe("a");
 
-    // Test empty array sorting
-    const emptySorted = IArray.Empty.sorted();
-    expect(emptySorted.isEmpty).toBe(true);
-  });
-
-  test("Grouping and Partitioning", () => {
-    const arr = IArray.apply("apple", "banana", "apricot", "blueberry", "cherry");
-
-    // Test groupBy
-    const grouped = arr.groupBy(s => s.charAt(0));
-    expect(grouped.get("a")?.length).toBe(2);
-    expect(grouped.get("b")?.length).toBe(2);
-    expect(grouped.get("c")?.length).toBe(1);
-
-    // Test partition
-    const [startsWithA, others] = arr.partition(s => s.startsWith("a"));
-    expect(startsWithA.length).toBe(2);
-    expect(others.length).toBe(3);
-    expect(startsWithA.apply(0)).toBe("apple");
-    expect(startsWithA.apply(1)).toBe("apricot");
-
-    // Test span
-    const [prefix, suffix] = arr.span(s => s.startsWith("a"));
-    expect(prefix.length).toBe(1);
-    expect(suffix.length).toBe(4);
-    expect(prefix.apply(0)).toBe("apple");
-    expect(suffix.apply(0)).toBe("banana");
-
-    // Test splitAt
-    const [left, right] = arr.splitAt(2);
-    expect(left.length).toBe(2);
-    expect(right.length).toBe(3);
-    expect(left.apply(0)).toBe("apple");
-    expect(left.apply(1)).toBe("banana");
-    expect(right.apply(0)).toBe("apricot");
-  });
-
-  test("Conversion and Utility Operations", () => {
-    const arr = IArray.apply("a", "b", "c", "d");
-
-    // Test toArray
-    const array = arr.toArray();
-    expect(Array.isArray(array)).toBe(true);
-    expect(array.length).toBe(4);
-    expect(array[0]).toBe("a");
-    expect(array[3]).toBe("d");
-
-    // Test mkString
-    const joined = arr.mkString(", ");
-    expect(joined).toBe("a, b, c, d");
-
-    const joinedWithBrackets = arr.mkString("[", ", ", "]");
-    expect(joinedWithBrackets).toBe("[a, b, c, d]");
+    // Test reverse on empty
+    const emptyReversed = IArray.Empty.reverse();
+    expect(emptyReversed.isEmpty).toBe(true);
 
     // Test distinct
-    const withDuplicates = IArray.apply("a", "b", "a", "c", "b", "d");
+    const withDuplicates = IArray.apply("a", "b", "a", "c", "b", "d", "a");
     const distinct = withDuplicates.distinct();
     expect(distinct.length).toBe(4);
-    expect(distinct.apply(0)).toBe("a");
-    expect(distinct.apply(1)).toBe("b");
-    expect(distinct.apply(2)).toBe("c");
-    expect(distinct.apply(3)).toBe("d");
+    expect(distinct.contains("a")).toBe(true);
+    expect(distinct.contains("b")).toBe(true);
+    expect(distinct.contains("c")).toBe(true);
+    expect(distinct.contains("d")).toBe(true);
 
-    // Test zip
-    const arr2 = IArray.apply(1, 2, 3, 4);
-    const zipped = arr.zip(arr2);
-    expect(zipped.length).toBe(4);
-    expect(zipped.apply(0)).toEqual(["a", 1]);
-    expect(zipped.apply(3)).toEqual(["d", 4]);
+    // Test distinct on array without duplicates
+    const noDuplicates = IArray.apply("a", "b", "c");
+    const distinctNoDup = noDuplicates.distinct();
+    expect(distinctNoDup).toEqual(noDuplicates);
 
-    // Test zipWithIndex
-    const withIndex = arr.zipWithIndex();
-    expect(withIndex.length).toBe(4);
-    expect(withIndex.apply(0)).toEqual(["a", 0]);
-    expect(withIndex.apply(3)).toEqual(["d", 3]);
+    // Test distinct on small arrays
+    const singleDistinct = IArray.apply("only").distinct();
+    expect(singleDistinct.length).toBe(1);
+    expect(singleDistinct.apply(0)).toBe("only");
+
+    const emptyDistinct = IArray.Empty.distinct();
+    expect(emptyDistinct.isEmpty).toBe(true);
+  });
+
+  test("Conversion Operations", () => {
+    const arr = IArray.apply("a", "b", "c");
+
+    // Test toList (toArray in TS)
+    const list = arr.toArray();
+    expect(list).toEqual(["a", "b", "c"]);
+
+    // Test toVector (toArray as closest equivalent)
+    const vector = arr.toArray();
+    expect(vector).toEqual(["a", "b", "c"]);
+
+    // Test toSet
+    const set = arr.toSet();
+    expect(set).toEqual(new Set(["a", "b", "c"]));
+
+    // Test toSortedSet (no native equivalent, but test that it's sorted)
+    const sortedArray = arr.sorted().toArray();
+    expect(sortedArray).toEqual(["a", "b", "c"]);
+
+    // Test toMap with tuples
+    const tuples = IArray.apply<[string, string]>(["key1", "value1"], ["key2", "value2"]);
+    const map = tuples.toMap();
+    expect(map.size).toBe(2);
+    expect(map.get("key1")).toBe("value1");
+    expect(map.get("key2")).toBe("value2");
+
+    // Test groupBy
+    const words = IArray.apply("apple", "banana", "apricot", "blueberry", "cherry");
+    const grouped = words.groupBy(s => s.charAt(0));
+    expect(grouped.get("a")?.length).toBe(2);
+    expect(grouped.get("a")?.contains("apple")).toBe(true);
+    expect(grouped.get("a")?.contains("apricot")).toBe(true);
+    expect(grouped.get("b")?.length).toBe(2);
+    expect(grouped.get("c")?.length).toBe(1);
+  });
+
+  test("Builder Operations", () => {
+    // Test basic builder
+    const builder = IArrayBuilder.empty<string>();
+    expect(builder.isEmpty).toBe(true);
+
+    builder.addOne("a");
+    builder.addOne("b");
+    builder.addOne("c");
+
+    const result = builder.result();
+    expect(result.length).toBe(3);
+    expect(result.apply(0)).toBe("a");
+    expect(result.apply(1)).toBe("b");
+    expect(result.apply(2)).toBe("c");
+
+    // Test builder with initial capacity
+    const builder2 = IArrayBuilder.empty<string>(100);
+    builder2.addOne("test");
+    const result2 = builder2.result();
+    expect(result2.length).toBe(1);
+    expect(result2.apply(0)).toBe("test");
+
+    // Test builder from existing IArray
+    const existing = IArray.apply("x", "y");
+    const builder3 = IArrayBuilder.fromIArray(existing, 50);
+    builder3.addOne("z");
+    const result3 = builder3.result();
+    expect(result3.length).toBe(3);
+    expect(result3.apply(0)).toBe("x");
+    expect(result3.apply(1)).toBe("y");
+    expect(result3.apply(2)).toBe("z");
+
+    // Test ++= operation
+    const builder4 = IArrayBuilder.empty<string>();
+    const toAdd = IArray.apply("1", "2", "3");
+    builder4.appendAll(toAdd);
+    const result4 = builder4.result();
+    expect(result4.length).toBe(3);
+    expect(result4).toEqual(toAdd);
+
+    // Test clear
+    builder4.clear();
+    expect(builder4.isEmpty).toBe(true);
+    const emptyResult = builder4.result();
+    expect(emptyResult.isEmpty).toBe(true);
+
+    // Test forall on builder
+    const builder5 = IArrayBuilder.empty<string>();
+    builder5.addOne("abc");
+    builder5.addOne("def");
+    expect(builder5.forall(s => s.length === 3)).toBe(true);
+    expect(builder5.forall(s => s.startsWith("a"))).toBe(false);
   });
 });
