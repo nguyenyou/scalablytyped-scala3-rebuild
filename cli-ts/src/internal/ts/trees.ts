@@ -6,6 +6,7 @@ interface TsIdent extends TsTree {
   readonly value: string;
 }
 
+
 type TsIdentLibraryType = TsIdentLibrarySimple | TsIdentLibraryScoped;
 
 export abstract class TsIdentLibrary implements TsIdent {
@@ -98,4 +99,8 @@ export class TsIdentLibraryScoped extends TsIdentLibrary {
   getPackageName(): string {
     return this.name;
   }
+}
+
+export namespace TsIdent {
+  export const std = new TsIdentLibrarySimple('std');
 }
