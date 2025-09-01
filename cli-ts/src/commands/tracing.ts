@@ -5,6 +5,11 @@ import { TsIdentLibrary } from '@/internal/ts/trees.js';
 import { Json } from '@/internal/importer/LibTsSource.js';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { Bootstrap } from '@/internal/importer/Bootstrap.ts'
+import {ConversionOptions, Selection, Versions} from "@/internal/importer/ConversionOptions.ts";
+import {Flavour} from "@/Flavour.ts";
+import { Name } from '@/internal/scalajs/Name.ts'
+import {InFolder} from "@/internal/files.ts";
 
 /**
  * Main conversion command - equivalent to Scala Tracing.scala
@@ -14,6 +19,20 @@ export class TracingCommand extends BaseCommand {
   private readonly inDirectory: string;
   private readonly sourceOutputDir: string;
   private readonly paths: Paths;
+  
+  private readonly DefaultOptions = new ConversionOptions(
+    true,
+    Flavour.Normal,
+    Name.typings,
+    new Set(['es6']),
+    Selection.All(),
+    Selection.All(),
+    new Set(),
+    new Versions(Versions.Scala3, Versions.ScalaJs1),
+    false,
+    undefined,
+    false
+  )
 
   constructor(options: CommandOptions) {
     super(options);
@@ -35,7 +54,10 @@ export class TracingCommand extends BaseCommand {
       
       // TypeScript equivalent of: val wantedLibs: SortedSet[TsIdentLibrary] = packageJson.allLibs(false, peer = true).keySet
       const wantedLibs: Set<TsIdentLibrary> = new Set(packageJson.allLibs(false, true).keys());
-      console.log(wantedLibs)
+      // console.log(wantedLibs)
+// Bootstrap.fromNodeModules(InFolder(nodeModulesPath), DefaultOptions, wantedLibs)
+      const x = Bootstrap.fromNodeModules(new InFolder(this.paths.nodeModules), this.DefaultOptions, wantedLibs);
+      // console.log(x)
       
 
       // Step 2: Bootstrap from node_modules

@@ -4,6 +4,7 @@
 
 import { Flavour } from '@/Flavour.ts';
 import { TsIdentLibrary } from '../ts/trees.js';
+import { Name } from '@/internal/scalajs/Name.ts'
 
 // Selection type - represents a selection criteria for filtering
 export abstract class Selection<T> {
@@ -91,53 +92,6 @@ export namespace Selection {
   }
 }
 
-// Name type - represents a Scala identifier name
-export class Name {
-  constructor(public readonly unescaped: string) {}
-  
-  withSuffix(suffix: string): Name {
-    return new Name(this.unescaped + "_" + suffix);
-  }
-  
-  get value(): string {
-    return this.escapeScalaName(this.unescaped);
-  }
-  
-  get isEscaped(): boolean {
-    return this.value !== this.unescaped;
-  }
-  
-  // Simplified Scala name escaping
-  private escapeScalaName(name: string): string {
-    // Basic escaping - in a real implementation this would be more comprehensive
-    if (SCALA_KEYWORDS.has(name)) {
-      return `\`${name}\``;
-    }
-    return name;
-  }
-  
-  toString(): string {
-    return this.value;
-  }
-}
-
-// Scala keywords that need escaping
-const SCALA_KEYWORDS = new Set([
-  'abstract', 'case', 'catch', 'class', 'def', 'do', 'else', 'extends', 'false',
-  'final', 'finally', 'for', 'forSome', 'if', 'implicit', 'import', 'lazy',
-  'match', 'new', 'null', 'object', 'override', 'package', 'private', 'protected',
-  'return', 'sealed', 'super', 'this', 'throw', 'trait', 'try', 'true', 'type',
-  'val', 'var', 'while', 'with', 'yield'
-]);
-
-// Name constants (subset of the Scala implementation)
-export namespace Name {
-  export const mod = new Name("mod");
-  export const std = new Name("std");
-  export const typings = new Name("typings");
-  export const global = new Name("global");
-}
-
 // Dependency type for versions
 export interface Dep {
   organization: string;
@@ -191,6 +145,11 @@ export class Versions {
   public readonly runtime: Dep;
   public readonly scalaJsDom: Dep;
   
+  public static Scala212 = new ScalaVersion("2.12.18");
+  public static Scala213 = new ScalaVersion("2.13.12");
+  public static Scala3 = new ScalaVersion("3.7.2");
+  public static ScalaJs1 = new ScalaJsVersion("1.19.0");
+  
   constructor(public readonly scala: ScalaVersion, public readonly scalaJs: ScalaJsVersion) {
     this.runtime = {
       organization: "com.olvind",
@@ -205,14 +164,6 @@ export class Versions {
       type: "scalajs"
     };
   }
-}
-
-// Version constants
-export namespace Versions {
-  export const Scala212 = new ScalaVersion("2.12.18");
-  export const Scala213 = new ScalaVersion("2.13.12");
-  export const Scala3 = new ScalaVersion("3.7.2");
-  export const ScalaJs1 = new ScalaJsVersion("1.19.0");
 }
 
 // FlavourImpl interface - simplified for this port

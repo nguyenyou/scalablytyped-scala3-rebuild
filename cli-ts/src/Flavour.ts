@@ -7,6 +7,7 @@
 // Abstract base class for Flavour
 export abstract class Flavour {
   constructor(public readonly id: string) {}
+  
 }
 
 // Concrete flavour implementations
