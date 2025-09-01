@@ -315,5 +315,240 @@ object PackageJsonTests extends TestSuite {
         assert(keys == keys.sorted)
       }
     }
+
+    test("Parsing Methods") {
+      test("parsedTypes with string value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = None,
+          types = Some(CirceJson.fromString("./index.d.ts")),
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedTypes
+        assert(parsed.isDefined)
+        assert(parsed.get.length == 1)
+        assert(parsed.get(0) == "./index.d.ts")
+      }
+
+      test("parsedTypes with array value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = None,
+          types = Some(CirceJson.arr(
+            CirceJson.fromString("./index.d.ts"),
+            CirceJson.fromString("./lib/types.d.ts")
+          )),
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedTypes
+        assert(parsed.isDefined)
+        assert(parsed.get.length == 2)
+        assert(parsed.get.contains("./index.d.ts"))
+        assert(parsed.get.contains("./lib/types.d.ts"))
+      }
+
+      test("parsedTypes with null value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = None,
+          types = Some(CirceJson.Null),
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedTypes
+        assert(parsed.isEmpty)
+      }
+
+      test("parsedTypings with string value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = Some(CirceJson.fromString("./typings/index.d.ts")),
+          module = None,
+          types = None,
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedTypings
+        assert(parsed.isDefined)
+        assert(parsed.get.length == 1)
+        assert(parsed.get(0) == "./typings/index.d.ts")
+      }
+
+      test("parsedModules with string value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = Some(CirceJson.fromString("./lib/index.js")),
+          types = None,
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedModules
+        assert(parsed.isDefined)
+        assert(parsed.get.size == 1)
+        assert(parsed.get("") == "./lib/index.js")
+      }
+
+      test("parsedModules with object value") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = Some(CirceJson.obj(
+            "main" -> CirceJson.fromString("./lib/index.js"),
+            "browser" -> CirceJson.fromString("./lib/browser.js")
+          )),
+          types = None,
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val parsed = packageJson.parsedModules
+        assert(parsed.isDefined)
+        assert(parsed.get.size == 2)
+        assert(parsed.get("main") == "./lib/index.js")
+        assert(parsed.get("browser") == "./lib/browser.js")
+      }
+
+      test("parsedExported with complex exports") {
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = None,
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = None,
+          types = None,
+          files = None,
+          dist = None,
+          exports = Some(CirceJson.obj(
+            "." -> CirceJson.obj(
+              "types" -> CirceJson.fromString("./index.d.ts"),
+              "import" -> CirceJson.fromString("./esm/index.js")
+            ),
+            "./utils" -> CirceJson.obj(
+              "types" -> CirceJson.fromString("./utils/index.d.ts")
+            )
+          ))
+        )
+
+        val parsed = packageJson.parsedExported
+        assert(parsed.isDefined)
+        assert(parsed.get.size == 2)
+        assert(parsed.get(".") == "./index.d.ts")
+        assert(parsed.get("./utils") == "./utils/index.d.ts")
+      }
+    }
+
+    test("Edge Cases and Boundary Conditions") {
+      test("PackageJson with scoped library dependencies") {
+        val deps = Map(
+          TsIdentLibrary("@angular/core") -> "^15.0.0",
+          TsIdentLibrary("@types/node") -> "^18.0.0", // This becomes "node"
+          TsIdentLibrary("@babel/core") -> "^7.20.0"
+        )
+        val packageJson = PackageJson(
+          version = Some("1.0.0"),
+          dependencies = Some(deps),
+          devDependencies = None,
+          peerDependencies = None,
+          typings = None,
+          module = None,
+          types = None,
+          files = None,
+          dist = None,
+          exports = None
+        )
+
+        val libs = packageJson.allLibs(dev = false, peer = false)
+        assert(libs.size == 3)
+        assert(libs.contains(TsIdentLibrary("@angular/core")))
+        assert(libs.contains(TsIdentLibrary("node"))) // @types/node -> node
+        assert(libs.contains(TsIdentLibrary("@babel/core")))
+      }
+
+      test("PackageJson with empty arrays and objects") {
+        val jsonStr = """{
+          "version": "1.0.0",
+          "dependencies": {},
+          "devDependencies": {},
+          "peerDependencies": {},
+          "files": [],
+          "types": [],
+          "exports": {}
+        }"""
+
+        val result = Json.apply[PackageJson](jsonStr)
+
+        result match {
+          case Right(packageJson) =>
+            assert(packageJson.version.contains("1.0.0"))
+            assert(packageJson.dependencies.isDefined)
+            assert(packageJson.dependencies.get.isEmpty)
+            assert(packageJson.devDependencies.isDefined)
+            assert(packageJson.devDependencies.get.isEmpty)
+            assert(packageJson.peerDependencies.isDefined)
+            assert(packageJson.peerDependencies.get.isEmpty)
+            assert(packageJson.files.isDefined)
+            assert(packageJson.files.get.isEmpty)
+            assert(packageJson.parsedTypes.isEmpty) // Empty array filtered out
+            assert(packageJson.parsedExported.isEmpty) // Empty object filtered out
+          case Left(_) =>
+            assert(false) // Should parse successfully
+        }
+      }
+
+      test("PackageJson.Dist parsing") {
+        val jsonStr = """{
+          "version": "1.0.0",
+          "dist": {
+            "tarball": "https://registry.npmjs.org/test/-/test-1.0.0.tgz"
+          }
+        }"""
+
+        val result = Json.apply[PackageJson](jsonStr)
+
+        result match {
+          case Right(packageJson) =>
+            assert(packageJson.dist.isDefined)
+            assert(packageJson.dist.get.tarball == "https://registry.npmjs.org/test/-/test-1.0.0.tgz")
+          case Left(_) =>
+            assert(false) // Should parse successfully
+        }
+      }
+    }
   }
 }
