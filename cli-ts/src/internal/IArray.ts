@@ -471,7 +471,7 @@ export class IArray<T> {
     return this.flatMap(x => x);
   }
 
-  // Array concatenation and modification
+  // Array concatenation and modification (Scala ++ operator)
   concat<U>(that: IArray<U>): IArray<T | U> {
     if (this.isEmpty) return that as IArray<T | U>;
     if (that.isEmpty) return this as IArray<T | U>;
@@ -489,7 +489,7 @@ export class IArray<T> {
     return IArray.fromArrayAndSize(result, newLength);
   }
 
-  // Prepend element
+  // Prepend element (Scala +: operator)
   prepend<U extends T>(elem: U): IArray<T | U> {
     const newLength = this.length + 1;
     const result: (T | U)[] = new Array(newLength);
@@ -500,7 +500,7 @@ export class IArray<T> {
     return IArray.fromArrayAndSize(result, newLength);
   }
 
-  // Append element
+  // Append element (Scala :+ operator)
   append<U extends T>(elem: U): IArray<T | U> {
     const newLength = this.length + 1;
     const result: (T | U)[] = new Array(newLength);
@@ -737,6 +737,24 @@ export class IArray<T> {
     return this.reduce((x, y) => ordering.compare(x, y) >= 0 ? x : y);
   }
 
+  minBy<U>(f: (value: T) => U, ordering: Ordering<U>): T {
+    if (this.isEmpty) throw new Error("minBy on empty IArray");
+
+    let minValue: U | undefined = undefined;
+    let minElem: T | undefined = undefined;
+    let first = true;
+
+    for (const elem of this) {
+      const fx = f(elem);
+      if (first || ordering.compare(fx, minValue!) < 0) {
+        minElem = elem;
+        minValue = fx;
+        first = false;
+      }
+    }
+    return minElem!;
+  }
+
   maxBy<U>(f: (value: T) => U, ordering: Ordering<U>): T {
     if (this.isEmpty) throw new Error("maxBy on empty IArray");
 
@@ -851,31 +869,27 @@ export class IArray<T> {
   }
 
   mkString(sepOrInit?: string, sep?: string, post?: string): string {
-    if (arguments.length === 1) {
+    if (arguments.length === 0) {
+      // No argument case: mkString()
+      return this.mkString("", "", "");
+    } else if (arguments.length === 1) {
       // Single argument case: mkString(sep)
-      const separator = sepOrInit || "";
-      const parts: string[] = [];
-      for (let i = 0; i < this.length; i++) {
-        if (i !== 0) {
-          parts.push(separator);
-        }
-        parts.push(String(this.apply(i)));
-      }
-      return parts.join("");
+      return this.mkString("", sepOrInit || "", "");
     } else {
       // Three argument case: mkString(init, sep, post)
       const init = sepOrInit || "";
       const separator = sep || "";
       const postfix = post || "";
-      const parts: string[] = [init];
+      const result = new Array<string>();
+      result.push(init);
       for (let i = 0; i < this.length; i++) {
         if (i !== 0) {
-          parts.push(separator);
+          result.push(separator);
         }
-        parts.push(String(this.apply(i)));
+        result.push(String(this.apply(i)));
       }
-      parts.push(postfix);
-      return parts.join("");
+      result.push(postfix);
+      return result.join("");
     }
   }
 
@@ -1183,6 +1197,23 @@ export class IArray<T> {
     }
 
     return IArray.fromArrayAndSize(result, outputIndex);
+  }
+
+  // Additional utility methods to match Scala implementation more closely
+  iterator(): Iterator<T> {
+    return this[Symbol.iterator]();
+  }
+
+  // Alias methods to match Scala naming
+  size(): number {
+    return this.length;
+  }
+
+  // Method to check if this array ends with given suffix
+  endsWith(suffix: IArray<T>): boolean {
+    if (suffix.length > this.length) return false;
+    const offset = this.length - suffix.length;
+    return this.startsWith(suffix, offset);
   }
 }
 
