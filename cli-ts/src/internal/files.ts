@@ -114,6 +114,19 @@ export namespace files {
   }
 
   /**
+   * Check if a path is a directory
+   * Equivalent to Scala os.isDir(path)
+   */
+  export async function isDir(filePath: string): Promise<boolean> {
+    try {
+      const stats = await fs.stat(filePath);
+      return stats.isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Read file content as string with UTF-8 encoding
    * Equivalent to Scala def content(file: InFile): String
    */
@@ -202,6 +215,19 @@ export namespace filesSync {
     try {
       fsSync.accessSync(filePath);
       return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if a path is a directory (synchronous version)
+   * Equivalent to Scala os.isDir(path)
+   */
+  export function isDir(filePath: string): boolean {
+    try {
+      const stats = fsSync.statSync(filePath);
+      return stats.isDirectory();
     } catch {
       return false;
     }

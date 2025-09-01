@@ -1,4 +1,4 @@
-import {InFile, InFolder} from "@/internal/files.ts";
+import {InFile, InFolder, filesSync} from "@/internal/files.ts";
 import {ConversionOptions} from "@/internal/importer/ConversionOptions.ts";
 import {TsIdent, TsIdentLibrary} from "@/internal/ts/trees.ts";
 import {StdLibSource} from "@/internal/importer/LibTsSource.ts";
@@ -17,6 +17,18 @@ export namespace Bootstrap {
     const f = IArray.fromIterable(files)
     const ln = TsIdent.std
     const stdLibSource = new StdLibSource(new InFolder(folder), f, ln)
+
+    // Converted from Scala:
+    // val `@types`: Option[InFolder] =
+    //   fromFolder.path / "@types" match {
+    //     case dir if os.isDir(dir) => Some(InFolder(dir))
+    //     case _                    => None
+    //   }
+    const typesPath = path.join(fromFolder.path, "@types");
+    const atTypes: InFolder | null = filesSync.isDir(typesPath)
+      ? new InFolder(typesPath)
+      : null;
+
     return 1
   }
 }
