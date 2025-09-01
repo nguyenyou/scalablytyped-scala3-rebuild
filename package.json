@@ -6,10 +6,14 @@
   "scripts": {
     "generate": "rm -rf generated-sources && ./mill cli.runMain org.scalablytyped.converter.cli.Tracing",
     "cli:fix": "./mill cli.fix",
-    "cli:fmt": "./mill mill.scalalib.scalafmt.ScalafmtModule/ cli.sources"
+    "cli:fmt": "./mill mill.scalalib.scalafmt.ScalafmtModule/ cli.sources",
+    "test:ts": "bun test",
+    "test:scala": "./mill cli.test",
+    "test:all": "concurrently \"npm run test:ts\" \"npm run test:scala\""
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "concurrently": "9.2.1",
     "typescript": "5.9.2"
   },
   "dependencies": {
