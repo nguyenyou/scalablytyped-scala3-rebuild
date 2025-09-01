@@ -33,6 +33,7 @@ import org.scalablytyped.converter.internal.scalajs.Versions
 import org.scalablytyped.converter.internal.ts.CalculateLibraryVersion.PackageJsonOnly
 import org.scalablytyped.converter.internal.ts.PackageJson
 import org.scalablytyped.converter.internal.ts.TsIdentLibrary
+import os.Path
 
 import scala.collection.immutable.SortedSet
 
@@ -71,8 +72,8 @@ object Tracing {
 
     try {
       executionLogger.logStep("Initializing converter and reading configuration")
-      val packageJsonPath = paths.packageJson.getOrElse(sys.error(s"${inDirectory} does not contain package.json"))
-      val nodeModulesPath = paths.node_modules.getOrElse(sys.error(s"${inDirectory} does not contain node_modules"))
+      val packageJsonPath: Path = paths.packageJson.getOrElse(sys.error(s"${inDirectory} does not contain package.json"))
+      val nodeModulesPath: Path = paths.node_modules.getOrElse(sys.error(s"${inDirectory} does not contain node_modules"))
       val packageJson: PackageJson = Json.force[PackageJson](packageJsonPath)
       executionLogger.logProgress(s"Found package.json at: $packageJsonPath")
       executionLogger.logProgress(s"Found node_modules at: $nodeModulesPath")
