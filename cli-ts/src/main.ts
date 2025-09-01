@@ -3,8 +3,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { TracingCommand } from './commands/tracing.js';
-import { SourceOnlyCommand } from './commands/source-only.js';
-import { ImportDefinitionsCommand } from './commands/import-definitions.js';
 
 const program = new Command();
 
@@ -24,36 +22,6 @@ program
   .action(async (options) => {
     try {
       const command = new TracingCommand(options);
-      await command.execute();
-    } catch (error) {
-      console.error(chalk.red('Error:'), error instanceof Error ? error.message : String(error));
-      process.exit(1);
-    }
-  });
-
-// Source-only generation command
-program
-  .command('generate')
-  .description('Generate Scala sources only (equivalent to SourceOnlyMain)')
-  .option('-o, --output <dir>', 'Output directory for generated sources', './my-sources')
-  .option('--libs <libs...>', 'Specific libraries to generate')
-  .action(async (options) => {
-    try {
-      const command = new SourceOnlyCommand(options);
-      await command.execute();
-    } catch (error) {
-      console.error(chalk.red('Error:'), error instanceof Error ? error.message : String(error));
-      process.exit(1);
-    }
-  });
-
-// Import ScalaJS definitions command
-program
-  .command('import-definitions')
-  .description('Import ScalaJS definitions (equivalent to ImportScalajsDefinitions)')
-  .action(async () => {
-    try {
-      const command = new ImportDefinitionsCommand();
       await command.execute();
     } catch (error) {
       console.error(chalk.red('Error:'), error instanceof Error ? error.message : String(error));

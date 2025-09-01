@@ -8,7 +8,7 @@ import { PhaseFlavour } from '../phases/phase-flavour.js';
 import { RecPhase } from '../phases/rec-phase.js';
 import { PersistingParser } from '../core/persisting-parser.js';
 import { Paths } from '../utils/paths.js';
-import { PackageJson } from '../types/package-json.js';
+import type { PackageJson } from 'type-fest'
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -23,7 +23,9 @@ export class TracingCommand extends BaseCommand {
 
   constructor(options: CommandOptions) {
     super(options);
-    this.inDirectory = process.cwd();
+    const cwd = process.cwd()
+    const root = path.resolve(cwd, '..');
+    this.inDirectory = root;
     this.sourceOutputDir = path.resolve(options.output || './generated-sources');
     this.paths = new Paths(this.inDirectory);
   }
@@ -37,6 +39,8 @@ export class TracingCommand extends BaseCommand {
 
       // Step 1: Load configuration
       const { packageJson, wantedLibs } = await this.loadConfiguration();
+      console.log(wantedLibs)
+      return
 
       // Step 2: Bootstrap from node_modules
       this.startSpinner('Bootstrapping from node_modules...');
@@ -98,11 +102,7 @@ export class TracingCommand extends BaseCommand {
     if (packageJson.dependencies) {
       Object.keys(packageJson.dependencies).forEach(dep => wantedLibs.add(dep));
     }
-    
-    if (packageJson.devDependencies) {
-      Object.keys(packageJson.devDependencies).forEach(dep => wantedLibs.add(dep));
-    }
-
+   
     this.debug(`Wanted libraries: ${Array.from(wantedLibs).join(', ')}`);
     
     return { packageJson, wantedLibs };

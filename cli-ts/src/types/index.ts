@@ -26,7 +26,6 @@ export * from './ts-scope.js';
 
 // Configuration types
 export * from './conversion-options.js';
-export * from './package-json.js';
 
 // Re-export commonly used types for convenience
 export type {
