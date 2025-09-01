@@ -246,4 +246,5 @@ export namespace TsIdent {
   export const defaultIdent = new TsIdentSimple('default');
   export const constructorIdent = new TsIdentSimple('constructor');
   export const namespaced = new TsIdentSimple('*');
+  export const std = new TsIdentLibrary('std');
 }

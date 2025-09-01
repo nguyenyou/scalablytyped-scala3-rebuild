@@ -1,401 +1,452 @@
-import { ConversionOptions } from '../types/conversion-options.js';
-import { PackageJson } from '../types/package-json.js';
 import * as path from 'path';
 import * as fs from 'fs-extra';
-import { glob } from 'glob';
+import { TsIdent, TsIdentLibrary, IArray } from '../types/ts-ast.js';
+import { ConversionOptions } from '../types/conversion-options.js';
 
 /**
- * Bootstrap class for discovering and initializing TypeScript libraries
+ * File system utilities
+ * Equivalent to Scala files object
+ */
+export namespace Files {
+  export function exists(filePath: string): boolean {
+    return fs.existsSync(filePath);
+  }
+
+  export function isDirectory(dirPath: string): boolean {
+    try {
+      return fs.statSync(dirPath).isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  export function listDirectory(dirPath: string): string[] {
+    try {
+      return fs.readdirSync(dirPath);
+    } catch {
+      return [];
+    }
+  }
+}
+
+/**
+ * Represents an input file
+ * Equivalent to Scala InFile
+ */
+export class InFile {
+  constructor(public readonly path: string) {}
+
+  get folder(): InFolder {
+    return new InFolder(path.dirname(this.path));
+  }
+
+  toString(): string {
+    return this.path;
+  }
+}
+
+/**
+ * Represents an input folder
+ * Equivalent to Scala InFolder
+ */
+export class InFolder {
+  constructor(public readonly path: string) {}
+
+  get name(): string {
+    return path.basename(this.path);
+  }
+}
+
+/**
+ * TypeScript library source types
+ * Equivalent to Scala LibTsSource
+ */
+export abstract class LibTsSource {
+  abstract readonly folder: InFolder;
+  abstract readonly libName: TsIdentLibrary;
+
+  get path(): string {
+    return this.folder.path;
+  }
+
+  static hasTypescriptSources(folder: InFolder): boolean {
+    try {
+      const files = fs.readdirSync(folder.path, { recursive: true });
+      return files.some(file => typeof file === 'string' && file.endsWith('.d.ts'));
+    } catch {
+      return false;
+    }
+  }
+}
+
+export namespace LibTsSource {
+  export class StdLibSource extends LibTsSource {
+    constructor(
+      public readonly folder: InFolder,
+      public readonly files: IArray<InFile>,
+      public readonly libName: TsIdentLibrary
+    ) {
+      super();
+    }
+  }
+
+  export class FromFolder extends LibTsSource {
+    constructor(
+      public readonly folder: InFolder,
+      public readonly libName: TsIdentLibrary
+    ) {
+      super();
+    }
+  }
+}
+
+/**
+ * Library resolver result types
+ * Equivalent to Scala LibraryResolver.Res
+ */
+export abstract class LibraryResolverResult<T> {
+  abstract toOption(): T | undefined;
+  abstract map<U>(f: (value: T) => U): LibraryResolverResult<U>;
+}
+
+export namespace LibraryResolverResult {
+  export class Found<T> extends LibraryResolverResult<T> {
+    constructor(public readonly source: T) {
+      super();
+    }
+
+    toOption(): T {
+      return this.source;
+    }
+
+    map<U>(f: (value: T) => U): LibraryResolverResult<U> {
+      return new Found(f(this.source));
+    }
+  }
+
+  export class Ignored extends LibraryResolverResult<never> {
+    constructor(public readonly name: TsIdentLibrary) {
+      super();
+    }
+
+    toOption(): undefined {
+      return undefined;
+    }
+
+    map<U>(_f: (value: never) => U): LibraryResolverResult<U> {
+      return this;
+    }
+  }
+
+  export class NotAvailable extends LibraryResolverResult<never> {
+    constructor(public readonly name: TsIdentLibrary) {
+      super();
+    }
+
+    toOption(): undefined {
+      return undefined;
+    }
+
+    map<U>(_f: (value: never) => U): LibraryResolverResult<U> {
+      return this;
+    }
+  }
+}
+
+/**
+ * Library resolver
+ * Equivalent to Scala LibraryResolver
+ */
+export class LibraryResolver {
+  private readonly byName: Map<string, LibTsSource>;
+
+  constructor(
+    public readonly stdLib: LibTsSource.StdLibSource,
+    allSources: IArray<LibTsSource.FromFolder>,
+    private readonly ignored: Set<string>
+  ) {
+    this.byName = new Map();
+
+    // Group sources by library name, taking the first one for each name
+    for (const source of allSources) {
+      if (!this.byName.has(source.libName.value)) {
+        this.byName.set(source.libName.value, source);
+      }
+    }
+
+    // Add standard library
+    this.byName.set(TsIdent.std.value, stdLib);
+  }
+
+  library(name: TsIdentLibrary): LibraryResolverResult<LibTsSource> {
+    if (this.ignored.has(name.value)) {
+      return new LibraryResolverResult.Ignored(name);
+    }
+
+    const source = this.byName.get(name.value);
+    if (source) {
+      return new LibraryResolverResult.Found(source);
+    } else {
+      return new LibraryResolverResult.NotAvailable(name);
+    }
+  }
+}
+
+/**
+ * Utility functions for collections
+ * Equivalent to Scala seqs.partitionCollect2
+ */
+export namespace CollectionUtils {
+  export function partitionCollect2<T, T1, T2>(
+    items: T[],
+    collector1: (item: T) => T1 | undefined,
+    collector2: (item: T) => T2 | undefined
+  ): [T1[], T2[], T[]] {
+    const collected1: T1[] = [];
+    const collected2: T2[] = [];
+    const remaining: T[] = [];
+
+    for (const item of items) {
+      const result1 = collector1(item);
+      if (result1 !== undefined) {
+        collected1.push(result1);
+        continue;
+      }
+
+      const result2 = collector2(item);
+      if (result2 !== undefined) {
+        collected2.push(result2);
+        continue;
+      }
+
+      remaining.push(item);
+    }
+
+    return [collected1, collected2, remaining];
+  }
+}
+
+/**
+ * Either type for error handling
+ * Equivalent to Scala Either
+ */
+export abstract class Either<L, R> {
+  abstract isLeft(): this is Left<L, R>;
+  abstract isRight(): this is Right<L, R>;
+  abstract map<U>(f: (value: R) => U): Either<L, U>;
+  abstract flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U>;
+}
+
+export class Left<L, R> extends Either<L, R> {
+  constructor(public readonly value: L) {
+    super();
+  }
+
+  isLeft(): this is Left<L, R> {
+    return true;
+  }
+
+  isRight(): this is Right<L, R> {
+    return false;
+  }
+
+  map<U>(_f: (value: R) => U): Either<L, U> {
+    return new Left<L, U>(this.value);
+  }
+
+  flatMap<U>(_f: (value: R) => Either<L, U>): Either<L, U> {
+    return new Left<L, U>(this.value);
+  }
+}
+
+export class Right<L, R> extends Either<L, R> {
+  constructor(public readonly value: R) {
+    super();
+  }
+
+  isLeft(): this is Left<L, R> {
+    return false;
+  }
+
+  isRight(): this is Right<L, R> {
+    return true;
+  }
+
+  map<U>(f: (value: R) => U): Either<L, U> {
+    return new Right<L, U>(f(this.value));
+  }
+
+  flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U> {
+    return f(this.value);
+  }
+}
+
+/**
+ * Unresolved libraries error
+ * Equivalent to Scala Bootstrap.Unresolved
+ */
+export class Unresolved {
+  constructor(public readonly notAvailable: TsIdentLibrary[]) {}
+
+  get msg(): string {
+    const libraryNames = this.notAvailable.map(lib => lib.value).join(', ');
+    return `Missing typescript definitions for the following libraries: ${libraryNames}. Try to add a corresponding \`@types\` npm package, or use \`stIgnore\` to ignore`;
+  }
+}
+
+/**
+ * Bootstrap result
+ * Equivalent to Scala Bootstrap.Bootstrapped
+ */
+export class Bootstrapped {
+  constructor(
+    public readonly inputFolders: IArray<InFolder>,
+    public readonly libraryResolver: LibraryResolver,
+    public readonly initialLibs: Either<Unresolved, LibTsSource[]>
+  ) {}
+}
+
+/**
+ * Bootstrap functionality
  * Equivalent to Scala Bootstrap object
  */
-export class Bootstrap {
+export namespace Bootstrap {
   /**
    * Bootstrap from node_modules directory
-   * Discovers all TypeScript libraries and creates resolvers
+   * Equivalent to Scala Bootstrap.fromNodeModules
    */
-  static async fromNodeModules(
-    nodeModulesPath: string,
-    conversionOptions: ConversionOptions,
-    wantedLibs: Set<string>
-  ): Promise<BootstrapResult> {
-    console.log(`Bootstrapping from ${nodeModulesPath}...`);
+  export function fromNodeModules(
+    fromFolder: InFolder,
+    conversion: ConversionOptions,
+    wantedLibs: Set<TsIdentLibrary>
+  ): Bootstrapped {
+    // Create standard library source
+    const stdLibFolder = path.join(fromFolder.path, 'typescript', 'lib');
 
-    // Discover input folders
-    const inputFolders = await this.discoverInputFolders(nodeModulesPath);
-    console.log(`Found input folders: ${inputFolders.join(', ')}`);
+    if (!Files.exists(stdLibFolder)) {
+      throw new Error(`You must add typescript as a dependency. ${stdLibFolder} must exist.`);
+    }
+
+    if (conversion.ignored.has(TsIdent.std.value)) {
+      throw new Error('You cannot ignore std');
+    }
+
+    const stdLibFiles = Array.from(conversion.stdLibs).map(s =>
+      new InFile(path.join(stdLibFolder, `lib.${s}.d.ts`))
+    );
+
+    const stdLibSource = new LibTsSource.StdLibSource(
+      new InFolder(stdLibFolder),
+      IArray.from(stdLibFiles),
+      TsIdent.std
+    );
+
+    // Find @types folder
+    const typesPath = path.join(fromFolder.path, '@types');
+    const typesFolder = Files.isDirectory(typesPath) ? new InFolder(typesPath) : undefined;
+
+    // Create input folders array
+    const inputFolders = IArray.from([typesFolder, fromFolder].filter(Boolean) as InFolder[]);
+
+    // Find all sources
+    const allSources = findSources(inputFolders);
 
     // Create library resolver
-    const libraryResolver = new LibraryResolver(nodeModulesPath, conversionOptions);
-    await libraryResolver.initialize();
+    const libraryResolver = new LibraryResolver(stdLibSource, allSources, conversion.ignored);
 
-    // Discover all available libraries
-    const allLibraries = await this.discoverLibraries(nodeModulesPath, inputFolders);
-    console.log(`Discovered ${allLibraries.length} libraries`);
+    // Resolve initial libraries
+    const initialLibs = resolveAll(libraryResolver, wantedLibs);
 
-    // Filter to wanted libraries
-    const wantedLibraries = allLibraries.filter(lib =>
-      wantedLibs.has(lib.libName) || this.isStandardLibrary(lib.libName)
-    );
-
-    console.log(`Discovered ${allLibraries.length} libraries, selected ${wantedLibraries.length} wanted libraries`);
-
-    return new BootstrapResult(
-      inputFolders,
-      libraryResolver,
-      wantedLibraries
-    );
+    return new Bootstrapped(inputFolders, libraryResolver, initialLibs);
   }
 
   /**
-   * Discover input folders containing TypeScript definitions
+   * Find sources in folders
+   * Equivalent to Scala Bootstrap.findSources
    */
-  private static async discoverInputFolders(nodeModulesPath: string): Promise<string[]> {
-    const folders: string[] = [nodeModulesPath];
+  function findSources(folders: IArray<InFolder>): IArray<LibTsSource.FromFolder> {
+    let foundSources: LibTsSource.FromFolder[] = [];
 
-    // Add @types directory if it exists
-    const typesPath = path.join(nodeModulesPath, '@types');
-    if (await fs.pathExists(typesPath)) {
-      folders.push(typesPath);
+    for (const folder of folders) {
+      const foundNames = new Set(foundSources.map(s => s.libName.value));
+      const newSources = forFolder(folder).filter(s => !foundNames.has(s.libName.value));
+      foundSources = [...foundSources, ...newSources];
     }
 
-    // Add TypeScript lib directory if available
-    const tsLibPath = path.join(nodeModulesPath, 'typescript', 'lib');
-    if (await fs.pathExists(tsLibPath)) {
-      folders.push(tsLibPath);
-    }
-
-    return folders;
+    return IArray.from(foundSources);
   }
 
   /**
-   * Discover all TypeScript libraries in the given folders
+   * Find sources for a single folder
+   * Equivalent to Scala Bootstrap.forFolder
    */
-  private static async discoverLibraries(
-    nodeModulesPath: string,
-    inputFolders: string[]
-  ): Promise<LibTsSource[]> {
-    const libraries: LibTsSource[] = [];
-
-    for (const folder of inputFolders) {
-      const discovered = await this.discoverLibrariesInFolder(folder, nodeModulesPath);
-      libraries.push(...discovered);
-    }
-
-    return libraries;
-  }
-
-  /**
-   * Discover libraries in a specific folder
-   */
-  private static async discoverLibrariesInFolder(
-    folder: string,
-    nodeModulesPath: string
-  ): Promise<LibTsSource[]> {
-    const libraries: LibTsSource[] = [];
+  function forFolder(folder: InFolder): LibTsSource.FromFolder[] {
+    const sources: LibTsSource.FromFolder[] = [];
 
     try {
-      console.log(`Scanning folder: ${folder}`);
-      const entries = await fs.readdir(folder, { withFileTypes: true });
-      console.log(`Found ${entries.length} entries in ${folder}`);
+      const entries = Files.listDirectory(folder.path);
 
       for (const entry of entries) {
-        if (entry.isDirectory() && !entry.name.startsWith('.')) {
-          const libPath = path.join(folder, entry.name);
-          console.log(`Checking library path: ${libPath}`);
+        const entryPath = path.join(folder.path, entry);
 
-          // Handle scoped packages (like @types, @eslint, etc.)
-          if (entry.name.startsWith('@')) {
-            console.log(`Found scoped package directory: ${entry.name}`);
-            // Recursively scan inside scoped package directory
-            const scopedLibraries = await this.discoverLibrariesInFolder(libPath, nodeModulesPath);
-            libraries.push(...scopedLibraries);
-          } else {
-            // Regular package
-            const libName = folder.endsWith('@types') ? `@types/${entry.name}` : entry.name;
-            console.log(`Library name: ${libName}`);
+        if (!Files.isDirectory(entryPath)) {
+          continue;
+        }
 
-            const library = await this.createLibraryFromPath(libPath, libName);
+        if (entry.startsWith('@')) {
+          if (entry.startsWith('@types')) {
+            continue; // Skip @types directories
+          }
 
-            if (library) {
-              console.log(`✅ Created library: ${library.libName} with ${library.sourceFiles.length} files`);
-              libraries.push(library);
-            } else {
-              console.log(`❌ Failed to create library for ${libName}`);
+          // Handle scoped packages
+          const nestedEntries = Files.listDirectory(entryPath);
+          for (const nestedEntry of nestedEntries) {
+            const nestedPath = path.join(entryPath, nestedEntry);
+            if (Files.isDirectory(nestedPath)) {
+              const libName = new TsIdentLibrary(`${entry}/${nestedEntry}`);
+              const source = new LibTsSource.FromFolder(new InFolder(nestedPath), libName);
+              if (LibTsSource.hasTypescriptSources(source.folder)) {
+                sources.push(source);
+              }
             }
+          }
+        } else {
+          // Handle regular packages
+          const libName = new TsIdentLibrary(entry);
+          const source = new LibTsSource.FromFolder(new InFolder(entryPath), libName);
+          if (LibTsSource.hasTypescriptSources(source.folder)) {
+            sources.push(source);
           }
         }
       }
     } catch (error) {
-      console.warn(`Failed to read directory ${folder}:`, error);
+      // Ignore errors when reading directories
     }
 
-    console.log(`Discovered ${libraries.length} libraries in ${folder}`);
-    return libraries;
+    return sources;
   }
 
   /**
-   * Create a library source from a path
+   * Resolve all wanted libraries
+   * Equivalent to Scala Bootstrap.resolveAll
    */
-  static async createLibraryFromPath(
-    libPath: string,
-    libName: string
-  ): Promise<LibTsSource | undefined> {
-    try {
-      console.log(`    Creating library for ${libName} at ${libPath}`);
+  function resolveAll(
+    libraryResolver: LibraryResolver,
+    libs: Set<TsIdentLibrary>
+  ): Either<Unresolved, LibTsSource[]> {
+    const libsArray = Array.from(libs);
+    const results = libsArray.map(lib => libraryResolver.library(lib));
 
-      // Look for package.json
-      const packageJsonPath = path.join(libPath, 'package.json');
-      let packageJson: PackageJson = {};
+    const [allFound, notAvailable] = CollectionUtils.partitionCollect2(
+      results,
+      (result) => result instanceof LibraryResolverResult.Found ? result.source : undefined,
+      (result) => result instanceof LibraryResolverResult.NotAvailable ? result.name : undefined
+    );
 
-      if (await fs.pathExists(packageJsonPath)) {
-        packageJson = await fs.readJson(packageJsonPath);
-        console.log(`    ✅ Found package.json for ${libName}`);
-      } else {
-        console.log(`    ⚠️  No package.json for ${libName}`);
-      }
-
-      // Find TypeScript definition files
-      console.log(`    Searching for TypeScript files in ${libPath}`);
-      const tsFiles = await this.findTypeScriptFiles(libPath);
-      console.log(`    Found ${tsFiles.length} TypeScript files for ${libName}`);
-
-      if (tsFiles.length === 0) {
-        console.log(`    ❌ No TypeScript files found for ${libName}, skipping`);
-        return undefined; // No TypeScript files found
-      }
-
-      console.log(`    ✅ Creating LibTsSource for ${libName} with ${tsFiles.length} files`);
-      return new LibTsSource(
-        libName,
-        libPath,
-        tsFiles,
-        packageJson
-      );
-    } catch (error) {
-      console.warn(`    ❌ Failed to create library from ${libPath}:`, error);
-      return undefined;
-    }
-  }
-
-  /**
-   * Find all TypeScript definition files in a directory
-   */
-  static async findTypeScriptFiles(dir: string): Promise<string[]> {
-    try {
-      // Use simpler patterns that work better with glob
-      const patterns = [
-        path.join(dir, '*.d.ts'),
-        path.join(dir, '*.ts'),
-        path.join(dir, '*/*.d.ts'),
-        path.join(dir, '*/*.ts')
-      ];
-
-      const allFiles: string[] = [];
-
-      for (const pattern of patterns) {
-        const files = await glob(pattern, {
-          ignore: ['**/test/**', '**/tests/**', '**/*.test.*', '**/spec/**', '**/*.spec.*']
-        });
-        allFiles.push(...files);
-      }
-
-      // Remove duplicates and resolve paths
-      const uniqueFiles = [...new Set(allFiles)];
-      return uniqueFiles.map(file => path.resolve(file));
-    } catch (error) {
-      console.warn(`Failed to find TypeScript files in ${dir}:`, error);
-      return [];
-    }
-  }
-
-  /**
-   * Check if a library is a standard library
-   */
-  private static isStandardLibrary(libName: string): boolean {
-    const stdLibs = new Set([
-      'typescript',
-      'lib.es6',
-      'lib.dom',
-      'lib.es2015',
-      'lib.es2016',
-      'lib.es2017',
-      'lib.es2018',
-      'lib.es2019',
-      'lib.es2020',
-      'lib.es2021',
-      'lib.es2022'
-    ]);
-
-    return stdLibs.has(libName) || libName.startsWith('lib.');
-  }
-}
-
-/**
- * TypeScript library source
- * Equivalent to Scala LibTsSource
- */
-export class LibTsSource {
-  constructor(
-    public readonly libName: string,
-    public readonly libPath: string,
-    public readonly sourceFiles: string[],
-    public readonly packageJson: PackageJson
-  ) {}
-
-  get version(): string {
-    return this.packageJson.version || '0.0.0';
-  }
-
-  get hasTypes(): boolean {
-    return this.sourceFiles.some(file => file.endsWith('.d.ts'));
-  }
-
-  get mainTypesFile(): string | undefined {
-    // Look for main types file
-    if (this.packageJson.types) {
-      return path.resolve(this.libPath, this.packageJson.types);
-    }
-    if (this.packageJson.typings) {
-      return path.resolve(this.libPath, this.packageJson.typings);
-    }
-
-    // Look for index.d.ts
-    const indexDts = path.join(this.libPath, 'index.d.ts');
-    if (this.sourceFiles.includes(indexDts)) {
-      return indexDts;
-    }
-
-    // Return first .d.ts file
-    return this.sourceFiles.find(file => file.endsWith('.d.ts'));
-  }
-}
-
-/**
- * Result of the bootstrap process
- */
-export class BootstrapResult {
-  constructor(
-    public readonly inputFolders: string[],
-    public readonly libraryResolver: LibraryResolver,
-    private readonly initialLibs: LibTsSource[]
-  ) {}
-
-  getInitialLibs(): LibTsSource[] {
-    return this.initialLibs;
-  }
-
-  findLibrary(libName: string): LibTsSource | undefined {
-    return this.initialLibs.find(lib => lib.libName === libName);
-  }
-}
-
-/**
- * Library resolver for TypeScript modules
- * Equivalent to Scala LibraryResolver
- */
-export class LibraryResolver {
-  private readonly moduleCache = new Map<string, LibTsSource>();
-  private stdLibrary?: LibTsSource;
-
-  constructor(
-    private readonly nodeModulesPath: string,
-    private readonly options: ConversionOptions
-  ) {}
-
-  async initialize(): Promise<void> {
-    // Initialize standard library
-    await this.initializeStdLib();
-  }
-
-  get stdLib(): LibTsSource {
-    if (!this.stdLibrary) {
-      throw new Error('Standard library not initialized');
-    }
-    return this.stdLibrary;
-  }
-
-  /**
-   * Resolve a module by name
-   */
-  async resolveModule(moduleName: string): Promise<LibTsSource | undefined> {
-    // Check cache first
-    if (this.moduleCache.has(moduleName)) {
-      return this.moduleCache.get(moduleName);
-    }
-
-    // Try to resolve from node_modules
-    const resolved = await this.resolveFromNodeModules(moduleName);
-    if (resolved) {
-      this.moduleCache.set(moduleName, resolved);
-      return resolved;
-    }
-
-    // Try to resolve from @types
-    const typesResolved = await this.resolveFromTypes(moduleName);
-    if (typesResolved) {
-      this.moduleCache.set(moduleName, typesResolved);
-      return typesResolved;
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Initialize standard library
-   */
-  private async initializeStdLib(): Promise<void> {
-    const tsLibPath = path.join(this.nodeModulesPath, 'typescript', 'lib');
-
-    if (await fs.pathExists(tsLibPath)) {
-      const libFiles = await fs.readdir(tsLibPath);
-      const stdLibFiles = libFiles
-        .filter(file => file.startsWith('lib.') && file.endsWith('.d.ts'))
-        .map(file => path.join(tsLibPath, file));
-
-      this.stdLibrary = new LibTsSource(
-        'std',
-        tsLibPath,
-        stdLibFiles,
-        { name: 'typescript-std', version: '1.0.0' }
-      );
+    if (notAvailable.length === 0) {
+      return new Right(allFound);
     } else {
-      // Fallback: create minimal std lib
-      this.stdLibrary = new LibTsSource(
-        'std',
-        '',
-        [],
-        { name: 'typescript-std', version: '1.0.0' }
-      );
+      return new Left(new Unresolved(notAvailable));
     }
-  }
-
-  /**
-   * Resolve module from node_modules
-   */
-  private async resolveFromNodeModules(moduleName: string): Promise<LibTsSource | undefined> {
-    const modulePath = path.join(this.nodeModulesPath, moduleName);
-
-    if (await fs.pathExists(modulePath)) {
-      return await Bootstrap.createLibraryFromPath(modulePath, moduleName);
-    }
-
-    return undefined;
-  }
-
-  /**
-   * Resolve module from @types
-   */
-  private async resolveFromTypes(moduleName: string): Promise<LibTsSource | undefined> {
-    const typesName = moduleName.startsWith('@')
-      ? moduleName.replace('@', '').replace('/', '__')
-      : moduleName;
-
-    const typesPath = path.join(this.nodeModulesPath, '@types', typesName);
-
-    if (await fs.pathExists(typesPath)) {
-      return await Bootstrap.createLibraryFromPath(typesPath, `@types/${typesName}`);
-    }
-
-    return undefined;
   }
 }

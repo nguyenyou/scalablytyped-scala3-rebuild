@@ -38,9 +38,9 @@ import scala.collection.immutable.SortedSet
 
 object Tracing {
   private val inDirectory = os.pwd
-  val sourceOutputDir     = os.pwd / "generated-sources"
-  lazy val paths          = new Paths(inDirectory)
-  val parseCachePath      = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
+  private val sourceOutputDir     = os.pwd / "generated-sources"
+  private val paths          = new Paths(inDirectory)
+  private val parseCachePath      = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
 
   val logger: Logger[(Array[Logger.Stored], Unit)] =
     storing().zipWith(stdout.filter(LogLevel.warn))
@@ -62,9 +62,9 @@ object Tracing {
     useDeprecatedModuleNames = false
   )
 
-  def main(args: Array[String]): Unit = System.exit(mainNoExit(args))
+  def main(args: Array[String]): Unit = System.exit(mainNoExit())
 
-  def mainNoExit(args: Array[String]): Int = {
+  private def mainNoExit(): Int = {
     // Note: args parameter is currently unused but kept for future CLI argument parsing
     // Initialize execution logging
     executionLogger.initializeExecutionLog()
