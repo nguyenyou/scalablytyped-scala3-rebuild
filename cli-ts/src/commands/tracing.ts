@@ -1,5 +1,7 @@
 import { BaseCommand, CommandOptions } from './base-command.js';
 import { Paths } from '@/utils/paths.js';
+import { PackageJson } from '@/internal/ts/PackageJson.js';
+import { Json } from '@/internal/importer/LibTsSource.js';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 
@@ -25,9 +27,17 @@ export class TracingCommand extends BaseCommand {
     try {
       // Step 0: Validate environment
       await this.validateEnvironment();
+      
+      const packageJsonPath = this.paths.packageJson;
+      console.log(packageJsonPath);
+
+      // TypeScript equivalent of: val packageJson: PackageJson = Json.force[PackageJson](packageJsonPath)
+      const packageJson: PackageJson = Json.force(packageJsonPath, (obj) => PackageJson.fromObject(obj));
+      console.log(packageJson)
+      
 
       // Step 2: Bootstrap from node_modules
-      this.startSpinner('Bootstrapping from node_modules...');
+      // this.startSpinner('Bootstrapping from node_modules...');
 
     } catch (error) {
       this.failSpinner('Conversion failed');
