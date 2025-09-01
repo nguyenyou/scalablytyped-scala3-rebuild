@@ -481,7 +481,7 @@ class ImportTree(
 
     case class Ctor(value: CtorTree) extends MemberRet
 
-    case class Normal(value: MemberTree) extends MemberRet
+    private case class Normal(value: MemberTree) extends MemberRet
 
     case class Inheritance(value: TypeRef) extends MemberRet
 

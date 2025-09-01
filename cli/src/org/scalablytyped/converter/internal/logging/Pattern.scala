@@ -15,10 +15,10 @@ trait Pattern {
 }
 
 object Pattern {
-  def prefixFor(l: LogLevel): String =
+  private def prefixFor(l: LogLevel): String =
     f"[${l.name.value}%-5s]"
 
-  @inline def colorFor(l: LogLevel): EscapeAttr =
+  @inline private def colorFor(l: LogLevel): EscapeAttr =
     l.level match {
       case LogLevel.trace.level => Color.Reset
       case LogLevel.debug.level => Color.Green
@@ -27,7 +27,7 @@ object Pattern {
       case LogLevel.error.level => Color.Red
     }
 
-  @inline def subtleColorFor(l: LogLevel): EscapeAttr =
+  @inline private def subtleColorFor(l: LogLevel): EscapeAttr =
     l.level match {
       case LogLevel.trace.level => Color.Reset
       case LogLevel.debug.level => Color.LightGreen
@@ -36,7 +36,7 @@ object Pattern {
       case LogLevel.error.level => Color.LightRed
     }
 
-  def formatThrowable(th: Throwable): String = {
+  private def formatThrowable(th: Throwable): String = {
     val sw = new StringWriter()
     val pw = new PrintWriter(sw)
     th.printStackTrace(pw)
