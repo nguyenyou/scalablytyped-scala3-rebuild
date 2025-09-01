@@ -13,7 +13,7 @@ trait Scalafix extends ScalafixModule {
 }
 
 object Versions {
-    val scala2 = "3.7.2"
+    val scala3 = "3.7.2"
     val sjs = "1.19.0"
     val sourcecode = "0.4.3-M5"
     val fansi = "0.5.1"
@@ -24,7 +24,7 @@ object Versions {
 }
 
 trait BaseModule extends ScalaModule, Scalafix {
-  def scalaVersion = Versions.scala2
+  def scalaVersion = Versions.scala3
   def mvnDeps = Seq(
     // Core Libraries
     mvn"com.lihaoyi::os-lib:${Versions.osLib}",
@@ -38,8 +38,6 @@ trait BaseModule extends ScalaModule, Scalafix {
     mvn"io.circe::circe-core::${Versions.circe}",
     mvn"io.circe::circe-generic::${Versions.circe}",
     mvn"io.circe::circe-parser::${Versions.circe}"
-    
-    // Build & Development Tools
   )
 
   object test extends ScalaTests {
