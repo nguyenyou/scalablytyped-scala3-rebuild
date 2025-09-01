@@ -1,12 +1,13 @@
 package org.scalablytyped.converter.cli
 
+import fansi.Str
 import org.scalablytyped.converter.internal.logging.*
 import sourcecode.Text
+
 import java.io.FileWriter
 import java.io.PrintWriter
-import java.time.format.DateTimeFormatter
 import java.time.LocalDateTime
-import fansi.Str
+import java.time.format.DateTimeFormatter
 
 /** Dedicated execution logging module for CLI applications. Provides comprehensive logging with sequential step
   * numbering, timestamps, and human-readable output to both console and file.
@@ -89,7 +90,7 @@ class ExecutionLogger(logFilePath: os.Path, workingDirectory: os.Path, outputDir
   def initializeExecutionLog(): Unit = {
     stepCounter = 0
     val startTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-    executionLogWriter.println(s"=== ScalablyTyped Converter Execution Log ===")
+    executionLogWriter.println("=== ScalablyTyped Converter Execution Log ===")
     executionLogWriter.println(s"Started at: $startTime")
     executionLogWriter.println(s"Working directory: $workingDirectory")
     executionLogWriter.println(s"Output directory: $outputDirectory")

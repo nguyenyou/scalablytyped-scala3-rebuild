@@ -13,8 +13,8 @@ import seqs.*
   * If the algorithm is unable to come up with a non-conflicting name, it adds the hashCode() of the members.
   */
 object DeriveNonConflictingName {
-  val Anon          = ""
-  val Fn            = "Fn"
+  val Anon                  = ""
+  val Fn                    = "Fn"
   private val isMeaningless = Set(Anon, Fn)
 
   def apply[T](prefix: String, members: IArray[TsMember])(tryCreate: TsIdentSimple => Option[T]): T = {

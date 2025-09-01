@@ -715,7 +715,11 @@ class ImportTree(
       ignoreBound = true
     )
 
-  private def tsFunParams(scope: TsTreeScope, importName: AdaptiveNamingImport, params: IArray[TsFunParam]): IArray[ParamTree] =
+  private def tsFunParams(
+      scope: TsTreeScope,
+      importName: AdaptiveNamingImport,
+      params: IArray[TsFunParam]
+  ): IArray[ParamTree] =
     params.map { param =>
       val tpe = importType.orAny(scope / param, importName)(param.tpe)
       ParamTree(ImportName(param.name), isImplicit = false, isVal = false, tpe, NotImplemented, param.comments)

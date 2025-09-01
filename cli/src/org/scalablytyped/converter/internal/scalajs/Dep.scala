@@ -9,18 +9,6 @@ sealed trait Dep {
   def org: String
   def version: String
 
-  private def concrete(versions: Versions): Dep.Concrete =
-    this match {
-      case concrete: Dep.Concrete => concrete
-      case Dep.Scala(_, artifact, _) =>
-        Dep.Mangled(s"${artifact}_${versions.scala.binVersion}", this)
-      case Dep.ScalaJs(_, artifact, _) =>
-        Dep.Mangled(s"${artifact}_sjs${versions.scalaJs.scalaJsBinVersion}_${versions.scala.binVersion}", this)
-      case Dep.ScalaFullVersion(_, artifact, _) =>
-        Dep.Mangled(s"${artifact}_${versions.scala.scalaVersion}", this)
-      case Dep.For3Use2_13(dep) =>
-        dep.concrete(versions.copy(scala = Versions.Scala213))
-    }
 }
 
 object Dep {

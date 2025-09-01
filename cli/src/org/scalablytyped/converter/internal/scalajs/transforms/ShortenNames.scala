@@ -7,7 +7,8 @@ import org.scalablytyped.converter.internal.scalajs.*
 import scala.collection.mutable
 
 object ShortenNames {
-  private val Forbidden: Set[Name] = Set(Name("|"), Name.underscore, Name.scala, Name.js, Name.com, Name.org, Name("List"))
+  private val Forbidden: Set[Name] =
+    Set(Name("|"), Name.underscore, Name.scala, Name.js, Name.com, Name.org, Name("List"))
 
   case class ImportTree(imported: QualifiedName)
 

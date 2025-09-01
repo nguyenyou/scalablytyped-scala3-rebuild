@@ -76,6 +76,6 @@ object Versions {
 }
 
 case class Versions(scala: Versions.Scala, scalaJs: Versions.ScalaJs) {
-  val runtime      = Dep.ScalaJs("com.olvind", "scalablytyped-runtime", "2.4.2")
-  val scalaJsDom   = Dep.ScalaJs("org.scala-js", "scalajs-dom", "2.8.0")
+  val runtime    = Dep.ScalaJs("com.olvind", "scalablytyped-runtime", "2.4.2")
+  val scalaJsDom = Dep.ScalaJs("org.scala-js", "scalajs-dom", "2.8.0")
 }

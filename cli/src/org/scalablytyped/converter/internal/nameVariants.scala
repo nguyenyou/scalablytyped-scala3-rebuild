@@ -4,7 +4,7 @@ object nameVariants {
   sealed trait NameVariant
   private case object Clean                extends NameVariant
   private case class KeepSymbolNum(n: Int) extends NameVariant
-  case object Unchanged            extends NameVariant
+  case object Unchanged                    extends NameVariant
 
   /* you would be surprised what shows up */
   private val WordBoundary = Set[Char]('.', ',', ':', ';', '?', '!', ' ', '\t', '\n', '-', '_', '/')

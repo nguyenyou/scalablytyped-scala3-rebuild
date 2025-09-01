@@ -38,10 +38,10 @@ import os.Path
 import scala.collection.immutable.SortedSet
 
 object Tracing {
-  private val inDirectory = os.pwd
-  private val sourceOutputDir     = os.pwd / "generated-sources"
-  private val paths          = new Paths(inDirectory)
-  private val parseCachePath      = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
+  private val inDirectory     = os.pwd
+  private val sourceOutputDir = os.pwd / "generated-sources"
+  private val paths           = new Paths(inDirectory)
+  private val parseCachePath  = Some(files.existing(constants.defaultCacheFolder / "parse").toNIO)
 
   val logger: Logger[(Array[Logger.Stored], Unit)] =
     storing().zipWith(stdout.filter(LogLevel.warn))
@@ -72,8 +72,10 @@ object Tracing {
 
     try {
       executionLogger.logStep("Initializing converter and reading configuration")
-      val packageJsonPath: Path = paths.packageJson.getOrElse(sys.error(s"${inDirectory} does not contain package.json"))
-      val nodeModulesPath: Path = paths.node_modules.getOrElse(sys.error(s"${inDirectory} does not contain node_modules"))
+      val packageJsonPath: Path =
+        paths.packageJson.getOrElse(sys.error(s"${inDirectory} does not contain package.json"))
+      val nodeModulesPath: Path =
+        paths.node_modules.getOrElse(sys.error(s"${inDirectory} does not contain node_modules"))
       val packageJson: PackageJson = Json.force[PackageJson](packageJsonPath)
       executionLogger.logProgress(s"Found package.json at: $packageJsonPath")
       executionLogger.logProgress(s"Found node_modules at: $nodeModulesPath")

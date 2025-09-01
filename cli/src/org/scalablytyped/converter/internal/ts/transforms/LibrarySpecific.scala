@@ -48,19 +48,19 @@ object LibrarySpecific {
 
   private object semanticUiReact extends Named {
     override val libName: TsIdentLibrary = TsIdentLibrarySimple("semantic-ui-react")
-    private val stdLib                           = TsQIdent(IArray(TsIdent.std))
-    private val reactMod                         = TsQIdent(IArray(react.libName, TsIdentModule(None, List("react"))))
-    val AllHTMLAttributes: TsQIdent = reactMod + TsIdent("AllHTMLAttributes")
-    private val InputHTMLAttributes              = reactMod + TsIdent("InputHTMLAttributes")
-    private val HTMLInputElement                 = stdLib + TsIdent("HTMLInputElement")
-    private val TextareaHTMLAttributes           = reactMod + TsIdent("TextareaHTMLAttributes")
-    private val HTMLTextareaElement              = stdLib + TsIdent("HTMLTextAreaElement")
-    private val FormHTMLAttributes               = reactMod + TsIdent("FormHTMLAttributes")
-    private val HTMLFormElement                  = stdLib + TsIdent("HTMLFormElement")
-    private val ButtonHTMLAttributes             = reactMod + TsIdent("ButtonHTMLAttributes")
-    private val HTMLButtonElement                = stdLib + TsIdent("HTMLButtonElement")
-    private val TdHTMLAttributes                 = reactMod + TsIdent("TdHTMLAttributes")
-    private val HTMLTableCellElement             = stdLib + TsIdent("HTMLTableCellElement")
+    private val stdLib                   = TsQIdent(IArray(TsIdent.std))
+    private val reactMod                 = TsQIdent(IArray(react.libName, TsIdentModule(None, List("react"))))
+    val AllHTMLAttributes: TsQIdent      = reactMod + TsIdent("AllHTMLAttributes")
+    private val InputHTMLAttributes      = reactMod + TsIdent("InputHTMLAttributes")
+    private val HTMLInputElement         = stdLib + TsIdent("HTMLInputElement")
+    private val TextareaHTMLAttributes   = reactMod + TsIdent("TextareaHTMLAttributes")
+    private val HTMLTextareaElement      = stdLib + TsIdent("HTMLTextAreaElement")
+    private val FormHTMLAttributes       = reactMod + TsIdent("FormHTMLAttributes")
+    private val HTMLFormElement          = stdLib + TsIdent("HTMLFormElement")
+    private val ButtonHTMLAttributes     = reactMod + TsIdent("ButtonHTMLAttributes")
+    private val HTMLButtonElement        = stdLib + TsIdent("HTMLButtonElement")
+    private val TdHTMLAttributes         = reactMod + TsIdent("TdHTMLAttributes")
+    private val HTMLTableCellElement     = stdLib + TsIdent("HTMLTableCellElement")
 
     private def event(name: TsQIdent, of: TsQIdent) =
       TsTypeRef(NoComments, name, IArray(TsTypeRef(NoComments, of, Empty)))
@@ -105,13 +105,13 @@ object LibrarySpecific {
   }
 
   object react extends Named {
-    val libName       = TsIdentLibrarySimple("react")
+    val libName               = TsIdentLibrarySimple("react")
     private val DOMAttributes = TsIdent("DOMAttributes")
     private val ReactElement  = TsIdent("ReactElement")
     private val ReactFragment = TsIdent("ReactFragment")
     private val ReactNode     = TsIdent("ReactNode")
     private val CSSProperties = TsIdent("CSSProperties")
-    val Readonly      = TsQIdent(IArray(TsIdent("Readonly")))
+    val Readonly              = TsQIdent(IArray(TsIdent("Readonly")))
 
     // Somewhere in here we need to take a look at the component, and if it has an "as" member with a known mapping and we don't have
     // an inheritance tree already, we should add that.

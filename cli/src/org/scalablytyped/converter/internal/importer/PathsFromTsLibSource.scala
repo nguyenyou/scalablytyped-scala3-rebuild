@@ -7,7 +7,7 @@ import org.scalablytyped.converter.internal.InFolder
 import scala.util.matching.Regex
 
 object PathsFromTsLibSource {
-  val V: Regex = "v[\\d.]+".r
+  val V: Regex  = "v[\\d.]+".r
   val TS: Regex = "ts[\\d.]+".r
 
   def filesFrom(bound: InFolder): IArray[InFile] = {

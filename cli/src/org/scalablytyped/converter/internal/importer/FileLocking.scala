@@ -65,7 +65,11 @@ object FileLocking {
     tryWrite[V](path, onExists = onExists, onNotExists = onNotExists)
   }
 
-  private def tryWrite[T](path: Path, onExists: (FileChannel, () => ByteBuffer) => T, onNotExists: FileChannel => T): T =
+  private def tryWrite[T](
+      path: Path,
+      onExists: (FileChannel, () => ByteBuffer) => T,
+      onNotExists: FileChannel => T
+  ): T =
     withLock(path) { channel =>
       val size = channel.size
       if (size > 0) {

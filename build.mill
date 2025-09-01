@@ -8,32 +8,28 @@ import mill.scalajslib.*
 import mill.scalajslib.api.*
 import com.goyeau.mill.scalafix.ScalafixModule
 
-trait Scalafix extends ScalafixModule {
-  def scalacOptions = super.scalacOptions() ++ Seq("-Wunused:all", "-Wunused:imports")
-}
-
 object Versions {
-    val scala3 = "3.7.2"
-    val sjs = "1.19.0"
-    val sourcecode = "0.4.3-M5"
-    val fansi = "0.5.1"
-    val scalaParserCombinators = "2.4.0"
-    val circe = "0.14.14"
-    val osLib = "0.9.3"
-    val utest = "0.9.1"
+  val scala3                 = "3.7.2"
+  val sjs                    = "1.19.0"
+  val sourcecode             = "0.4.3-M5"
+  val fansi                  = "0.5.1"
+  val scalaParserCombinators = "2.4.0"
+  val circe                  = "0.14.14"
+  val osLib                  = "0.9.3"
+  val utest                  = "0.9.1"
 }
 
-trait BaseModule extends ScalaModule, Scalafix {
+trait BaseModule extends ScalaModule, ScalafixModule {
   def scalaVersion = Versions.scala3
   def mvnDeps = Seq(
     // Core Libraries
     mvn"com.lihaoyi::os-lib:${Versions.osLib}",
     mvn"com.lihaoyi::sourcecode:${Versions.sourcecode}",
     mvn"com.lihaoyi::fansi:${Versions.fansi}",
-    
+
     // Parsing & Language
     mvn"org.scala-lang.modules::scala-parser-combinators:${Versions.scalaParserCombinators}",
-    
+
     // JSON Processing (Circe)
     mvn"io.circe::circe-core::${Versions.circe}",
     mvn"io.circe::circe-generic::${Versions.circe}",
@@ -41,22 +37,25 @@ trait BaseModule extends ScalaModule, Scalafix {
   )
 
   object test extends ScalaTests {
-    def mvnDeps = Seq(mvn"com.lihaoyi::utest:${Versions.utest}")
+    def mvnDeps       = Seq(mvn"com.lihaoyi::utest:${Versions.utest}")
     def testFramework = "utest.runner.Framework"
   }
 }
 
-object cli extends BaseModule with BuildInfo {
+object cli extends BaseModule, BuildInfo, ScalafixModule {
   val buildInfoPackageName = "org.scalablytyped.converter.internal"
 
   def buildInfoMembers = Seq(
     BuildInfo.Value("gitSha", os.proc("git", "rev-parse", "HEAD").call().out.trim()),
-    BuildInfo.Value("version", "0.1.0"),
+    BuildInfo.Value("version", "0.1.0")
   )
 
-  def scalacOptions = super.scalacOptions() ++ Seq(
+  def scalacOptions = Seq(
+    "-Wunused:all",
+    "-Wunused:imports",
     "-rewrite",
-    "-source", "3.7-migration",
+    "-source",
+    "3.7-migration",
     "-feature",
     "-language:implicitConversions"
   )

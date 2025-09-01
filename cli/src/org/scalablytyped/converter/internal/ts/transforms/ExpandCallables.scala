@@ -69,7 +69,7 @@ object ExpandCallables extends TransformClassMembers {
     }
   }
   private case class Expand(callables: IArray[(Comments, TsFunSig)], keepOriginalMember: Boolean) extends Result
-  case object Noop                                                                        extends Result
+  case object Noop                                                                                extends Result
 
   private def callableTypes(scope: TsTreeScope)(tpe: TsType): Result =
     tpe match {

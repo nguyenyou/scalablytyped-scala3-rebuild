@@ -161,8 +161,8 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
       }
   }
 
-  case class Ok[T](value: T, wasRewritten: Boolean) extends Res[T]
-  private case class Problems(problems: IArray[Problem])    extends Res[Nothing]
+  case class Ok[T](value: T, wasRewritten: Boolean)      extends Res[T]
+  private case class Problems(problems: IArray[Problem]) extends Res[Nothing]
 
   object Res {
     def ofOpt[T](ot: Option[T], wasRewritten: Boolean, p: Problem): Res[T] =
@@ -201,9 +201,10 @@ object ExpandTypeMappings extends TreeTransformationScopedChanges {
 
   case class UnsupportedTM(scope: TsTreeScope, tm: TsMemberTypeMapped) extends Problem
   case class CouldNotPickKeys(scope: TsTreeScope, keys: Set[String])   extends Problem
-  private case class UnsupportedPredicate(e: TsType)                           extends Problem
+  private case class UnsupportedPredicate(e: TsType)                   extends Problem
 
-  private final case class Replace(key: TsType, name: TsLiteral, ld: LoopDetector) extends TreeTransformationScopedChanges {
+  private final case class Replace(key: TsType, name: TsLiteral, ld: LoopDetector)
+      extends TreeTransformationScopedChanges {
     override def enterTsType(scope: TsTreeScope)(x: TsType): TsType =
       x match {
         case `key` => TsTypeLiteral(name)
