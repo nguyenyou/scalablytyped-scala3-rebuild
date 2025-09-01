@@ -171,6 +171,10 @@ export class IArray<T> {
     return IArray.fromArrayAndSize(array, array.length);
   }
 
+  static fromTraversable<T>(iterable: Iterable<T>): IArray<T> {
+    return IArray.fromIterable(iterable);
+  }
+
   private static fromArrayAndSize<T>(array: T[], length: number): IArray<T> {
     return length === 0 ? IArray.Empty : new IArray(array, length);
   }
@@ -266,11 +270,13 @@ export class IArray<T> {
 
   reduce<U>(op: (acc: T | U, value: T) => U): U {
     if (this.isEmpty) {
-      throw new Error("reduce on empty IArray");
+      throw new Error("reduce on empty list");
     }
     let result: T | U = this.apply(0);
-    for (let i = 1; i < this.length; i++) {
-      result = op(result, this.apply(i));
+    let idx = 1;
+    while (idx < this.length) {
+      result = op(result, this.apply(idx));
+      idx += 1;
     }
     return result as U;
   }
@@ -284,8 +290,10 @@ export class IArray<T> {
       throw new Error("reduceRight on empty IArray");
     }
     let result: T | U = this.apply(this.length - 1);
-    for (let i = this.length - 2; i >= 0; i--) {
-      result = op(this.apply(i), result);
+    let idx = this.length - 2;
+    while (idx >= 0) {
+      result = op(this.apply(idx), result);
+      idx -= 1;
     }
     return result as U;
   }
@@ -314,25 +322,19 @@ export class IArray<T> {
   }
 
   get head(): T {
-    if (this.isEmpty) {
-      throw new Error("head of empty IArray");
-    }
-    return this.apply(0);
-  }
-
-  get tailOption(): IArray<T> | undefined {
-    return this.isEmpty ? undefined : this.drop(1);
+    return this.headOption ?? (() => { throw new Error("head of empty list"); })();
   }
 
   get tailOpt(): IArray<T> | undefined {
-    return this.tailOption;
+    return this.isEmpty ? undefined : this.drop(1);
+  }
+
+  get tailOption(): IArray<T> | undefined {
+    return this.tailOpt;
   }
 
   get tail(): IArray<T> {
-    if (this.isEmpty) {
-      throw new Error("tail of empty IArray");
-    }
-    return this.drop(1);
+    return this.tailOpt ?? (() => { throw new Error("tail of empty list"); })();
   }
 
   get initOption(): IArray<T> | undefined {
@@ -340,10 +342,7 @@ export class IArray<T> {
   }
 
   get init(): IArray<T> {
-    if (this.isEmpty) {
-      throw new Error("init of empty IArray");
-    }
-    return this.dropRight(1);
+    return this.initOption ?? (() => { throw new Error("init of empty list"); })();
   }
 
   get lastOption(): T | undefined {
@@ -351,10 +350,7 @@ export class IArray<T> {
   }
 
   get last(): T {
-    if (this.isEmpty) {
-      throw new Error("last of empty IArray");
-    }
-    return this.apply(this.length - 1);
+    return this.lastOption ?? (() => { throw new Error("last of empty list"); })();
   }
 
   // Predicate operations
@@ -558,8 +554,10 @@ export class IArray<T> {
     if (newLength === 0) return IArray.Empty;
 
     const result: T[] = new Array(newLength);
-    for (let i = 0; i < newLength; i++) {
+    let i = 0;
+    while (i < newLength) {
       result[i] = this.apply(i);
+      i += 1;
     }
     return IArray.fromArrayAndSize(result, newLength);
   }
@@ -571,8 +569,10 @@ export class IArray<T> {
 
     const result: T[] = new Array(newLength);
     const startIndex = this.length - newLength;
-    for (let i = 0; i < newLength; i++) {
+    let i = 0;
+    while (i < newLength) {
       result[i] = this.apply(startIndex + i);
+      i += 1;
     }
     return IArray.fromArrayAndSize(result, newLength);
   }
@@ -593,8 +593,10 @@ export class IArray<T> {
     if (newLength === 0) return IArray.Empty;
 
     const result: T[] = new Array(newLength);
-    for (let i = 0; i < newLength; i++) {
+    let i = 0;
+    while (i < newLength) {
       result[i] = this.apply(n + i);
+      i += 1;
     }
     return IArray.fromArrayAndSize(result, newLength);
   }
@@ -616,11 +618,12 @@ export class IArray<T> {
   }
 
   reverse(): IArray<T> {
-    if (this.length <= 1) return this;
-
+    if (this.isEmpty) return IArray.Empty;
     const result: T[] = new Array(this.length);
-    for (let i = 0; i < this.length; i++) {
-      result[i] = this.apply(this.length - 1 - i);
+    let idx = 0;
+    while (idx < this.length) {
+      result[idx] = this.apply(this.length - 1 - idx);
+      idx += 1;
     }
     return IArray.fromArrayAndSize(result, this.length);
   }
@@ -762,13 +765,16 @@ export class IArray<T> {
     let maxElem: T | undefined = undefined;
     let first = true;
 
-    for (const elem of this) {
+    let idx = 0;
+    while (idx < this.length) {
+      const elem = this.apply(idx);
       const fx = f(elem);
       if (first || ordering.compare(fx, maxValue!) > 0) {
         maxElem = elem;
         maxValue = fx;
         first = false;
       }
+      idx += 1;
     }
     return maxElem!;
   }
@@ -868,29 +874,19 @@ export class IArray<T> {
     return j === that.length;
   }
 
-  mkString(sepOrInit?: string, sep?: string, post?: string): string {
-    if (arguments.length === 0) {
-      // No argument case: mkString()
-      return this.mkString("", "", "");
-    } else if (arguments.length === 1) {
-      // Single argument case: mkString(sep)
-      return this.mkString("", sepOrInit || "", "");
-    } else {
-      // Three argument case: mkString(init, sep, post)
-      const init = sepOrInit || "";
-      const separator = sep || "";
-      const postfix = post || "";
-      const result = new Array<string>();
-      result.push(init);
-      for (let i = 0; i < this.length; i++) {
-        if (i !== 0) {
-          result.push(separator);
-        }
-        result.push(String(this.apply(i)));
+  mkString(init: string, sep: string, post: string): string {
+    const result = new Array<string>();
+    result.push(init);
+    let i = 0;
+    while (i < this.length) {
+      if (i !== 0) {
+        result.push(sep);
       }
-      result.push(postfix);
-      return result.join("");
+      result.push(String(this.apply(i)));
+      i += 1;
     }
+    result.push(post);
+    return result.join("");
   }
 
   updated(index: number, elem: T): IArray<T> {
@@ -933,6 +929,7 @@ export class IArray<T> {
   toString(): string {
     return this.mkString("IArray(", ", ", ")");
   }
+
 
   private _hashCode: number | undefined;
 
@@ -1215,6 +1212,7 @@ export class IArray<T> {
     const offset = this.length - suffix.length;
     return this.startsWith(suffix, offset);
   }
+
 }
 
 // Static ordering implementation for IArray (equivalent to Scala's implicit ordering)
@@ -1281,84 +1279,83 @@ export function createIArrayDecoder<T>(elementDecoder: Decoder<T>): Decoder<IArr
 }
 
 // Utility functions for common operations
-export namespace IArrayUtils {
-  /**
-   * Creates an IArray from a variable number of arguments
-   */
-  export function of<T>(...elements: T[]): IArray<T> {
-    return IArray.apply(...elements);
-  }
 
-  /**
-   * Creates an empty IArray
-   */
-  export function empty<T>(): IArray<T> {
-    return IArray.Empty;
-  }
+/**
+ * Creates an IArray from a variable number of arguments
+ */
+export function iArrayOf<T>(...elements: T[]): IArray<T> {
+  return IArray.apply(...elements);
+}
 
-  /**
-   * Creates an IArray with a single element
-   */
-  export function single<T>(element: T): IArray<T> {
-    return IArray.apply(element);
-  }
+/**
+ * Creates an empty IArray
+ */
+export function emptyIArray<T>(): IArray<T> {
+  return IArray.Empty;
+}
 
-  /**
-   * Creates an IArray by repeating an element n times
-   */
-  export function fill<T>(n: number, element: T): IArray<T> {
-    if (n <= 0) return IArray.Empty;
-    const array: T[] = new Array(n);
-    for (let i = 0; i < n; i++) {
-      array[i] = element;
+/**
+ * Creates an IArray with a single element
+ */
+export function singleIArray<T>(element: T): IArray<T> {
+  return IArray.apply(element);
+}
+
+/**
+ * Creates an IArray by repeating an element n times
+ */
+export function fillIArray<T>(n: number, element: T): IArray<T> {
+  if (n <= 0) return IArray.Empty;
+  const array: T[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    array[i] = element;
+  }
+  return IArray.fromArray(array);
+}
+
+/**
+ * Creates an IArray from a range of numbers
+ */
+export function rangeIArray(start: number, end: number, step: number = 1): IArray<number> {
+  if (step === 0) throw new Error("Step cannot be zero");
+  if (step > 0 && start >= end) return IArray.Empty;
+  if (step < 0 && start <= end) return IArray.Empty;
+
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < end; i += step) {
+      result.push(i);
     }
-    return IArray.fromArray(array);
+  } else {
+    for (let i = start; i > end; i += step) {
+      result.push(i);
+    }
+  }
+  return IArray.fromArray(result);
+}
+
+/**
+ * Concatenates multiple IArrays
+ */
+export function concatIArrays<T>(...arrays: IArray<T>[]): IArray<T> {
+  if (arrays.length === 0) return IArray.Empty;
+  if (arrays.length === 1) return arrays[0];
+
+  let totalLength = 0;
+  for (const arr of arrays) {
+    totalLength += arr.length;
   }
 
-  /**
-   * Creates an IArray from a range of numbers
-   */
-  export function range(start: number, end: number, step: number = 1): IArray<number> {
-    if (step === 0) throw new Error("Step cannot be zero");
-    if (step > 0 && start >= end) return IArray.Empty;
-    if (step < 0 && start <= end) return IArray.Empty;
-
-    const result: number[] = [];
-    if (step > 0) {
-      for (let i = start; i < end; i += step) {
-        result.push(i);
-      }
-    } else {
-      for (let i = start; i > end; i += step) {
-        result.push(i);
-      }
+  const result: T[] = new Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    for (let i = 0; i < arr.length; i++) {
+      result[offset + i] = arr.apply(i);
     }
-    return IArray.fromArray(result);
+    offset += arr.length;
   }
 
-  /**
-   * Concatenates multiple IArrays
-   */
-  export function concat<T>(...arrays: IArray<T>[]): IArray<T> {
-    if (arrays.length === 0) return IArray.Empty;
-    if (arrays.length === 1) return arrays[0];
-
-    let totalLength = 0;
-    for (const arr of arrays) {
-      totalLength += arr.length;
-    }
-
-    const result: T[] = new Array(totalLength);
-    let offset = 0;
-    for (const arr of arrays) {
-      for (let i = 0; i < arr.length; i++) {
-        result[offset + i] = arr.apply(i);
-      }
-      offset += arr.length;
-    }
-
-    return IArray.fromArray(result);
-  }
+  return IArray.fromArray(result);
 }
 
 // Export everything for easy access

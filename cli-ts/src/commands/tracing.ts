@@ -1,5 +1,4 @@
 import { BaseCommand, CommandOptions } from './base-command.js';
-import { Bootstrap } from '../core/bootstrap.js';
 import { Paths } from '../utils/paths.js';
 import type { PackageJson } from 'type-fest'
 import * as fs from 'fs-extra';
@@ -36,12 +35,6 @@ export class TracingCommand extends BaseCommand {
 
       // Step 2: Bootstrap from node_modules
       this.startSpinner('Bootstrapping from node_modules...');
-      const bootstrapped = await Bootstrap.fromNodeModules(
-        new InFolder(this.paths.nodeModules),
-        this.getDefaultOptions(),
-        wantedLibs
-      );
-      this.succeedSpinner(`Bootstrap completed, found ${bootstrapped.libraryResolver.stdLib.libName} as stdlib`);
 
     } catch (error) {
       this.failSpinner('Conversion failed');
@@ -86,14 +79,7 @@ export class TracingCommand extends BaseCommand {
     }
 
     // Filter out ignored libraries (equivalent to Scala: fromPackageJson -- DefaultOptions.ignoredLibs)
-    const defaultOptions = this.getDefaultOptions();
     const wantedLibs = new Set<TsIdentLibrary>();
-
-    for (const lib of fromPackageJson) {
-      if (!defaultOptions.ignored.has(lib.value)) {
-        wantedLibs.add(lib);
-      }
-    }
 
     this.debug(`Libraries after filtering ignored: ${Array.from(wantedLibs).map(lib => lib.value).join(', ')}`);
 
@@ -104,23 +90,5 @@ export class TracingCommand extends BaseCommand {
     return { packageJson, wantedLibs };
   }
 
-  private getDefaultOptions(): ConversionOptions {
-    return {
-      useScalaJsDomTypes: true,
-      outputPackage: 'typings',
-      flavour: 'Normal',
-      enableScalaJsDefined: 'All',
-      ignored: new Set(['typescript']),
-      stdLibs: new Set(['es6']),
-      versions: {
-        scala: 'Scala3',
-        scalaJs: 'ScalaJs1'
-      },
-      expandTypeMappings: 'DefaultSelection',
-      enableLongApplyMethod: false,
-      privateWithin: undefined,
-      useDeprecatedModuleNames: false
-    };
-  }
 
 }

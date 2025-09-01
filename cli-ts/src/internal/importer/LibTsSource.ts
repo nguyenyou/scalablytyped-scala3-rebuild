@@ -8,3 +8,7 @@ abstract class LibTsSource implements TsLib {
   abstract packageJsonOpt?: PackageJson;
   abstract shortenedFiles: InFile[];
 }
+
+const LibTsSourceObject = {
+  
+}
