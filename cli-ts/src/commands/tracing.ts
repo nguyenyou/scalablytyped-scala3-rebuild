@@ -23,8 +23,7 @@ export class TracingCommand extends BaseCommand {
 
   constructor(options: CommandOptions) {
     super(options);
-    const cwd = process.cwd()
-    const root = path.resolve(cwd, '..');
+    const root = process.cwd()
     this.inDirectory = root;
     this.sourceOutputDir = path.resolve(options.output || './generated-sources');
     this.paths = new Paths(this.inDirectory);
