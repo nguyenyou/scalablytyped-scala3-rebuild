@@ -61,7 +61,7 @@ object Selection {
     }
   }
 
-  implicit def decodes[T: Decoder: Ordering]: Decoder[Selection[T]] = {
+  implicit def decodes[T: {Decoder, Ordering}]: Decoder[Selection[T]] = {
     import io.circe.Decoder
     import scala.collection.immutable.TreeSet
 
