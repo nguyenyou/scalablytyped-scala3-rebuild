@@ -133,7 +133,7 @@ export class Name {
   static readonly SUPER = new Name("Super");
   static readonly WILDCARD = new Name("Wildcard");
   static readonly REPEATED = new Name("Repeated");
-  static readonly APPLY = new Name("Apply");
+  static readonly APPLY = new Name("<apply>");
   static readonly UNDEFINED = new Name("Undefined");
 
   // Internal names set
