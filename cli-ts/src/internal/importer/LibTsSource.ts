@@ -2,11 +2,11 @@
  * TypeScript port of org.scalablytyped.converter.internal.importer.LibTsSource
  */
 
-import { TsLib } from '../ts/TsTreeScope.js';
-import { TsIdentLibrary } from '../ts/trees.js';
-import { PackageJson } from '../ts/PackageJson.js';
-import { InFile, InFolder, filesSync } from '../files.js';
-import { IArray } from '../IArray.js';
+import {TsLib} from '../ts/TsTreeScope.js';
+import {TsIdentLibrary} from '../ts/trees.js';
+import {PackageJson} from '../ts/PackageJson.js';
+import {InFile, InFolder, filesSync} from '../files.js';
+import {IArray} from '../IArray.js';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -67,7 +67,7 @@ export const LibraryResolver = {
 export abstract class LibTsSource implements TsLib {
   abstract folder: InFolder;
   abstract libName: TsIdentLibrary;
-  
+
   protected readonly pathString: string;
 
   constructor(folder: InFolder) {
@@ -84,13 +84,13 @@ export abstract class LibTsSource implements TsLib {
     if (filesSync.exists(packageJsonPath)) {
       return Json.opt(packageJsonPath, (obj) => PackageJson.fromObject(obj));
     }
-    
+
     // Try parent folder (for stdlib)
     packageJsonPath = path.join(path.dirname(this.folder.path), 'package.json');
     if (filesSync.exists(packageJsonPath)) {
       return Json.opt(packageJsonPath, (obj) => PackageJson.fromObject(obj));
     }
-    
+
     return undefined;
   }
 
@@ -107,17 +107,17 @@ export abstract class LibTsSource implements TsLib {
   static hasTypescriptSourcesImpl(folder: InFolder): boolean {
     const walk = (dirPath: string, depth: number = 0): boolean => {
       if (depth > 10) return false; // Prevent infinite recursion
-      
+
       try {
-        const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-        
+        const entries = fs.readdirSync(dirPath, {withFileTypes: true});
+
         for (const entry of entries) {
           if (entry.name === 'node_modules') {
             continue; // Skip node_modules
           }
-          
+
           const fullPath = path.join(dirPath, entry.name);
-          
+
           if (entry.isFile() && entry.name.endsWith('.d.ts')) {
             return true;
           } else if (entry.isDirectory()) {
@@ -131,14 +131,14 @@ export abstract class LibTsSource implements TsLib {
         return false;
       }
     };
-    
+
     return walk(folder.path);
   }
 
   private static findShortenedFiles(src: LibTsSource): IArray<InFile> {
-    const fromTypingsJson = (fromFolder: FromFolder, files: IArray<string> | undefined): IArray<InFile> => {
+    const fromTypingsJson = (fromFolder: LibTsSource.FromFolder, files: IArray<string> | undefined): IArray<InFile> => {
       if (!files) return IArray.Empty;
-      
+
       return files.collect({
         isDefinedAt: (pathStr: string) => pathStr.endsWith('typings.json'),
         apply: (pathStr: string) => {
@@ -155,15 +155,15 @@ export abstract class LibTsSource implements TsLib {
       });
     };
 
-    const fromFileEntry = (fromFolder: FromFolder, files: IArray<string> | undefined): IArray<InFile> => {
+    const fromFileEntry = (fromFolder: LibTsSource.FromFolder, files: IArray<string> | undefined): IArray<InFile> => {
       if (!files) return IArray.Empty;
-      
+
       return files.mapNotNone(file => LibraryResolver.file(fromFolder.folder, file));
     };
 
-    const fromModuleDeclaration = (fromFolder: FromFolder, files: Map<string, string> | undefined): IArray<InFile> => {
+    const fromModuleDeclaration = (fromFolder: LibTsSource.FromFolder, files: Map<string, string> | undefined): IArray<InFile> => {
       const fileValues = files ? IArray.fromTraversable(Array.from(files.values())) : IArray.Empty;
-      
+
       return fileValues
         .mapNotNone(file => LibraryResolver.file(fromFolder.folder, file))
         .mapNotNone(existingFile => {
@@ -172,10 +172,10 @@ export abstract class LibTsSource implements TsLib {
     };
 
     // Pattern match on the source type
-    if (src instanceof StdLibSource) {
+    if (src instanceof LibTsSource.StdLibSource) {
       return IArray.Empty;
-    } else if (src instanceof FromFolder) {
-      const f = src as FromFolder;
+    } else if (src instanceof LibTsSource.FromFolder) {
+      const f = src as LibTsSource.FromFolder;
       // Need to get parsed types/typings from our custom PackageJson
       const customPkg = f.getCustomPackageJson();
       const fromTypings = IArray.fromArray([
@@ -192,20 +192,20 @@ export abstract class LibTsSource implements TsLib {
       return IArray.Empty;
     }
   }
-  
+
   protected getCustomPackageJson(): PackageJson | undefined {
     // Try to find package.json in current folder or parent folder
     let packageJsonPath = path.join(this.folder.path, 'package.json');
     if (filesSync.exists(packageJsonPath)) {
       return Json.opt(packageJsonPath, (obj) => PackageJson.fromObject(obj));
     }
-    
+
     // Try parent folder (for stdlib)
     packageJsonPath = path.join(path.dirname(this.folder.path), 'package.json');
     if (filesSync.exists(packageJsonPath)) {
       return Json.opt(packageJsonPath, (obj) => PackageJson.fromObject(obj));
     }
-    
+
     return undefined;
   }
 
@@ -215,29 +215,30 @@ export abstract class LibTsSource implements TsLib {
   }
 }
 
-// StdLibSource implementation
-export class StdLibSource extends LibTsSource {
-  constructor(
-    public readonly folder: InFolder,
-    public readonly files: IArray<InFile>,
-    public readonly libName: TsIdentLibrary
-  ) {
-    super(folder);
-  }
-}
-
-// FromFolder implementation  
-export class FromFolder extends LibTsSource {
-  constructor(
-    public readonly folder: InFolder,
-    public readonly libName: TsIdentLibrary
-  ) {
-    super(folder);
-  }
-}
-
 // Export namespace with static utilities
 export namespace LibTsSource {
+
+// StdLibSource implementation
+  export class StdLibSource extends LibTsSource {
+    constructor(
+      public readonly folder: InFolder,
+      public readonly files: IArray<InFile>,
+      public readonly libName: TsIdentLibrary
+    ) {
+      super(folder);
+    }
+  }
+
+// FromFolder implementation  
+  export class FromFolder extends LibTsSource {
+    constructor(
+      public readonly folder: InFolder,
+      public readonly libName: TsIdentLibrary
+    ) {
+      super(folder);
+    }
+  }
+
   export const hasTypescriptSources = LibTsSource.hasTypescriptSourcesImpl;
   export const compare = LibTsSource.compareImpl;
 }

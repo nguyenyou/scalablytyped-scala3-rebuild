@@ -1,7 +1,7 @@
 import { InFile, InFolder, filesSync } from "@/internal/files.ts";
 import { ConversionOptions } from "@/internal/importer/ConversionOptions.ts";
 import { TsIdent, TsIdentLibrary } from "@/internal/ts/trees.ts";
-import { StdLibSource, LibTsSource, FromFolder } from "@/internal/importer/LibTsSource.ts";
+import { LibTsSource } from "@/internal/importer/LibTsSource.ts";
 import * as path from "node:path";
 import { IArray } from "@/internal/IArray.ts";
 import * as E from "fp-ts/Either";
@@ -41,8 +41,8 @@ export class LibraryResolver {
   private readonly byName: Map<string, LibTsSource>;
 
   constructor(
-    public readonly stdLib: StdLibSource,
-    allSources: IArray<FromFolder>,
+    public readonly stdLib: LibTsSource.StdLibSource,
+    allSources: IArray<LibTsSource.FromFolder>,
     private readonly ignored: Set<TsIdentLibrary>
   ) {
     // Group by library name and take the first one for each name
@@ -110,7 +110,7 @@ export namespace Bootstrap {
     );
 
     // Find all sources
-    const allSources: IArray<FromFolder> = findSources(inputFolders);
+    const allSources: IArray<LibTsSource.FromFolder> = findSources(inputFolders);
 
     // Create library resolver
     const libraryResolver = new LibraryResolver(stdLibSource, allSources, conversion.ignoredLibs);
@@ -121,7 +121,7 @@ export namespace Bootstrap {
     return new Bootstrapped(inputFolders, libraryResolver, initialLibs);
   }
 
-  function createStdLibSource(fromFolder: InFolder, conversion: ConversionOptions): StdLibSource {
+  function createStdLibSource(fromFolder: InFolder, conversion: ConversionOptions): LibTsSource.StdLibSource {
     const folder = path.join(fromFolder.path, "typescript", "lib");
 
     // Validate that typescript lib folder exists
@@ -141,15 +141,15 @@ export namespace Bootstrap {
       new InFile(path.join(folder, `lib.${s}.d.ts`))
     );
 
-    return new StdLibSource(
+    return new LibTsSource.StdLibSource(
       new InFolder(folder),
       IArray.fromArray(files),
       TsIdent.std
     );
   }
 
-  function findSources(folders: IArray<InFolder>): IArray<FromFolder> {
-    return folders.foldLeft<IArray<FromFolder>>(IArray.Empty, (foundSources, next) => {
+  function findSources(folders: IArray<InFolder>): IArray<LibTsSource.FromFolder> {
+    return folders.foldLeft<IArray<LibTsSource.FromFolder>>(IArray.Empty, (foundSources, next) => {
       const foundNames = new Set(foundSources.map(source => source.libName.value).toArray());
       const newSources = forFolder(next).filter(source => !foundNames.has(source.libName.value));
 
@@ -157,7 +157,7 @@ export namespace Bootstrap {
     });
   }
 
-  function forFolder(folder: InFolder): IArray<FromFolder> {
+  function forFolder(folder: InFolder): IArray<LibTsSource.FromFolder> {
     // This is a simplified implementation - in a full implementation,
     // we would need to scan the directory structure like the Scala version
     // For now, return empty array as this requires more complex directory scanning
