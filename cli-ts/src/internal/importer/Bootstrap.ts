@@ -1,4 +1,5 @@
 import { InFile, InFolder, filesSync } from "@/internal/files.ts";
+import * as fs from "node:fs";
 import { ConversionOptions } from "@/internal/importer/ConversionOptions.ts";
 import { TsIdent, TsIdentLibrary } from "@/internal/ts/trees.ts";
 import { LibTsSource } from "@/internal/importer/LibTsSource.ts";
@@ -93,17 +94,14 @@ export namespace Bootstrap {
     conversion: ConversionOptions,
     wantedLibs: Set<TsIdentLibrary>
   ): Bootstrapped {
-    // Create stdlib source with validation
     const stdLibSource = createStdLibSource(fromFolder, conversion);
 
-    // Handle @types directory with Option
     const atTypes: O.Option<InFolder> = pipe(
       path.join(fromFolder.path, "@types"),
       O.fromPredicate(filesSync.isDir),
       O.map(typesPath => new InFolder(typesPath))
     );
 
-    // Create input folders array
     const inputFolders: IArray<InFolder> = IArray.fromOptions(
       atTypes,
       O.some(fromFolder)
@@ -157,11 +155,67 @@ export namespace Bootstrap {
     });
   }
 
-  function forFolder(folder: InFolder): IArray<LibTsSource.FromFolder> {
-    // This is a simplified implementation - in a full implementation,
-    // we would need to scan the directory structure like the Scala version
-    // For now, return empty array as this requires more complex directory scanning
-    return IArray.Empty;
+  export function forFolder(folder: InFolder): IArray<LibTsSource.FromFolder> {
+    try {
+      // Get all entries in the folder
+      const entries = fs.readdirSync(folder.path, { withFileTypes: true });
+
+      // Filter to only directories
+      const directories = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => path.join(folder.path, entry.name));
+
+      // Process each directory
+      const sources: LibTsSource.FromFolder[] = [];
+
+      for (const dirPath of directories) {
+        const dirName = path.basename(dirPath);
+
+        if (dirName.startsWith("@")) {
+          // Handle scoped packages (e.g., @types, @angular, etc.)
+          if (dirName.startsWith("@types")) {
+            // Skip @types directories as they are handled separately
+            continue;
+          } else {
+            // For other scoped packages, list their subdirectories
+            try {
+              const scopedEntries = fs.readdirSync(dirPath, { withFileTypes: true });
+              const scopedDirs = scopedEntries
+                .filter(entry => entry.isDirectory())
+                .map(entry => path.join(dirPath, entry.name));
+
+              for (const nestedPath of scopedDirs) {
+                const nestedName = path.basename(nestedPath);
+                const libName = TsIdentLibrary.construct(`${dirName}/${nestedName}`);
+                const source = new LibTsSource.FromFolder(new InFolder(nestedPath), libName);
+
+                // Only include if it has TypeScript sources
+                if (LibTsSource.hasTypescriptSources(source.folder)) {
+                  sources.push(source);
+                }
+              }
+            } catch {
+              // Skip if we can't read the scoped directory
+              continue;
+            }
+          }
+        } else {
+          // Handle regular packages
+          const libName = TsIdentLibrary.construct(dirName);
+          const source = new LibTsSource.FromFolder(new InFolder(dirPath), libName);
+
+          // Only include if it has TypeScript sources
+          if (LibTsSource.hasTypescriptSources(source.folder)) {
+            sources.push(source);
+          }
+        }
+      }
+
+      return IArray.fromArray(sources);
+    } catch {
+      // If we can't read the directory, return empty array
+      return IArray.Empty;
+    }
   }
 
   function resolveAll(
