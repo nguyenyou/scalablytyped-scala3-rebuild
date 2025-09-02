@@ -8,6 +8,7 @@ import { IArray } from "@/internal/IArray.ts";
 import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/function";
+import {LibraryResolver} from "@/internal/importer/LibraryResolver.ts";
 
 // TypeScript equivalent of Scala's LibraryResolver.Res
 export type LibraryResolverRes<T> =
@@ -34,48 +35,6 @@ export class Unresolved {
 
   get msg(): string {
     return `Missing typescript definitions for the following libraries: ${this.notAvailable.map(lib => lib.value).join(", ")}. Try to add a corresponding \`@types\` npm package, or use \`stIgnore\` to ignore`;
-  }
-}
-
-// TypeScript equivalent of Scala's LibraryResolver
-export class LibraryResolver {
-  private readonly byName: Map<string, LibTsSource>;
-
-  constructor(
-    public readonly stdLib: LibTsSource.StdLibSource,
-    allSources: IArray<LibTsSource.FromFolder>,
-    private readonly ignored: Set<TsIdentLibrary>
-  ) {
-    // Group by library name and take the first one for each name
-    const grouped = new Map<string, LibTsSource>();
-
-    // Add all sources
-    for (let i = 0; i < allSources.length; i++) {
-      const source = allSources.apply(i);
-      if (!grouped.has(source.libName.value)) {
-        grouped.set(source.libName.value, source);
-      }
-    }
-
-    // Add stdlib
-    grouped.set(TsIdent.std.value, stdLib);
-
-    this.byName = grouped;
-  }
-
-  library(name: TsIdentLibrary): LibraryResolverRes<LibTsSource> {
-    // Check if ignored
-    for (const ignoredLib of this.ignored) {
-      if (ignoredLib.value === name.value) {
-        return LibraryResolverRes.Ignored(name);
-      }
-    }
-
-    // Look up by name
-    const source = this.byName.get(name.value);
-    return source
-      ? LibraryResolverRes.Found(source)
-      : LibraryResolverRes.NotAvailable(name);
   }
 }
 

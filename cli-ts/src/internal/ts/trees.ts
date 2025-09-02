@@ -101,6 +101,66 @@ export class TsIdentLibraryScoped extends TsIdentLibrary {
   }
 }
 
+/**
+ * Represents a TypeScript module identifier. In TypeScript: "lodash", "@types/node", "./relative-module"
+ * Used in import/export statements and module declarations.
+ */
+export class TsIdentModule implements TsIdent {
+  constructor(
+    public readonly scopeOpt: string | undefined,
+    public readonly fragments: string[]
+  ) {}
+
+  /**
+   * @deprecated "this doesnt really work for node"
+   * Converts module identifier to library identifier
+   */
+  get inLibrary(): TsIdentLibrary {
+    if (this.scopeOpt === undefined) {
+      return new TsIdentLibrarySimple(this.fragments[0]);
+    } else {
+      return new TsIdentLibraryScoped(this.scopeOpt, this.fragments[0]);
+    }
+  }
+
+  /**
+   * Constructs the full module name. Examples: "lodash", "@types/node", "@scope/package/submodule"
+   */
+  get value(): string {
+    if (this.scopeOpt === undefined) {
+      return this.fragments.join('/');
+    } else {
+      return `@${this.scopeOpt}/${this.fragments.join('/')}`;
+    }
+  }
+
+  toString(): string {
+    return this.value;
+  }
+}
+
+export namespace TsIdentModule {
+  /**
+   * Creates a module identifier from a library identifier
+   */
+  export function fromLibrary(lib: TsIdentLibrary): TsIdentModule {
+    if (lib instanceof TsIdentLibrarySimple) {
+      return new TsIdentModule(undefined, lib.value.split('.'));
+    } else if (lib instanceof TsIdentLibraryScoped) {
+      return new TsIdentModule(lib.scope, lib.name.split('.'));
+    } else {
+      throw new Error(`Unknown library type: ${lib}`);
+    }
+  }
+
+  /**
+   * Creates a simple module identifier with a single fragment
+   */
+  export function simple(s: string): TsIdentModule {
+    return new TsIdentModule(undefined, [s]);
+  }
+}
+
 export namespace TsIdent {
   export const std = new TsIdentLibrarySimple('std');
 }
