@@ -50,8 +50,7 @@ object Bootstrap {
     val inputFolders: IArray[InFolder] =
       IArray.fromOptions(`@types`, Some(fromFolder))
 
-    val allSources: IArray[LibTsSource.FromFolder] =
-      findSources(inputFolders)
+    val allSources: IArray[LibTsSource.FromFolder] = findSources(inputFolders)
 
     val libraryResolver = new LibraryResolver(stdLibSource, allSources, conversion.ignoredLibs)
 

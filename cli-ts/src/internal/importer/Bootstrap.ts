@@ -68,7 +68,6 @@ export namespace Bootstrap {
 
     // Find all sources
     const allSources: IArray<LibTsSource.FromFolder> = findSources(inputFolders);
-
     // Create library resolver
     const libraryResolver = new LibraryResolver(stdLibSource, allSources, conversion.ignoredLibs);
 
