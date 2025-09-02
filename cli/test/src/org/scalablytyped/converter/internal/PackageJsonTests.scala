@@ -60,7 +60,7 @@ object PackageJsonTests extends TestSuite {
             assert(packageJson.version.contains("1.0.0"))
             assert(packageJson.dependencies.isEmpty)
             assert(packageJson.devDependencies.isEmpty)
-          case Left(error) =>
+          case Left(_) =>
             assert(false) // Failed to parse: $error
         }
       }
@@ -99,7 +99,7 @@ object PackageJsonTests extends TestSuite {
             val peerDeps = packageJson.peerDependencies.get
             assert(peerDeps.contains(TsIdentLibrary("react")))
 
-          case Left(error) =>
+          case Left(_) =>
             assert(false) // Failed to parse: $error
         }
       }
@@ -140,7 +140,7 @@ object PackageJsonTests extends TestSuite {
             assert(files.contains("types/"))
             assert(files.contains("README.md"))
 
-          case Left(error) =>
+          case Left(_) =>
             assert(false) // Failed to parse: $error
         }
       }

@@ -69,21 +69,29 @@ object Bootstrap {
       foundSources ++ newSources
     }
 
-  private def forFolder(folder: InFolder): IArray[LibTsSource.FromFolder] =
-    IArray.fromTraversable(
-      os.list(folder.path)
-        .collect { case dir if os.isDir(dir) => dir }
-        .flatMap {
-          case path if path.last.startsWith("@") =>
-            if (path.last.startsWith("@types")) Nil
-            else
-              os.list(path)
-                .collect { case dir if os.isDir(dir) => dir }
-                .map(nestedPath => FromFolder(InFolder(nestedPath), TsIdentLibrary(s"${path.last}/${nestedPath.last}")))
-          case path => List(FromFolder(InFolder(path), TsIdentLibrary(path.last)))
-        }
-        .filter(s => LibTsSource.hasTypescriptSources(s.folder))
-    )
+  def forFolder(folder: InFolder): IArray[LibTsSource.FromFolder] =
+    try {
+      IArray.fromTraversable(
+        os.list(folder.path)
+          .collect { case dir if os.isDir(dir) => dir }
+          .flatMap {
+            case path if path.last.startsWith("@") =>
+              if (path.last.startsWith("@types")) Nil
+              else
+                try {
+                  os.list(path)
+                    .collect { case dir if os.isDir(dir) => dir }
+                    .map(nestedPath => FromFolder(InFolder(nestedPath), TsIdentLibrary(s"${path.last}/${nestedPath.last}")))
+                } catch {
+                  case _: Exception => Nil
+                }
+            case path => List(FromFolder(InFolder(path), TsIdentLibrary(path.last)))
+          }
+          .filter(s => LibTsSource.hasTypescriptSources(s.folder))
+      )
+    } catch {
+      case _: Exception => IArray.Empty
+    }
 
   private def resolveAll(
       libraryResolver: LibraryResolver,
