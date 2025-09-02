@@ -205,6 +205,13 @@ export const Formatters = {
    */
   toString: <T>(): Formatter<T> => ({
     format: (value: T) => String(value)
+  }),
+
+  /**
+   * Create a custom formatter
+   */
+  create: <T>(formatFn: (value: T) => string): Formatter<T> => ({
+    format: formatFn
   })
 };
 
@@ -228,5 +235,12 @@ export const Orderings = {
    */
   toString: <T>(): Ordering<T> => ({
     compare: (a: T, b: T) => String(a).localeCompare(String(b))
+  }),
+
+  /**
+   * Create a custom ordering
+   */
+  create: <T>(compareFn: (a: T, b: T) => number): Ordering<T> => ({
+    compare: compareFn
   })
 };

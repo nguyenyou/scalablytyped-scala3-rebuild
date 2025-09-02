@@ -131,6 +131,21 @@ export class LibraryResolver {
     }
     return false;
   }
+
+  /**
+   * Create a mock LibraryResolver for testing
+   */
+  static createMock(): LibraryResolver {
+    const mockStdLib = new LibTsSource.StdLibSource(
+      new InFolder('/mock/typescript'),
+      IArray.Empty,
+      { value: "typescript", type: "simple" } as TsIdentLibrary
+    );
+    const mockSources = IArray.Empty as IArray<LibTsSource.FromFolder>;
+    const mockIgnored = new Set<TsIdentLibrary>();
+
+    return new LibraryResolver(mockStdLib, mockSources, mockIgnored);
+  }
 }
 
 /**

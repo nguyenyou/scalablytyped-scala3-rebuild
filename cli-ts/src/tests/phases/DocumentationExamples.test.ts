@@ -19,10 +19,10 @@ import {
   isOk,
   isFailure,
   isIgnore
-} from '../../internal/phases';
-import { Phase, GetDeps, IsCircular } from '../../internal/phases/types';
-import { Logger } from '../../internal/logging';
-import { SortedSet, SortedMap } from '../../internal/collections';
+} from '@/internal/phases';
+import { Phase, GetDeps, IsCircular } from '@/internal/phases';
+import { Logger } from '@/internal/logging';
+import { SortedSet, SortedMap } from '@/internal/collections';
 
 // Test data types from README examples
 interface ParsedData { 

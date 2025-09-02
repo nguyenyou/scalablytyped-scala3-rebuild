@@ -14,6 +14,19 @@ import {InFolder} from "@/internal/files.ts";
 import { ExecutionLogger } from '@/utils/ExecutionLogger.js';
 import * as E from 'fp-ts/Either';
 import { pipe } from 'fp-ts/function';
+import { RecPhase } from '@/internal/phases/RecPhase.js';
+import { PhaseRunner, Formatters, Orderings } from '@/internal/phases/PhaseRunner.js';
+import { CollectingPhaseListener } from '@/internal/phases/PhaseListener.js';
+import { Phase1ReadTypescript } from '@/internal/importer/Phase1ReadTypescript.js';
+import { Phase2ToScalaJs } from '@/internal/importer/Phase2ToScalaJs.js';
+import { PhaseFlavour } from '@/internal/importer/PhaseFlavour.js';
+import { LibTs } from '@/internal/importer/LibTs.js';
+import { LibScalaJs } from '@/internal/importer/LibScalaJs.js';
+import { Logger } from '@/internal/logging/index.js';
+import { MockCalculateLibraryVersion } from '@/internal/importer/CalculateLibraryVersion.js';
+import { TsParsedFile } from '@/internal/ts/TsParsedFile.js';
+import { NormalFlavourImpl } from '@/internal/importer/FlavourImpl.js';
+import { none } from 'fp-ts/Option';
 
 /**
  * Main conversion command - equivalent to Scala Tracing.scala
@@ -92,6 +105,9 @@ export class TracingCommand extends BaseCommand {
       this.executionLogger.logProgress(`Initial sources from bootstrap: ${sources.map(s => s.libName.value).join(", ")}`);
       this.executionLogger.logProgress(`Converting ${sources.map(s => s.libName.value).join(", ")} to scalajs...`);
 
+      // Execute the three-phase pipeline
+      await this.executeThreePhasePipeline(sources, bootstrapped);
+
       // Finalize execution log on success
       await this.executionLogger.finalizeExecutionLog(true);
 
@@ -100,6 +116,92 @@ export class TracingCommand extends BaseCommand {
       await this.executionLogger.finalizeExecutionLog(false);
       throw error;
     }
+  }
+
+  /**
+   * Execute the three-phase pipeline: Phase1 → Phase2 → PhaseFlavour
+   */
+  private async executeThreePhasePipeline(sources: LibTsSource[], bootstrapped: Bootstrapped): Promise<void> {
+    this.executionLogger.logStep("Setting up three-phase pipeline");
+
+    // Create logger function
+    const getLogger = (id: LibTsSource): Logger<void> => {
+      return {
+        info: (msg: string) => this.info(`[${id.libName.value}] ${msg}`),
+        warn: (msg: string) => this.warn(`[${id.libName.value}] ${msg}`),
+        error: (msg: string) => this.error(`[${id.libName.value}] ${msg}`),
+        debug: (msg: string) => this.info(`[${id.libName.value}] DEBUG: ${msg}`),
+        withContext: (key: string, value: string) => getLogger(id)
+      } as Logger<void>;
+    };
+
+    // Create phase listener
+    const listener = new CollectingPhaseListener<LibTsSource>();
+
+    // Create formatters and orderings
+    const formatter = Formatters.create<LibTsSource>((source) => source.libName.value);
+    const ordering = Orderings.create<LibTsSource>((a, b) => a.libName.value.localeCompare(b.libName.value));
+
+    // Configure Phase1: TypeScript parsing
+    this.executionLogger.logStep("Configuring Phase1ReadTypescript");
+    const phase1Config = {
+      resolve: bootstrapped.libraryResolver,
+      calculateLibraryVersion: new MockCalculateLibraryVersion(),
+      ignored: this.DefaultOptions.ignoredLibs,
+      ignoredModulePrefixes: this.DefaultOptions.ignoredModulePrefixes,
+      pedantic: false,
+      parser: () => E.right(TsParsedFile.createMock()), // Mock parser
+      expandTypeMappings: this.DefaultOptions.expandTypeMappings
+    };
+    const phase1 = Phase1ReadTypescript.create(phase1Config);
+
+    // Configure Phase2: TypeScript to Scala.js conversion
+    this.executionLogger.logStep("Configuring Phase2ToScalaJs");
+    const phase2Config = {
+      pedantic: false,
+      useDeprecatedModuleNames: this.DefaultOptions.useDeprecatedModuleNames,
+      scalaVersion: this.DefaultOptions.versions.scala,
+      enableScalaJsDefined: this.DefaultOptions.enableScalaJsDefined,
+      outputPkg: this.DefaultOptions.outputPackage,
+      flavour: NormalFlavourImpl.createMock()
+    };
+    const phase2 = Phase2ToScalaJs.create(phase2Config);
+
+    // Configure Phase3: Flavour transformations
+    this.executionLogger.logStep("Configuring PhaseFlavour");
+    const phase3Config = {
+      flavour: NormalFlavourImpl.createMock(),
+      maybePrivateWithin: this.DefaultOptions.privateWithin ? { _tag: 'Some' as const, value: this.DefaultOptions.privateWithin } : { _tag: 'None' as const }
+    };
+    const phase3 = PhaseFlavour.create(phase3Config);
+
+    // Create the three-phase pipeline
+    this.executionLogger.logStep("Creating three-phase pipeline");
+    const pipeline = RecPhase.apply<LibTsSource>()
+      .next(phase1.apply.bind(phase1), "Phase1ReadTypescript")
+      .next(phase2.apply.bind(phase2), "Phase2ToScalaJs")
+      .next(phase3.apply.bind(phase3), "PhaseFlavour");
+
+    // Create phase runner
+    const runner = PhaseRunner.apply(pipeline, getLogger, listener, formatter, ordering);
+
+    // Execute pipeline for each source
+    this.executionLogger.logStep("Executing three-phase pipeline");
+    for (const source of sources) {
+      this.executionLogger.logProgress(`Processing ${source.libName.value} through three-phase pipeline`);
+
+      const result = runner(source);
+
+      if (result._tag === 'Ok') {
+        this.executionLogger.logProgress(`Successfully processed ${source.libName.value}`);
+      } else if (result._tag === 'Failure') {
+        this.executionLogger.logError(`Failed to process ${source.libName.value}: ${Array.from(result.errors.values()).join(', ')}`);
+      } else {
+        this.executionLogger.logProgress(`Ignored ${source.libName.value}`);
+      }
+    }
+
+    this.executionLogger.logStep("Three-phase pipeline execution completed");
   }
 
   private async validateEnvironment(): Promise<void> {

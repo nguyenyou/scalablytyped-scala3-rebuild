@@ -110,6 +110,12 @@ export class SortedMap<K, V> {
     return this.items.entries();
   }
 
+  forEach(callback: (value: V, key: K) => void): void {
+    for (const [key, value] of this.items) {
+      callback(value, key);
+    }
+  }
+
   [Symbol.iterator](): Iterator<[K, V]> {
     return this.items[Symbol.iterator]();
   }
