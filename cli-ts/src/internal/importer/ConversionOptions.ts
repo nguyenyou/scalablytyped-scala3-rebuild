@@ -4,93 +4,8 @@
 
 import { Flavour } from '@/Flavour.ts';
 import { TsIdentLibrary } from '../ts/trees.js';
-import { Name } from '@/internal/scalajs/Name.ts'
-
-// Selection type - represents a selection criteria for filtering
-export abstract class Selection<T> {
-  abstract apply(value: T): boolean;
-  
-  and(other: Selection<T>): Selection<T> {
-    return new AndSelection(this, other);
-  }
-  
-  or(other: Selection<T>): Selection<T> {
-    return new OrSelection(this, other);
-  }
-  
-  map<U>(f: (value: T) => U): Selection<U> {
-    if (this instanceof AllExcept) {
-      return new AllExcept(new Set(Array.from(this.values).map(f)));
-    } else if (this instanceof NoneExcept) {
-      return new NoneExcept(new Set(Array.from(this.values).map(f)));
-    } else if (this instanceof AndSelection) {
-      return new AndSelection(this._1.map(f), this._2.map(f));
-    } else if (this instanceof OrSelection) {
-      return new OrSelection(this._1.map(f), this._2.map(f));
-    }
-    throw new Error('Unknown Selection type');
-  }
-}
-
-// Selection implementations
-export class AllExcept<T> extends Selection<T> {
-  constructor(public readonly values: Set<T>) {
-    super();
-  }
-  
-  apply(value: T): boolean {
-    return !this.values.has(value);
-  }
-  
-  static create<T>(...values: T[]): AllExcept<T> {
-    return new AllExcept(new Set(values));
-  }
-}
-
-export class NoneExcept<T> extends Selection<T> {
-  constructor(public readonly values: Set<T>) {
-    super();
-  }
-  
-  apply(value: T): boolean {
-    return this.values.has(value);
-  }
-  
-  static create<T>(...values: T[]): NoneExcept<T> {
-    return new NoneExcept(new Set(values));
-  }
-}
-
-export class AndSelection<T> extends Selection<T> {
-  constructor(public readonly _1: Selection<T>, public readonly _2: Selection<T>) {
-    super();
-  }
-  
-  apply(value: T): boolean {
-    return this._1.apply(value) && this._2.apply(value);
-  }
-}
-
-export class OrSelection<T> extends Selection<T> {
-  constructor(public readonly _1: Selection<T>, public readonly _2: Selection<T>) {
-    super();
-  }
-  
-  apply(value: T): boolean {
-    return this._1.apply(value) || this._2.apply(value);
-  }
-}
-
-// Selection factory functions
-export namespace Selection {
-  export function All<T>(): Selection<T> {
-    return new AllExcept<T>(new Set());
-  }
-  
-  export function None<T>(): Selection<T> {
-    return new NoneExcept<T>(new Set());
-  }
-}
+import { Name } from '@/internal/scalajs/Name.ts';
+import { Selection, AllExcept, NoneExcept, And, Or } from '@/internal/Selection.ts';
 
 // Dependency type for versions
 export interface Dep {
@@ -227,19 +142,19 @@ export class ConversionOptions {
         return { AllExcept: Array.from(selection.values).map(itemSerializer) };
       } else if (selection instanceof NoneExcept) {
         return { NoneExcept: Array.from(selection.values).map(itemSerializer) };
-      } else if (selection instanceof AndSelection) {
-        return { 
-          And: { 
-            _1: serializeSelection(selection._1, itemSerializer), 
-            _2: serializeSelection(selection._2, itemSerializer) 
-          } 
+      } else if (selection instanceof And) {
+        return {
+          And: {
+            _1: serializeSelection(selection._1, itemSerializer),
+            _2: serializeSelection(selection._2, itemSerializer)
+          }
         };
-      } else if (selection instanceof OrSelection) {
-        return { 
-          Or: { 
-            _1: serializeSelection(selection._1, itemSerializer), 
-            _2: serializeSelection(selection._2, itemSerializer) 
-          } 
+      } else if (selection instanceof Or) {
+        return {
+          Or: {
+            _1: serializeSelection(selection._1, itemSerializer),
+            _2: serializeSelection(selection._2, itemSerializer)
+          }
         };
       }
       throw new Error('Unknown Selection type');
@@ -274,12 +189,12 @@ export class ConversionOptions {
       } else if (selectionObj.NoneExcept) {
         return new NoneExcept(new Set(selectionObj.NoneExcept.map(itemDeserializer)));
       } else if (selectionObj.And) {
-        return new AndSelection(
+        return new And(
           deserializeSelection(selectionObj.And._1, itemDeserializer),
           deserializeSelection(selectionObj.And._2, itemDeserializer)
         );
       } else if (selectionObj.Or) {
-        return new OrSelection(
+        return new Or(
           deserializeSelection(selectionObj.Or._1, itemDeserializer),
           deserializeSelection(selectionObj.Or._2, itemDeserializer)
         );

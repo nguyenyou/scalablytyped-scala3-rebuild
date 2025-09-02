@@ -6,7 +6,8 @@ import { Json, LibTsSource } from '@/internal/importer/LibTsSource.js';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { Bootstrap, Bootstrapped, Unresolved } from '@/internal/importer/Bootstrap.ts'
-import {ConversionOptions, Selection, Versions} from "@/internal/importer/ConversionOptions.ts";
+import {ConversionOptions, Versions} from "@/internal/importer/ConversionOptions.ts";
+import {Selection} from "@/internal/Selection.ts";
 import {Flavour} from "@/Flavour.ts";
 import { Name } from '@/internal/scalajs/Name.ts'
 import {InFolder} from "@/internal/files.ts";
