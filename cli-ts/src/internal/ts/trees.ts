@@ -624,6 +624,54 @@ export interface TsTypeInfer extends TsTypePredicate {
 }
 
 /**
+ * Represents a TypeScript template literal type.
+ * In TypeScript: `\`prefix_\${T}_suffix\``, `\`\${A}-\${B}\``
+ * Template literal types for string manipulation at the type level.
+ */
+export interface TsTypeTemplateLiteral extends TsType {
+  readonly _tag: 'TsTypeTemplateLiteral';
+
+  /**
+   * The template parts (strings and type interpolations)
+   */
+  readonly parts: IArray<TsTemplatePart>;
+}
+
+/**
+ * Represents a part of a template literal type.
+ * Either a literal string or a type interpolation.
+ */
+export interface TsTemplatePart extends TsTree {
+  readonly _tag: 'TsTemplatePartLiteral' | 'TsTemplatePartType';
+}
+
+/**
+ * Represents a literal string part in a template literal type.
+ * In TypeScript: the "prefix_" part in `\`prefix_\${T}_suffix\``
+ */
+export interface TsTemplatePartLiteral extends TsTemplatePart {
+  readonly _tag: 'TsTemplatePartLiteral';
+
+  /**
+   * The literal string content
+   */
+  readonly value: string;
+}
+
+/**
+ * Represents a type interpolation part in a template literal type.
+ * In TypeScript: the `\${T}` part in `\`prefix_\${T}_suffix\``
+ */
+export interface TsTemplatePartType extends TsTemplatePart {
+  readonly _tag: 'TsTemplatePartType';
+
+  /**
+   * The type being interpolated
+   */
+  readonly tpe: TsType;
+}
+
+/**
  * Base interface for all TypeScript class and interface members.
  * In TypeScript: properties, methods, constructors, call signatures, index signatures, etc.
  * Represents anything that can appear inside a class or interface body.
@@ -5129,4 +5177,315 @@ export const TsTypeInfer = {
    * Type guard
    */
   isTypeInfer: (tpe: TsType): tpe is TsTypeInfer => tpe._tag === 'TsTypeInfer'
+};
+
+/**
+ * Constructor functions for TsMemberTypeMapped
+ */
+export const TsMemberTypeMapped = {
+  /**
+   * Creates a mapped type member
+   */
+  create: (
+    comments: Comments,
+    level: TsProtectionLevel,
+    readonly: ReadonlyModifier,
+    key: TsIdent,
+    from: TsType,
+    as: Option<TsType>,
+    optionalize: OptionalModifier,
+    to: TsType
+  ): TsMemberTypeMapped => ({
+    _tag: 'TsMemberTypeMapped',
+    comments,
+    level,
+    readonly,
+    key,
+    from,
+    as,
+    optionalize,
+    to,
+    withComments: (cs: Comments) =>
+      TsMemberTypeMapped.create(cs, level, readonly, key, from, as, optionalize, to),
+    addComment: (c: Comment) =>
+      TsMemberTypeMapped.create(comments.add(c), level, readonly, key, from, as, optionalize, to),
+    asString: `TsMemberTypeMapped([${key.value} in ${from.asString}]${as._tag === 'Some' ? ' as ' + as.value.asString : ''}: ${to.asString})`
+  }),
+
+  /**
+   * Creates a simple mapped type member
+   */
+  simple: (key: TsIdent, from: TsType, to: TsType): TsMemberTypeMapped =>
+    TsMemberTypeMapped.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      ReadonlyModifier.noop(),
+      key,
+      from,
+      none,
+      OptionalModifier.noop(),
+      to
+    ),
+
+  /**
+   * Creates a readonly mapped type member
+   */
+  readonly: (key: TsIdent, from: TsType, to: TsType): TsMemberTypeMapped =>
+    TsMemberTypeMapped.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      ReadonlyModifier.yes(),
+      key,
+      from,
+      none,
+      OptionalModifier.noop(),
+      to
+    ),
+
+  /**
+   * Creates an optional mapped type member
+   */
+  optional: (key: TsIdent, from: TsType, to: TsType): TsMemberTypeMapped =>
+    TsMemberTypeMapped.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      ReadonlyModifier.noop(),
+      key,
+      from,
+      none,
+      OptionalModifier.optionalize(),
+      to
+    ),
+
+  /**
+   * Creates a mapped type member with key remapping
+   */
+  withKeyRemapping: (key: TsIdent, from: TsType, as: TsType, to: TsType): TsMemberTypeMapped =>
+    TsMemberTypeMapped.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      ReadonlyModifier.noop(),
+      key,
+      from,
+      some(as),
+      OptionalModifier.noop(),
+      to
+    ),
+
+  /**
+   * Type guard
+   */
+  isMemberTypeMapped: (tree: TsTree): tree is TsMemberTypeMapped => tree._tag === 'TsMemberTypeMapped'
+};
+
+/**
+ * Constructor functions for TsTemplatePartLiteral
+ */
+export const TsTemplatePartLiteral = {
+  /**
+   * Creates a literal template part
+   */
+  create: (value: string): TsTemplatePartLiteral => ({
+    _tag: 'TsTemplatePartLiteral',
+    value,
+    asString: `TsTemplatePartLiteral("${value}")`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTemplatePartLiteral: (tree: TsTree): tree is TsTemplatePartLiteral => tree._tag === 'TsTemplatePartLiteral'
+};
+
+/**
+ * Constructor functions for TsTemplatePartType
+ */
+export const TsTemplatePartType = {
+  /**
+   * Creates a type interpolation template part
+   */
+  create: (tpe: TsType): TsTemplatePartType => ({
+    _tag: 'TsTemplatePartType',
+    tpe,
+    asString: `TsTemplatePartType(\${${tpe.asString}})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTemplatePartType: (tree: TsTree): tree is TsTemplatePartType => tree._tag === 'TsTemplatePartType'
+};
+
+/**
+ * Constructor functions for TsTypeTemplateLiteral
+ */
+export const TsTypeTemplateLiteral = {
+  /**
+   * Creates a template literal type
+   */
+  create: (parts: IArray<TsTemplatePart>): TsTypeTemplateLiteral => ({
+    _tag: 'TsTypeTemplateLiteral',
+    parts,
+    asString: `TsTypeTemplateLiteral(\`${parts.toArray().map(p =>
+      p._tag === 'TsTemplatePartLiteral'
+        ? (p as TsTemplatePartLiteral).value
+        : '${' + (p as TsTemplatePartType).tpe.asString + '}'
+    ).join('')}\`)`
+  }),
+
+  /**
+   * Creates a template literal type from a simple string
+   */
+  fromString: (template: string): TsTypeTemplateLiteral => {
+    // Simple implementation - just treat as a single literal part
+    // In a full implementation, this would parse the template string
+    const parts = IArray.fromArray([TsTemplatePartLiteral.create(template)] as TsTemplatePart[]);
+    return TsTypeTemplateLiteral.create(parts);
+  },
+
+  /**
+   * Creates a template literal type with alternating literals and types
+   */
+  fromParts: (literals: string[], types: TsType[]): TsTypeTemplateLiteral => {
+    const parts: TsTemplatePart[] = [];
+
+    for (let i = 0; i < Math.max(literals.length, types.length); i++) {
+      if (i < literals.length && literals[i] !== '') {
+        parts.push(TsTemplatePartLiteral.create(literals[i]));
+      }
+      if (i < types.length) {
+        parts.push(TsTemplatePartType.create(types[i]));
+      }
+    }
+
+    return TsTypeTemplateLiteral.create(IArray.fromArray(parts));
+  },
+
+  /**
+   * Creates a simple template with one interpolation
+   */
+  simple: (prefix: string, tpe: TsType, suffix: string): TsTypeTemplateLiteral => {
+    const parts: TsTemplatePart[] = [];
+    if (prefix !== '') parts.push(TsTemplatePartLiteral.create(prefix));
+    parts.push(TsTemplatePartType.create(tpe));
+    if (suffix !== '') parts.push(TsTemplatePartLiteral.create(suffix));
+
+    return TsTypeTemplateLiteral.create(IArray.fromArray(parts));
+  },
+
+  /**
+   * Type guard
+   */
+  isTypeTemplateLiteral: (tpe: TsType): tpe is TsTypeTemplateLiteral => tpe._tag === 'TsTypeTemplateLiteral'
+};
+
+/**
+ * Utility functions for type mapping and advanced type operations
+ */
+export const TsType = {
+  /**
+   * Checks if the given members represent a mapped type.
+   * Mapped types have exactly one TsMemberTypeMapped member.
+   * This corresponds to TsType.isTypeMapping in the original Scala code.
+   */
+  isTypeMapping: (members: IArray<TsMember>): boolean => {
+    if (members.length !== 1) {
+      return false;
+    }
+    const member = members.apply(0);
+    return member._tag === 'TsMemberTypeMapped';
+  },
+
+  /**
+   * Checks if a type is a literal type
+   */
+  isLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLiteral';
+  },
+
+  /**
+   * Checks if a type is a string literal type
+   */
+  isStringLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLiteral' &&
+           (tpe as TsTypeLiteral).literal._tag === 'TsLiteralStr';
+  },
+
+  /**
+   * Checks if a type is a numeric literal type
+   */
+  isNumericLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLiteral' &&
+           (tpe as TsTypeLiteral).literal._tag === 'TsLiteralNum';
+  },
+
+  /**
+   * Checks if a type is a boolean literal type
+   */
+  isBooleanLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLiteral' &&
+           (tpe as TsTypeLiteral).literal._tag === 'TsLiteralBool';
+  },
+
+  /**
+   * Checks if a type is a template literal type
+   */
+  isTemplateLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeTemplateLiteral';
+  },
+
+  /**
+   * Checks if a type is a mapped type (object type with exactly one mapped member)
+   */
+  isMappedType: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeObject' &&
+           TsType.isTypeMapping((tpe as TsTypeObject).members);
+  },
+
+  /**
+   * Extracts the mapped member from a mapped type, if any
+   */
+  getMappedMember: (tpe: TsType): Option<TsMemberTypeMapped> => {
+    if (tpe._tag === 'TsTypeObject') {
+      const objType = tpe as TsTypeObject;
+      if (TsType.isTypeMapping(objType.members)) {
+        const member = objType.members.apply(0);
+        if (member._tag === 'TsMemberTypeMapped') {
+          return some(member as TsMemberTypeMapped);
+        }
+      }
+    }
+    return none;
+  },
+
+  /**
+   * Creates a mapped type from a mapped member
+   */
+  createMappedType: (mappedMember: TsMemberTypeMapped): TsTypeObject => {
+    return TsTypeObject.create(
+      Comments.empty(),
+      IArray.fromArray([mappedMember] as TsMember[])
+    );
+  },
+
+  /**
+   * Checks if a type represents a conditional type
+   */
+  isConditional: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeConditional';
+  },
+
+  /**
+   * Checks if a type represents a keyof operation
+   */
+  isKeyOf: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeKeyOf';
+  },
+
+  /**
+   * Checks if a type represents an indexed access (lookup) operation
+   */
+  isLookup: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLookup';
+  }
 };

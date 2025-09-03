@@ -83,7 +83,12 @@ import {
   TsTypeThis,
   TsTypeConditional,
   TsTypeExtends,
-  TsTypeInfer
+  TsTypeInfer,
+  TsMemberTypeMapped,
+  TsTemplatePartLiteral,
+  TsTemplatePartType,
+  TsTypeTemplateLiteral,
+  TsType
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -3572,6 +3577,326 @@ describe('trees - Phase 11: Advanced Type Features', () => {
       const tparam = TsTypeParam.simple(TsIdent.simple('T'));
       const infer = TsTypeInfer.create(tparam);
       expect(infer.asString).toBe('TsTypeInfer(infer T)');
+    });
+  });
+});
+
+describe('trees - Phase 12: Mapped Types and Template Literals', () => {
+  describe('TsMemberTypeMapped', () => {
+    describe('construction', () => {
+      it('should create a simple mapped type member', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+
+        expect(mapped._tag).toBe('TsMemberTypeMapped');
+        expect(mapped.key).toBe(key);
+        expect(mapped.from).toBe(from);
+        expect(mapped.to).toBe(to);
+        expect(mapped.readonly._tag).toBe('Noop');
+        expect(mapped.optionalize._tag).toBe('Noop');
+        expect(mapped.as._tag).toBe('None');
+      });
+
+      it('should create a readonly mapped type member', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.readonly(key, from, to);
+
+        expect(mapped._tag).toBe('TsMemberTypeMapped');
+        expect(mapped.readonly._tag).toBe('Yes');
+      });
+
+      it('should create an optional mapped type member', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.optional(key, from, to);
+
+        expect(mapped._tag).toBe('TsMemberTypeMapped');
+        expect(mapped.optionalize._tag).toBe('Optionalize');
+      });
+
+      it('should create a mapped type member with key remapping', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const as = TsTypeTemplateLiteral.simple('prefix_', TsTypeRef.fromIdent(key), '_suffix');
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.withKeyRemapping(key, from, as, to);
+
+        expect(mapped._tag).toBe('TsMemberTypeMapped');
+        expect(mapped.as._tag).toBe('Some');
+        expect(mapped.as.value).toBe(as);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify mapped type members', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+        expect(TsMemberTypeMapped.isMemberTypeMapped(mapped)).toBe(true);
+
+        const notMapped = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberTypeMapped.isMemberTypeMapped(notMapped)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTemplatePartLiteral', () => {
+    describe('construction', () => {
+      it('should create a literal template part', () => {
+        const part = TsTemplatePartLiteral.create('prefix_');
+
+        expect(part._tag).toBe('TsTemplatePartLiteral');
+        expect(part.value).toBe('prefix_');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify literal template parts', () => {
+        const part = TsTemplatePartLiteral.create('test');
+        expect(TsTemplatePartLiteral.isTemplatePartLiteral(part)).toBe(true);
+
+        const notPart = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTemplatePartLiteral.isTemplatePartLiteral(notPart)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTemplatePartType', () => {
+    describe('construction', () => {
+      it('should create a type interpolation template part', () => {
+        const tpe = TsTypeRef.string;
+        const part = TsTemplatePartType.create(tpe);
+
+        expect(part._tag).toBe('TsTemplatePartType');
+        expect(part.tpe).toBe(tpe);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify type template parts', () => {
+        const part = TsTemplatePartType.create(TsTypeRef.string);
+        expect(TsTemplatePartType.isTemplatePartType(part)).toBe(true);
+
+        const notPart = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTemplatePartType.isTemplatePartType(notPart)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeTemplateLiteral', () => {
+    describe('construction', () => {
+      it('should create a template literal type from string', () => {
+        const template = TsTypeTemplateLiteral.fromString('hello world');
+
+        expect(template._tag).toBe('TsTypeTemplateLiteral');
+        expect(template.parts.length).toBe(1);
+        expect(template.parts.apply(0)._tag).toBe('TsTemplatePartLiteral');
+        expect((template.parts.apply(0) as any).value).toBe('hello world');
+      });
+
+      it('should create a simple template with interpolation', () => {
+        const template = TsTypeTemplateLiteral.simple('prefix_', TsTypeRef.string, '_suffix');
+
+        expect(template._tag).toBe('TsTypeTemplateLiteral');
+        expect(template.parts.length).toBe(3);
+        expect(template.parts.apply(0)._tag).toBe('TsTemplatePartLiteral');
+        expect(template.parts.apply(1)._tag).toBe('TsTemplatePartType');
+        expect(template.parts.apply(2)._tag).toBe('TsTemplatePartLiteral');
+      });
+
+      it('should create template from parts', () => {
+        const literals = ['start_', '_middle_', '_end'];
+        const types = [TsTypeRef.string, TsTypeRef.number];
+        const template = TsTypeTemplateLiteral.fromParts(literals, types);
+
+        expect(template._tag).toBe('TsTypeTemplateLiteral');
+        expect(template.parts.length).toBe(5); // 3 literals + 2 types
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify template literal types', () => {
+        const template = TsTypeTemplateLiteral.fromString('test');
+        expect(TsTypeTemplateLiteral.isTypeTemplateLiteral(template)).toBe(true);
+
+        const notTemplate = TsTypeRef.string;
+        expect(TsTypeTemplateLiteral.isTypeTemplateLiteral(notTemplate)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsType utilities', () => {
+    describe('type mapping detection', () => {
+      it('should detect mapped types', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+        const members = IArray.fromArray([mapped] as any);
+
+        expect(TsType.isTypeMapping(members)).toBe(true);
+      });
+
+      it('should not detect non-mapped types as mapped', () => {
+        const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+        const members = IArray.fromArray([prop] as any);
+
+        expect(TsType.isTypeMapping(members)).toBe(false);
+      });
+
+      it('should not detect multiple members as mapped type', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+        const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+        const members = IArray.fromArray([mapped, prop] as any);
+
+        expect(TsType.isTypeMapping(members)).toBe(false);
+      });
+    });
+
+    describe('literal type detection', () => {
+      it('should detect string literal types', () => {
+        const stringLit = TsTypeLiteral.string('hello');
+        expect(TsType.isStringLiteral(stringLit)).toBe(true);
+        expect(TsType.isLiteral(stringLit)).toBe(true);
+
+        const notStringLit = TsTypeRef.string;
+        expect(TsType.isStringLiteral(notStringLit)).toBe(false);
+      });
+
+      it('should detect numeric literal types', () => {
+        const numLit = TsTypeLiteral.number(42);
+        expect(TsType.isNumericLiteral(numLit)).toBe(true);
+        expect(TsType.isLiteral(numLit)).toBe(true);
+
+        const notNumLit = TsTypeRef.number;
+        expect(TsType.isNumericLiteral(notNumLit)).toBe(false);
+      });
+
+      it('should detect boolean literal types', () => {
+        const boolLit = TsTypeLiteral.boolean(true);
+        expect(TsType.isBooleanLiteral(boolLit)).toBe(true);
+        expect(TsType.isLiteral(boolLit)).toBe(true);
+
+        const notBoolLit = TsTypeRef.boolean;
+        expect(TsType.isBooleanLiteral(notBoolLit)).toBe(false);
+      });
+    });
+
+    describe('template literal detection', () => {
+      it('should detect template literal types', () => {
+        const template = TsTypeTemplateLiteral.fromString('test');
+        expect(TsType.isTemplateLiteral(template)).toBe(true);
+
+        const notTemplate = TsTypeRef.string;
+        expect(TsType.isTemplateLiteral(notTemplate)).toBe(false);
+      });
+    });
+
+    describe('mapped type operations', () => {
+      it('should detect mapped types', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+        const mappedType = TsType.createMappedType(mapped);
+
+        expect(TsType.isMappedType(mappedType)).toBe(true);
+
+        const notMappedType = TsTypeObject.create(Comments.empty(), IArray.Empty);
+        expect(TsType.isMappedType(notMappedType)).toBe(false);
+      });
+
+      it('should extract mapped members', () => {
+        const key = TsIdent.simple('K');
+        const from = TsTypeKeyOf.create(TsTypeRef.string);
+        const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+        const mapped = TsMemberTypeMapped.simple(key, from, to);
+        const mappedType = TsType.createMappedType(mapped);
+
+        const extractedMember = TsType.getMappedMember(mappedType);
+        expect(extractedMember._tag).toBe('Some');
+        expect(extractedMember.value).toBe(mapped);
+
+        const notMappedType = TsTypeObject.create(Comments.empty(), IArray.Empty);
+        const noMember = TsType.getMappedMember(notMappedType);
+        expect(noMember._tag).toBe('None');
+      });
+    });
+
+    describe('advanced type detection', () => {
+      it('should detect conditional types', () => {
+        const conditional = TsTypeConditional.create(
+          TsTypeRef.string,
+          TsTypeRef.number,
+          TsTypeRef.boolean
+        );
+        expect(TsType.isConditional(conditional)).toBe(true);
+
+        const notConditional = TsTypeRef.string;
+        expect(TsType.isConditional(notConditional)).toBe(false);
+      });
+
+      it('should detect keyof types', () => {
+        const keyof = TsTypeKeyOf.create(TsTypeRef.string);
+        expect(TsType.isKeyOf(keyof)).toBe(true);
+
+        const notKeyOf = TsTypeRef.string;
+        expect(TsType.isKeyOf(notKeyOf)).toBe(false);
+      });
+
+      it('should detect lookup types', () => {
+        const lookup = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.number);
+        expect(TsType.isLookup(lookup)).toBe(true);
+
+        const notLookup = TsTypeRef.string;
+        expect(TsType.isLookup(notLookup)).toBe(false);
+      });
+    });
+  });
+
+  describe('string representation', () => {
+    it('should format mapped type members', () => {
+      const key = TsIdent.simple('K');
+      const from = TsTypeKeyOf.create(TsTypeRef.string);
+      const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+      const mapped = TsMemberTypeMapped.simple(key, from, to);
+      expect(mapped.asString).toContain('TsMemberTypeMapped([K in');
+      expect(mapped.asString).toContain('keyof');
+    });
+
+    it('should format template literal parts', () => {
+      const literalPart = TsTemplatePartLiteral.create('prefix_');
+      expect(literalPart.asString).toBe('TsTemplatePartLiteral("prefix_")');
+
+      const typePart = TsTemplatePartType.create(TsTypeRef.string);
+      expect(typePart.asString).toContain('TsTemplatePartType(${');
+      expect(typePart.asString).toContain('TsTypeRef');
+    });
+
+    it('should format template literal types', () => {
+      const template = TsTypeTemplateLiteral.simple('prefix_', TsTypeRef.string, '_suffix');
+      expect(template.asString).toContain('TsTypeTemplateLiteral(`');
+      expect(template.asString).toContain('prefix_');
+      expect(template.asString).toContain('_suffix');
+    });
+
+    it('should format mapped type members with key remapping', () => {
+      const key = TsIdent.simple('K');
+      const from = TsTypeKeyOf.create(TsTypeRef.string);
+      const as = TsTypeTemplateLiteral.simple('prefix_', TsTypeRef.fromIdent(key), '_suffix');
+      const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
+      const mapped = TsMemberTypeMapped.withKeyRemapping(key, from, as, to);
+      expect(mapped.asString).toContain(' as ');
+      expect(mapped.asString).toContain('TsTypeTemplateLiteral');
     });
   });
 });
