@@ -1003,6 +1003,25 @@ export class IArray<T> {
     return IArray.fromArrayAndSize(newArray, outputIndex);
   }
 
+  /**
+   * Maps elements using a function that returns fp-ts Option<U>, filtering out None values
+   */
+  mapNotNoneOption<U>(f: (value: T) => { _tag: 'Some'; value: U } | { _tag: 'None' }): IArray<U> {
+    if (this.isEmpty) {
+      return IArray.Empty;
+    }
+
+    const newArray: U[] = new Array(this.length);
+    let outputIndex = 0;
+    for (let i = 0; i < this.length; i++) {
+      const result = f(this.apply(i));
+      if (result._tag === 'Some') {
+        newArray[outputIndex++] = result.value;
+      }
+    }
+    return IArray.fromArrayAndSize(newArray, outputIndex);
+  }
+
   partitionCollect<U>(pf: PartialFunction<T, U>): [IArray<U>, IArray<T>] {
     const collected: U[] = new Array(this.length);
     let collectedCount = 0;

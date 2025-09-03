@@ -9,6 +9,7 @@ import {InFile, InFolder, filesSync} from '../files.js';
 import {IArray} from '../IArray.js';
 import * as path from 'path';
 import * as fs from 'fs';
+import {LibraryResolver} from "@/internal/importer/LibraryResolver.ts";
 
 // TypingsJson interface (from metadata.scala)
 export interface TypingsJson {
@@ -41,25 +42,6 @@ export const Json = {
     } catch (error) {
       throw new Error(`Error parsing JSON from ${filePath}: ${error}`);
     }
-  }
-};
-
-// LibraryResolver utilities
-export const LibraryResolver = {
-  file: (within: InFolder, fragment: string): InFile | undefined => {
-    const candidates = [
-      path.join(within.path, fragment),
-      path.join(within.path, fragment + '.ts'),
-      path.join(within.path, fragment + '.d.ts'),
-      path.join(within.path, fragment, 'index.d.ts')
-    ];
-
-    for (const candidate of candidates) {
-      if (filesSync.exists(candidate) && fs.statSync(candidate).isFile()) {
-        return new InFile(candidate);
-      }
-    }
-    return undefined;
   }
 };
 
@@ -158,14 +140,14 @@ export abstract class LibTsSource implements TsLib {
     const fromFileEntry = (fromFolder: LibTsSource.FromFolder, files: IArray<string> | undefined): IArray<InFile> => {
       if (!files) return IArray.Empty;
 
-      return files.mapNotNone(file => LibraryResolver.file(fromFolder.folder, file));
+      return files.mapNotNoneOption(file => LibraryResolver.file(fromFolder.folder, file));
     };
 
     const fromModuleDeclaration = (fromFolder: LibTsSource.FromFolder, files: Map<string, string> | undefined): IArray<InFile> => {
       const fileValues = files ? IArray.fromTraversable(Array.from(files.values())) : IArray.Empty;
 
       return fileValues
-        .mapNotNone(file => LibraryResolver.file(fromFolder.folder, file))
+        .mapNotNoneOption(file => LibraryResolver.file(fromFolder.folder, file))
         .mapNotNone(existingFile => {
           return LibTsSource.hasTypescriptSourcesImpl(existingFile.folder) ? existingFile : undefined;
         });
