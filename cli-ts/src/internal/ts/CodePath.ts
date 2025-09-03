@@ -1,46 +1,124 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.CodePath
- * 
+ *
  * Represents path information for TypeScript files
  */
 
+import { TsIdent, TsQIdent, TsTree } from './trees.js';
+import { Option, some, none } from 'fp-ts/Option';
+
 /**
- * Represents a code path within the project structure
+ * Base interface for code paths
  */
-export class CodePath {
-  constructor(public readonly path: string) {}
+export interface CodePath {
+  readonly _tag: 'NoPath' | 'HasPath';
 
   /**
-   * Create a CodePath from a string path
+   * Adds an identifier to the path
    */
-  static from(path: string): CodePath {
-    return new CodePath(path);
-  }
+  add(ident: TsIdent): CodePath;
 
   /**
-   * Get the filename from the path
+   * Gets the path if it exists
    */
-  get filename(): string {
-    const parts = this.path.split('/');
-    return parts[parts.length - 1] || '';
-  }
+  get(): Option<CodePathHasPath>;
 
   /**
-   * Get the directory from the path
+   * Forces getting the path, throwing if it doesn't exist
    */
-  get directory(): string {
-    const parts = this.path.split('/');
-    return parts.slice(0, -1).join('/');
-  }
+  forceHasPath(): CodePathHasPath;
 
   /**
-   * Check if this is a declaration file
+   * Replaces the last identifier in the path
    */
-  get isDeclarationFile(): boolean {
-    return this.path.endsWith('.d.ts');
-  }
-
-  toString(): string {
-    return this.path;
-  }
+  replaceLast(newLast: TsIdent): CodePath;
 }
+
+/**
+ * No path - represents absence of a code path
+ */
+export interface CodePathNoPath extends CodePath {
+  readonly _tag: 'NoPath';
+}
+
+/**
+ * Has path - represents a concrete code path
+ */
+export interface CodePathHasPath extends CodePath {
+  readonly _tag: 'HasPath';
+  readonly inLibrary: TsIdent;
+  readonly codePathPart: TsQIdent;
+  readonly codePath: TsQIdent;
+
+  /**
+   * Navigates into a tree node
+   */
+  navigate(tree: TsTree): CodePathHasPath;
+}
+
+/**
+ * Constructor functions and utilities for CodePath
+ */
+export const CodePath = {
+  /**
+   * Creates a no-path instance
+   */
+  noPath: (): CodePathNoPath => ({
+    _tag: 'NoPath',
+    add: () => CodePath.noPath(),
+    get: () => none,
+    forceHasPath: () => {
+      throw new Error('Expected code path');
+    },
+    replaceLast: () => CodePath.noPath()
+  }),
+
+  /**
+   * Creates a has-path instance
+   */
+  hasPath: (inLibrary: TsIdent, codePathPart: TsQIdent): CodePathHasPath => {
+    const codePath = TsQIdent.of(inLibrary, ...codePathPart.parts.toArray());
+
+    return {
+      _tag: 'HasPath',
+      inLibrary,
+      codePathPart,
+      codePath,
+      add: (ident: TsIdent) => CodePath.hasPath(inLibrary, TsQIdent.append(codePathPart, ident)),
+      get: () => some(CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath),
+      forceHasPath: () => CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath,
+      replaceLast: (newLast: TsIdent) => {
+        const parts = codePathPart.parts.toArray();
+        if (parts.length === 0) {
+          return CodePath.noPath();
+        }
+        const newParts = parts.slice(0, -1).concat([newLast]);
+        return CodePath.hasPath(inLibrary, TsQIdent.of(...newParts));
+      },
+      navigate: (tree: TsTree) => {
+        // This is a simplified version - full implementation would need
+        // access to all tree types which we'll implement in later phases
+        return CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath;
+      }
+    };
+  },
+
+  /**
+   * Type guards
+   */
+  isNoPath: (path: CodePath): path is CodePathNoPath => path._tag === 'NoPath',
+  isHasPath: (path: CodePath): path is CodePathHasPath => path._tag === 'HasPath'
+};
+
+/**
+ * Trait for objects that have a code path
+ */
+export interface HasCodePath {
+  readonly codePath: CodePath;
+  withCodePath(newCodePath: CodePath): HasCodePath;
+}
+
+/**
+ * Singleton instances
+ */
+export const CodePathNoPath: CodePathNoPath = CodePath.noPath();
