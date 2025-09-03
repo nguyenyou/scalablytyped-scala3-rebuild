@@ -43,9 +43,18 @@ import {
   TsTypeObject,
   TsTypeFunction,
   TsTypeUnion,
-  TsTypeIntersect
+  TsTypeIntersect,
+  TsMemberCall,
+  TsMemberCtor,
+  TsMemberFunction,
+  TsMemberIndex,
+  TsMemberProperty,
+  IndexingDict,
+  IndexingSingle
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
+import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
+import { MethodType } from '../internal/ts/MethodType.js';
 
 describe('trees - Phase 1: Base Types and Identifiers', () => {
   describe('TsIdent', () => {
@@ -1660,6 +1669,419 @@ describe('trees - Phase 6: Type System', () => {
 
         const notIntersectType = { _tag: 'SomethingElse', asString: 'test' };
         expect(TsTypeIntersect.isTypeIntersect(notIntersectType)).toBe(false);
+      });
+    });
+  });
+});
+
+describe('trees - Phase 7: Members', () => {
+  describe('TsMemberCall', () => {
+    describe('construction', () => {
+      it('should create a call signature member', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.string));
+        const level = TsProtectionLevel.default();
+        const callMember = TsMemberCall.create(Comments.empty(), level, signature);
+
+        expect(callMember._tag).toBe('TsMemberCall');
+        expect(callMember.level).toBe(level);
+        expect(callMember.signature).toBe(signature);
+        expect(callMember.comments).toBeDefined();
+      });
+
+      it('should create a public call signature', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.boolean));
+        const callMember = TsMemberCall.public(signature);
+
+        expect(callMember._tag).toBe('TsMemberCall');
+        expect(callMember.signature).toBe(signature);
+        expect(TsProtectionLevel.isDefault(callMember.level)).toBe(true);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const signature = TsFunSig.noParams(none);
+        const callMember = TsMemberCall.public(signature);
+        const newComments = Comments.empty();
+        const newCallMember = callMember.withComments(newComments);
+
+        expect(newCallMember._tag).toBe('TsMemberCall');
+        expect(newCallMember.comments).toBe(newComments);
+        expect(newCallMember.signature).toBe(signature);
+      });
+
+      it('should support addComment', () => {
+        const signature = TsFunSig.noParams(none);
+        const callMember = TsMemberCall.public(signature);
+        const comment: Comment = { text: 'Call signature', type: 'line' };
+        const newCallMember = callMember.addComment(comment);
+
+        expect(newCallMember._tag).toBe('TsMemberCall');
+        expect(newCallMember.comments.cs.length).toBe(1);
+        expect(newCallMember.signature).toBe(signature);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify call members', () => {
+        const signature = TsFunSig.noParams(none);
+        const callMember = TsMemberCall.public(signature);
+        expect(TsMemberCall.isMemberCall(callMember)).toBe(true);
+
+        const notCallMember = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberCall.isMemberCall(notCallMember)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsMemberCtor', () => {
+    describe('construction', () => {
+      it('should create a constructor signature member', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.string));
+        const level = TsProtectionLevel.default();
+        const ctorMember = TsMemberCtor.create(Comments.empty(), level, signature);
+
+        expect(ctorMember._tag).toBe('TsMemberCtor');
+        expect(ctorMember.level).toBe(level);
+        expect(ctorMember.signature).toBe(signature);
+        expect(ctorMember.comments).toBeDefined();
+      });
+
+      it('should create a public constructor signature', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.object));
+        const ctorMember = TsMemberCtor.public(signature);
+
+        expect(ctorMember._tag).toBe('TsMemberCtor');
+        expect(ctorMember.signature).toBe(signature);
+        expect(TsProtectionLevel.isDefault(ctorMember.level)).toBe(true);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.any));
+        const ctorMember = TsMemberCtor.public(signature);
+        const newComments = Comments.empty();
+        const newCtorMember = ctorMember.withComments(newComments);
+
+        expect(newCtorMember._tag).toBe('TsMemberCtor');
+        expect(newCtorMember.comments).toBe(newComments);
+        expect(newCtorMember.signature).toBe(signature);
+      });
+
+      it('should support addComment', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.any));
+        const ctorMember = TsMemberCtor.public(signature);
+        const comment: Comment = { text: 'Constructor signature', type: 'line' };
+        const newCtorMember = ctorMember.addComment(comment);
+
+        expect(newCtorMember._tag).toBe('TsMemberCtor');
+        expect(newCtorMember.comments.cs.length).toBe(1);
+        expect(newCtorMember.signature).toBe(signature);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify constructor members', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.any));
+        const ctorMember = TsMemberCtor.public(signature);
+        expect(TsMemberCtor.isMemberCtor(ctorMember)).toBe(true);
+
+        const notCtorMember = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberCtor.isMemberCtor(notCtorMember)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsMemberFunction', () => {
+    describe('construction', () => {
+      it('should create a method member', () => {
+        const name = TsIdent.simple('myMethod');
+        const signature = TsFunSig.noParams(some(TsTypeRef.string));
+        const methodMember = TsMemberFunction.method(name, signature);
+
+        expect(methodMember._tag).toBe('TsMemberFunction');
+        expect(methodMember.name).toBe(name);
+        expect(methodMember.signature).toBe(signature);
+        expect(MethodType.isNormal(methodMember.methodType)).toBe(true);
+        expect(methodMember.isStatic).toBe(false);
+        expect(methodMember.isReadOnly).toBe(false);
+      });
+
+      it('should create a getter method', () => {
+        const name = TsIdent.simple('getValue');
+        const returnType = TsTypeRef.number;
+        const getter = TsMemberFunction.getter(name, returnType);
+
+        expect(getter._tag).toBe('TsMemberFunction');
+        expect(getter.name).toBe(name);
+        expect(MethodType.isGetter(getter.methodType)).toBe(true);
+        expect(getter.isStatic).toBe(false);
+        expect(getter.isReadOnly).toBe(false);
+      });
+
+      it('should create a setter method', () => {
+        const name = TsIdent.simple('setValue');
+        const paramType = TsTypeRef.number;
+        const setter = TsMemberFunction.setter(name, paramType);
+
+        expect(setter._tag).toBe('TsMemberFunction');
+        expect(setter.name).toBe(name);
+        expect(MethodType.isSetter(setter.methodType)).toBe(true);
+        expect(setter.signature.params.length).toBe(1);
+        expect(setter.isStatic).toBe(false);
+        expect(setter.isReadOnly).toBe(false);
+      });
+
+      it('should create a static method', () => {
+        const name = TsIdent.simple('staticMethod');
+        const signature = TsFunSig.noParams(some(TsTypeRef.void));
+        const staticMethod = TsMemberFunction.static(name, signature);
+
+        expect(staticMethod._tag).toBe('TsMemberFunction');
+        expect(staticMethod.name).toBe(name);
+        expect(staticMethod.signature).toBe(signature);
+        expect(staticMethod.isStatic).toBe(true);
+        expect(staticMethod.isReadOnly).toBe(false);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const name = TsIdent.simple('test');
+        const signature = TsFunSig.noParams(none);
+        const methodMember = TsMemberFunction.method(name, signature);
+        const newComments = Comments.empty();
+        const newMethodMember = methodMember.withComments(newComments);
+
+        expect(newMethodMember._tag).toBe('TsMemberFunction');
+        expect(newMethodMember.comments).toBe(newComments);
+        expect(newMethodMember.name).toBe(name);
+      });
+
+      it('should support addComment', () => {
+        const name = TsIdent.simple('test');
+        const signature = TsFunSig.noParams(none);
+        const methodMember = TsMemberFunction.method(name, signature);
+        const comment: Comment = { text: 'Method description', type: 'line' };
+        const newMethodMember = methodMember.addComment(comment);
+
+        expect(newMethodMember._tag).toBe('TsMemberFunction');
+        expect(newMethodMember.comments.cs.length).toBe(1);
+        expect(newMethodMember.name).toBe(name);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify function members', () => {
+        const name = TsIdent.simple('test');
+        const signature = TsFunSig.noParams(none);
+        const methodMember = TsMemberFunction.method(name, signature);
+        expect(TsMemberFunction.isMemberFunction(methodMember)).toBe(true);
+
+        const notMethodMember = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberFunction.isMemberFunction(notMethodMember)).toBe(false);
+      });
+    });
+  });
+
+  describe('Indexing', () => {
+    describe('IndexingDict', () => {
+      it('should create dictionary-style indexing', () => {
+        const name = TsIdent.simple('key');
+        const tpe = TsTypeRef.string;
+        const indexing = IndexingDict.create(name, tpe);
+
+        expect(indexing._tag).toBe('IndexingDict');
+        expect(indexing.name).toBe(name);
+        expect(indexing.tpe).toBe(tpe);
+      });
+
+      it('should create string indexing', () => {
+        const name = TsIdent.simple('key');
+        const indexing = IndexingDict.string(name);
+
+        expect(indexing._tag).toBe('IndexingDict');
+        expect(indexing.name).toBe(name);
+        expect(indexing.tpe._tag).toBe('TsTypeRef');
+      });
+
+      it('should create number indexing', () => {
+        const name = TsIdent.simple('index');
+        const indexing = IndexingDict.number(name);
+
+        expect(indexing._tag).toBe('IndexingDict');
+        expect(indexing.name).toBe(name);
+        expect(indexing.tpe._tag).toBe('TsTypeRef');
+      });
+    });
+
+    describe('IndexingSingle', () => {
+      it('should create single property indexing', () => {
+        const name = TsQIdent.ofStrings('keyof', 'T');
+        const indexing = IndexingSingle.create(name);
+
+        expect(indexing._tag).toBe('IndexingSingle');
+        expect(indexing.name).toBe(name);
+      });
+    });
+  });
+
+  describe('TsMemberIndex', () => {
+    describe('construction', () => {
+      it('should create an index signature member', () => {
+        const indexing = IndexingDict.string(TsIdent.simple('key'));
+        const valueType = some(TsTypeRef.any);
+        const indexMember = TsMemberIndex.create(
+          Comments.empty(),
+          false,
+          TsProtectionLevel.default(),
+          indexing,
+          valueType
+        );
+
+        expect(indexMember._tag).toBe('TsMemberIndex');
+        expect(indexMember.indexing).toBe(indexing);
+        expect(indexMember.valueType).toBe(valueType);
+        expect(indexMember.isReadOnly).toBe(false);
+      });
+
+      it('should create a string index signature', () => {
+        const valueType = TsTypeRef.any;
+        const indexMember = TsMemberIndex.stringIndex(valueType);
+
+        expect(indexMember._tag).toBe('TsMemberIndex');
+        expect(indexMember.indexing._tag).toBe('IndexingDict');
+        expect(indexMember.valueType._tag).toBe('Some');
+        expect(indexMember.isReadOnly).toBe(false);
+      });
+
+      it('should create a number index signature', () => {
+        const valueType = TsTypeRef.string;
+        const indexMember = TsMemberIndex.numberIndex(valueType);
+
+        expect(indexMember._tag).toBe('TsMemberIndex');
+        expect(indexMember.indexing._tag).toBe('IndexingDict');
+        expect(indexMember.valueType._tag).toBe('Some');
+        expect(indexMember.isReadOnly).toBe(false);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const indexMember = TsMemberIndex.stringIndex(TsTypeRef.any);
+        const newComments = Comments.empty();
+        const newIndexMember = indexMember.withComments(newComments);
+
+        expect(newIndexMember._tag).toBe('TsMemberIndex');
+        expect(newIndexMember.comments).toBe(newComments);
+        expect(newIndexMember.indexing).toBe(indexMember.indexing);
+      });
+
+      it('should support addComment', () => {
+        const indexMember = TsMemberIndex.stringIndex(TsTypeRef.any);
+        const comment: Comment = { text: 'Index signature', type: 'line' };
+        const newIndexMember = indexMember.addComment(comment);
+
+        expect(newIndexMember._tag).toBe('TsMemberIndex');
+        expect(newIndexMember.comments.cs.length).toBe(1);
+        expect(newIndexMember.indexing).toBe(indexMember.indexing);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify index members', () => {
+        const indexMember = TsMemberIndex.stringIndex(TsTypeRef.any);
+        expect(TsMemberIndex.isMemberIndex(indexMember)).toBe(true);
+
+        const notIndexMember = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberIndex.isMemberIndex(notIndexMember)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsMemberProperty', () => {
+    describe('construction', () => {
+      it('should create a typed property', () => {
+        const name = TsIdent.simple('myProp');
+        const tpe = TsTypeRef.string;
+        const property = TsMemberProperty.typed(name, tpe);
+
+        expect(property._tag).toBe('TsMemberProperty');
+        expect(property.name).toBe(name);
+        expect(property.tpe._tag).toBe('Some');
+        expect(property.expr._tag).toBe('None');
+        expect(property.isStatic).toBe(false);
+        expect(property.isReadOnly).toBe(false);
+      });
+
+      it('should create a readonly property', () => {
+        const name = TsIdent.simple('readonlyProp');
+        const tpe = TsTypeRef.number;
+        const property = TsMemberProperty.readonly(name, tpe);
+
+        expect(property._tag).toBe('TsMemberProperty');
+        expect(property.name).toBe(name);
+        expect(property.isReadOnly).toBe(true);
+        expect(property.isStatic).toBe(false);
+      });
+
+      it('should create a static property', () => {
+        const name = TsIdent.simple('staticProp');
+        const tpe = TsTypeRef.boolean;
+        const property = TsMemberProperty.static(name, tpe);
+
+        expect(property._tag).toBe('TsMemberProperty');
+        expect(property.name).toBe(name);
+        expect(property.isStatic).toBe(true);
+        expect(property.isReadOnly).toBe(false);
+      });
+
+      it('should create a simple untyped property', () => {
+        const name = TsIdent.simple('simpleProp');
+        const property = TsMemberProperty.simple(name);
+
+        expect(property._tag).toBe('TsMemberProperty');
+        expect(property.name).toBe(name);
+        expect(property.tpe._tag).toBe('None');
+        expect(property.expr._tag).toBe('None');
+        expect(property.isStatic).toBe(false);
+        expect(property.isReadOnly).toBe(false);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const name = TsIdent.simple('test');
+        const property = TsMemberProperty.simple(name);
+        const newComments = Comments.empty();
+        const newProperty = property.withComments(newComments);
+
+        expect(newProperty._tag).toBe('TsMemberProperty');
+        expect(newProperty.comments).toBe(newComments);
+        expect(newProperty.name).toBe(name);
+      });
+
+      it('should support addComment', () => {
+        const name = TsIdent.simple('test');
+        const property = TsMemberProperty.simple(name);
+        const comment: Comment = { text: 'Property description', type: 'line' };
+        const newProperty = property.addComment(comment);
+
+        expect(newProperty._tag).toBe('TsMemberProperty');
+        expect(newProperty.comments.cs.length).toBe(1);
+        expect(newProperty.name).toBe(name);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify property members', () => {
+        const name = TsIdent.simple('test');
+        const property = TsMemberProperty.simple(name);
+        expect(TsMemberProperty.isMemberProperty(property)).toBe(true);
+
+        const notProperty = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsMemberProperty.isMemberProperty(notProperty)).toBe(false);
       });
     });
   });

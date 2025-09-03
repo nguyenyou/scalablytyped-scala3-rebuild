@@ -16,6 +16,9 @@ import { JsLocation, HasJsLocation } from './JsLocation.js';
 import { MemberCache, HasClassMembers } from './MemberCache.js';
 import { Directive } from './Directive.js';
 import { TsProtectionLevel } from './TsProtectionLevel.js';
+import { MethodType } from './MethodType.js';
+import { ReadonlyModifier } from './ReadonlyModifier.js';
+import { OptionalModifier } from './OptionalModifier.js';
 
 /**
  * Base interface for all TypeScript AST (Abstract Syntax Tree) nodes
@@ -619,9 +622,334 @@ export interface TsTypeInfer extends TsTypePredicate {
   readonly tparam: TsTypeParam;
 }
 
+/**
+ * Base interface for all TypeScript class and interface members.
+ * In TypeScript: properties, methods, constructors, call signatures, index signatures, etc.
+ * Represents anything that can appear inside a class or interface body.
+ */
 export interface TsMember extends TsTree {
   readonly _tag: string;
+
+  /**
+   * The visibility level (public, private, protected) of this member
+   */
   readonly level: TsProtectionLevel;
+}
+
+/**
+ * Represents a TypeScript call signature.
+ * In TypeScript: `(x: number): string` inside an interface or object type
+ * Allows objects to be called like functions.
+ */
+export interface TsMemberCall extends TsMember {
+  readonly _tag: 'TsMemberCall';
+
+  /**
+   * JSDoc comments for this call signature
+   */
+  readonly comments: Comments;
+
+  /**
+   * Visibility level of this call signature
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * The function signature for the call
+   */
+  readonly signature: TsFunSig;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberCall;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberCall;
+}
+
+/**
+ * Represents a TypeScript constructor signature.
+ * In TypeScript: `new (x: number): MyClass` inside an interface
+ * Allows objects to be used as constructors.
+ */
+export interface TsMemberCtor extends TsMember {
+  readonly _tag: 'TsMemberCtor';
+
+  /**
+   * JSDoc comments for this constructor signature
+   */
+  readonly comments: Comments;
+
+  /**
+   * Visibility level of this constructor signature
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * The function signature for the constructor
+   */
+  readonly signature: TsFunSig;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberCtor;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberCtor;
+}
+
+/**
+ * Represents a TypeScript method declaration.
+ * In TypeScript: `myMethod(x: number): string` in a class or interface
+ * Methods are functions that belong to classes or interfaces.
+ */
+export interface TsMemberFunction extends TsMember {
+  readonly _tag: 'TsMemberFunction';
+
+  /**
+   * JSDoc comments for this method
+   */
+  readonly comments: Comments;
+
+  /**
+   * Visibility level (public, private, protected)
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * The name of the method
+   */
+  readonly name: TsIdentSimple;
+
+  /**
+   * The type of method (normal, getter, setter)
+   */
+  readonly methodType: MethodType;
+
+  /**
+   * The method's signature (parameters, return type, generics)
+   */
+  readonly signature: TsFunSig;
+
+  /**
+   * Whether this is a static method
+   */
+  readonly isStatic: boolean;
+
+  /**
+   * Whether this method is readonly
+   */
+  readonly isReadOnly: boolean;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberFunction;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberFunction;
+}
+
+/**
+ * Represents different types of indexing in TypeScript.
+ * Used for index signatures and computed property access.
+ */
+export interface Indexing extends TsTree {
+  readonly _tag: string;
+}
+
+/**
+ * Dictionary-style indexing: `[key: string]: ValueType`
+ */
+export interface IndexingDict extends Indexing {
+  readonly _tag: 'IndexingDict';
+
+  /**
+   * The name of the index parameter
+   */
+  readonly name: TsIdent;
+
+  /**
+   * The type of the index parameter
+   */
+  readonly tpe: TsType;
+}
+
+/**
+ * Single property indexing: `[K in keyof T]`
+ */
+export interface IndexingSingle extends Indexing {
+  readonly _tag: 'IndexingSingle';
+
+  /**
+   * The qualified name being indexed
+   */
+  readonly name: TsQIdent;
+}
+
+/**
+ * Represents a TypeScript index signature.
+ * In TypeScript: `[key: string]: any` or `[index: number]: string`
+ * Allows objects to have properties with computed names.
+ */
+export interface TsMemberIndex extends TsMember {
+  readonly _tag: 'TsMemberIndex';
+
+  /**
+   * JSDoc comments for this index signature
+   */
+  readonly comments: Comments;
+
+  /**
+   * Whether the indexed values are readonly
+   */
+  readonly isReadOnly: boolean;
+
+  /**
+   * Visibility level of this index signature
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * The indexing pattern (key type and name)
+   */
+  readonly indexing: Indexing;
+
+  /**
+   * The type of values stored at indexed locations
+   */
+  readonly valueType: Option<TsType>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberIndex;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberIndex;
+}
+
+/**
+ * Represents a TypeScript mapped type member.
+ * In TypeScript: `{ [K in keyof T]: T[K] }` or `{ readonly [K in keyof T]?: T[K] }`
+ * Used for transforming types by mapping over their properties.
+ */
+export interface TsMemberTypeMapped extends TsMember {
+  readonly _tag: 'TsMemberTypeMapped';
+
+  /**
+   * JSDoc comments for this mapped type
+   */
+  readonly comments: Comments;
+
+  /**
+   * Visibility level of this mapped type
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * Readonly modifier (readonly, +readonly, -readonly, or none)
+   */
+  readonly readonly: ReadonlyModifier;
+
+  /**
+   * The key variable name (e.g., K in `[K in keyof T]`)
+   */
+  readonly key: TsIdent;
+
+  /**
+   * The type being mapped over (e.g., `keyof T`)
+   */
+  readonly from: TsType;
+
+  /**
+   * Optional key remapping (e.g., `as \`prefix_\${K}\``)
+   */
+  readonly as: Option<TsType>;
+
+  /**
+   * Optional modifier (+?, -?, ?, or none)
+   */
+  readonly optionalize: OptionalModifier;
+
+  /**
+   * The resulting type for each mapped property
+   */
+  readonly to: TsType;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberTypeMapped;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberTypeMapped;
+}
+
+/**
+ * Represents a TypeScript property declaration.
+ * In TypeScript: `myProp: string` or `static readonly count: number = 0`
+ * Properties store data in classes and interfaces.
+ */
+export interface TsMemberProperty extends TsMember {
+  readonly _tag: 'TsMemberProperty';
+
+  /**
+   * JSDoc comments for this property
+   */
+  readonly comments: Comments;
+
+  /**
+   * Visibility level (public, private, protected)
+   */
+  readonly level: TsProtectionLevel;
+
+  /**
+   * The name of the property
+   */
+  readonly name: TsIdentSimple;
+
+  /**
+   * Optional type annotation
+   */
+  readonly tpe: Option<TsType>;
+
+  /**
+   * Optional initializer expression
+   */
+  readonly expr: Option<TsExpr>;
+
+  /**
+   * Whether this is a static property
+   */
+  readonly isStatic: boolean;
+
+  /**
+   * Whether this property is readonly
+   */
+  readonly isReadOnly: boolean;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsMemberProperty;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsMemberProperty;
 }
 
 export interface TsEnumMember extends TsTree {
@@ -2805,4 +3133,400 @@ export const TsTypeIntersect = {
    * Type guard
    */
   isTypeIntersect: (tree: TsTree): tree is TsTypeIntersect => tree._tag === 'TsTypeIntersect'
+};
+
+/**
+ * Constructor functions and utilities for TsMemberCall
+ */
+export const TsMemberCall = {
+  /**
+   * Creates a call signature member
+   */
+  create: (
+    comments: Comments,
+    level: TsProtectionLevel,
+    signature: TsFunSig
+  ): TsMemberCall => {
+    return {
+      _tag: 'TsMemberCall',
+      comments,
+      level,
+      signature,
+      withComments: (cs: Comments) =>
+        TsMemberCall.create(cs, level, signature),
+      addComment: (c: Comment) =>
+        TsMemberCall.create(comments.add(c), level, signature),
+      asString: `TsMemberCall(${signature.asString})`
+    };
+  },
+
+  /**
+   * Creates a public call signature
+   */
+  public: (signature: TsFunSig): TsMemberCall =>
+    TsMemberCall.create(Comments.empty(), TsProtectionLevel.default(), signature),
+
+  /**
+   * Type guard
+   */
+  isMemberCall: (tree: TsTree): tree is TsMemberCall => tree._tag === 'TsMemberCall'
+};
+
+/**
+ * Constructor functions and utilities for TsMemberCtor
+ */
+export const TsMemberCtor = {
+  /**
+   * Creates a constructor signature member
+   */
+  create: (
+    comments: Comments,
+    level: TsProtectionLevel,
+    signature: TsFunSig
+  ): TsMemberCtor => {
+    return {
+      _tag: 'TsMemberCtor',
+      comments,
+      level,
+      signature,
+      withComments: (cs: Comments) =>
+        TsMemberCtor.create(cs, level, signature),
+      addComment: (c: Comment) =>
+        TsMemberCtor.create(comments.add(c), level, signature),
+      asString: `TsMemberCtor(${signature.asString})`
+    };
+  },
+
+  /**
+   * Creates a public constructor signature
+   */
+  public: (signature: TsFunSig): TsMemberCtor =>
+    TsMemberCtor.create(Comments.empty(), TsProtectionLevel.default(), signature),
+
+  /**
+   * Type guard
+   */
+  isMemberCtor: (tree: TsTree): tree is TsMemberCtor => tree._tag === 'TsMemberCtor'
+};
+
+/**
+ * Constructor functions and utilities for TsMemberFunction
+ */
+export const TsMemberFunction = {
+  /**
+   * Creates a method member
+   */
+  create: (
+    comments: Comments,
+    level: TsProtectionLevel,
+    name: TsIdentSimple,
+    methodType: MethodType,
+    signature: TsFunSig,
+    isStatic: boolean,
+    isReadOnly: boolean
+  ): TsMemberFunction => {
+    return {
+      _tag: 'TsMemberFunction',
+      comments,
+      level,
+      name,
+      methodType,
+      signature,
+      isStatic,
+      isReadOnly,
+      withComments: (cs: Comments) =>
+        TsMemberFunction.create(cs, level, name, methodType, signature, isStatic, isReadOnly),
+      addComment: (c: Comment) =>
+        TsMemberFunction.create(comments.add(c), level, name, methodType, signature, isStatic, isReadOnly),
+      asString: `TsMemberFunction(${name.value})`
+    };
+  },
+
+  /**
+   * Creates a simple public method
+   */
+  method: (name: TsIdentSimple, signature: TsFunSig): TsMemberFunction =>
+    TsMemberFunction.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      MethodType.normal(),
+      signature,
+      false,
+      false
+    ),
+
+  /**
+   * Creates a getter method
+   */
+  getter: (name: TsIdentSimple, returnType: TsType): TsMemberFunction =>
+    TsMemberFunction.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      MethodType.getter(),
+      TsFunSig.noParams(some(returnType)),
+      false,
+      false
+    ),
+
+  /**
+   * Creates a setter method
+   */
+  setter: (name: TsIdentSimple, paramType: TsType): TsMemberFunction => {
+    const param = TsFunParam.typed(TsIdent.simple('value'), paramType);
+    const signature = TsFunSig.simple(IArray.fromArray([param]), none);
+    return TsMemberFunction.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      MethodType.setter(),
+      signature,
+      false,
+      false
+    );
+  },
+
+  /**
+   * Creates a static method
+   */
+  static: (name: TsIdentSimple, signature: TsFunSig): TsMemberFunction =>
+    TsMemberFunction.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      MethodType.normal(),
+      signature,
+      true,
+      false
+    ),
+
+  /**
+   * Type guard
+   */
+  isMemberFunction: (tree: TsTree): tree is TsMemberFunction => tree._tag === 'TsMemberFunction'
+};
+
+/**
+ * Constructor functions and utilities for Indexing
+ */
+export const IndexingDict = {
+  /**
+   * Creates dictionary-style indexing
+   */
+  create: (name: TsIdent, tpe: TsType): IndexingDict => {
+    return {
+      _tag: 'IndexingDict',
+      name,
+      tpe,
+      asString: `IndexingDict(${name.value}: ${tpe.asString})`
+    };
+  },
+
+  /**
+   * Creates string indexing: [key: string]
+   */
+  string: (name: TsIdent): IndexingDict =>
+    IndexingDict.create(name, TsTypeRef.string),
+
+  /**
+   * Creates number indexing: [index: number]
+   */
+  number: (name: TsIdent): IndexingDict =>
+    IndexingDict.create(name, TsTypeRef.number),
+
+  /**
+   * Type guard
+   */
+  isIndexingDict: (tree: TsTree): tree is IndexingDict => tree._tag === 'IndexingDict'
+};
+
+export const IndexingSingle = {
+  /**
+   * Creates single property indexing
+   */
+  create: (name: TsQIdent): IndexingSingle => {
+    return {
+      _tag: 'IndexingSingle',
+      name,
+      asString: `IndexingSingle(${name.asString})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isIndexingSingle: (tree: TsTree): tree is IndexingSingle => tree._tag === 'IndexingSingle'
+};
+
+/**
+ * Constructor functions and utilities for TsMemberIndex
+ */
+export const TsMemberIndex = {
+  /**
+   * Creates an index signature member
+   */
+  create: (
+    comments: Comments,
+    isReadOnly: boolean,
+    level: TsProtectionLevel,
+    indexing: Indexing,
+    valueType: Option<TsType>
+  ): TsMemberIndex => {
+    return {
+      _tag: 'TsMemberIndex',
+      comments,
+      isReadOnly,
+      level,
+      indexing,
+      valueType,
+      withComments: (cs: Comments) =>
+        TsMemberIndex.create(cs, isReadOnly, level, indexing, valueType),
+      addComment: (c: Comment) =>
+        TsMemberIndex.create(comments.add(c), isReadOnly, level, indexing, valueType),
+      asString: `TsMemberIndex(${indexing.asString})`
+    };
+  },
+
+  /**
+   * Creates a simple string index signature
+   */
+  stringIndex: (valueType: TsType): TsMemberIndex => {
+    const indexing = IndexingDict.string(TsIdent.simple('key'));
+    return TsMemberIndex.create(
+      Comments.empty(),
+      false,
+      TsProtectionLevel.default(),
+      indexing,
+      some(valueType)
+    );
+  },
+
+  /**
+   * Creates a simple number index signature
+   */
+  numberIndex: (valueType: TsType): TsMemberIndex => {
+    const indexing = IndexingDict.number(TsIdent.simple('index'));
+    return TsMemberIndex.create(
+      Comments.empty(),
+      false,
+      TsProtectionLevel.default(),
+      indexing,
+      some(valueType)
+    );
+  },
+
+  /**
+   * Type guard
+   */
+  isMemberIndex: (tree: TsTree): tree is TsMemberIndex => tree._tag === 'TsMemberIndex'
+};
+
+/**
+ * Constructor functions and utilities for TsMemberProperty
+ */
+export const TsMemberProperty = {
+  /**
+   * Creates a property member
+   */
+  create: (
+    comments: Comments,
+    level: TsProtectionLevel,
+    name: TsIdentSimple,
+    tpe: Option<TsType>,
+    expr: Option<TsExpr>,
+    isStatic: boolean,
+    isReadOnly: boolean
+  ): TsMemberProperty => {
+    return {
+      _tag: 'TsMemberProperty',
+      comments,
+      level,
+      name,
+      tpe,
+      expr,
+      isStatic,
+      isReadOnly,
+      withComments: (cs: Comments) =>
+        TsMemberProperty.create(cs, level, name, tpe, expr, isStatic, isReadOnly),
+      addComment: (c: Comment) =>
+        TsMemberProperty.create(comments.add(c), level, name, tpe, expr, isStatic, isReadOnly),
+      asString: `TsMemberProperty(${name.value}${tpe._tag === 'Some' ? ': ' + tpe.value.asString : ''})`
+    };
+  },
+
+  /**
+   * Creates a simple typed property
+   */
+  typed: (name: TsIdentSimple, tpe: TsType): TsMemberProperty =>
+    TsMemberProperty.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      some(tpe),
+      none,
+      false,
+      false
+    ),
+
+  /**
+   * Creates a property with an initializer
+   */
+  withInitializer: (name: TsIdentSimple, tpe: Option<TsType>, expr: TsExpr): TsMemberProperty =>
+    TsMemberProperty.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      tpe,
+      some(expr),
+      false,
+      false
+    ),
+
+  /**
+   * Creates a readonly property
+   */
+  readonly: (name: TsIdentSimple, tpe: TsType): TsMemberProperty =>
+    TsMemberProperty.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      some(tpe),
+      none,
+      false,
+      true
+    ),
+
+  /**
+   * Creates a static property
+   */
+  static: (name: TsIdentSimple, tpe: TsType): TsMemberProperty =>
+    TsMemberProperty.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      some(tpe),
+      none,
+      true,
+      false
+    ),
+
+  /**
+   * Creates a simple untyped property
+   */
+  simple: (name: TsIdentSimple): TsMemberProperty =>
+    TsMemberProperty.create(
+      Comments.empty(),
+      TsProtectionLevel.default(),
+      name,
+      none,
+      none,
+      false,
+      false
+    ),
+
+  /**
+   * Type guard
+   */
+  isMemberProperty: (tree: TsTree): tree is TsMemberProperty => tree._tag === 'TsMemberProperty'
 };

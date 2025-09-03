@@ -5,7 +5,7 @@
  */
 
 import { IArray } from '../IArray';
-import { Comments } from '../scalajs/Comments';
+import { Comments } from '../Comments';
 import { CodePath } from './CodePath';
 
 /**
