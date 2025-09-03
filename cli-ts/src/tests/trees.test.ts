@@ -69,7 +69,8 @@ import {
   TsExprBinaryOp,
   TsExprCast,
   TsExprArrayOf,
-  TsExpr
+  TsExpr,
+  TsEnumMember
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -2900,6 +2901,228 @@ describe('trees - Phase 9: Expression System', () => {
         expect(TsExpr.isRef(literal)).toBe(false);
         expect(TsExpr.isLiteral(ref)).toBe(false);
         expect(TsExpr.isCall(unary)).toBe(false);
+      });
+    });
+  });
+});
+
+describe('trees - Phase 10: Enum Members', () => {
+  describe('TsEnumMember', () => {
+    describe('construction', () => {
+      it('should create an auto-assigned enum member', () => {
+        const name = TsIdent.simple('Red');
+        const member = TsEnumMember.auto(name);
+
+        expect(member._tag).toBe('TsEnumMember');
+        expect(member.name).toBe(name);
+        expect(member.expr._tag).toBe('None');
+        expect(member.comments).toBe(Comments.empty());
+      });
+
+      it('should create a numeric enum member', () => {
+        const name = TsIdent.simple('Green');
+        const member = TsEnumMember.numeric(name, 1);
+
+        expect(member._tag).toBe('TsEnumMember');
+        expect(member.name).toBe(name);
+        expect(member.expr._tag).toBe('Some');
+
+        const expr = member.expr.value;
+        expect(TsExpr.isLiteral(expr)).toBe(true);
+        expect(TsLiteral.isNum((expr as any).value)).toBe(true);
+        expect((expr as any).value.value).toBe('1');
+      });
+
+      it('should create a string enum member', () => {
+        const name = TsIdent.simple('Blue');
+        const member = TsEnumMember.string(name, 'blue');
+
+        expect(member._tag).toBe('TsEnumMember');
+        expect(member.name).toBe(name);
+        expect(member.expr._tag).toBe('Some');
+
+        const expr = member.expr.value;
+        expect(TsExpr.isLiteral(expr)).toBe(true);
+        expect(TsLiteral.isStr((expr as any).value)).toBe(true);
+        expect((expr as any).value.value).toBe('blue');
+      });
+
+      it('should create an enum member with expression', () => {
+        const name = TsIdent.simple('Computed');
+        const expr = TsExprBinaryOp.add(
+          TsExprLiteral.number('1'),
+          TsExprLiteral.number('2')
+        );
+        const member = TsEnumMember.withExpr(name, expr);
+
+        expect(member._tag).toBe('TsEnumMember');
+        expect(member.name).toBe(name);
+        expect(member.expr._tag).toBe('Some');
+        expect(member.expr.value).toBe(expr);
+      });
+
+      it('should create an enum member with comments', () => {
+        const name = TsIdent.simple('Documented');
+        const comments = Comments.create('This is a documented enum member');
+        const member = TsEnumMember.withComments(comments, name, none);
+
+        expect(member._tag).toBe('TsEnumMember');
+        expect(member.name).toBe(name);
+        expect(member.comments).toBe(comments);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const name = TsIdent.simple('Test');
+        const member = TsEnumMember.auto(name);
+        const comments = Comments.create('New comment');
+        const updated = member.withComments(comments);
+
+        expect(updated.comments).toBe(comments);
+        expect(updated.name).toBe(name);
+        expect(updated.expr).toBe(member.expr);
+      });
+
+      it('should support addComment', () => {
+        const name = TsIdent.simple('Test');
+        const member = TsEnumMember.auto(name);
+        const comment = Comment.create('Added comment');
+        const updated = member.addComment(comment);
+
+        expect(updated.comments.cs.length).toBe(1);
+        expect(updated.name).toBe(name);
+        expect(updated.expr).toBe(member.expr);
+      });
+    });
+
+    describe('utilities', () => {
+      it('should initialize auto-assigned members', () => {
+        const members = IArray.fromArray([
+          TsEnumMember.auto(TsIdent.simple('First')),
+          TsEnumMember.auto(TsIdent.simple('Second')),
+          TsEnumMember.numeric(TsIdent.simple('Third'), 10),
+          TsEnumMember.auto(TsIdent.simple('Fourth'))
+        ]);
+
+        const initialized = TsEnumMember.initializeMembers(members);
+
+        expect(initialized.length).toBe(4);
+
+        // First should be 0
+        const first = initialized.apply(0);
+        expect(first.expr._tag).toBe('Some');
+        expect(TsExpr.format(first.expr.value)).toBe('0');
+
+        // Second should be 1
+        const second = initialized.apply(1);
+        expect(second.expr._tag).toBe('Some');
+        expect(TsExpr.format(second.expr.value)).toBe('1');
+
+        // Third should remain 10
+        const third = initialized.apply(2);
+        expect(third.expr._tag).toBe('Some');
+        expect(TsExpr.format(third.expr.value)).toBe('10');
+
+        // Fourth should be 11 (10 + 1)
+        const fourth = initialized.apply(3);
+        expect(fourth.expr._tag).toBe('Some');
+        expect(TsExpr.format(fourth.expr.value)).toBe('11');
+      });
+
+      it('should get effective value of enum members', () => {
+        const autoMember = TsEnumMember.auto(TsIdent.simple('Auto'));
+        const numericMember = TsEnumMember.numeric(TsIdent.simple('Numeric'), 42);
+
+        const autoValue = TsEnumMember.getValue(autoMember, 5);
+        const numericValue = TsEnumMember.getValue(numericMember, 5);
+
+        expect(TsExpr.format(autoValue)).toBe('5');
+        expect(TsExpr.format(numericValue)).toBe('42');
+      });
+
+      it('should detect explicit vs auto-assigned values', () => {
+        const autoMember = TsEnumMember.auto(TsIdent.simple('Auto'));
+        const numericMember = TsEnumMember.numeric(TsIdent.simple('Numeric'), 42);
+
+        expect(TsEnumMember.hasExplicitValue(autoMember)).toBe(false);
+        expect(TsEnumMember.hasExplicitValue(numericMember)).toBe(true);
+
+        expect(TsEnumMember.isAutoAssigned(autoMember)).toBe(true);
+        expect(TsEnumMember.isAutoAssigned(numericMember)).toBe(false);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify enum members', () => {
+        const member = TsEnumMember.auto(TsIdent.simple('Test'));
+        expect(TsEnumMember.isEnumMember(member)).toBe(true);
+
+        const notMember = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsEnumMember.isEnumMember(notMember)).toBe(false);
+      });
+    });
+
+    describe('string representation', () => {
+      it('should format auto-assigned members', () => {
+        const member = TsEnumMember.auto(TsIdent.simple('Red'));
+        expect(member.asString).toBe('TsEnumMember(Red)');
+      });
+
+      it('should format members with explicit values', () => {
+        const member = TsEnumMember.numeric(TsIdent.simple('Green'), 1);
+        expect(member.asString).toBe('TsEnumMember(Green = 1)');
+      });
+
+      it('should format members with string values', () => {
+        const member = TsEnumMember.string(TsIdent.simple('Blue'), 'blue');
+        expect(member.asString).toBe('TsEnumMember(Blue = "blue")');
+      });
+
+      it('should format members with complex expressions', () => {
+        const expr = TsExprBinaryOp.add(
+          TsExprLiteral.number('1'),
+          TsExprLiteral.number('2')
+        );
+        const member = TsEnumMember.withExpr(TsIdent.simple('Computed'), expr);
+        expect(member.asString).toBe('TsEnumMember(Computed = 1 + 2)');
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should handle mixed numeric and string enums', () => {
+        const members = IArray.fromArray([
+          TsEnumMember.numeric(TsIdent.simple('First'), 0),
+          TsEnumMember.string(TsIdent.simple('Second'), 'second'),
+          TsEnumMember.auto(TsIdent.simple('Third'))
+        ]);
+
+        const initialized = TsEnumMember.initializeMembers(members);
+
+        // First should remain 0
+        expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('0');
+
+        // Second should remain "second"
+        expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('"second"');
+
+        // Third should be auto-assigned to 1 (0 + 1)
+        expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('1');
+      });
+
+      it('should handle non-sequential numeric values', () => {
+        const members = IArray.fromArray([
+          TsEnumMember.numeric(TsIdent.simple('First'), 100),
+          TsEnumMember.auto(TsIdent.simple('Second')),
+          TsEnumMember.numeric(TsIdent.simple('Third'), 5),
+          TsEnumMember.auto(TsIdent.simple('Fourth'))
+        ]);
+
+        const initialized = TsEnumMember.initializeMembers(members);
+
+        expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('100');
+        expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('101');
+        expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('5');
+        expect(TsExpr.format(initialized.apply(3).expr.value)).toBe('6');
       });
     });
   });

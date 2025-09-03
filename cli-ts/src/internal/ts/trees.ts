@@ -953,10 +953,39 @@ export interface TsMemberProperty extends TsMember {
   addComment(c: Comment): TsMemberProperty;
 }
 
+/**
+ * Represents a single member/value within a TypeScript enum.
+ * In TypeScript: `Red = 1` or `Green` (auto-assigned value) within an enum declaration.
+ * Enum members can have explicit values or be auto-assigned based on their position.
+ */
 export interface TsEnumMember extends TsTree {
   readonly _tag: 'TsEnumMember';
+
+  /**
+   * JSDoc comments for this enum member
+   */
+  readonly comments: Comments;
+
+  /**
+   * The name of this enum member
+   */
   readonly name: TsIdentSimple;
+
+  /**
+   * Optional explicit value assignment (e.g., = 1, = "red")
+   * If None, the value will be auto-assigned based on position
+   */
   readonly expr: Option<TsExpr>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsEnumMember;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsEnumMember;
 }
 
 /**
@@ -4664,4 +4693,120 @@ export const TsExpr = {
   isBinaryOp: (expr: TsExpr): expr is TsExprBinaryOp => expr._tag === 'TsExprBinaryOp',
   isCast: (expr: TsExpr): expr is TsExprCast => expr._tag === 'TsExprCast',
   isArrayOf: (expr: TsExpr): expr is TsExprArrayOf => expr._tag === 'TsExprArrayOf'
+};
+
+/**
+ * Constructor functions and utilities for TsEnumMember
+ */
+export const TsEnumMember = {
+  /**
+   * Creates an enum member
+   */
+  create: (
+    comments: Comments,
+    name: TsIdentSimple,
+    expr: Option<TsExpr>
+  ): TsEnumMember => {
+    return {
+      _tag: 'TsEnumMember',
+      comments,
+      name,
+      expr,
+      asString: `TsEnumMember(${name.value}${expr._tag === 'Some' ? ' = ' + TsExpr.format(expr.value) : ''})`,
+      withComments: (cs: Comments) => TsEnumMember.create(cs, name, expr),
+      addComment: (c: Comment) => TsEnumMember.create(comments.add(c), name, expr)
+    };
+  },
+
+  /**
+   * Creates an enum member without explicit value (auto-assigned)
+   */
+  auto: (name: TsIdentSimple): TsEnumMember =>
+    TsEnumMember.create(Comments.empty(), name, none),
+
+  /**
+   * Creates an enum member with explicit numeric value
+   */
+  numeric: (name: TsIdentSimple, value: number): TsEnumMember => {
+    const expr = TsExprLiteral.number(value.toString());
+    return TsEnumMember.create(Comments.empty(), name, some(expr));
+  },
+
+  /**
+   * Creates an enum member with explicit string value
+   */
+  string: (name: TsIdentSimple, value: string): TsEnumMember => {
+    const expr = TsExprLiteral.string(value);
+    return TsEnumMember.create(Comments.empty(), name, some(expr));
+  },
+
+  /**
+   * Creates an enum member with explicit expression value
+   */
+  withExpr: (name: TsIdentSimple, expr: TsExpr): TsEnumMember =>
+    TsEnumMember.create(Comments.empty(), name, some(expr)),
+
+  /**
+   * Creates an enum member with comments
+   */
+  withComments: (
+    comments: Comments,
+    name: TsIdentSimple,
+    expr: Option<TsExpr>
+  ): TsEnumMember =>
+    TsEnumMember.create(comments, name, expr),
+
+  /**
+   * Initializes enum members with auto-assigned values
+   * Assigns numeric values starting from 0 for members without explicit values
+   */
+  initializeMembers: (members: IArray<TsEnumMember>): IArray<TsEnumMember> => {
+    let lastUnspecifiedIndex = 0;
+    return members.map((member: TsEnumMember) => {
+      if (member.expr._tag === 'None') {
+        const autoValue = TsExprLiteral.number(lastUnspecifiedIndex.toString());
+        lastUnspecifiedIndex += 1;
+        return TsEnumMember.create(member.comments, member.name, some(autoValue));
+      } else {
+        // Try to extract numeric value to update counter
+        const expr = member.expr.value;
+        if (TsExpr.isLiteral(expr) && TsLiteral.isNum(expr.value)) {
+          const numValue = parseInt((expr.value as any).value, 10);
+          if (!isNaN(numValue)) {
+            lastUnspecifiedIndex = numValue + 1;
+          }
+        }
+        return member;
+      }
+    });
+  },
+
+  /**
+   * Gets the effective value of an enum member
+   * Returns the explicit value or inferred auto-assigned value
+   */
+  getValue: (member: TsEnumMember, index: number): TsExpr => {
+    if (member.expr._tag === 'Some') {
+      return member.expr.value;
+    } else {
+      return TsExprLiteral.number(index.toString());
+    }
+  },
+
+  /**
+   * Checks if an enum member has an explicit value
+   */
+  hasExplicitValue: (member: TsEnumMember): boolean =>
+    member.expr._tag === 'Some',
+
+  /**
+   * Checks if an enum member is auto-assigned
+   */
+  isAutoAssigned: (member: TsEnumMember): boolean =>
+    member.expr._tag === 'None',
+
+  /**
+   * Type guard
+   */
+  isEnumMember: (tree: TsTree): tree is TsEnumMember => tree._tag === 'TsEnumMember'
 };
