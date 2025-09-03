@@ -19,6 +19,7 @@ import { TsProtectionLevel } from './TsProtectionLevel.js';
 import { MethodType } from './MethodType.js';
 import { ReadonlyModifier } from './ReadonlyModifier.js';
 import { OptionalModifier } from './OptionalModifier.js';
+import { ExportType } from './ExportType.js';
 
 /**
  * Base interface for all TypeScript AST (Abstract Syntax Tree) nodes
@@ -962,13 +963,208 @@ export interface TsExpr extends TsTree {
   readonly _tag: string;
 }
 
-// Forward declarations for import/export types
-export interface TsExport extends TsContainerOrDecl {
-  readonly _tag: 'TsExport';
+/**
+ * Represents what is being imported in a TypeScript import statement.
+ * Covers the different syntaxes for importing from modules.
+ */
+export interface TsImported extends TsTree {
+  readonly _tag: string;
 }
 
+/**
+ * Default import or single named import.
+ * In TypeScript: `import React from "react"` or `import { useState } from "react"`
+ */
+export interface TsImportedIdent extends TsImported {
+  readonly _tag: 'TsImportedIdent';
+
+  /**
+   * The identifier being imported
+   */
+  readonly ident: TsIdentSimple;
+}
+
+/**
+ * Destructured/named imports with optional aliasing.
+ * In TypeScript: `import { useState as state, useEffect } from "react"`
+ * The tuple represents (originalName, optionalAlias)
+ */
+export interface TsImportedDestructured extends TsImported {
+  readonly _tag: 'TsImportedDestructured';
+
+  /**
+   * Array of (originalName, optionalAlias) pairs
+   */
+  readonly idents: IArray<[TsIdent, Option<TsIdentSimple>]>;
+}
+
+/**
+ * Star/namespace import.
+ * In TypeScript: `import * as React from "react"` or `import * from "module"`
+ */
+export interface TsImportedStar extends TsImported {
+  readonly _tag: 'TsImportedStar';
+
+  /**
+   * Optional alias for the star import
+   */
+  readonly asOpt: Option<TsIdentSimple>;
+}
+
+/**
+ * Represents the source of a TypeScript import.
+ * Specifies where the import is coming from.
+ */
+export interface TsImportee extends TsTree {
+  readonly _tag: string;
+}
+
+/**
+ * CommonJS-style require import.
+ * In TypeScript: `import foo = require("module")`
+ */
+export interface TsImporteeRequired extends TsImportee {
+  readonly _tag: 'TsImporteeRequired';
+
+  /**
+   * The module being required
+   */
+  readonly from: TsIdentModule;
+}
+
+/**
+ * ES6-style module import.
+ * In TypeScript: `import { foo } from "module"`
+ */
+export interface TsImporteeFrom extends TsImportee {
+  readonly _tag: 'TsImporteeFrom';
+
+  /**
+   * The module being imported from
+   */
+  readonly from: TsIdentModule;
+}
+
+/**
+ * Local/relative import.
+ * In TypeScript: `import { foo } from "./local-module"`
+ */
+export interface TsImporteeLocal extends TsImportee {
+  readonly _tag: 'TsImporteeLocal';
+
+  /**
+   * The qualified identifier for the local import
+   */
+  readonly qident: TsQIdent;
+}
+
+/**
+ * Represents a complete TypeScript import declaration.
+ * In TypeScript: `import { useState } from "react"` or `import type { Props } from "./types"`
+ */
 export interface TsImport extends TsContainerOrDecl {
   readonly _tag: 'TsImport';
+
+  /**
+   * Whether this is a type-only import
+   */
+  readonly typeOnly: boolean;
+
+  /**
+   * What is being imported
+   */
+  readonly imported: IArray<TsImported>;
+
+  /**
+   * Where it's being imported from
+   */
+  readonly from: TsImportee;
+}
+
+/**
+ * Represents what is being exported in a TypeScript export statement.
+ * Covers the different syntaxes for exporting from modules.
+ */
+export interface TsExportee extends TsTree {
+  readonly _tag: string;
+}
+
+/**
+ * Named exports with optional aliasing.
+ * In TypeScript: `export { foo, bar as baz }` or `export { foo } from "module"`
+ * The tuple represents (originalName, optionalAlias)
+ */
+export interface TsExporteeNames extends TsExportee {
+  readonly _tag: 'TsExporteeNames';
+
+  /**
+   * Array of (originalName, optionalAlias) pairs
+   */
+  readonly idents: IArray<[TsQIdent, Option<TsIdentSimple>]>;
+
+  /**
+   * Optional module to re-export from
+   */
+  readonly fromOpt: Option<TsIdentModule>;
+}
+
+/**
+ * Direct export of a declaration.
+ * In TypeScript: `export class MyClass {}` or `export function myFunc() {}`
+ */
+export interface TsExporteeTree extends TsExportee {
+  readonly _tag: 'TsExporteeTree';
+
+  /**
+   * The declaration being exported
+   */
+  readonly decl: TsDecl;
+}
+
+/**
+ * Star/namespace export.
+ * In TypeScript: `export * from "module"` or `export * as namespace from "module"`
+ */
+export interface TsExporteeStar extends TsExportee {
+  readonly _tag: 'TsExporteeStar';
+
+  /**
+   * Optional alias for the star export
+   */
+  readonly as: Option<TsIdentSimple>;
+
+  /**
+   * The module being re-exported from
+   */
+  readonly from: TsIdentModule;
+}
+
+/**
+ * Represents a complete TypeScript export declaration.
+ * In TypeScript: `export { foo }` or `export type { Props }` or `export default MyClass`
+ */
+export interface TsExport extends TsContainerOrDecl {
+  readonly _tag: 'TsExport';
+
+  /**
+   * JSDoc comments for this export
+   */
+  readonly comments: Comments;
+
+  /**
+   * Whether this is a type-only export
+   */
+  readonly typeOnly: boolean;
+
+  /**
+   * The type of export (default, named, etc.)
+   */
+  readonly tpe: ExportType;
+
+  /**
+   * What is being exported
+   */
+  readonly exported: TsExportee;
 }
 
 // Forward declarations for member types
@@ -3529,4 +3725,374 @@ export const TsMemberProperty = {
    * Type guard
    */
   isMemberProperty: (tree: TsTree): tree is TsMemberProperty => tree._tag === 'TsMemberProperty'
+};
+
+/**
+ * Constructor functions and utilities for TsImported
+ */
+export const TsImportedIdent = {
+  /**
+   * Creates an identifier import
+   */
+  create: (ident: TsIdentSimple): TsImportedIdent => {
+    return {
+      _tag: 'TsImportedIdent',
+      ident,
+      asString: `TsImportedIdent(${ident.value})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isImportedIdent: (tree: TsTree): tree is TsImportedIdent => tree._tag === 'TsImportedIdent'
+};
+
+export const TsImportedDestructured = {
+  /**
+   * Creates a destructured import
+   */
+  create: (idents: IArray<[TsIdent, Option<TsIdentSimple>]>): TsImportedDestructured => {
+    return {
+      _tag: 'TsImportedDestructured',
+      idents,
+      asString: `TsImportedDestructured(${idents.length} imports)`
+    };
+  },
+
+  /**
+   * Creates a simple destructured import without aliases
+   */
+  simple: (idents: IArray<TsIdent>): TsImportedDestructured => {
+    const pairs = idents.map(ident => [ident, none] as [TsIdent, Option<TsIdentSimple>]);
+    return TsImportedDestructured.create(pairs);
+  },
+
+  /**
+   * Type guard
+   */
+  isImportedDestructured: (tree: TsTree): tree is TsImportedDestructured => tree._tag === 'TsImportedDestructured'
+};
+
+export const TsImportedStar = {
+  /**
+   * Creates a star import
+   */
+  create: (asOpt: Option<TsIdentSimple>): TsImportedStar => {
+    return {
+      _tag: 'TsImportedStar',
+      asOpt,
+      asString: `TsImportedStar(${asOpt._tag === 'Some' ? 'as ' + asOpt.value.value : 'no alias'})`
+    };
+  },
+
+  /**
+   * Creates a star import with alias
+   */
+  withAlias: (alias: TsIdentSimple): TsImportedStar =>
+    TsImportedStar.create(some(alias)),
+
+  /**
+   * Creates a star import without alias
+   */
+  withoutAlias: (): TsImportedStar =>
+    TsImportedStar.create(none),
+
+  /**
+   * Type guard
+   */
+  isImportedStar: (tree: TsTree): tree is TsImportedStar => tree._tag === 'TsImportedStar'
+};
+
+/**
+ * Constructor functions and utilities for TsImportee
+ */
+export const TsImporteeRequired = {
+  /**
+   * Creates a require-style importee
+   */
+  create: (from: TsIdentModule): TsImporteeRequired => {
+    return {
+      _tag: 'TsImporteeRequired',
+      from,
+      asString: `TsImporteeRequired(${from.value})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isImporteeRequired: (tree: TsTree): tree is TsImporteeRequired => tree._tag === 'TsImporteeRequired'
+};
+
+export const TsImporteeFrom = {
+  /**
+   * Creates an ES6-style importee
+   */
+  create: (from: TsIdentModule): TsImporteeFrom => {
+    return {
+      _tag: 'TsImporteeFrom',
+      from,
+      asString: `TsImporteeFrom(${from.value})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isImporteeFrom: (tree: TsTree): tree is TsImporteeFrom => tree._tag === 'TsImporteeFrom'
+};
+
+export const TsImporteeLocal = {
+  /**
+   * Creates a local importee
+   */
+  create: (qident: TsQIdent): TsImporteeLocal => {
+    return {
+      _tag: 'TsImporteeLocal',
+      qident,
+      asString: `TsImporteeLocal(${qident.asString})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isImporteeLocal: (tree: TsTree): tree is TsImporteeLocal => tree._tag === 'TsImporteeLocal'
+};
+
+/**
+ * Constructor functions and utilities for TsImport
+ */
+export const TsImport = {
+  /**
+   * Creates an import declaration
+   */
+  create: (
+    typeOnly: boolean,
+    imported: IArray<TsImported>,
+    from: TsImportee
+  ): TsImport => {
+    return {
+      _tag: 'TsImport',
+      typeOnly,
+      imported,
+      from,
+      asString: `TsImport(${typeOnly ? 'type ' : ''}${imported.length} imports from ${from.asString})`
+    };
+  },
+
+  /**
+   * Creates a simple named import
+   */
+  named: (names: IArray<TsIdent>, from: TsIdentModule): TsImport => {
+    const imported = IArray.fromArray([TsImportedDestructured.simple(names)] as TsImported[]);
+    const importee = TsImporteeFrom.create(from);
+    return TsImport.create(false, imported, importee);
+  },
+
+  /**
+   * Creates a default import
+   */
+  default: (name: TsIdentSimple, from: TsIdentModule): TsImport => {
+    const imported = IArray.fromArray([TsImportedIdent.create(name)] as TsImported[]);
+    const importee = TsImporteeFrom.create(from);
+    return TsImport.create(false, imported, importee);
+  },
+
+  /**
+   * Creates a star import
+   */
+  star: (alias: Option<TsIdentSimple>, from: TsIdentModule): TsImport => {
+    const imported = IArray.fromArray([TsImportedStar.create(alias)] as TsImported[]);
+    const importee = TsImporteeFrom.create(from);
+    return TsImport.create(false, imported, importee);
+  },
+
+  /**
+   * Creates a type-only import
+   */
+  typeOnly: (names: IArray<TsIdent>, from: TsIdentModule): TsImport => {
+    const imported = IArray.fromArray([TsImportedDestructured.simple(names)] as TsImported[]);
+    const importee = TsImporteeFrom.create(from);
+    return TsImport.create(true, imported, importee);
+  },
+
+  /**
+   * Type guard
+   */
+  isImport: (tree: TsTree): tree is TsImport => tree._tag === 'TsImport'
+};
+
+/**
+ * Constructor functions and utilities for TsExportee
+ */
+export const TsExporteeNames = {
+  /**
+   * Creates a named exportee
+   */
+  create: (
+    idents: IArray<[TsQIdent, Option<TsIdentSimple>]>,
+    fromOpt: Option<TsIdentModule>
+  ): TsExporteeNames => {
+    return {
+      _tag: 'TsExporteeNames',
+      idents,
+      fromOpt,
+      asString: `TsExporteeNames(${idents.length} exports${fromOpt._tag === 'Some' ? ' from ' + fromOpt.value.value : ''})`
+    };
+  },
+
+  /**
+   * Creates a simple named export without re-export
+   */
+  simple: (idents: IArray<TsQIdent>): TsExporteeNames => {
+    const pairs = idents.map(ident => [ident, none] as [TsQIdent, Option<TsIdentSimple>]);
+    return TsExporteeNames.create(pairs, none);
+  },
+
+  /**
+   * Creates a re-export from another module
+   */
+  reExport: (idents: IArray<TsQIdent>, from: TsIdentModule): TsExporteeNames => {
+    const pairs = idents.map(ident => [ident, none] as [TsQIdent, Option<TsIdentSimple>]);
+    return TsExporteeNames.create(pairs, some(from));
+  },
+
+  /**
+   * Type guard
+   */
+  isExporteeNames: (tree: TsTree): tree is TsExporteeNames => tree._tag === 'TsExporteeNames'
+};
+
+export const TsExporteeTree = {
+  /**
+   * Creates a tree exportee
+   */
+  create: (decl: TsDecl): TsExporteeTree => {
+    return {
+      _tag: 'TsExporteeTree',
+      decl,
+      asString: `TsExporteeTree(${decl.asString})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isExporteeTree: (tree: TsTree): tree is TsExporteeTree => tree._tag === 'TsExporteeTree'
+};
+
+export const TsExporteeStar = {
+  /**
+   * Creates a star exportee
+   */
+  create: (as: Option<TsIdentSimple>, from: TsIdentModule): TsExporteeStar => {
+    return {
+      _tag: 'TsExporteeStar',
+      as,
+      from,
+      asString: `TsExporteeStar(${as._tag === 'Some' ? 'as ' + as.value.value : 'no alias'} from ${from.value})`
+    };
+  },
+
+  /**
+   * Creates a star export with alias
+   */
+  withAlias: (alias: TsIdentSimple, from: TsIdentModule): TsExporteeStar =>
+    TsExporteeStar.create(some(alias), from),
+
+  /**
+   * Creates a star export without alias
+   */
+  withoutAlias: (from: TsIdentModule): TsExporteeStar =>
+    TsExporteeStar.create(none, from),
+
+  /**
+   * Type guard
+   */
+  isExporteeStar: (tree: TsTree): tree is TsExporteeStar => tree._tag === 'TsExporteeStar'
+};
+
+/**
+ * Constructor functions and utilities for TsExport
+ */
+export const TsExport = {
+  /**
+   * Creates an export declaration
+   */
+  create: (
+    comments: Comments,
+    typeOnly: boolean,
+    tpe: ExportType,
+    exported: TsExportee
+  ): TsExport => {
+    return {
+      _tag: 'TsExport',
+      comments,
+      typeOnly,
+      tpe,
+      exported,
+      asString: `TsExport(${typeOnly ? 'type ' : ''}${ExportType.isDefaulted(tpe) ? 'default ' : ''}${exported.asString})`
+    };
+  },
+
+  /**
+   * Creates a named export
+   */
+  named: (names: IArray<TsQIdent>): TsExport => {
+    const exportee = TsExporteeNames.simple(names);
+    return TsExport.create(Comments.empty(), false, ExportType.named(), exportee);
+  },
+
+  /**
+   * Creates a default export
+   */
+  default: (decl: TsDecl): TsExport => {
+    const exportee = TsExporteeTree.create(decl);
+    return TsExport.create(Comments.empty(), false, ExportType.defaulted(), exportee);
+  },
+
+  /**
+   * Creates a star export
+   */
+  star: (from: TsIdentModule): TsExport => {
+    const exportee = TsExporteeStar.withoutAlias(from);
+    return TsExport.create(Comments.empty(), false, ExportType.named(), exportee);
+  },
+
+  /**
+   * Creates a star export with alias
+   */
+  starAs: (alias: TsIdentSimple, from: TsIdentModule): TsExport => {
+    const exportee = TsExporteeStar.withAlias(alias, from);
+    return TsExport.create(Comments.empty(), false, ExportType.named(), exportee);
+  },
+
+  /**
+   * Creates a type-only export
+   */
+  typeOnly: (names: IArray<TsQIdent>): TsExport => {
+    const exportee = TsExporteeNames.simple(names);
+    return TsExport.create(Comments.empty(), true, ExportType.named(), exportee);
+  },
+
+  /**
+   * Creates a re-export
+   */
+  reExport: (names: IArray<TsQIdent>, from: TsIdentModule): TsExport => {
+    const exportee = TsExporteeNames.reExport(names, from);
+    return TsExport.create(Comments.empty(), false, ExportType.named(), exportee);
+  },
+
+  /**
+   * Creates an export with comments
+   */
+  withComments: (comments: Comments, typeOnly: boolean, tpe: ExportType, exported: TsExportee): TsExport =>
+    TsExport.create(comments, typeOnly, tpe, exported),
+
+  /**
+   * Type guard
+   */
+  isExport: (tree: TsTree): tree is TsExport => tree._tag === 'TsExport'
 };

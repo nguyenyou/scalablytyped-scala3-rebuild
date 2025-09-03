@@ -50,11 +50,23 @@ import {
   TsMemberIndex,
   TsMemberProperty,
   IndexingDict,
-  IndexingSingle
+  IndexingSingle,
+  TsImportedIdent,
+  TsImportedDestructured,
+  TsImportedStar,
+  TsImporteeRequired,
+  TsImporteeFrom,
+  TsImporteeLocal,
+  TsImport,
+  TsExporteeNames,
+  TsExporteeTree,
+  TsExporteeStar,
+  TsExport
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
 import { MethodType } from '../internal/ts/MethodType.js';
+import { ExportType } from '../internal/ts/ExportType.js';
 
 describe('trees - Phase 1: Base Types and Identifiers', () => {
   describe('TsIdent', () => {
@@ -2082,6 +2094,403 @@ describe('trees - Phase 7: Members', () => {
 
         const notProperty = { _tag: 'SomethingElse', asString: 'test' };
         expect(TsMemberProperty.isMemberProperty(notProperty)).toBe(false);
+      });
+    });
+  });
+});
+
+describe('trees - Phase 8: Import/Export System', () => {
+  describe('TsImported', () => {
+    describe('TsImportedIdent', () => {
+      it('should create an identifier import', () => {
+        const ident = TsIdent.simple('React');
+        const imported = TsImportedIdent.create(ident);
+
+        expect(imported._tag).toBe('TsImportedIdent');
+        expect(imported.ident).toBe(ident);
+      });
+
+      it('should identify imported idents', () => {
+        const ident = TsIdent.simple('useState');
+        const imported = TsImportedIdent.create(ident);
+        expect(TsImportedIdent.isImportedIdent(imported)).toBe(true);
+
+        const notImported = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImportedIdent.isImportedIdent(notImported)).toBe(false);
+      });
+    });
+
+    describe('TsImportedDestructured', () => {
+      it('should create a destructured import', () => {
+        const ident1 = TsIdent.simple('useState');
+        const ident2 = TsIdent.simple('useEffect');
+        const alias = TsIdent.simple('effect');
+        const idents = IArray.fromArray([
+          [ident1, none] as [TsIdent, Option<TsIdentSimple>],
+          [ident2, some(alias)] as [TsIdent, Option<TsIdentSimple>]
+        ]);
+        const imported = TsImportedDestructured.create(idents);
+
+        expect(imported._tag).toBe('TsImportedDestructured');
+        expect(imported.idents).toBe(idents);
+        expect(imported.idents.length).toBe(2);
+      });
+
+      it('should create a simple destructured import', () => {
+        const idents = IArray.fromArray([
+          TsIdent.simple('useState'),
+          TsIdent.simple('useEffect')
+        ]);
+        const imported = TsImportedDestructured.simple(idents);
+
+        expect(imported._tag).toBe('TsImportedDestructured');
+        expect(imported.idents.length).toBe(2);
+        expect(imported.idents.apply(0)[1]._tag).toBe('None'); // No alias
+        expect(imported.idents.apply(1)[1]._tag).toBe('None'); // No alias
+      });
+
+      it('should identify destructured imports', () => {
+        const idents = IArray.fromArray([TsIdent.simple('test')]);
+        const imported = TsImportedDestructured.simple(idents);
+        expect(TsImportedDestructured.isImportedDestructured(imported)).toBe(true);
+
+        const notImported = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImportedDestructured.isImportedDestructured(notImported)).toBe(false);
+      });
+    });
+
+    describe('TsImportedStar', () => {
+      it('should create a star import with alias', () => {
+        const alias = TsIdent.simple('React');
+        const imported = TsImportedStar.withAlias(alias);
+
+        expect(imported._tag).toBe('TsImportedStar');
+        expect(imported.asOpt._tag).toBe('Some');
+        expect(imported.asOpt.value).toBe(alias);
+      });
+
+      it('should create a star import without alias', () => {
+        const imported = TsImportedStar.withoutAlias();
+
+        expect(imported._tag).toBe('TsImportedStar');
+        expect(imported.asOpt._tag).toBe('None');
+      });
+
+      it('should identify star imports', () => {
+        const imported = TsImportedStar.withoutAlias();
+        expect(TsImportedStar.isImportedStar(imported)).toBe(true);
+
+        const notImported = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImportedStar.isImportedStar(notImported)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsImportee', () => {
+    describe('TsImporteeRequired', () => {
+      it('should create a require-style importee', () => {
+        const module = TsIdentModule.simple('fs');
+        const importee = TsImporteeRequired.create(module);
+
+        expect(importee._tag).toBe('TsImporteeRequired');
+        expect(importee.from).toBe(module);
+      });
+
+      it('should identify required importees', () => {
+        const module = TsIdentModule.simple('path');
+        const importee = TsImporteeRequired.create(module);
+        expect(TsImporteeRequired.isImporteeRequired(importee)).toBe(true);
+
+        const notImportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImporteeRequired.isImporteeRequired(notImportee)).toBe(false);
+      });
+    });
+
+    describe('TsImporteeFrom', () => {
+      it('should create an ES6-style importee', () => {
+        const module = TsIdentModule.simple('react');
+        const importee = TsImporteeFrom.create(module);
+
+        expect(importee._tag).toBe('TsImporteeFrom');
+        expect(importee.from).toBe(module);
+      });
+
+      it('should identify from importees', () => {
+        const module = TsIdentModule.simple('lodash');
+        const importee = TsImporteeFrom.create(module);
+        expect(TsImporteeFrom.isImporteeFrom(importee)).toBe(true);
+
+        const notImportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImporteeFrom.isImporteeFrom(notImportee)).toBe(false);
+      });
+    });
+
+    describe('TsImporteeLocal', () => {
+      it('should create a local importee', () => {
+        const qident = TsQIdent.ofStrings('./utils', 'helper');
+        const importee = TsImporteeLocal.create(qident);
+
+        expect(importee._tag).toBe('TsImporteeLocal');
+        expect(importee.qident).toBe(qident);
+      });
+
+      it('should identify local importees', () => {
+        const qident = TsQIdent.ofStrings('./types');
+        const importee = TsImporteeLocal.create(qident);
+        expect(TsImporteeLocal.isImporteeLocal(importee)).toBe(true);
+
+        const notImportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImporteeLocal.isImporteeLocal(notImportee)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsImport', () => {
+    describe('construction', () => {
+      it('should create a named import', () => {
+        const names = IArray.fromArray([
+          TsIdent.simple('useState'),
+          TsIdent.simple('useEffect')
+        ]);
+        const module = TsIdentModule.simple('react');
+        const importDecl = TsImport.named(names, module);
+
+        expect(importDecl._tag).toBe('TsImport');
+        expect(importDecl.typeOnly).toBe(false);
+        expect(importDecl.imported.length).toBe(1);
+        expect(importDecl.from._tag).toBe('TsImporteeFrom');
+      });
+
+      it('should create a default import', () => {
+        const name = TsIdent.simple('React');
+        const module = TsIdentModule.simple('react');
+        const importDecl = TsImport.default(name, module);
+
+        expect(importDecl._tag).toBe('TsImport');
+        expect(importDecl.typeOnly).toBe(false);
+        expect(importDecl.imported.length).toBe(1);
+        expect(importDecl.imported.apply(0)._tag).toBe('TsImportedIdent');
+      });
+
+      it('should create a star import', () => {
+        const alias = TsIdent.simple('React');
+        const module = TsIdentModule.simple('react');
+        const importDecl = TsImport.star(some(alias), module);
+
+        expect(importDecl._tag).toBe('TsImport');
+        expect(importDecl.typeOnly).toBe(false);
+        expect(importDecl.imported.length).toBe(1);
+        expect(importDecl.imported.apply(0)._tag).toBe('TsImportedStar');
+      });
+
+      it('should create a type-only import', () => {
+        const names = IArray.fromArray([TsIdent.simple('Props')]);
+        const module = TsIdentModule.simple('./types');
+        const importDecl = TsImport.typeOnly(names, module);
+
+        expect(importDecl._tag).toBe('TsImport');
+        expect(importDecl.typeOnly).toBe(true);
+        expect(importDecl.imported.length).toBe(1);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify imports', () => {
+        const names = IArray.fromArray([TsIdent.simple('test')]);
+        const module = TsIdentModule.simple('test-module');
+        const importDecl = TsImport.named(names, module);
+        expect(TsImport.isImport(importDecl)).toBe(true);
+
+        const notImport = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsImport.isImport(notImport)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExportee', () => {
+    describe('TsExporteeNames', () => {
+      it('should create a named exportee', () => {
+        const name1 = TsQIdent.ofStrings('myFunction');
+        const name2 = TsQIdent.ofStrings('myClass');
+        const alias = TsIdent.simple('MyClass');
+        const idents = IArray.fromArray([
+          [name1, none] as [TsQIdent, Option<TsIdentSimple>],
+          [name2, some(alias)] as [TsQIdent, Option<TsIdentSimple>]
+        ]);
+        const exportee = TsExporteeNames.create(idents, none);
+
+        expect(exportee._tag).toBe('TsExporteeNames');
+        expect(exportee.idents).toBe(idents);
+        expect(exportee.fromOpt._tag).toBe('None');
+      });
+
+      it('should create a simple named export', () => {
+        const names = IArray.fromArray([
+          TsQIdent.ofStrings('func1'),
+          TsQIdent.ofStrings('func2')
+        ]);
+        const exportee = TsExporteeNames.simple(names);
+
+        expect(exportee._tag).toBe('TsExporteeNames');
+        expect(exportee.idents.length).toBe(2);
+        expect(exportee.fromOpt._tag).toBe('None');
+      });
+
+      it('should create a re-export', () => {
+        const names = IArray.fromArray([TsQIdent.ofStrings('helper')]);
+        const module = TsIdentModule.simple('./utils');
+        const exportee = TsExporteeNames.reExport(names, module);
+
+        expect(exportee._tag).toBe('TsExporteeNames');
+        expect(exportee.idents.length).toBe(1);
+        expect(exportee.fromOpt._tag).toBe('Some');
+        expect(exportee.fromOpt.value).toBe(module);
+      });
+
+      it('should identify named exportees', () => {
+        const names = IArray.fromArray([TsQIdent.ofStrings('test')]);
+        const exportee = TsExporteeNames.simple(names);
+        expect(TsExporteeNames.isExporteeNames(exportee)).toBe(true);
+
+        const notExportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExporteeNames.isExporteeNames(notExportee)).toBe(false);
+      });
+    });
+
+    describe('TsExporteeTree', () => {
+      it('should create a tree exportee', () => {
+        // Create a mock declaration for testing
+        const mockDecl = {
+          _tag: 'TsDeclClass',
+          asString: 'class MyClass {}'
+        } as any;
+        const exportee = TsExporteeTree.create(mockDecl);
+
+        expect(exportee._tag).toBe('TsExporteeTree');
+        expect(exportee.decl).toBe(mockDecl);
+      });
+
+      it('should identify tree exportees', () => {
+        const mockDecl = { _tag: 'TsDeclFunction', asString: 'function test() {}' } as any;
+        const exportee = TsExporteeTree.create(mockDecl);
+        expect(TsExporteeTree.isExporteeTree(exportee)).toBe(true);
+
+        const notExportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExporteeTree.isExporteeTree(notExportee)).toBe(false);
+      });
+    });
+
+    describe('TsExporteeStar', () => {
+      it('should create a star export with alias', () => {
+        const alias = TsIdent.simple('Utils');
+        const module = TsIdentModule.simple('./utils');
+        const exportee = TsExporteeStar.withAlias(alias, module);
+
+        expect(exportee._tag).toBe('TsExporteeStar');
+        expect(exportee.as._tag).toBe('Some');
+        expect(exportee.as.value).toBe(alias);
+        expect(exportee.from).toBe(module);
+      });
+
+      it('should create a star export without alias', () => {
+        const module = TsIdentModule.simple('./helpers');
+        const exportee = TsExporteeStar.withoutAlias(module);
+
+        expect(exportee._tag).toBe('TsExporteeStar');
+        expect(exportee.as._tag).toBe('None');
+        expect(exportee.from).toBe(module);
+      });
+
+      it('should identify star exportees', () => {
+        const module = TsIdentModule.simple('./test');
+        const exportee = TsExporteeStar.withoutAlias(module);
+        expect(TsExporteeStar.isExporteeStar(exportee)).toBe(true);
+
+        const notExportee = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExporteeStar.isExporteeStar(notExportee)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExport', () => {
+    describe('construction', () => {
+      it('should create a named export', () => {
+        const names = IArray.fromArray([
+          TsQIdent.ofStrings('myFunction'),
+          TsQIdent.ofStrings('myVariable')
+        ]);
+        const exportDecl = TsExport.named(names);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(false);
+        expect(ExportType.isNamed(exportDecl.tpe)).toBe(true);
+        expect(exportDecl.exported._tag).toBe('TsExporteeNames');
+      });
+
+      it('should create a default export', () => {
+        const mockDecl = { _tag: 'TsDeclClass', asString: 'class MyClass {}' } as any;
+        const exportDecl = TsExport.default(mockDecl);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(false);
+        expect(ExportType.isDefaulted(exportDecl.tpe)).toBe(true);
+        expect(exportDecl.exported._tag).toBe('TsExporteeTree');
+      });
+
+      it('should create a star export', () => {
+        const module = TsIdentModule.simple('./utils');
+        const exportDecl = TsExport.star(module);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(false);
+        expect(ExportType.isNamed(exportDecl.tpe)).toBe(true);
+        expect(exportDecl.exported._tag).toBe('TsExporteeStar');
+      });
+
+      it('should create a star export with alias', () => {
+        const alias = TsIdent.simple('Utils');
+        const module = TsIdentModule.simple('./utils');
+        const exportDecl = TsExport.starAs(alias, module);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(false);
+        expect(exportDecl.exported._tag).toBe('TsExporteeStar');
+        const starExportee = exportDecl.exported as any;
+        expect(starExportee.as._tag).toBe('Some');
+        expect(starExportee.as.value).toBe(alias);
+      });
+
+      it('should create a type-only export', () => {
+        const names = IArray.fromArray([TsQIdent.ofStrings('MyType')]);
+        const exportDecl = TsExport.typeOnly(names);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(true);
+        expect(ExportType.isNamed(exportDecl.tpe)).toBe(true);
+      });
+
+      it('should create a re-export', () => {
+        const names = IArray.fromArray([TsQIdent.ofStrings('helper')]);
+        const module = TsIdentModule.simple('./helpers');
+        const exportDecl = TsExport.reExport(names, module);
+
+        expect(exportDecl._tag).toBe('TsExport');
+        expect(exportDecl.typeOnly).toBe(false);
+        expect(exportDecl.exported._tag).toBe('TsExporteeNames');
+        const namesExportee = exportDecl.exported as any;
+        expect(namesExportee.fromOpt._tag).toBe('Some');
+        expect(namesExportee.fromOpt.value).toBe(module);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify exports', () => {
+        const names = IArray.fromArray([TsQIdent.ofStrings('test')]);
+        const exportDecl = TsExport.named(names);
+        expect(TsExport.isExport(exportDecl)).toBe(true);
+
+        const notExport = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExport.isExport(notExport)).toBe(false);
       });
     });
   });
