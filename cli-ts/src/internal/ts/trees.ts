@@ -8,7 +8,8 @@
  */
 
 import { IArray } from '../IArray.js';
-import { Comments, Comment } from '../scalajs/Comments.js';
+import { Comments } from '../Comments.js';
+import {Comment} from '../Comment.js'
 import { Option, some, none } from 'fp-ts/Option';
 import { CodePath, HasCodePath } from './CodePath.js';
 import { JsLocation, HasJsLocation } from './JsLocation.js';
@@ -149,22 +150,473 @@ export interface TsDeclNamespaceOrModule extends TsContainer, TsNamedValueDecl, 
  */
 export interface TsDeclModuleLike extends TsDeclNamespaceOrModule {}
 
-// Forward declarations for types that will be implemented in later phases
+/**
+ * Represents a TypeScript generic type parameter.
+ * In TypeScript: `T`, `T extends string`, `T = string`, or `T extends keyof U = never`
+ * Used in generic classes, interfaces, functions, and type aliases.
+ */
 export interface TsTypeParam extends TsTree {
   readonly _tag: 'TsTypeParam';
+
+  /**
+   * JSDoc comments for this type parameter
+   */
+  readonly comments: Comments;
+
+  /**
+   * The name of the type parameter (e.g., T, U, K)
+   */
   readonly name: TsIdentSimple;
+
+  /**
+   * Optional constraint (e.g., T extends string)
+   */
   readonly upperBound: Option<TsType>;
+
+  /**
+   * Optional default type (e.g., T = string)
+   */
   readonly default: Option<TsType>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsTypeParam;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsTypeParam;
 }
 
-export interface TsTypeRef extends TsType {
-  readonly _tag: 'TsTypeRef';
-  readonly name: TsQIdent;
-  readonly tparams: IArray<TsType>;
+/**
+ * Represents a TypeScript function signature.
+ * In TypeScript: `<T>(param1: string, param2: number): boolean` (the signature part of a function)
+ * Used in function declarations, method declarations, and function types.
+ */
+export interface TsFunSig extends TsTree {
+  readonly _tag: 'TsFunSig';
+
+  /**
+   * JSDoc comments for this function signature
+   */
+  readonly comments: Comments;
+
+  /**
+   * Generic type parameters (e.g., <T, U>)
+   */
+  readonly tparams: IArray<TsTypeParam>;
+
+  /**
+   * Function parameters with their types
+   */
+  readonly params: IArray<TsFunParam>;
+
+  /**
+   * Return type of the function (None means void or inferred)
+   */
+  readonly resultType: Option<TsType>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsFunSig;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsFunSig;
 }
 
+/**
+ * Represents a single parameter in a TypeScript function.
+ * In TypeScript: `param: string` or `optionalParam?: number` or `...rest: string[]`
+ */
+export interface TsFunParam extends TsTree {
+  readonly _tag: 'TsFunParam';
+
+  /**
+   * JSDoc comments for this parameter
+   */
+  readonly comments: Comments;
+
+  /**
+   * The name of the parameter
+   */
+  readonly name: TsIdentSimple;
+
+  /**
+   * The type of the parameter (None means inferred or any)
+   */
+  readonly tpe: Option<TsType>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsFunParam;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsFunParam;
+
+  /**
+   * Checks equality based on type (name doesn't matter for type checking)
+   */
+  equals(other: TsFunParam): boolean;
+}
+
+/**
+ * Base trait for all TypeScript types.
+ * In TypeScript: `string`, `number`, `MyInterface`, `string | number`, `{ prop: string }`, etc.
+ * Represents any type expression that can appear in type annotations.
+ */
 export interface TsType extends TsTree {
   readonly _tag: string;
+}
+
+/**
+ * Represents a TypeScript type reference.
+ * In TypeScript: `MyClass`, `Array<string>`, `Promise<number>`, `React.Component<Props>`
+ * References to named types, possibly with generic type arguments.
+ */
+export interface TsTypeRef extends TsType {
+  readonly _tag: 'TsTypeRef';
+
+  /**
+   * JSDoc comments for this type reference
+   */
+  readonly comments: Comments;
+
+  /**
+   * The qualified name being referenced
+   */
+  readonly name: TsQIdent;
+
+  /**
+   * Generic type arguments (e.g., <string, number>)
+   */
+  readonly tparams: IArray<TsType>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsTypeRef;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsTypeRef;
+}
+
+/**
+ * Represents a TypeScript literal type.
+ * In TypeScript: `42`, `"hello"`, `true`, `false`
+ * Types that represent specific literal values.
+ */
+export interface TsTypeLiteral extends TsType {
+  readonly _tag: 'TsTypeLiteral';
+
+  /**
+   * The literal value this type represents
+   */
+  readonly literal: TsLiteral;
+}
+
+/**
+ * Represents a TypeScript object type.
+ * In TypeScript: `{ prop: string; method(): void }`, `{ [key: string]: any }`
+ * Anonymous object types with properties, methods, and index signatures.
+ */
+export interface TsTypeObject extends TsType, HasClassMembers {
+  readonly _tag: 'TsTypeObject';
+
+  /**
+   * JSDoc comments for this object type
+   */
+  readonly comments: Comments;
+
+  /**
+   * Properties, methods, and signatures of this object type
+   */
+  readonly members: IArray<TsMember>;
+
+  /**
+   * Creates a copy with new comments
+   */
+  withComments(cs: Comments): TsTypeObject;
+
+  /**
+   * Adds a comment to the existing comments
+   */
+  addComment(c: Comment): TsTypeObject;
+}
+
+/**
+ * Represents a TypeScript function type.
+ * In TypeScript: `(x: number, y: string) => boolean`, `<T>(arg: T) => T`
+ * Function types with parameters and return types.
+ */
+export interface TsTypeFunction extends TsType {
+  readonly _tag: 'TsTypeFunction';
+
+  /**
+   * The function signature (parameters, return type, type parameters)
+   */
+  readonly signature: TsFunSig;
+}
+
+/**
+ * Represents a TypeScript constructor type.
+ * In TypeScript: `new (x: number) => MyClass`, `abstract new () => AbstractClass`
+ * Types for constructor functions.
+ */
+export interface TsTypeConstructor extends TsType {
+  readonly _tag: 'TsTypeConstructor';
+
+  /**
+   * Whether this is an abstract constructor
+   */
+  readonly isAbstract: boolean;
+
+  /**
+   * The constructor function signature
+   */
+  readonly signature: TsTypeFunction;
+}
+
+/**
+ * Represents a TypeScript type predicate with 'is'.
+ * In TypeScript: `x is string`, `value is MyType`
+ * Used in type guard functions to narrow types.
+ */
+export interface TsTypeIs extends TsType {
+  readonly _tag: 'TsTypeIs';
+
+  /**
+   * The parameter being checked
+   */
+  readonly ident: TsIdent;
+
+  /**
+   * The type being asserted
+   */
+  readonly tpe: TsType;
+}
+
+/**
+ * Represents a TypeScript assertion signature.
+ * In TypeScript: `asserts x`, `asserts x is string`
+ * Used in assertion functions that throw if condition is false.
+ */
+export interface TsTypeAsserts extends TsType {
+  readonly _tag: 'TsTypeAsserts';
+
+  /**
+   * The parameter being asserted
+   */
+  readonly ident: TsIdentSimple;
+
+  /**
+   * Optional type being asserted
+   */
+  readonly isOpt: Option<TsType>;
+}
+
+/**
+ * Represents a single element in a TypeScript tuple type.
+ * In TypeScript: `string` in `[string, number]` or `name: string` in `[name: string, age: number]`
+ * Tuple elements can optionally have labels for better documentation.
+ */
+export interface TsTupleElement extends TsTree {
+  readonly _tag: 'TsTupleElement';
+
+  /**
+   * Optional label for this tuple element
+   */
+  readonly label: Option<TsIdent>;
+
+  /**
+   * The type of this tuple element
+   */
+  readonly tpe: TsType;
+}
+
+/**
+ * Represents a TypeScript tuple type.
+ * In TypeScript: `[string, number]`, `[name: string, age: number]`, `[string, ...number[]]`
+ * Fixed-length arrays with specific types for each position.
+ */
+export interface TsTypeTuple extends TsType {
+  readonly _tag: 'TsTypeTuple';
+
+  /**
+   * The elements of this tuple type
+   */
+  readonly elems: IArray<TsTupleElement>;
+}
+
+/**
+ * Represents a TypeScript typeof query.
+ * In TypeScript: `typeof myVariable`, `typeof MyClass.prototype`
+ * Gets the type of a value expression.
+ */
+export interface TsTypeQuery extends TsType {
+  readonly _tag: 'TsTypeQuery';
+
+  /**
+   * The expression to get the type of
+   */
+  readonly expr: TsQIdent;
+}
+
+/**
+ * Represents a TypeScript rest/spread type.
+ * In TypeScript: `...string[]` in tuple types or function parameters
+ * Represents variable-length sequences of a type.
+ */
+export interface TsTypeRepeated extends TsType {
+  readonly _tag: 'TsTypeRepeated';
+
+  /**
+   * The underlying type being repeated
+   */
+  readonly underlying: TsType;
+}
+
+/**
+ * Represents a TypeScript keyof operator.
+ * In TypeScript: `keyof MyInterface`, `keyof typeof myObject`
+ * Gets the union of all property names of a type.
+ */
+export interface TsTypeKeyOf extends TsType {
+  readonly _tag: 'TsTypeKeyOf';
+
+  /**
+   * The type to get the keys of
+   */
+  readonly key: TsType;
+}
+
+/**
+ * Represents a TypeScript indexed access type.
+ * In TypeScript: `MyType[K]`, `MyArray[number]`, `MyObject["property"]`
+ * Accesses the type of a property by key.
+ */
+export interface TsTypeLookup extends TsType {
+  readonly _tag: 'TsTypeLookup';
+
+  /**
+   * The type being indexed
+   */
+  readonly from: TsType;
+
+  /**
+   * The key/index type
+   */
+  readonly key: TsType;
+}
+
+/**
+ * Represents the TypeScript 'this' type.
+ * In TypeScript: `this` in method return types or parameter types
+ * Refers to the type of the current instance.
+ */
+export interface TsTypeThis extends TsType {
+  readonly _tag: 'TsTypeThis';
+}
+
+/**
+ * Represents a TypeScript intersection type.
+ * In TypeScript: `A & B & C`
+ * Creates a type that has all properties of all intersected types.
+ */
+export interface TsTypeIntersect extends TsType {
+  readonly _tag: 'TsTypeIntersect';
+
+  /**
+   * The types being intersected
+   */
+  readonly types: IArray<TsType>;
+}
+
+/**
+ * Represents a TypeScript union type.
+ * In TypeScript: `string | number | boolean`
+ * Creates a type that can be any one of the specified types.
+ */
+export interface TsTypeUnion extends TsType {
+  readonly _tag: 'TsTypeUnion';
+
+  /**
+   * The types in the union
+   */
+  readonly types: IArray<TsType>;
+}
+
+/**
+ * Base trait for TypeScript type predicates and conditional logic.
+ * Used in advanced type-level programming with conditional types.
+ */
+export interface TsTypePredicate extends TsType {
+  readonly _tag: string;
+}
+
+/**
+ * Represents a TypeScript conditional type.
+ * In TypeScript: `T extends string ? string[] : never`
+ * Type-level if-then-else logic based on type relationships.
+ */
+export interface TsTypeConditional extends TsTypePredicate {
+  readonly _tag: 'TsTypeConditional';
+
+  /**
+   * The condition to test
+   */
+  readonly pred: TsType;
+
+  /**
+   * Type to use if condition is true
+   */
+  readonly ifTrue: TsType;
+
+  /**
+   * Type to use if condition is false
+   */
+  readonly ifFalse: TsType;
+}
+
+/**
+ * Represents a TypeScript extends clause in conditional types.
+ * In TypeScript: `T extends (...args: any[]) => infer R ? R : any`
+ * Tests if one type extends/is assignable to another.
+ */
+export interface TsTypeExtends extends TsTypePredicate {
+  readonly _tag: 'TsTypeExtends';
+
+  /**
+   * The type being tested
+   */
+  readonly tpe: TsType;
+
+  /**
+   * The type it should extend
+   */
+  readonly extends: TsType;
+}
+
+/**
+ * Represents a TypeScript infer keyword in conditional types.
+ * In TypeScript: `infer R` in `T extends (...args: any[]) => infer R ? R : any`
+ * Captures and names a type for use in the conditional type's branches.
+ */
+export interface TsTypeInfer extends TsTypePredicate {
+  readonly _tag: 'TsTypeInfer';
+
+  /**
+   * The type parameter being inferred
+   */
+  readonly tparam: TsTypeParam;
 }
 
 export interface TsMember extends TsTree {
@@ -180,19 +632,6 @@ export interface TsEnumMember extends TsTree {
 
 export interface TsExpr extends TsTree {
   readonly _tag: string;
-}
-
-export interface TsFunSig extends TsTree {
-  readonly _tag: 'TsFunSig';
-  readonly tparams: IArray<TsTypeParam>;
-  readonly params: IArray<TsFunParam>;
-  readonly resultType: Option<TsType>;
-}
-
-export interface TsFunParam extends TsTree {
-  readonly _tag: 'TsFunParam';
-  readonly name: TsIdentSimple;
-  readonly tpe: Option<TsType>;
 }
 
 // Forward declarations for import/export types
@@ -1881,4 +2320,489 @@ export const TsDeclTypeAlias = {
    * Type guard
    */
   isTypeAlias: (tree: TsTree): tree is TsDeclTypeAlias => tree._tag === 'TsDeclTypeAlias'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeParam
+ */
+export const TsTypeParam = {
+  /**
+   * Creates a type parameter
+   */
+  create: (
+    comments: Comments,
+    name: TsIdentSimple,
+    upperBound: Option<TsType>,
+    defaultType: Option<TsType>
+  ): TsTypeParam => {
+    return {
+      _tag: 'TsTypeParam',
+      comments,
+      name,
+      upperBound,
+      default: defaultType,
+      withComments: (cs: Comments) =>
+        TsTypeParam.create(cs, name, upperBound, defaultType),
+      addComment: (c: Comment) =>
+        TsTypeParam.create(comments.add(c), name, upperBound, defaultType),
+      asString: `TsTypeParam(${name.value})`
+    };
+  },
+
+  /**
+   * Creates a simple type parameter without bounds or defaults
+   */
+  simple: (name: TsIdentSimple): TsTypeParam =>
+    TsTypeParam.create(Comments.empty(), name, none, none),
+
+  /**
+   * Creates a type parameter with an upper bound constraint
+   */
+  withUpperBound: (name: TsIdentSimple, upperBound: TsType): TsTypeParam =>
+    TsTypeParam.create(Comments.empty(), name, some(upperBound), none),
+
+  /**
+   * Creates a type parameter with a default type
+   */
+  withDefault: (name: TsIdentSimple, defaultType: TsType): TsTypeParam =>
+    TsTypeParam.create(Comments.empty(), name, none, some(defaultType)),
+
+  /**
+   * Converts type parameters to type arguments for instantiation.
+   * Transforms `<T, U>` into `T, U` for use in type references.
+   */
+  asTypeArgs: (tps: IArray<TsTypeParam>): IArray<TsTypeRef> =>
+    tps.map(tp => ({ _tag: 'TsTypeRef', name: TsQIdent.of(tp.name), tparams: IArray.Empty, asString: `TsTypeRef(${tp.name.value})` } as TsTypeRef)),
+
+  /**
+   * Type guard
+   */
+  isTypeParam: (tree: TsTree): tree is TsTypeParam => tree._tag === 'TsTypeParam'
+};
+
+/**
+ * Constructor functions and utilities for TsFunSig
+ */
+export const TsFunSig = {
+  /**
+   * Creates a function signature
+   */
+  create: (
+    comments: Comments,
+    tparams: IArray<TsTypeParam>,
+    params: IArray<TsFunParam>,
+    resultType: Option<TsType>
+  ): TsFunSig => {
+    return {
+      _tag: 'TsFunSig',
+      comments,
+      tparams,
+      params,
+      resultType,
+      withComments: (cs: Comments) =>
+        TsFunSig.create(cs, tparams, params, resultType),
+      addComment: (c: Comment) =>
+        TsFunSig.create(comments.add(c), tparams, params, resultType),
+      asString: `TsFunSig(${params.length} params)`
+    };
+  },
+
+  /**
+   * Creates a simple function signature without type parameters
+   */
+  simple: (params: IArray<TsFunParam>, resultType: Option<TsType>): TsFunSig =>
+    TsFunSig.create(Comments.empty(), IArray.Empty, params, resultType),
+
+  /**
+   * Creates a function signature with no parameters
+   */
+  noParams: (resultType: Option<TsType>): TsFunSig =>
+    TsFunSig.create(Comments.empty(), IArray.Empty, IArray.Empty, resultType),
+
+  /**
+   * Creates a function signature with type parameters
+   */
+  withTypeParams: (
+    tparams: IArray<TsTypeParam>,
+    params: IArray<TsFunParam>,
+    resultType: Option<TsType>
+  ): TsFunSig =>
+    TsFunSig.create(Comments.empty(), tparams, params, resultType),
+
+  /**
+   * Type guard
+   */
+  isFunSig: (tree: TsTree): tree is TsFunSig => tree._tag === 'TsFunSig'
+};
+
+/**
+ * Constructor functions and utilities for TsFunParam
+ */
+export const TsFunParam = {
+  /**
+   * Creates a function parameter
+   */
+  create: (
+    comments: Comments,
+    name: TsIdentSimple,
+    tpe: Option<TsType>
+  ): TsFunParam => {
+    return {
+      _tag: 'TsFunParam',
+      comments,
+      name,
+      tpe,
+      withComments: (cs: Comments) =>
+        TsFunParam.create(cs, name, tpe),
+      addComment: (c: Comment) =>
+        TsFunParam.create(comments.add(c), name, tpe),
+      equals: (other: TsFunParam) => {
+        // Parameters are considered equal if they have the same type (name doesn't matter for type checking)
+        if (tpe._tag === 'None' && other.tpe._tag === 'None') return true;
+        if (tpe._tag === 'Some' && other.tpe._tag === 'Some') {
+          // For now, we'll do a simple string comparison of the type's asString
+          // In a full implementation, this would be a proper type equality check
+          return tpe.value.asString === other.tpe.value.asString;
+        }
+        return false;
+      },
+      asString: `TsFunParam(${name.value}${tpe._tag === 'Some' ? ': ' + tpe.value.asString : ''})`
+    };
+  },
+
+  /**
+   * Creates a simple parameter without type annotation
+   */
+  simple: (name: TsIdentSimple): TsFunParam =>
+    TsFunParam.create(Comments.empty(), name, none),
+
+  /**
+   * Creates a typed parameter
+   */
+  typed: (name: TsIdentSimple, tpe: TsType): TsFunParam =>
+    TsFunParam.create(Comments.empty(), name, some(tpe)),
+
+  /**
+   * Creates a parameter with comments
+   */
+  withComments: (comments: Comments, name: TsIdentSimple, tpe: Option<TsType>): TsFunParam =>
+    TsFunParam.create(comments, name, tpe),
+
+  /**
+   * Type guard
+   */
+  isFunParam: (tree: TsTree): tree is TsFunParam => tree._tag === 'TsFunParam'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeRef
+ */
+export const TsTypeRef = {
+  /**
+   * Creates a type reference
+   */
+  create: (
+    comments: Comments,
+    name: TsQIdent,
+    tparams: IArray<TsType>
+  ): TsTypeRef => {
+    return {
+      _tag: 'TsTypeRef',
+      comments,
+      name,
+      tparams,
+      withComments: (cs: Comments) =>
+        TsTypeRef.create(cs, name, tparams),
+      addComment: (c: Comment) =>
+        TsTypeRef.create(comments.add(c), name, tparams),
+      asString: `TsTypeRef(${name.asString}${tparams.length > 0 ? `<${tparams.length} args>` : ''})`
+    };
+  },
+
+  /**
+   * Creates a type reference from a simple identifier
+   */
+  fromIdent: (tsIdent: TsIdent): TsTypeRef =>
+    TsTypeRef.create(Comments.empty(), TsQIdent.of(tsIdent), IArray.Empty),
+
+  /**
+   * Creates a type reference from a qualified identifier
+   */
+  fromQIdent: (tsQIdent: TsQIdent): TsTypeRef =>
+    TsTypeRef.create(Comments.empty(), tsQIdent, IArray.Empty),
+
+  /**
+   * Creates a simple type reference without type parameters
+   */
+  simple: (name: TsQIdent): TsTypeRef =>
+    TsTypeRef.create(Comments.empty(), name, IArray.Empty),
+
+  /**
+   * Creates a generic type reference with type parameters
+   */
+  generic: (name: TsQIdent, tparams: IArray<TsType>): TsTypeRef =>
+    TsTypeRef.create(Comments.empty(), name, tparams),
+
+  // Common TypeScript type references (defined as getters to avoid circular reference)
+  get any(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentAny, IArray.Empty); },
+  get boolean(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentBoolean, IArray.Empty); },
+  get Boolean(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentBooleanConstructor, IArray.Empty); },
+  get symbol(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentSymbol, IArray.Empty); },
+  get object(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentObject, IArray.Empty); },
+  get Object(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentObjectConstructor, IArray.Empty); },
+  get string(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentString, IArray.Empty); },
+  get String(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentStringConstructor, IArray.Empty); },
+  get never(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentNever, IArray.Empty); },
+  get number(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentNumber, IArray.Empty); },
+  get null(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentNull, IArray.Empty); },
+  get void(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentVoid, IArray.Empty); },
+  get undefined(): TsTypeRef { return TsTypeRef.create(Comments.empty(), TsQIdentUndefined, IArray.Empty); },
+
+  /**
+   * Type guard
+   */
+  isTypeRef: (tree: TsTree): tree is TsTypeRef => tree._tag === 'TsTypeRef'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeLiteral
+ */
+export const TsTypeLiteral = {
+  /**
+   * Creates a literal type
+   */
+  create: (literal: TsLiteral): TsTypeLiteral => {
+    return {
+      _tag: 'TsTypeLiteral',
+      literal,
+      asString: `TsTypeLiteral(${literal.asString})`
+    };
+  },
+
+  /**
+   * Creates a string literal type
+   */
+  string: (value: string): TsTypeLiteral =>
+    TsTypeLiteral.create(TsLiteral.str(value)),
+
+  /**
+   * Creates a number literal type
+   */
+  number: (value: number): TsTypeLiteral =>
+    TsTypeLiteral.create(TsLiteral.num(value.toString())),
+
+  /**
+   * Creates a boolean literal type
+   */
+  boolean: (value: boolean): TsTypeLiteral =>
+    TsTypeLiteral.create(TsLiteral.bool(value)),
+
+  /**
+   * Type guard
+   */
+  isTypeLiteral: (tree: TsTree): tree is TsTypeLiteral => tree._tag === 'TsTypeLiteral'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeObject
+ */
+export const TsTypeObject = {
+  /**
+   * Creates an object type
+   */
+  create: (
+    comments: Comments,
+    members: IArray<TsMember>
+  ): TsTypeObject => {
+    // Create class member cache
+    const classMemberCache = HasClassMembers.create(members);
+
+    return {
+      _tag: 'TsTypeObject',
+      comments,
+      ...classMemberCache,
+      withComments: (cs: Comments) =>
+        TsTypeObject.create(cs, members),
+      addComment: (c: Comment) =>
+        TsTypeObject.create(comments.add(c), members),
+      asString: `TsTypeObject(${members.length} members)`
+    };
+  },
+
+  /**
+   * Creates an empty object type
+   */
+  empty: (): TsTypeObject =>
+    TsTypeObject.create(Comments.empty(), IArray.Empty),
+
+  /**
+   * Creates an object type with members
+   */
+  withMembers: (members: IArray<TsMember>): TsTypeObject =>
+    TsTypeObject.create(Comments.empty(), members),
+
+  /**
+   * Type guard
+   */
+  isTypeObject: (tree: TsTree): tree is TsTypeObject => tree._tag === 'TsTypeObject'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeFunction
+ */
+export const TsTypeFunction = {
+  /**
+   * Creates a function type
+   */
+  create: (signature: TsFunSig): TsTypeFunction => {
+    return {
+      _tag: 'TsTypeFunction',
+      signature,
+      asString: `TsTypeFunction(${signature.asString})`
+    };
+  },
+
+  /**
+   * Type guard
+   */
+  isTypeFunction: (tree: TsTree): tree is TsTypeFunction => tree._tag === 'TsTypeFunction'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeUnion
+ */
+export const TsTypeUnion = {
+  /**
+   * Creates a union type
+   */
+  create: (types: IArray<TsType>): TsTypeUnion => {
+    return {
+      _tag: 'TsTypeUnion',
+      types,
+      asString: `TsTypeUnion(${types.length} types)`
+    };
+  },
+
+  /**
+   * Flattens nested union types into a single level
+   */
+  flatten: (types: IArray<TsType>): IArray<TsType> => {
+    const result: TsType[] = [];
+    for (let i = 0; i < types.length; i++) {
+      const type = types.apply(i);
+      if (type._tag === 'TsTypeUnion') {
+        const nested = TsTypeUnion.flatten((type as TsTypeUnion).types);
+        for (let j = 0; j < nested.length; j++) {
+          result.push(nested.apply(j));
+        }
+      } else {
+        result.push(type);
+      }
+    }
+    return IArray.fromArray(result);
+  },
+
+  /**
+   * Creates a simplified union type, removing duplicates and flattening nested unions
+   */
+  simplified: (types: IArray<TsType>): TsType => {
+    const flattened = TsTypeUnion.flatten(types);
+    const distinct = IArray.fromArray([...new Set(flattened.toArray().map(t => t.asString))].map(str =>
+      flattened.toArray().find(t => t.asString === str)!
+    ));
+
+    if (distinct.length === 0) {
+      return TsTypeRef.never;
+    } else if (distinct.length === 1) {
+      return distinct.apply(0);
+    } else {
+      return TsTypeUnion.create(distinct);
+    }
+  },
+
+  /**
+   * Type guard
+   */
+  isTypeUnion: (tree: TsTree): tree is TsTypeUnion => tree._tag === 'TsTypeUnion'
+};
+
+/**
+ * Constructor functions and utilities for TsTypeIntersect
+ */
+export const TsTypeIntersect = {
+  /**
+   * Creates an intersection type
+   */
+  create: (types: IArray<TsType>): TsTypeIntersect => {
+    return {
+      _tag: 'TsTypeIntersect',
+      types,
+      asString: `TsTypeIntersect(${types.length} types)`
+    };
+  },
+
+  /**
+   * Flattens nested intersection types into a single level
+   */
+  flatten: (types: IArray<TsType>): IArray<TsType> => {
+    const result: TsType[] = [];
+    for (let i = 0; i < types.length; i++) {
+      const type = types.apply(i);
+      if (type._tag === 'TsTypeIntersect') {
+        const nested = TsTypeIntersect.flatten((type as TsTypeIntersect).types);
+        for (let j = 0; j < nested.length; j++) {
+          result.push(nested.apply(j));
+        }
+      } else {
+        result.push(type);
+      }
+    }
+    return IArray.fromArray(result);
+  },
+
+  /**
+   * Creates a simplified intersection type, combining object types where possible
+   */
+  simplified: (types: IArray<TsType>): TsType => {
+    // Separate object types from other types
+    const objects: TsTypeObject[] = [];
+    const others: TsType[] = [];
+
+    for (let i = 0; i < types.length; i++) {
+      const type = types.apply(i);
+      if (type._tag === 'TsTypeObject') {
+        objects.push(type as TsTypeObject);
+      } else {
+        others.push(type);
+      }
+    }
+
+    // Combine object types if we have more than one
+    const combinedTypes: TsType[] = [...others];
+    if (objects.length > 1) {
+      const allMembers = objects.flatMap(obj => obj.members.toArray());
+      const combinedObject = TsTypeObject.withMembers(IArray.fromArray(allMembers));
+      combinedTypes.unshift(combinedObject);
+    } else if (objects.length === 1) {
+      combinedTypes.unshift(objects[0]);
+    }
+
+    const flattened = TsTypeIntersect.flatten(IArray.fromArray(combinedTypes));
+    const distinct = IArray.fromArray([...new Set(flattened.toArray().map(t => t.asString))].map(str =>
+      flattened.toArray().find(t => t.asString === str)!
+    ));
+
+    if (distinct.length === 0) {
+      return TsTypeRef.never;
+    } else if (distinct.length === 1) {
+      return distinct.apply(0);
+    } else {
+      return TsTypeIntersect.create(distinct);
+    }
+  },
+
+  /**
+   * Type guard
+   */
+  isTypeIntersect: (tree: TsTree): tree is TsTypeIntersect => tree._tag === 'TsTypeIntersect'
 };

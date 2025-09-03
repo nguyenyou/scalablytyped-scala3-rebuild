@@ -7,7 +7,8 @@
 import { describe, it, expect } from 'bun:test';
 import { some, none } from 'fp-ts/Option';
 import { IArray } from '../internal/IArray.js';
-import { Comments } from '../internal/scalajs/Comments.js';
+import { Comments } from '../internal/Comments.js';
+import { Comment } from '../internal/Comment.js';
 import { CodePath } from '../internal/ts/CodePath.js';
 import { Directive } from '../internal/ts/Directive.js';
 import {
@@ -33,7 +34,16 @@ import {
   TsDeclEnum,
   TsDeclVar,
   TsDeclFunction,
-  TsDeclTypeAlias
+  TsDeclTypeAlias,
+  TsTypeParam,
+  TsFunSig,
+  TsFunParam,
+  TsTypeRef,
+  TsTypeLiteral,
+  TsTypeObject,
+  TsTypeFunction,
+  TsTypeUnion,
+  TsTypeIntersect
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 
@@ -1015,6 +1025,641 @@ describe('trees - Phase 4: Declaration Types', () => {
 
         const notInterface = { _tag: 'SomethingElse', asString: 'test' };
         expect(TsDeclInterface.isInterface(notInterface)).toBe(false);
+      });
+    });
+  });
+});
+
+describe('trees - Phase 5: Function Signatures and Parameters', () => {
+  describe('TsTypeParam', () => {
+    describe('construction', () => {
+      it('should create a simple type parameter', () => {
+        const name = TsIdent.simple('T');
+        const typeParam = TsTypeParam.simple(name);
+
+        expect(typeParam._tag).toBe('TsTypeParam');
+        expect(typeParam.name).toBe(name);
+        expect(typeParam.upperBound._tag).toBe('None');
+        expect(typeParam.default._tag).toBe('None');
+        expect(typeParam.comments).toBeDefined();
+      });
+
+      it('should create a type parameter with upper bound', () => {
+        const name = TsIdent.simple('T');
+        const upperBound = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('string')), tparams: IArray.Empty, asString: 'string' } as any;
+        const typeParam = TsTypeParam.withUpperBound(name, upperBound);
+
+        expect(typeParam._tag).toBe('TsTypeParam');
+        expect(typeParam.name).toBe(name);
+        expect(typeParam.upperBound._tag).toBe('Some');
+        expect(typeParam.default._tag).toBe('None');
+      });
+
+      it('should create a type parameter with default type', () => {
+        const name = TsIdent.simple('T');
+        const defaultType = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('string')), tparams: IArray.Empty, asString: 'string' } as any;
+        const typeParam = TsTypeParam.withDefault(name, defaultType);
+
+        expect(typeParam._tag).toBe('TsTypeParam');
+        expect(typeParam.name).toBe(name);
+        expect(typeParam.upperBound._tag).toBe('None');
+        expect(typeParam.default._tag).toBe('Some');
+      });
+
+      it('should create a type parameter with comments', () => {
+        const comments = Comments.empty();
+        const name = TsIdent.simple('T');
+        const typeParam = TsTypeParam.create(comments, name, none, none);
+
+        expect(typeParam._tag).toBe('TsTypeParam');
+        expect(typeParam.comments).toBe(comments);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const name = TsIdent.simple('T');
+        const typeParam = TsTypeParam.simple(name);
+        const newComments = Comments.empty();
+        const newTypeParam = typeParam.withComments(newComments);
+
+        expect(newTypeParam._tag).toBe('TsTypeParam');
+        expect(newTypeParam.comments).toBe(newComments);
+        expect(newTypeParam.name).toBe(name);
+      });
+
+      it('should support addComment', () => {
+        const name = TsIdent.simple('T');
+        const typeParam = TsTypeParam.simple(name);
+        const comment: Comment = { text: 'Type parameter T', type: 'line' };
+        const newTypeParam = typeParam.addComment(comment);
+
+        expect(newTypeParam._tag).toBe('TsTypeParam');
+        expect(newTypeParam.name).toBe(name);
+        expect(newTypeParam.comments.cs.length).toBe(1);
+      });
+    });
+
+    describe('utility functions', () => {
+      it('should convert type parameters to type arguments', () => {
+        const typeParam1 = TsTypeParam.simple(TsIdent.simple('T'));
+        const typeParam2 = TsTypeParam.simple(TsIdent.simple('U'));
+        const typeParams = IArray.fromArray([typeParam1, typeParam2]);
+
+        const typeArgs = TsTypeParam.asTypeArgs(typeParams);
+
+        expect(typeArgs.length).toBe(2);
+        expect(typeArgs.apply(0)._tag).toBe('TsTypeRef');
+        expect(typeArgs.apply(1)._tag).toBe('TsTypeRef');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify type parameters', () => {
+        const name = TsIdent.simple('T');
+        const typeParam = TsTypeParam.simple(name);
+        expect(TsTypeParam.isTypeParam(typeParam)).toBe(true);
+
+        const notTypeParam = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeParam.isTypeParam(notTypeParam)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsFunParam', () => {
+    describe('construction', () => {
+      it('should create a simple parameter without type', () => {
+        const name = TsIdent.simple('param');
+        const param = TsFunParam.simple(name);
+
+        expect(param._tag).toBe('TsFunParam');
+        expect(param.name).toBe(name);
+        expect(param.tpe._tag).toBe('None');
+        expect(param.comments).toBeDefined();
+      });
+
+      it('should create a typed parameter', () => {
+        const name = TsIdent.simple('param');
+        const type = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('string')), tparams: IArray.Empty, asString: 'string' } as any;
+        const param = TsFunParam.typed(name, type);
+
+        expect(param._tag).toBe('TsFunParam');
+        expect(param.name).toBe(name);
+        expect(param.tpe._tag).toBe('Some');
+      });
+
+      it('should create a parameter with comments', () => {
+        const comments = Comments.empty();
+        const name = TsIdent.simple('param');
+        const param = TsFunParam.withComments(comments, name, none);
+
+        expect(param._tag).toBe('TsFunParam');
+        expect(param.comments).toBe(comments);
+        expect(param.name).toBe(name);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const name = TsIdent.simple('param');
+        const param = TsFunParam.simple(name);
+        const newComments = Comments.empty();
+        const newParam = param.withComments(newComments);
+
+        expect(newParam._tag).toBe('TsFunParam');
+        expect(newParam.comments).toBe(newComments);
+        expect(newParam.name).toBe(name);
+      });
+
+      it('should support addComment', () => {
+        const name = TsIdent.simple('param');
+        const param = TsFunParam.simple(name);
+        const comment: Comment = { text: 'Parameter description', type: 'line' };
+        const newParam = param.addComment(comment);
+
+        expect(newParam._tag).toBe('TsFunParam');
+        expect(newParam.name).toBe(name);
+        expect(newParam.comments.cs.length).toBe(1);
+      });
+    });
+
+    describe('equality', () => {
+      it('should consider parameters equal if they have the same type', () => {
+        const type = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('string')), tparams: IArray.Empty, asString: 'string' } as any;
+        const param1 = TsFunParam.typed(TsIdent.simple('param1'), type);
+        const param2 = TsFunParam.typed(TsIdent.simple('param2'), type);
+
+        expect(param1.equals(param2)).toBe(true);
+      });
+
+      it('should consider untyped parameters equal', () => {
+        const param1 = TsFunParam.simple(TsIdent.simple('param1'));
+        const param2 = TsFunParam.simple(TsIdent.simple('param2'));
+
+        expect(param1.equals(param2)).toBe(true);
+      });
+
+      it('should consider parameters with different types unequal', () => {
+        const type1 = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('string')), tparams: IArray.Empty, asString: 'string' } as any;
+        const type2 = { _tag: 'TsTypeRef', name: TsQIdent.of(TsIdent.simple('number')), tparams: IArray.Empty, asString: 'number' } as any;
+        const param1 = TsFunParam.typed(TsIdent.simple('param1'), type1);
+        const param2 = TsFunParam.typed(TsIdent.simple('param2'), type2);
+
+        expect(param1.equals(param2)).toBe(false);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify function parameters', () => {
+        const name = TsIdent.simple('param');
+        const param = TsFunParam.simple(name);
+        expect(TsFunParam.isFunParam(param)).toBe(true);
+
+        const notParam = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsFunParam.isFunParam(notParam)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsFunSig', () => {
+    describe('construction', () => {
+      it('should create a simple function signature', () => {
+        const param1 = TsFunParam.typed(TsIdent.simple('x'), { _tag: 'TsTypeRef', asString: 'number' } as any);
+        const param2 = TsFunParam.typed(TsIdent.simple('y'), { _tag: 'TsTypeRef', asString: 'string' } as any);
+        const params = IArray.fromArray([param1, param2]);
+        const returnType = { _tag: 'TsTypeRef', asString: 'boolean' } as any;
+
+        const signature = TsFunSig.simple(params, some(returnType));
+
+        expect(signature._tag).toBe('TsFunSig');
+        expect(signature.params).toBe(params);
+        expect(signature.resultType._tag).toBe('Some');
+        expect(signature.tparams.length).toBe(0);
+      });
+
+      it('should create a function signature with no parameters', () => {
+        const returnType = { _tag: 'TsTypeRef', asString: 'void' } as any;
+        const signature = TsFunSig.noParams(some(returnType));
+
+        expect(signature._tag).toBe('TsFunSig');
+        expect(signature.params.length).toBe(0);
+        expect(signature.resultType._tag).toBe('Some');
+        expect(signature.tparams.length).toBe(0);
+      });
+
+      it('should create a function signature with type parameters', () => {
+        const typeParam = TsTypeParam.simple(TsIdent.simple('T'));
+        const tparams = IArray.fromArray([typeParam]);
+        const param = TsFunParam.typed(TsIdent.simple('value'), { _tag: 'TsTypeRef', asString: 'T' } as any);
+        const params = IArray.fromArray([param]);
+        const returnType = { _tag: 'TsTypeRef', asString: 'T' } as any;
+
+        const signature = TsFunSig.withTypeParams(tparams, params, some(returnType));
+
+        expect(signature._tag).toBe('TsFunSig');
+        expect(signature.tparams).toBe(tparams);
+        expect(signature.params).toBe(params);
+        expect(signature.resultType._tag).toBe('Some');
+      });
+
+      it('should create a function signature with comments', () => {
+        const comments = Comments.empty();
+        const signature = TsFunSig.create(comments, IArray.Empty, IArray.Empty, none);
+
+        expect(signature._tag).toBe('TsFunSig');
+        expect(signature.comments).toBe(comments);
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const signature = TsFunSig.noParams(none);
+        const newComments = Comments.empty();
+        const newSignature = signature.withComments(newComments);
+
+        expect(newSignature._tag).toBe('TsFunSig');
+        expect(newSignature.comments).toBe(newComments);
+        expect(newSignature.params.length).toBe(0);
+      });
+
+      it('should support addComment', () => {
+        const signature = TsFunSig.noParams(none);
+        const comment: Comment = { text: 'Function signature description', type: 'line' };
+        const newSignature = signature.addComment(comment);
+
+        expect(newSignature._tag).toBe('TsFunSig');
+        expect(newSignature.comments.cs.length).toBe(1);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify function signatures', () => {
+        const signature = TsFunSig.noParams(none);
+        expect(TsFunSig.isFunSig(signature)).toBe(true);
+
+        const notSignature = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsFunSig.isFunSig(notSignature)).toBe(false);
+      });
+    });
+
+    describe('string representation', () => {
+      it('should have meaningful asString', () => {
+        const param1 = TsFunParam.simple(TsIdent.simple('x'));
+        const param2 = TsFunParam.simple(TsIdent.simple('y'));
+        const params = IArray.fromArray([param1, param2]);
+        const signature = TsFunSig.simple(params, none);
+
+        expect(signature.asString).toBe('TsFunSig(2 params)');
+      });
+    });
+  });
+});
+
+describe('trees - Phase 6: Type System', () => {
+  describe('TsTypeRef', () => {
+    describe('construction', () => {
+      it('should create a simple type reference', () => {
+        const name = TsQIdent.ofStrings('string');
+        const typeRef = TsTypeRef.simple(name);
+
+        expect(typeRef._tag).toBe('TsTypeRef');
+        expect(typeRef.name).toBe(name);
+        expect(typeRef.tparams.length).toBe(0);
+        expect(typeRef.comments).toBeDefined();
+      });
+
+      it('should create a generic type reference', () => {
+        const name = TsQIdent.ofStrings('Array');
+        const stringType = TsTypeRef.string;
+        const tparams = IArray.fromArray([stringType]);
+        const typeRef = TsTypeRef.generic(name, tparams);
+
+        expect(typeRef._tag).toBe('TsTypeRef');
+        expect(typeRef.name).toBe(name);
+        expect(typeRef.tparams).toBe(tparams);
+      });
+
+      it('should create type references from identifiers', () => {
+        const ident = TsIdent.simple('MyType');
+        const typeRef = TsTypeRef.fromIdent(ident);
+
+        expect(typeRef._tag).toBe('TsTypeRef');
+        expect(typeRef.name.parts.apply(0)).toBe(ident);
+        expect(typeRef.tparams.length).toBe(0);
+      });
+    });
+
+    describe('built-in types', () => {
+      it('should provide common TypeScript types', () => {
+        expect(TsTypeRef.any._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.string._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.number._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.boolean._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.void._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.never._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.null._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.undefined._tag).toBe('TsTypeRef');
+      });
+
+      it('should provide constructor types', () => {
+        expect(TsTypeRef.String._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.Boolean._tag).toBe('TsTypeRef');
+        expect(TsTypeRef.Object._tag).toBe('TsTypeRef');
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const typeRef = TsTypeRef.string;
+        const newComments = Comments.empty();
+        const newTypeRef = typeRef.withComments(newComments);
+
+        expect(newTypeRef._tag).toBe('TsTypeRef');
+        expect(newTypeRef.comments).toBe(newComments);
+        expect(newTypeRef.name).toBe(typeRef.name);
+      });
+
+      it('should support addComment', () => {
+        const typeRef = TsTypeRef.string;
+        const comment: Comment = { text: 'String type', type: 'line' };
+        const newTypeRef = typeRef.addComment(comment);
+
+        expect(newTypeRef._tag).toBe('TsTypeRef');
+        expect(newTypeRef.comments.cs.length).toBe(1);
+        expect(newTypeRef.name).toBe(typeRef.name);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify type references', () => {
+        const typeRef = TsTypeRef.string;
+        expect(TsTypeRef.isTypeRef(typeRef)).toBe(true);
+
+        const notTypeRef = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeRef.isTypeRef(notTypeRef)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeLiteral', () => {
+    describe('construction', () => {
+      it('should create string literal types', () => {
+        const literal = TsTypeLiteral.string('hello');
+
+        expect(literal._tag).toBe('TsTypeLiteral');
+        expect(literal.literal._tag).toBe('TsLiteralStr');
+        expect(literal.literal.value).toBe('hello');
+      });
+
+      it('should create number literal types', () => {
+        const literal = TsTypeLiteral.number(42);
+
+        expect(literal._tag).toBe('TsTypeLiteral');
+        expect(literal.literal._tag).toBe('TsLiteralNum');
+        expect(literal.literal.value).toBe('42');
+      });
+
+      it('should create boolean literal types', () => {
+        const literal = TsTypeLiteral.boolean(true);
+
+        expect(literal._tag).toBe('TsTypeLiteral');
+        expect(literal.literal._tag).toBe('TsLiteralBool');
+        expect(literal.literal.value).toBe('true');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify literal types', () => {
+        const literal = TsTypeLiteral.string('test');
+        expect(TsTypeLiteral.isTypeLiteral(literal)).toBe(true);
+
+        const notLiteral = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeLiteral.isTypeLiteral(notLiteral)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeObject', () => {
+    describe('construction', () => {
+      it('should create empty object types', () => {
+        const objectType = TsTypeObject.empty();
+
+        expect(objectType._tag).toBe('TsTypeObject');
+        expect(objectType.members.length).toBe(0);
+        expect(objectType.comments).toBeDefined();
+      });
+
+      it('should create object types with members', () => {
+        const members = IArray.Empty; // Would normally contain TsMember instances
+        const objectType = TsTypeObject.withMembers(members);
+
+        expect(objectType._tag).toBe('TsTypeObject');
+        expect(objectType.members).toBe(members);
+      });
+
+      it('should have class member cache functionality', () => {
+        const objectType = TsTypeObject.empty();
+
+        // Check that class member cache properties exist
+        expect(objectType.members).toBeDefined();
+        expect(objectType.membersByName).toBeDefined();
+        expect(objectType.unnamed).toBeDefined();
+      });
+    });
+
+    describe('manipulation', () => {
+      it('should support withComments', () => {
+        const objectType = TsTypeObject.empty();
+        const newComments = Comments.empty();
+        const newObjectType = objectType.withComments(newComments);
+
+        expect(newObjectType._tag).toBe('TsTypeObject');
+        expect(newObjectType.comments).toBe(newComments);
+        expect(newObjectType.members.length).toBe(0);
+      });
+
+      it('should support addComment', () => {
+        const objectType = TsTypeObject.empty();
+        const comment: Comment = { text: 'Object type', type: 'line' };
+        const newObjectType = objectType.addComment(comment);
+
+        expect(newObjectType._tag).toBe('TsTypeObject');
+        expect(newObjectType.comments.cs.length).toBe(1);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify object types', () => {
+        const objectType = TsTypeObject.empty();
+        expect(TsTypeObject.isTypeObject(objectType)).toBe(true);
+
+        const notObjectType = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeObject.isTypeObject(notObjectType)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeFunction', () => {
+    describe('construction', () => {
+      it('should create function types', () => {
+        const signature = TsFunSig.noParams(some(TsTypeRef.string));
+        const functionType = TsTypeFunction.create(signature);
+
+        expect(functionType._tag).toBe('TsTypeFunction');
+        expect(functionType.signature).toBe(signature);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify function types', () => {
+        const signature = TsFunSig.noParams(none);
+        const functionType = TsTypeFunction.create(signature);
+        expect(TsTypeFunction.isTypeFunction(functionType)).toBe(true);
+
+        const notFunctionType = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeFunction.isTypeFunction(notFunctionType)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeUnion', () => {
+    describe('construction', () => {
+      it('should create union types', () => {
+        const stringType = TsTypeRef.string;
+        const numberType = TsTypeRef.number;
+        const types = IArray.fromArray([stringType, numberType]);
+        const unionType = TsTypeUnion.create(types);
+
+        expect(unionType._tag).toBe('TsTypeUnion');
+        expect(unionType.types).toBe(types);
+        expect(unionType.types.length).toBe(2);
+      });
+
+      it('should flatten nested union types', () => {
+        const stringType = TsTypeRef.string;
+        const numberType = TsTypeRef.number;
+        const booleanType = TsTypeRef.boolean;
+
+        const innerUnion = TsTypeUnion.create(IArray.fromArray([stringType, numberType]));
+        const outerTypes = IArray.fromArray([innerUnion, booleanType]);
+
+        const flattened = TsTypeUnion.flatten(outerTypes);
+
+        expect(flattened.length).toBe(3);
+        expect(flattened.apply(0)).toBe(stringType);
+        expect(flattened.apply(1)).toBe(numberType);
+        expect(flattened.apply(2)).toBe(booleanType);
+      });
+
+      it('should create simplified union types', () => {
+        const stringType = TsTypeRef.string;
+        const numberType = TsTypeRef.number;
+        const types = IArray.fromArray([stringType, numberType]);
+
+        const simplified = TsTypeUnion.simplified(types);
+
+        expect(simplified._tag).toBe('TsTypeUnion');
+        expect((simplified as any).types.length).toBe(2);
+      });
+
+      it('should simplify single-type unions to the type itself', () => {
+        const stringType = TsTypeRef.string;
+        const types = IArray.fromArray([stringType]);
+
+        const simplified = TsTypeUnion.simplified(types);
+
+        expect(simplified).toBe(stringType);
+      });
+
+      it('should simplify empty unions to never', () => {
+        const types = IArray.Empty;
+
+        const simplified = TsTypeUnion.simplified(types);
+
+        expect(simplified._tag).toBe('TsTypeRef');
+        expect((simplified as any).name.parts.apply(0).value).toBe('never');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify union types', () => {
+        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const unionType = TsTypeUnion.create(types);
+        expect(TsTypeUnion.isTypeUnion(unionType)).toBe(true);
+
+        const notUnionType = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeUnion.isTypeUnion(notUnionType)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeIntersect', () => {
+    describe('construction', () => {
+      it('should create intersection types', () => {
+        const type1 = TsTypeRef.string;
+        const type2 = TsTypeRef.number;
+        const types = IArray.fromArray([type1, type2]);
+        const intersectType = TsTypeIntersect.create(types);
+
+        expect(intersectType._tag).toBe('TsTypeIntersect');
+        expect(intersectType.types).toBe(types);
+        expect(intersectType.types.length).toBe(2);
+      });
+
+      it('should flatten nested intersection types', () => {
+        const stringType = TsTypeRef.string;
+        const numberType = TsTypeRef.number;
+        const booleanType = TsTypeRef.boolean;
+
+        const innerIntersect = TsTypeIntersect.create(IArray.fromArray([stringType, numberType]));
+        const outerTypes = IArray.fromArray([innerIntersect, booleanType]);
+
+        const flattened = TsTypeIntersect.flatten(outerTypes);
+
+        expect(flattened.length).toBe(3);
+        expect(flattened.apply(0)).toBe(stringType);
+        expect(flattened.apply(1)).toBe(numberType);
+        expect(flattened.apply(2)).toBe(booleanType);
+      });
+
+      it('should create simplified intersection types', () => {
+        const stringType = TsTypeRef.string;
+        const numberType = TsTypeRef.number;
+        const types = IArray.fromArray([stringType, numberType]);
+
+        const simplified = TsTypeIntersect.simplified(types);
+
+        expect(simplified._tag).toBe('TsTypeIntersect');
+        expect((simplified as any).types.length).toBe(2);
+      });
+
+      it('should simplify single-type intersections to the type itself', () => {
+        const stringType = TsTypeRef.string;
+        const types = IArray.fromArray([stringType]);
+
+        const simplified = TsTypeIntersect.simplified(types);
+
+        expect(simplified).toBe(stringType);
+      });
+
+      it('should simplify empty intersections to never', () => {
+        const types = IArray.Empty;
+
+        const simplified = TsTypeIntersect.simplified(types);
+
+        expect(simplified._tag).toBe('TsTypeRef');
+        expect((simplified as any).name.parts.apply(0).value).toBe('never');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify intersection types', () => {
+        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const intersectType = TsTypeIntersect.create(types);
+        expect(TsTypeIntersect.isTypeIntersect(intersectType)).toBe(true);
+
+        const notIntersectType = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTypeIntersect.isTypeIntersect(notIntersectType)).toBe(false);
       });
     });
   });

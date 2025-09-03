@@ -7,7 +7,7 @@
 import { IArray } from '../IArray';
 import { Name } from './Name';
 import { QualifiedName } from './QualifiedName';
-import { Comments } from './Comments';
+import { Comments } from '../Comments';
 import { Annotation } from './Annotation';
 
 /**

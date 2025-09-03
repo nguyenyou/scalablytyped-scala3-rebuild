@@ -294,6 +294,14 @@ export class NoComments extends Comments {
 export namespace Comments {
 
   /**
+   * Create empty Comments
+   * Equivalent to Scala's `NoComments`
+   */
+  export function empty(): Comments {
+    return NoComments.instance;
+  }
+
+  /**
    * Create Comments from a head string and optional tail strings
    * Equivalent to Scala's `def apply(h: String, tail: String*): Comments`
    */
