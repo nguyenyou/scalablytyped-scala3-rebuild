@@ -959,8 +959,136 @@ export interface TsEnumMember extends TsTree {
   readonly expr: Option<TsExpr>;
 }
 
+/**
+ * Base interface for all TypeScript expressions.
+ * In TypeScript: `myVar`, `42`, `"hello"`, `func()`, `a + b`, etc.
+ * Represents any expression that can appear in TypeScript code.
+ */
 export interface TsExpr extends TsTree {
   readonly _tag: string;
+}
+
+/**
+ * Represents a reference to an identifier or qualified name.
+ * In TypeScript: `myVar`, `MyClass.staticProp`, `namespace.function`
+ * References to variables, functions, properties, etc.
+ */
+export interface TsExprRef extends TsExpr {
+  readonly _tag: 'TsExprRef';
+
+  /**
+   * The qualified identifier being referenced
+   */
+  readonly value: TsQIdent;
+}
+
+/**
+ * Represents a literal value expression.
+ * In TypeScript: `42`, `"hello"`, `true`, `false`
+ * Compile-time constant values.
+ */
+export interface TsExprLiteral extends TsExpr {
+  readonly _tag: 'TsExprLiteral';
+
+  /**
+   * The literal value
+   */
+  readonly value: TsLiteral;
+}
+
+/**
+ * Represents a function call expression.
+ * In TypeScript: `func()`, `obj.method(arg1, arg2)`, `new Constructor(args)`
+ * Function invocations with arguments.
+ */
+export interface TsExprCall extends TsExpr {
+  readonly _tag: 'TsExprCall';
+
+  /**
+   * The function expression being called
+   */
+  readonly function: TsExpr;
+
+  /**
+   * The arguments passed to the function
+   */
+  readonly params: IArray<TsExpr>;
+}
+
+/**
+ * Represents a unary operation expression.
+ * In TypeScript: `!flag`, `-number`, `+value`, `typeof obj`, `void expr`
+ * Single-operand operations.
+ */
+export interface TsExprUnary extends TsExpr {
+  readonly _tag: 'TsExprUnary';
+
+  /**
+   * The unary operator
+   */
+  readonly op: string;
+
+  /**
+   * The expression being operated on
+   */
+  readonly expr: TsExpr;
+}
+
+/**
+ * Represents a binary operation expression.
+ * In TypeScript: `a + b`, `x === y`, `value && other`, `left | right`
+ * Two-operand operations.
+ */
+export interface TsExprBinaryOp extends TsExpr {
+  readonly _tag: 'TsExprBinaryOp';
+
+  /**
+   * The left operand
+   */
+  readonly one: TsExpr;
+
+  /**
+   * The binary operator
+   */
+  readonly op: string;
+
+  /**
+   * The right operand
+   */
+  readonly two: TsExpr;
+}
+
+/**
+ * Represents a type cast expression.
+ * In TypeScript: `value as string`, `<number>value`
+ * Type assertions and casts.
+ */
+export interface TsExprCast extends TsExpr {
+  readonly _tag: 'TsExprCast';
+
+  /**
+   * The expression being cast
+   */
+  readonly expr: TsExpr;
+
+  /**
+   * The target type
+   */
+  readonly tpe: TsType;
+}
+
+/**
+ * Represents an array literal expression.
+ * In TypeScript: `[value]`, `[1, 2, 3]`, `[...items]`
+ * Array construction with elements.
+ */
+export interface TsExprArrayOf extends TsExpr {
+  readonly _tag: 'TsExprArrayOf';
+
+  /**
+   * The expression representing the array element(s)
+   */
+  readonly expr: TsExpr;
 }
 
 /**
@@ -4095,4 +4223,445 @@ export const TsExport = {
    * Type guard
    */
   isExport: (tree: TsTree): tree is TsExport => tree._tag === 'TsExport'
+};
+
+/**
+ * Constructor functions and utilities for TsExpr
+ */
+export const TsExprRef = {
+  /**
+   * Creates a reference expression
+   */
+  create: (value: TsQIdent): TsExprRef => {
+    return {
+      _tag: 'TsExprRef',
+      value,
+      asString: `TsExprRef(${value.asString})`
+    };
+  },
+
+  /**
+   * Creates a simple identifier reference
+   */
+  simple: (name: string): TsExprRef =>
+    TsExprRef.create(TsQIdent.ofStrings(name)),
+
+  /**
+   * Type guard
+   */
+  isExprRef: (tree: TsTree): tree is TsExprRef => tree._tag === 'TsExprRef'
+};
+
+export const TsExprLiteral = {
+  /**
+   * Creates a literal expression
+   */
+  create: (value: TsLiteral): TsExprLiteral => {
+    return {
+      _tag: 'TsExprLiteral',
+      value,
+      asString: `TsExprLiteral(${value.asString})`
+    };
+  },
+
+  /**
+   * Creates a string literal expression
+   */
+  string: (value: string): TsExprLiteral =>
+    TsExprLiteral.create(TsLiteral.str(value)),
+
+  /**
+   * Creates a number literal expression
+   */
+  number: (value: string): TsExprLiteral =>
+    TsExprLiteral.create(TsLiteral.num(value)),
+
+  /**
+   * Creates a boolean literal expression
+   */
+  boolean: (value: boolean): TsExprLiteral =>
+    TsExprLiteral.create(TsLiteral.bool(value)),
+
+  /**
+   * Type guard
+   */
+  isExprLiteral: (tree: TsTree): tree is TsExprLiteral => tree._tag === 'TsExprLiteral'
+};
+
+export const TsExprCall = {
+  /**
+   * Creates a function call expression
+   */
+  create: (func: TsExpr, params: IArray<TsExpr>): TsExprCall => {
+    return {
+      _tag: 'TsExprCall',
+      function: func,
+      params,
+      asString: `TsExprCall(${func.asString}, ${params.length} params)`
+    };
+  },
+
+  /**
+   * Creates a simple function call with no parameters
+   */
+  noParams: (func: TsExpr): TsExprCall =>
+    TsExprCall.create(func, IArray.Empty),
+
+  /**
+   * Creates a method call on an object
+   */
+  method: (obj: TsExpr, methodName: string, params: IArray<TsExpr>): TsExprCall => {
+    const objQIdent = obj._tag === 'TsExprRef' ? (obj as TsExprRef).value : TsQIdent.ofStrings('obj');
+    const methodQIdent = TsQIdent.append(objQIdent, TsIdent.simple(methodName));
+    const methodRef = TsExprRef.create(methodQIdent);
+    return TsExprCall.create(methodRef, params);
+  },
+
+  /**
+   * Type guard
+   */
+  isExprCall: (tree: TsTree): tree is TsExprCall => tree._tag === 'TsExprCall'
+};
+
+export const TsExprUnary = {
+  /**
+   * Creates a unary operation expression
+   */
+  create: (op: string, expr: TsExpr): TsExprUnary => {
+    return {
+      _tag: 'TsExprUnary',
+      op,
+      expr,
+      asString: `TsExprUnary(${op} ${expr.asString})`
+    };
+  },
+
+  /**
+   * Creates a logical NOT expression
+   */
+  not: (expr: TsExpr): TsExprUnary =>
+    TsExprUnary.create('!', expr),
+
+  /**
+   * Creates a numeric negation expression
+   */
+  negate: (expr: TsExpr): TsExprUnary =>
+    TsExprUnary.create('-', expr),
+
+  /**
+   * Creates a typeof expression
+   */
+  typeof: (expr: TsExpr): TsExprUnary =>
+    TsExprUnary.create('typeof', expr),
+
+  /**
+   * Creates a void expression
+   */
+  void: (expr: TsExpr): TsExprUnary =>
+    TsExprUnary.create('void', expr),
+
+  /**
+   * Type guard
+   */
+  isExprUnary: (tree: TsTree): tree is TsExprUnary => tree._tag === 'TsExprUnary'
+};
+
+export const TsExprBinaryOp = {
+  /**
+   * Creates a binary operation expression
+   */
+  create: (one: TsExpr, op: string, two: TsExpr): TsExprBinaryOp => {
+    return {
+      _tag: 'TsExprBinaryOp',
+      one,
+      op,
+      two,
+      asString: `TsExprBinaryOp(${one.asString} ${op} ${two.asString})`
+    };
+  },
+
+  /**
+   * Creates an addition expression
+   */
+  add: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '+', right),
+
+  /**
+   * Creates a subtraction expression
+   */
+  subtract: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '-', right),
+
+  /**
+   * Creates a multiplication expression
+   */
+  multiply: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '*', right),
+
+  /**
+   * Creates an equality comparison expression
+   */
+  equals: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '===', right),
+
+  /**
+   * Creates a logical AND expression
+   */
+  and: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '&&', right),
+
+  /**
+   * Creates a logical OR expression
+   */
+  or: (left: TsExpr, right: TsExpr): TsExprBinaryOp =>
+    TsExprBinaryOp.create(left, '||', right),
+
+  /**
+   * Type guard
+   */
+  isExprBinaryOp: (tree: TsTree): tree is TsExprBinaryOp => tree._tag === 'TsExprBinaryOp'
+};
+
+export const TsExprCast = {
+  /**
+   * Creates a type cast expression
+   */
+  create: (expr: TsExpr, tpe: TsType): TsExprCast => {
+    return {
+      _tag: 'TsExprCast',
+      expr,
+      tpe,
+      asString: `TsExprCast(${expr.asString} as ${tpe.asString})`
+    };
+  },
+
+  /**
+   * Creates a cast to string type
+   */
+  toString: (expr: TsExpr): TsExprCast =>
+    TsExprCast.create(expr, TsTypeRef.string),
+
+  /**
+   * Creates a cast to number type
+   */
+  toNumber: (expr: TsExpr): TsExprCast =>
+    TsExprCast.create(expr, TsTypeRef.number),
+
+  /**
+   * Creates a cast to any type
+   */
+  toAny: (expr: TsExpr): TsExprCast =>
+    TsExprCast.create(expr, TsTypeRef.any),
+
+  /**
+   * Type guard
+   */
+  isExprCast: (tree: TsTree): tree is TsExprCast => tree._tag === 'TsExprCast'
+};
+
+export const TsExprArrayOf = {
+  /**
+   * Creates an array literal expression
+   */
+  create: (expr: TsExpr): TsExprArrayOf => {
+    return {
+      _tag: 'TsExprArrayOf',
+      expr,
+      asString: `TsExprArrayOf([${expr.asString}])`
+    };
+  },
+
+  /**
+   * Creates an empty array literal
+   */
+  empty: (): TsExprArrayOf => {
+    const emptyExpr = TsExprRef.simple(''); // Placeholder for empty array
+    return TsExprArrayOf.create(emptyExpr);
+  },
+
+  /**
+   * Creates an array with a single element
+   */
+  single: (element: TsExpr): TsExprArrayOf =>
+    TsExprArrayOf.create(element),
+
+  /**
+   * Type guard
+   */
+  isExprArrayOf: (tree: TsTree): tree is TsExprArrayOf => tree._tag === 'TsExprArrayOf'
+};
+
+/**
+ * Utility functions for working with TypeScript expressions
+ */
+export const TsExpr = {
+  /**
+   * Default type for expressions when type cannot be inferred
+   */
+  Default: TsTypeUnion.simplified(IArray.fromArray([TsTypeRef.string, TsTypeRef.number] as TsType[])),
+
+  /**
+   * Formats an expression as a string representation
+   */
+  format: (expr: TsExpr): string => {
+    switch (expr._tag) {
+      case 'TsExprRef':
+        return (expr as TsExprRef).value.asString;
+      case 'TsExprLiteral':
+        const litExpr = expr as TsExprLiteral;
+        if (TsLiteral.isStr(litExpr.value)) {
+          return `"${(litExpr.value as TsLiteralStr).value}"`;
+        } else if (TsLiteral.isNum(litExpr.value)) {
+          return (litExpr.value as TsLiteralNum).value;
+        } else if (TsLiteral.isBool(litExpr.value)) {
+          return (litExpr.value as TsLiteralBool).value.toString();
+        }
+        return litExpr.value.asString;
+      case 'TsExprCall':
+        const callExpr = expr as TsExprCall;
+        const paramStrs = callExpr.params.map(TsExpr.format).toArray().join(', ');
+        return `${TsExpr.format(callExpr.function)}(${paramStrs})`;
+      case 'TsExprUnary':
+        const unaryExpr = expr as TsExprUnary;
+        return `${unaryExpr.op}${TsExpr.format(unaryExpr.expr)}`;
+      case 'TsExprBinaryOp':
+        const binaryExpr = expr as TsExprBinaryOp;
+        return `${TsExpr.format(binaryExpr.one)} ${binaryExpr.op} ${TsExpr.format(binaryExpr.two)}`;
+      case 'TsExprCast':
+        const castExpr = expr as TsExprCast;
+        return `${TsExpr.format(castExpr.expr)} as ${castExpr.tpe.asString}`;
+      case 'TsExprArrayOf':
+        const arrayExpr = expr as TsExprArrayOf;
+        return `[${TsExpr.format(arrayExpr.expr)}]`;
+      default:
+        return 'unknown';
+    }
+  },
+
+  /**
+   * Infers the type of an expression
+   */
+  typeOf: (expr: TsExpr): TsType => {
+    switch (expr._tag) {
+      case 'TsExprRef':
+        return TsExpr.Default;
+      case 'TsExprLiteral':
+        const litExpr = expr as TsExprLiteral;
+        return TsTypeLiteral.create(litExpr.value);
+      case 'TsExprCall':
+        return TsTypeRef.any;
+      case 'TsExprUnary':
+        const unaryExpr = expr as TsExprUnary;
+        return TsExpr.widen(TsExpr.typeOf(unaryExpr.expr));
+      case 'TsExprCast':
+        const castExpr = expr as TsExprCast;
+        return castExpr.tpe;
+      case 'TsExprArrayOf':
+        const arrayExpr = expr as TsExprArrayOf;
+        const elementType = TsExpr.typeOf(arrayExpr.expr);
+        return TsTypeRef.create(Comments.empty(), TsQIdent.ofStrings('Array'), IArray.fromArray([elementType]));
+      case 'TsExprBinaryOp':
+        const binaryExpr = expr as TsExprBinaryOp;
+        const leftType = TsExpr.typeOf(binaryExpr.one);
+        const rightType = TsExpr.typeOf(binaryExpr.two);
+
+        // Handle numeric operations
+        if (binaryExpr.op === '+' || binaryExpr.op === '*') {
+          if (TsExpr.isNumericLiteral(leftType) && TsExpr.isNumericLiteral(rightType)) {
+            // Could implement actual arithmetic here
+            return TsTypeRef.number;
+          }
+        }
+
+        return TsExpr.widen(leftType);
+      default:
+        return TsExpr.Default;
+    }
+  },
+
+  /**
+   * Infers the type of an optional expression
+   */
+  typeOfOpt: (exprOpt: Option<TsExpr>): TsType => {
+    return exprOpt._tag === 'Some' ? TsExpr.typeOf(exprOpt.value) : TsExpr.Default;
+  },
+
+  /**
+   * Widens a literal type to its base type
+   */
+  widen: (tpe: TsType): TsType => {
+    if (tpe._tag === 'TsTypeLiteral') {
+      const litType = tpe as TsTypeLiteral;
+      if (TsLiteral.isStr(litType.literal)) {
+        return TsTypeRef.string;
+      } else if (TsLiteral.isNum(litType.literal)) {
+        return TsTypeRef.number;
+      } else if (TsLiteral.isBool(litType.literal)) {
+        return TsTypeRef.boolean;
+      }
+    }
+
+    if (tpe._tag === 'TsTypeRef') {
+      const refType = tpe as TsTypeRef;
+      if (refType.name.asString === 'string' || refType.name.asString === 'number') {
+        return tpe;
+      }
+    }
+
+    return TsExpr.Default;
+  },
+
+  /**
+   * Checks if a type represents a numeric literal
+   */
+  isNumericLiteral: (tpe: TsType): boolean => {
+    return tpe._tag === 'TsTypeLiteral' && TsLiteral.isNum((tpe as TsTypeLiteral).literal);
+  },
+
+  /**
+   * Visits and transforms expressions recursively
+   */
+  visit: (expr: TsExpr, f: (e: TsExpr) => TsExpr): TsExpr => {
+    const transformed = (() => {
+      switch (expr._tag) {
+        case 'TsExprRef':
+        case 'TsExprLiteral':
+          return expr;
+        case 'TsExprCast':
+          const castExpr = expr as TsExprCast;
+          return TsExprCast.create(TsExpr.visit(castExpr.expr, f), castExpr.tpe);
+        case 'TsExprArrayOf':
+          const arrayExpr = expr as TsExprArrayOf;
+          return TsExprArrayOf.create(TsExpr.visit(arrayExpr.expr, f));
+        case 'TsExprCall':
+          const callExpr = expr as TsExprCall;
+          const newFunction = TsExpr.visit(callExpr.function, f);
+          const newParams = callExpr.params.map((p: TsExpr) => TsExpr.visit(p, f));
+          return TsExprCall.create(newFunction, newParams);
+        case 'TsExprUnary':
+          const unaryExpr = expr as TsExprUnary;
+          return TsExprUnary.create(unaryExpr.op, TsExpr.visit(unaryExpr.expr, f));
+        case 'TsExprBinaryOp':
+          const binaryExpr = expr as TsExprBinaryOp;
+          const newOne = TsExpr.visit(binaryExpr.one, f);
+          const newTwo = TsExpr.visit(binaryExpr.two, f);
+          return TsExprBinaryOp.create(newOne, binaryExpr.op, newTwo);
+        default:
+          return expr;
+      }
+    })();
+
+    return f(transformed);
+  },
+
+  /**
+   * Type guards for expression types
+   */
+  isRef: (expr: TsExpr): expr is TsExprRef => expr._tag === 'TsExprRef',
+  isLiteral: (expr: TsExpr): expr is TsExprLiteral => expr._tag === 'TsExprLiteral',
+  isCall: (expr: TsExpr): expr is TsExprCall => expr._tag === 'TsExprCall',
+  isUnary: (expr: TsExpr): expr is TsExprUnary => expr._tag === 'TsExprUnary',
+  isBinaryOp: (expr: TsExpr): expr is TsExprBinaryOp => expr._tag === 'TsExprBinaryOp',
+  isCast: (expr: TsExpr): expr is TsExprCast => expr._tag === 'TsExprCast',
+  isArrayOf: (expr: TsExpr): expr is TsExprArrayOf => expr._tag === 'TsExprArrayOf'
 };

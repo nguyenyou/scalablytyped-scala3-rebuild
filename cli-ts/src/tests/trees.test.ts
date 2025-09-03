@@ -61,7 +61,15 @@ import {
   TsExporteeNames,
   TsExporteeTree,
   TsExporteeStar,
-  TsExport
+  TsExport,
+  TsExprRef,
+  TsExprLiteral,
+  TsExprCall,
+  TsExprUnary,
+  TsExprBinaryOp,
+  TsExprCast,
+  TsExprArrayOf,
+  TsExpr
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -2491,6 +2499,407 @@ describe('trees - Phase 8: Import/Export System', () => {
 
         const notExport = { _tag: 'SomethingElse', asString: 'test' };
         expect(TsExport.isExport(notExport)).toBe(false);
+      });
+    });
+  });
+});
+
+describe('trees - Phase 9: Expression System', () => {
+  describe('TsExprRef', () => {
+    describe('construction', () => {
+      it('should create a reference expression', () => {
+        const qident = TsQIdent.ofStrings('myVariable');
+        const ref = TsExprRef.create(qident);
+
+        expect(ref._tag).toBe('TsExprRef');
+        expect(ref.value).toBe(qident);
+      });
+
+      it('should create a simple reference', () => {
+        const ref = TsExprRef.simple('myVar');
+
+        expect(ref._tag).toBe('TsExprRef');
+        expect(ref.value.asString).toBe('TsQIdent(myVar)');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify reference expressions', () => {
+        const ref = TsExprRef.simple('test');
+        expect(TsExprRef.isExprRef(ref)).toBe(true);
+
+        const notRef = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprRef.isExprRef(notRef)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprLiteral', () => {
+    describe('construction', () => {
+      it('should create a string literal expression', () => {
+        const literal = TsExprLiteral.string('hello');
+
+        expect(literal._tag).toBe('TsExprLiteral');
+        expect(TsLiteral.isStr(literal.value)).toBe(true);
+        expect((literal.value as any).value).toBe('hello');
+      });
+
+      it('should create a number literal expression', () => {
+        const literal = TsExprLiteral.number('42');
+
+        expect(literal._tag).toBe('TsExprLiteral');
+        expect(TsLiteral.isNum(literal.value)).toBe(true);
+        expect((literal.value as any).value).toBe('42');
+      });
+
+      it('should create a boolean literal expression', () => {
+        const literal = TsExprLiteral.boolean(true);
+
+        expect(literal._tag).toBe('TsExprLiteral');
+        expect(TsLiteral.isBool(literal.value)).toBe(true);
+        expect((literal.value as any).value).toBe('true');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify literal expressions', () => {
+        const literal = TsExprLiteral.string('test');
+        expect(TsExprLiteral.isExprLiteral(literal)).toBe(true);
+
+        const notLiteral = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprLiteral.isExprLiteral(notLiteral)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprCall', () => {
+    describe('construction', () => {
+      it('should create a function call expression', () => {
+        const func = TsExprRef.simple('myFunction');
+        const arg1 = TsExprLiteral.string('arg1');
+        const arg2 = TsExprLiteral.number('42');
+        const params = IArray.fromArray([arg1, arg2]);
+        const call = TsExprCall.create(func, params);
+
+        expect(call._tag).toBe('TsExprCall');
+        expect(call.function).toBe(func);
+        expect(call.params).toBe(params);
+        expect(call.params.length).toBe(2);
+      });
+
+      it('should create a no-parameter function call', () => {
+        const func = TsExprRef.simple('getValue');
+        const call = TsExprCall.noParams(func);
+
+        expect(call._tag).toBe('TsExprCall');
+        expect(call.function).toBe(func);
+        expect(call.params.length).toBe(0);
+      });
+
+      it('should create a method call', () => {
+        const obj = TsExprRef.simple('myObject');
+        const arg = TsExprLiteral.string('test');
+        const params = IArray.fromArray([arg]);
+        const call = TsExprCall.method(obj, 'doSomething', params);
+
+        expect(call._tag).toBe('TsExprCall');
+        expect(call.params.length).toBe(1);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify call expressions', () => {
+        const func = TsExprRef.simple('test');
+        const call = TsExprCall.noParams(func);
+        expect(TsExprCall.isExprCall(call)).toBe(true);
+
+        const notCall = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprCall.isExprCall(notCall)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprUnary', () => {
+    describe('construction', () => {
+      it('should create a logical NOT expression', () => {
+        const expr = TsExprRef.simple('flag');
+        const notExpr = TsExprUnary.not(expr);
+
+        expect(notExpr._tag).toBe('TsExprUnary');
+        expect(notExpr.op).toBe('!');
+        expect(notExpr.expr).toBe(expr);
+      });
+
+      it('should create a numeric negation expression', () => {
+        const expr = TsExprLiteral.number('42');
+        const negExpr = TsExprUnary.negate(expr);
+
+        expect(negExpr._tag).toBe('TsExprUnary');
+        expect(negExpr.op).toBe('-');
+        expect(negExpr.expr).toBe(expr);
+      });
+
+      it('should create a typeof expression', () => {
+        const expr = TsExprRef.simple('value');
+        const typeofExpr = TsExprUnary.typeof(expr);
+
+        expect(typeofExpr._tag).toBe('TsExprUnary');
+        expect(typeofExpr.op).toBe('typeof');
+        expect(typeofExpr.expr).toBe(expr);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify unary expressions', () => {
+        const expr = TsExprRef.simple('test');
+        const unary = TsExprUnary.not(expr);
+        expect(TsExprUnary.isExprUnary(unary)).toBe(true);
+
+        const notUnary = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprUnary.isExprUnary(notUnary)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprBinaryOp', () => {
+    describe('construction', () => {
+      it('should create an addition expression', () => {
+        const left = TsExprLiteral.number('1');
+        const right = TsExprLiteral.number('2');
+        const add = TsExprBinaryOp.add(left, right);
+
+        expect(add._tag).toBe('TsExprBinaryOp');
+        expect(add.one).toBe(left);
+        expect(add.op).toBe('+');
+        expect(add.two).toBe(right);
+      });
+
+      it('should create an equality comparison', () => {
+        const left = TsExprRef.simple('a');
+        const right = TsExprRef.simple('b');
+        const equals = TsExprBinaryOp.equals(left, right);
+
+        expect(equals._tag).toBe('TsExprBinaryOp');
+        expect(equals.one).toBe(left);
+        expect(equals.op).toBe('===');
+        expect(equals.two).toBe(right);
+      });
+
+      it('should create a logical AND expression', () => {
+        const left = TsExprRef.simple('condition1');
+        const right = TsExprRef.simple('condition2');
+        const and = TsExprBinaryOp.and(left, right);
+
+        expect(and._tag).toBe('TsExprBinaryOp');
+        expect(and.one).toBe(left);
+        expect(and.op).toBe('&&');
+        expect(and.two).toBe(right);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify binary operation expressions', () => {
+        const left = TsExprRef.simple('a');
+        const right = TsExprRef.simple('b');
+        const binary = TsExprBinaryOp.add(left, right);
+        expect(TsExprBinaryOp.isExprBinaryOp(binary)).toBe(true);
+
+        const notBinary = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprBinaryOp.isExprBinaryOp(notBinary)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprCast', () => {
+    describe('construction', () => {
+      it('should create a type cast expression', () => {
+        const expr = TsExprRef.simple('value');
+        const targetType = TsTypeRef.string;
+        const cast = TsExprCast.create(expr, targetType);
+
+        expect(cast._tag).toBe('TsExprCast');
+        expect(cast.expr).toBe(expr);
+        expect(cast.tpe).toBe(targetType);
+      });
+
+      it('should create a cast to string', () => {
+        const expr = TsExprLiteral.number('42');
+        const cast = TsExprCast.toString(expr);
+
+        expect(cast._tag).toBe('TsExprCast');
+        expect(cast.expr).toBe(expr);
+        expect(cast.tpe._tag).toBe('TsTypeRef');
+      });
+
+      it('should create a cast to any', () => {
+        const expr = TsExprRef.simple('unknown');
+        const cast = TsExprCast.toAny(expr);
+
+        expect(cast._tag).toBe('TsExprCast');
+        expect(cast.expr).toBe(expr);
+        expect(cast.tpe._tag).toBe('TsTypeRef');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify cast expressions', () => {
+        const expr = TsExprRef.simple('test');
+        const cast = TsExprCast.toString(expr);
+        expect(TsExprCast.isExprCast(cast)).toBe(true);
+
+        const notCast = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprCast.isExprCast(notCast)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExprArrayOf', () => {
+    describe('construction', () => {
+      it('should create an array literal expression', () => {
+        const element = TsExprLiteral.string('item');
+        const array = TsExprArrayOf.create(element);
+
+        expect(array._tag).toBe('TsExprArrayOf');
+        expect(array.expr).toBe(element);
+      });
+
+      it('should create a single element array', () => {
+        const element = TsExprLiteral.number('42');
+        const array = TsExprArrayOf.single(element);
+
+        expect(array._tag).toBe('TsExprArrayOf');
+        expect(array.expr).toBe(element);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify array expressions', () => {
+        const element = TsExprRef.simple('test');
+        const array = TsExprArrayOf.single(element);
+        expect(TsExprArrayOf.isExprArrayOf(array)).toBe(true);
+
+        const notArray = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsExprArrayOf.isExprArrayOf(notArray)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsExpr utilities', () => {
+    describe('format', () => {
+      it('should format reference expressions', () => {
+        const ref = TsExprRef.simple('myVar');
+        const formatted = TsExpr.format(ref);
+
+        expect(formatted).toBe('TsQIdent(myVar)');
+      });
+
+      it('should format string literal expressions', () => {
+        const literal = TsExprLiteral.string('hello');
+        const formatted = TsExpr.format(literal);
+
+        expect(formatted).toBe('"hello"');
+      });
+
+      it('should format number literal expressions', () => {
+        const literal = TsExprLiteral.number('42');
+        const formatted = TsExpr.format(literal);
+
+        expect(formatted).toBe('42');
+      });
+
+      it('should format function call expressions', () => {
+        const func = TsExprRef.simple('myFunc');
+        const arg = TsExprLiteral.string('arg');
+        const call = TsExprCall.create(func, IArray.fromArray([arg]));
+        const formatted = TsExpr.format(call);
+
+        expect(formatted).toBe('TsQIdent(myFunc)("arg")');
+      });
+
+      it('should format binary operation expressions', () => {
+        const left = TsExprLiteral.number('1');
+        const right = TsExprLiteral.number('2');
+        const add = TsExprBinaryOp.add(left, right);
+        const formatted = TsExpr.format(add);
+
+        expect(formatted).toBe('1 + 2');
+      });
+    });
+
+    describe('typeOf', () => {
+      it('should infer type of literal expressions', () => {
+        const stringLit = TsExprLiteral.string('hello');
+        const type = TsExpr.typeOf(stringLit);
+
+        expect(type._tag).toBe('TsTypeLiteral');
+      });
+
+      it('should infer type of cast expressions', () => {
+        const expr = TsExprRef.simple('value');
+        const cast = TsExprCast.toString(expr);
+        const type = TsExpr.typeOf(cast);
+
+        expect(type._tag).toBe('TsTypeRef');
+      });
+
+      it('should infer type of array expressions', () => {
+        const element = TsExprLiteral.number('42');
+        const array = TsExprArrayOf.single(element);
+        const type = TsExpr.typeOf(array);
+
+        expect(type._tag).toBe('TsTypeRef');
+      });
+    });
+
+    describe('visit', () => {
+      it('should transform expressions recursively', () => {
+        const original = TsExprRef.simple('oldName');
+        const transformed = TsExpr.visit(original, (expr) => {
+          if (TsExpr.isRef(expr) && expr.value.asString === 'TsQIdent(oldName)') {
+            return TsExprRef.simple('newName');
+          }
+          return expr;
+        });
+
+        expect(TsExpr.format(transformed)).toBe('TsQIdent(newName)');
+      });
+
+      it('should transform nested expressions', () => {
+        const inner = TsExprRef.simple('oldName');
+        const outer = TsExprUnary.not(inner);
+        const transformed = TsExpr.visit(outer, (expr) => {
+          if (TsExpr.isRef(expr) && expr.value.asString === 'TsQIdent(oldName)') {
+            return TsExprRef.simple('newName');
+          }
+          return expr;
+        });
+
+        expect(TsExpr.format(transformed)).toBe('!TsQIdent(newName)');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify expression types correctly', () => {
+        const ref = TsExprRef.simple('test');
+        const literal = TsExprLiteral.string('test');
+        const call = TsExprCall.noParams(ref);
+        const unary = TsExprUnary.not(ref);
+        const binary = TsExprBinaryOp.add(literal, literal);
+        const cast = TsExprCast.toString(ref);
+        const array = TsExprArrayOf.single(literal);
+
+        expect(TsExpr.isRef(ref)).toBe(true);
+        expect(TsExpr.isLiteral(literal)).toBe(true);
+        expect(TsExpr.isCall(call)).toBe(true);
+        expect(TsExpr.isUnary(unary)).toBe(true);
+        expect(TsExpr.isBinaryOp(binary)).toBe(true);
+        expect(TsExpr.isCast(cast)).toBe(true);
+        expect(TsExpr.isArrayOf(array)).toBe(true);
+
+        // Cross-checks
+        expect(TsExpr.isRef(literal)).toBe(false);
+        expect(TsExpr.isLiteral(ref)).toBe(false);
+        expect(TsExpr.isCall(unary)).toBe(false);
       });
     });
   });
