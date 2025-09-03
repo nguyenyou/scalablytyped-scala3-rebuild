@@ -4810,3 +4810,323 @@ export const TsEnumMember = {
    */
   isEnumMember: (tree: TsTree): tree is TsEnumMember => tree._tag === 'TsEnumMember'
 };
+
+/**
+ * Constructor functions and utilities for advanced TypeScript types
+ */
+
+/**
+ * Constructor functions for TsTypeConstructor
+ */
+export const TsTypeConstructor = {
+  /**
+   * Creates a constructor type
+   */
+  create: (isAbstract: boolean, signature: TsTypeFunction): TsTypeConstructor => ({
+    _tag: 'TsTypeConstructor',
+    isAbstract,
+    signature,
+    asString: `TsTypeConstructor(${isAbstract ? 'abstract ' : ''}new ${signature.asString})`
+  }),
+
+  /**
+   * Creates a concrete constructor type
+   */
+  concrete: (signature: TsTypeFunction): TsTypeConstructor =>
+    TsTypeConstructor.create(false, signature),
+
+  /**
+   * Creates an abstract constructor type
+   */
+  abstract: (signature: TsTypeFunction): TsTypeConstructor =>
+    TsTypeConstructor.create(true, signature),
+
+  /**
+   * Type guard
+   */
+  isTypeConstructor: (tpe: TsType): tpe is TsTypeConstructor => tpe._tag === 'TsTypeConstructor'
+};
+
+/**
+ * Constructor functions for TsTypeIs
+ */
+export const TsTypeIs = {
+  /**
+   * Creates a type predicate with 'is'
+   */
+  create: (ident: TsIdent, tpe: TsType): TsTypeIs => ({
+    _tag: 'TsTypeIs',
+    ident,
+    tpe,
+    asString: `TsTypeIs(${ident.value} is ${tpe.asString})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeIs: (tpe: TsType): tpe is TsTypeIs => tpe._tag === 'TsTypeIs'
+};
+
+/**
+ * Constructor functions for TsTypeAsserts
+ */
+export const TsTypeAsserts = {
+  /**
+   * Creates an assertion signature
+   */
+  create: (ident: TsIdentSimple, isOpt: Option<TsType>): TsTypeAsserts => ({
+    _tag: 'TsTypeAsserts',
+    ident,
+    isOpt,
+    asString: `TsTypeAsserts(asserts ${ident.value}${isOpt._tag === 'Some' ? ' is ' + isOpt.value.asString : ''})`
+  }),
+
+  /**
+   * Creates a simple assertion (asserts x)
+   */
+  simple: (ident: TsIdentSimple): TsTypeAsserts =>
+    TsTypeAsserts.create(ident, none),
+
+  /**
+   * Creates a typed assertion (asserts x is Type)
+   */
+  typed: (ident: TsIdentSimple, tpe: TsType): TsTypeAsserts =>
+    TsTypeAsserts.create(ident, some(tpe)),
+
+  /**
+   * Type guard
+   */
+  isTypeAsserts: (tpe: TsType): tpe is TsTypeAsserts => tpe._tag === 'TsTypeAsserts'
+};
+
+/**
+ * Constructor functions for TsTupleElement
+ */
+export const TsTupleElement = {
+  /**
+   * Creates a tuple element
+   */
+  create: (label: Option<TsIdent>, tpe: TsType): TsTupleElement => ({
+    _tag: 'TsTupleElement',
+    label,
+    tpe,
+    asString: `TsTupleElement(${label._tag === 'Some' ? label.value.value + ': ' : ''}${tpe.asString})`
+  }),
+
+  /**
+   * Creates an unlabeled tuple element
+   */
+  unlabeled: (tpe: TsType): TsTupleElement =>
+    TsTupleElement.create(none, tpe),
+
+  /**
+   * Creates a labeled tuple element
+   */
+  labeled: (label: TsIdent, tpe: TsType): TsTupleElement =>
+    TsTupleElement.create(some(label), tpe),
+
+  /**
+   * Type guard
+   */
+  isTupleElement: (tree: TsTree): tree is TsTupleElement => tree._tag === 'TsTupleElement'
+};
+
+/**
+ * Constructor functions for TsTypeTuple
+ */
+export const TsTypeTuple = {
+  /**
+   * Creates a tuple type
+   */
+  create: (elems: IArray<TsTupleElement>): TsTypeTuple => ({
+    _tag: 'TsTypeTuple',
+    elems,
+    asString: `TsTypeTuple([${elems.toArray().map(e => e.asString).join(', ')}])`
+  }),
+
+  /**
+   * Creates a tuple from types (unlabeled)
+   */
+  fromTypes: (types: IArray<TsType>): TsTypeTuple =>
+    TsTypeTuple.create(types.map(TsTupleElement.unlabeled)),
+
+  /**
+   * Creates an empty tuple
+   */
+  empty: (): TsTypeTuple =>
+    TsTypeTuple.create(IArray.Empty),
+
+  /**
+   * Type guard
+   */
+  isTypeTuple: (tpe: TsType): tpe is TsTypeTuple => tpe._tag === 'TsTypeTuple'
+};
+
+/**
+ * Constructor functions for TsTypeQuery
+ */
+export const TsTypeQuery = {
+  /**
+   * Creates a typeof query
+   */
+  create: (expr: TsQIdent): TsTypeQuery => ({
+    _tag: 'TsTypeQuery',
+    expr,
+    asString: `TsTypeQuery(typeof ${expr.asString})`
+  }),
+
+  /**
+   * Creates a typeof query from a simple identifier
+   */
+  simple: (name: string): TsTypeQuery =>
+    TsTypeQuery.create(TsQIdent.ofStrings(name)),
+
+  /**
+   * Type guard
+   */
+  isTypeQuery: (tpe: TsType): tpe is TsTypeQuery => tpe._tag === 'TsTypeQuery'
+};
+
+/**
+ * Constructor functions for TsTypeRepeated
+ */
+export const TsTypeRepeated = {
+  /**
+   * Creates a repeated/rest type
+   */
+  create: (underlying: TsType): TsTypeRepeated => ({
+    _tag: 'TsTypeRepeated',
+    underlying,
+    asString: `TsTypeRepeated(...${underlying.asString})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeRepeated: (tpe: TsType): tpe is TsTypeRepeated => tpe._tag === 'TsTypeRepeated'
+};
+
+/**
+ * Constructor functions for TsTypeKeyOf
+ */
+export const TsTypeKeyOf = {
+  /**
+   * Creates a keyof type
+   */
+  create: (key: TsType): TsTypeKeyOf => ({
+    _tag: 'TsTypeKeyOf',
+    key,
+    asString: `TsTypeKeyOf(keyof ${key.asString})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeKeyOf: (tpe: TsType): tpe is TsTypeKeyOf => tpe._tag === 'TsTypeKeyOf'
+};
+
+/**
+ * Constructor functions for TsTypeLookup
+ */
+export const TsTypeLookup = {
+  /**
+   * Creates an indexed access type
+   */
+  create: (from: TsType, key: TsType): TsTypeLookup => ({
+    _tag: 'TsTypeLookup',
+    from,
+    key,
+    asString: `TsTypeLookup(${from.asString}[${key.asString}])`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeLookup: (tpe: TsType): tpe is TsTypeLookup => tpe._tag === 'TsTypeLookup'
+};
+
+/**
+ * Constructor functions for TsTypeThis
+ */
+export const TsTypeThis = {
+  /**
+   * Creates a 'this' type
+   */
+  create: (): TsTypeThis => ({
+    _tag: 'TsTypeThis',
+    asString: 'TsTypeThis(this)'
+  }),
+
+  /**
+   * Singleton instance
+   */
+  instance: {
+    _tag: 'TsTypeThis' as const,
+    asString: 'TsTypeThis(this)'
+  },
+
+  /**
+   * Type guard
+   */
+  isTypeThis: (tpe: TsType): tpe is TsTypeThis => tpe._tag === 'TsTypeThis'
+};
+
+/**
+ * Constructor functions for TsTypeConditional
+ */
+export const TsTypeConditional = {
+  /**
+   * Creates a conditional type
+   */
+  create: (pred: TsType, ifTrue: TsType, ifFalse: TsType): TsTypeConditional => ({
+    _tag: 'TsTypeConditional',
+    pred,
+    ifTrue,
+    ifFalse,
+    asString: `TsTypeConditional(${pred.asString} ? ${ifTrue.asString} : ${ifFalse.asString})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeConditional: (tpe: TsType): tpe is TsTypeConditional => tpe._tag === 'TsTypeConditional'
+};
+
+/**
+ * Constructor functions for TsTypeExtends
+ */
+export const TsTypeExtends = {
+  /**
+   * Creates an extends clause
+   */
+  create: (tpe: TsType, extends_: TsType): TsTypeExtends => ({
+    _tag: 'TsTypeExtends',
+    tpe,
+    extends: extends_,
+    asString: `TsTypeExtends(${tpe.asString} extends ${extends_.asString})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeExtends: (tpe: TsType): tpe is TsTypeExtends => tpe._tag === 'TsTypeExtends'
+};
+
+/**
+ * Constructor functions for TsTypeInfer
+ */
+export const TsTypeInfer = {
+  /**
+   * Creates an infer type
+   */
+  create: (tparam: TsTypeParam): TsTypeInfer => ({
+    _tag: 'TsTypeInfer',
+    tparam,
+    asString: `TsTypeInfer(infer ${tparam.name.value})`
+  }),
+
+  /**
+   * Type guard
+   */
+  isTypeInfer: (tpe: TsType): tpe is TsTypeInfer => tpe._tag === 'TsTypeInfer'
+};

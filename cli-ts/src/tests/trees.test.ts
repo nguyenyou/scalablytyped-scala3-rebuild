@@ -70,7 +70,20 @@ import {
   TsExprCast,
   TsExprArrayOf,
   TsExpr,
-  TsEnumMember
+  TsEnumMember,
+  TsTypeConstructor,
+  TsTypeIs,
+  TsTypeAsserts,
+  TsTupleElement,
+  TsTypeTuple,
+  TsTypeQuery,
+  TsTypeRepeated,
+  TsTypeKeyOf,
+  TsTypeLookup,
+  TsTypeThis,
+  TsTypeConditional,
+  TsTypeExtends,
+  TsTypeInfer
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -3124,6 +3137,441 @@ describe('trees - Phase 10: Enum Members', () => {
         expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('5');
         expect(TsExpr.format(initialized.apply(3).expr.value)).toBe('6');
       });
+    });
+  });
+});
+
+describe('trees - Phase 11: Advanced Type Features', () => {
+  describe('TsTypeConstructor', () => {
+    describe('construction', () => {
+      it('should create a concrete constructor type', () => {
+        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const constructor = TsTypeConstructor.concrete(signature);
+
+        expect(constructor._tag).toBe('TsTypeConstructor');
+        expect(constructor.isAbstract).toBe(false);
+        expect(constructor.signature).toBe(signature);
+      });
+
+      it('should create an abstract constructor type', () => {
+        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const constructor = TsTypeConstructor.abstract(signature);
+
+        expect(constructor._tag).toBe('TsTypeConstructor');
+        expect(constructor.isAbstract).toBe(true);
+        expect(constructor.signature).toBe(signature);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify constructor types', () => {
+        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const constructor = TsTypeConstructor.concrete(signature);
+        expect(TsTypeConstructor.isTypeConstructor(constructor)).toBe(true);
+
+        const notConstructor = TsTypeRef.string;
+        expect(TsTypeConstructor.isTypeConstructor(notConstructor)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeIs', () => {
+    describe('construction', () => {
+      it('should create a type predicate', () => {
+        const ident = TsIdent.simple('value');
+        const tpe = TsTypeRef.string;
+        const predicate = TsTypeIs.create(ident, tpe);
+
+        expect(predicate._tag).toBe('TsTypeIs');
+        expect(predicate.ident).toBe(ident);
+        expect(predicate.tpe).toBe(tpe);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify type predicates', () => {
+        const ident = TsIdent.simple('value');
+        const predicate = TsTypeIs.create(ident, TsTypeRef.string);
+        expect(TsTypeIs.isTypeIs(predicate)).toBe(true);
+
+        const notPredicate = TsTypeRef.string;
+        expect(TsTypeIs.isTypeIs(notPredicate)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeAsserts', () => {
+    describe('construction', () => {
+      it('should create a simple assertion', () => {
+        const ident = TsIdent.simple('value');
+        const assertion = TsTypeAsserts.simple(ident);
+
+        expect(assertion._tag).toBe('TsTypeAsserts');
+        expect(assertion.ident).toBe(ident);
+        expect(assertion.isOpt._tag).toBe('None');
+      });
+
+      it('should create a typed assertion', () => {
+        const ident = TsIdent.simple('value');
+        const tpe = TsTypeRef.string;
+        const assertion = TsTypeAsserts.typed(ident, tpe);
+
+        expect(assertion._tag).toBe('TsTypeAsserts');
+        expect(assertion.ident).toBe(ident);
+        expect(assertion.isOpt._tag).toBe('Some');
+        expect(assertion.isOpt.value).toBe(tpe);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify assertion types', () => {
+        const ident = TsIdent.simple('value');
+        const assertion = TsTypeAsserts.simple(ident);
+        expect(TsTypeAsserts.isTypeAsserts(assertion)).toBe(true);
+
+        const notAssertion = TsTypeRef.string;
+        expect(TsTypeAsserts.isTypeAsserts(notAssertion)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTupleElement', () => {
+    describe('construction', () => {
+      it('should create an unlabeled tuple element', () => {
+        const tpe = TsTypeRef.string;
+        const element = TsTupleElement.unlabeled(tpe);
+
+        expect(element._tag).toBe('TsTupleElement');
+        expect(element.label._tag).toBe('None');
+        expect(element.tpe).toBe(tpe);
+      });
+
+      it('should create a labeled tuple element', () => {
+        const label = TsIdent.simple('name');
+        const tpe = TsTypeRef.string;
+        const element = TsTupleElement.labeled(label, tpe);
+
+        expect(element._tag).toBe('TsTupleElement');
+        expect(element.label._tag).toBe('Some');
+        expect(element.label.value).toBe(label);
+        expect(element.tpe).toBe(tpe);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify tuple elements', () => {
+        const element = TsTupleElement.unlabeled(TsTypeRef.string);
+        expect(TsTupleElement.isTupleElement(element)).toBe(true);
+
+        const notElement = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsTupleElement.isTupleElement(notElement)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeTuple', () => {
+    describe('construction', () => {
+      it('should create a tuple from types', () => {
+        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const tuple = TsTypeTuple.fromTypes(types);
+
+        expect(tuple._tag).toBe('TsTypeTuple');
+        expect(tuple.elems.length).toBe(2);
+        expect(tuple.elems.apply(0).tpe).toBe(types.apply(0));
+        expect(tuple.elems.apply(1).tpe).toBe(types.apply(1));
+      });
+
+      it('should create an empty tuple', () => {
+        const tuple = TsTypeTuple.empty();
+
+        expect(tuple._tag).toBe('TsTypeTuple');
+        expect(tuple.elems.length).toBe(0);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify tuple types', () => {
+        const tuple = TsTypeTuple.empty();
+        expect(TsTypeTuple.isTypeTuple(tuple)).toBe(true);
+
+        const notTuple = TsTypeRef.string;
+        expect(TsTypeTuple.isTypeTuple(notTuple)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeQuery', () => {
+    describe('construction', () => {
+      it('should create a typeof query', () => {
+        const expr = TsQIdent.ofStrings('myVariable');
+        const query = TsTypeQuery.create(expr);
+
+        expect(query._tag).toBe('TsTypeQuery');
+        expect(query.expr).toBe(expr);
+      });
+
+      it('should create a simple typeof query', () => {
+        const query = TsTypeQuery.simple('myVariable');
+
+        expect(query._tag).toBe('TsTypeQuery');
+        expect(query.expr.asString).toBe('TsQIdent(myVariable)');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify query types', () => {
+        const query = TsTypeQuery.simple('test');
+        expect(TsTypeQuery.isTypeQuery(query)).toBe(true);
+
+        const notQuery = TsTypeRef.string;
+        expect(TsTypeQuery.isTypeQuery(notQuery)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeRepeated', () => {
+    describe('construction', () => {
+      it('should create a repeated type', () => {
+        const underlying = TsTypeRef.string;
+        const repeated = TsTypeRepeated.create(underlying);
+
+        expect(repeated._tag).toBe('TsTypeRepeated');
+        expect(repeated.underlying).toBe(underlying);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify repeated types', () => {
+        const repeated = TsTypeRepeated.create(TsTypeRef.string);
+        expect(TsTypeRepeated.isTypeRepeated(repeated)).toBe(true);
+
+        const notRepeated = TsTypeRef.string;
+        expect(TsTypeRepeated.isTypeRepeated(notRepeated)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeKeyOf', () => {
+    describe('construction', () => {
+      it('should create a keyof type', () => {
+        const key = TsTypeRef.string;
+        const keyof = TsTypeKeyOf.create(key);
+
+        expect(keyof._tag).toBe('TsTypeKeyOf');
+        expect(keyof.key).toBe(key);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify keyof types', () => {
+        const keyof = TsTypeKeyOf.create(TsTypeRef.string);
+        expect(TsTypeKeyOf.isTypeKeyOf(keyof)).toBe(true);
+
+        const notKeyOf = TsTypeRef.string;
+        expect(TsTypeKeyOf.isTypeKeyOf(notKeyOf)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeLookup', () => {
+    describe('construction', () => {
+      it('should create an indexed access type', () => {
+        const from = TsTypeRef.string;
+        const key = TsTypeRef.number;
+        const lookup = TsTypeLookup.create(from, key);
+
+        expect(lookup._tag).toBe('TsTypeLookup');
+        expect(lookup.from).toBe(from);
+        expect(lookup.key).toBe(key);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify lookup types', () => {
+        const lookup = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.number);
+        expect(TsTypeLookup.isTypeLookup(lookup)).toBe(true);
+
+        const notLookup = TsTypeRef.string;
+        expect(TsTypeLookup.isTypeLookup(notLookup)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeThis', () => {
+    describe('construction', () => {
+      it('should create a this type', () => {
+        const thisType = TsTypeThis.create();
+
+        expect(thisType._tag).toBe('TsTypeThis');
+      });
+
+      it('should use singleton instance', () => {
+        const thisType = TsTypeThis.instance;
+
+        expect(thisType._tag).toBe('TsTypeThis');
+        expect(thisType.asString).toBe('TsTypeThis(this)');
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify this types', () => {
+        const thisType = TsTypeThis.create();
+        expect(TsTypeThis.isTypeThis(thisType)).toBe(true);
+
+        const notThis = TsTypeRef.string;
+        expect(TsTypeThis.isTypeThis(notThis)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeConditional', () => {
+    describe('construction', () => {
+      it('should create a conditional type', () => {
+        const pred = TsTypeRef.string;
+        const ifTrue = TsTypeRef.number;
+        const ifFalse = TsTypeRef.boolean;
+        const conditional = TsTypeConditional.create(pred, ifTrue, ifFalse);
+
+        expect(conditional._tag).toBe('TsTypeConditional');
+        expect(conditional.pred).toBe(pred);
+        expect(conditional.ifTrue).toBe(ifTrue);
+        expect(conditional.ifFalse).toBe(ifFalse);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify conditional types', () => {
+        const conditional = TsTypeConditional.create(
+          TsTypeRef.string,
+          TsTypeRef.number,
+          TsTypeRef.boolean
+        );
+        expect(TsTypeConditional.isTypeConditional(conditional)).toBe(true);
+
+        const notConditional = TsTypeRef.string;
+        expect(TsTypeConditional.isTypeConditional(notConditional)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeExtends', () => {
+    describe('construction', () => {
+      it('should create an extends clause', () => {
+        const tpe = TsTypeRef.string;
+        const extends_ = TsTypeRef.object;
+        const extendsClause = TsTypeExtends.create(tpe, extends_);
+
+        expect(extendsClause._tag).toBe('TsTypeExtends');
+        expect(extendsClause.tpe).toBe(tpe);
+        expect(extendsClause.extends).toBe(extends_);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify extends types', () => {
+        const extendsClause = TsTypeExtends.create(TsTypeRef.string, TsTypeRef.object);
+        expect(TsTypeExtends.isTypeExtends(extendsClause)).toBe(true);
+
+        const notExtends = TsTypeRef.string;
+        expect(TsTypeExtends.isTypeExtends(notExtends)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsTypeInfer', () => {
+    describe('construction', () => {
+      it('should create an infer type', () => {
+        const tparam = TsTypeParam.simple(TsIdent.simple('T'));
+        const infer = TsTypeInfer.create(tparam);
+
+        expect(infer._tag).toBe('TsTypeInfer');
+        expect(infer.tparam).toBe(tparam);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify infer types', () => {
+        const tparam = TsTypeParam.simple(TsIdent.simple('T'));
+        const infer = TsTypeInfer.create(tparam);
+        expect(TsTypeInfer.isTypeInfer(infer)).toBe(true);
+
+        const notInfer = TsTypeRef.string;
+        expect(TsTypeInfer.isTypeInfer(notInfer)).toBe(false);
+      });
+    });
+  });
+
+  describe('string representation', () => {
+    it('should format constructor types', () => {
+      const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+      const constructor = TsTypeConstructor.abstract(signature);
+      expect(constructor.asString).toContain('TsTypeConstructor(abstract new');
+    });
+
+    it('should format type predicates', () => {
+      const ident = TsIdent.simple('value');
+      const predicate = TsTypeIs.create(ident, TsTypeRef.string);
+      expect(predicate.asString).toBe('TsTypeIs(value is TsTypeRef(TsQIdent(string)))');
+    });
+
+    it('should format assertions', () => {
+      const ident = TsIdent.simple('value');
+      const assertion = TsTypeAsserts.typed(ident, TsTypeRef.string);
+      expect(assertion.asString).toBe('TsTypeAsserts(asserts value is TsTypeRef(TsQIdent(string)))');
+    });
+
+    it('should format tuple elements', () => {
+      const label = TsIdent.simple('name');
+      const element = TsTupleElement.labeled(label, TsTypeRef.string);
+      expect(element.asString).toBe('TsTupleElement(name: TsTypeRef(TsQIdent(string)))');
+    });
+
+    it('should format tuples', () => {
+      const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+      const tuple = TsTypeTuple.fromTypes(types);
+      expect(tuple.asString).toContain('TsTypeTuple([');
+      expect(tuple.asString).toContain('TsTypeRef(TsQIdent(string))');
+      expect(tuple.asString).toContain('TsTypeRef(TsQIdent(number))');
+    });
+
+    it('should format typeof queries', () => {
+      const query = TsTypeQuery.simple('myVariable');
+      expect(query.asString).toBe('TsTypeQuery(typeof TsQIdent(myVariable))');
+    });
+
+    it('should format repeated types', () => {
+      const repeated = TsTypeRepeated.create(TsTypeRef.string);
+      expect(repeated.asString).toBe('TsTypeRepeated(...TsTypeRef(TsQIdent(string)))');
+    });
+
+    it('should format keyof types', () => {
+      const keyof = TsTypeKeyOf.create(TsTypeRef.string);
+      expect(keyof.asString).toBe('TsTypeKeyOf(keyof TsTypeRef(TsQIdent(string)))');
+    });
+
+    it('should format lookup types', () => {
+      const lookup = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.number);
+      expect(lookup.asString).toBe('TsTypeLookup(TsTypeRef(TsQIdent(string))[TsTypeRef(TsQIdent(number))])');
+    });
+
+    it('should format conditional types', () => {
+      const conditional = TsTypeConditional.create(
+        TsTypeRef.string,
+        TsTypeRef.number,
+        TsTypeRef.boolean
+      );
+      expect(conditional.asString).toBe('TsTypeConditional(TsTypeRef(TsQIdent(string)) ? TsTypeRef(TsQIdent(number)) : TsTypeRef(TsQIdent(boolean)))');
+    });
+
+    it('should format extends clauses', () => {
+      const extendsClause = TsTypeExtends.create(TsTypeRef.string, TsTypeRef.object);
+      expect(extendsClause.asString).toBe('TsTypeExtends(TsTypeRef(TsQIdent(string)) extends TsTypeRef(TsQIdent(object)))');
+    });
+
+    it('should format infer types', () => {
+      const tparam = TsTypeParam.simple(TsIdent.simple('T'));
+      const infer = TsTypeInfer.create(tparam);
+      expect(infer.asString).toBe('TsTypeInfer(infer T)');
     });
   });
 });
