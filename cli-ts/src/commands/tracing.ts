@@ -1,7 +1,7 @@
 import { BaseCommand, CommandOptions } from './base-command.js';
 import { Paths } from '@/utils/paths.js';
 import { PackageJson } from '@/internal/ts/PackageJson.js';
-import { TsIdentLibrary } from '@/internal/ts/trees.js';
+import { TsIdentLibrary, TsParsedFile } from '@/internal/ts/trees.js';
 import { Json, LibTsSource } from '@/internal/importer/LibTsSource.js';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -24,7 +24,6 @@ import { LibTs } from '@/internal/importer/LibTs.js';
 import { LibScalaJs } from '@/internal/importer/LibScalaJs.js';
 import { Logger } from '@/internal/logging/index.js';
 import { MockCalculateLibraryVersion } from '@/internal/importer/CalculateLibraryVersion.js';
-import { TsParsedFile } from '@/internal/ts/TsParsedFile.js';
 import { NormalFlavourImpl } from '@/internal/importer/FlavourImpl.js';
 import { none } from 'fp-ts/Option';
 
