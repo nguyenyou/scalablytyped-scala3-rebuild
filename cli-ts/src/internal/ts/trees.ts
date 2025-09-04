@@ -2595,7 +2595,19 @@ export const TsParsedFile = {
   /**
    * Type guard
    */
-  isParsedFile: (tree: TsTree): tree is TsParsedFile => tree._tag === 'TsParsedFile'
+  isParsedFile: (tree: TsTree): tree is TsParsedFile => tree._tag === 'TsParsedFile',
+
+  /**
+   * Create a mock TsParsedFile for testing
+   */
+  createMock: (): TsParsedFile => {
+    const mockComments = Comments.empty();
+    const mockDirectives = IArray.Empty as IArray<Directive>;
+    const mockMembers = IArray.Empty as IArray<TsContainerOrDecl>;
+    const mockCodePath = CodePath.noPath();
+
+    return TsParsedFile.create(mockComments, mockDirectives, mockMembers, mockCodePath);
+  }
 };
 
 /**
