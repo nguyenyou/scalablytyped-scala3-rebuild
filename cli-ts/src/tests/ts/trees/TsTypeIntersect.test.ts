@@ -495,7 +495,7 @@ describe('TsTypeIntersect Tests', () => {
 
   describe('Performance and Scalability', () => {
     it('large intersection types', () => {
-      const types = IArray.fromIterable(Array.from({ length: 100 }, (_, i) =>
+      const types = IArray.fromIterable<TsType>(Array.from({ length: 100 }, (_, i) =>
         TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple(`Type${i + 1}`)), IArray.Empty)
       ));
 
@@ -511,7 +511,7 @@ describe('TsTypeIntersect Tests', () => {
 
     it('deeply nested object combinations', () => {
       // Create multiple object types with different properties
-      const obj1Props = IArray.fromArray([
+      const obj1Props = IArray.fromArray<TsMember>([
         TsMemberProperty.create(
           Comments.empty(),
           TsProtectionLevel.default(),
@@ -532,7 +532,7 @@ describe('TsTypeIntersect Tests', () => {
         )
       ]);
 
-      const obj2Props = IArray.fromArray([
+      const obj2Props = IArray.fromArray<TsMember>([
         TsMemberProperty.create(
           Comments.empty(),
           TsProtectionLevel.default(),
@@ -546,7 +546,7 @@ describe('TsTypeIntersect Tests', () => {
 
       const obj1 = TsTypeObject.create(Comments.empty(), obj1Props);
       const obj2 = TsTypeObject.create(Comments.empty(), obj2Props);
-      const objects = IArray.fromArray([obj1, obj2]);
+      const objects = IArray.fromArray<TsType>([obj1, obj2]);
 
       const result = TsTypeIntersect.simplified(objects);
 
