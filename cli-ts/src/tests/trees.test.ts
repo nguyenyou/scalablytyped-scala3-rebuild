@@ -3147,13 +3147,22 @@ describe('trees - Phase 10: Enum Members', () => {
         const initialized = TsEnumMember.initializeMembers(members);
 
         // First should remain 0
-        expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('0');
+        const x = initialized.apply(0).expr 
+        if (isSome(x)) {
+          expect(TsExpr.format(x.value)).toBe('0');
+        }
 
         // Second should remain "second"
-        expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('"second"');
+        const y = initialized.apply(1).expr
+        if (isSome(y)) {
+          expect(TsExpr.format(y.value)).toBe('"second"');
+        }
 
         // Third should be auto-assigned to 1 (0 + 1)
-        expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('1');
+        const z = initialized.apply(2).expr 
+        if (isSome(z)) {
+          expect(TsExpr.format(z.value)).toBe('1');
+        }
       });
 
       it('should handle non-sequential numeric values', () => {
@@ -3166,10 +3175,18 @@ describe('trees - Phase 10: Enum Members', () => {
 
         const initialized = TsEnumMember.initializeMembers(members);
 
-        expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('100');
-        expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('101');
-        expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('5');
-        expect(TsExpr.format(initialized.apply(3).expr.value)).toBe('6');
+        if (isSome(initialized.apply(0).expr)) {
+          expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('100');
+        }
+        if (isSome(initialized.apply(1).expr)) {
+          expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('101');
+        }
+        if (isSome(initialized.apply(2).expr)) {
+          expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('5');
+        }
+        if (isSome(initialized.apply(3).expr)) {
+          expect(TsExpr.format(initialized.apply(3).expr.value)).toBe('6');
+        }
       });
     });
   });
@@ -3253,7 +3270,9 @@ describe('trees - Phase 11: Advanced Type Features', () => {
         expect(assertion._tag).toBe('TsTypeAsserts');
         expect(assertion.ident).toBe(ident);
         expect(assertion.isOpt._tag).toBe('Some');
-        expect(assertion.isOpt.value).toBe(tpe);
+        if (isSome(assertion.isOpt)) {
+          expect(assertion.isOpt.value).toBe(tpe);
+        }
       });
     });
 
@@ -3287,7 +3306,9 @@ describe('trees - Phase 11: Advanced Type Features', () => {
 
         expect(element._tag).toBe('TsTupleElement');
         expect(element.label._tag).toBe('Some');
-        expect(element.label.value).toBe(label);
+        if (isSome(element.label)) {
+          expect(element.label.value).toBe(label);
+        }
         expect(element.tpe).toBe(tpe);
       });
     });
@@ -3657,7 +3678,9 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
 
         expect(mapped._tag).toBe('TsMemberTypeMapped');
         expect(mapped.as._tag).toBe('Some');
-        expect(mapped.as.value).toBe(as);
+        if (isSome(mapped.as)) {
+          expect(mapped.as.value).toBe(as);
+        }
       });
     });
 
@@ -4086,7 +4109,9 @@ describe('trees - Phase 13: Declaration System Completion', () => {
         expect(varDecl._tag).toBe('TsDeclVar');
         expect(varDecl.tpe._tag).toBe('None');
         expect(varDecl.expr._tag).toBe('Some');
-        expect(varDecl.expr.value).toBe(expr);
+        if (isSome(varDecl.expr)) {
+          expect(varDecl.expr.value).toBe(expr);
+        }
       });
     });
 
@@ -4381,7 +4406,9 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
       const extracted = TsType.getMappedMember(mappedType);
       expect(extracted._tag).toBe('Some');
-      expect(extracted.value).toBe(mapped);
+      if (isSome(extracted)) {
+        expect(extracted.value).toBe(mapped);
+      }
     });
 
     it('should return none for non-mapped types', () => {
