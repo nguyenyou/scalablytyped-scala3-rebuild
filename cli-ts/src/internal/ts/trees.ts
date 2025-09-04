@@ -3308,9 +3308,10 @@ export const TsTypeParam = {
   /**
    * Converts type parameters to type arguments for instantiation.
    * Transforms `<T, U>` into `T, U` for use in type references.
+   * This corresponds to TsTypeParam.asTypeArgs in the original Scala code.
    */
   asTypeArgs: (tps: IArray<TsTypeParam>): IArray<TsTypeRef> =>
-    tps.map(tp => ({ _tag: 'TsTypeRef', name: TsQIdent.of(tp.name), tparams: IArray.Empty, asString: `TsTypeRef(${tp.name.value})` } as TsTypeRef)),
+    tps.map(tp => TsTypeRef.fromIdent(tp.name)),
 
   /**
    * Type guard
@@ -3700,32 +3701,54 @@ export const TsTypeIntersect = {
 
   /**
    * Creates a simplified intersection type, combining object types where possible
+   * This corresponds to TsTypeIntersect.simplified in the original Scala code
    */
   simplified: (types: IArray<TsType>): TsType => {
-    // Separate object types from other types
+    // Separate object types that are not mapped types from other types
     const objects: TsTypeObject[] = [];
     const others: TsType[] = [];
 
     for (let i = 0; i < types.length; i++) {
       const type = types.apply(i);
-      if (type._tag === 'TsTypeObject') {
+      if (type._tag === 'TsTypeObject' && !TsType.isTypeMapping((type as TsTypeObject).members)) {
         objects.push(type as TsTypeObject);
       } else {
         others.push(type);
       }
     }
 
-    // Combine object types if we have more than one
-    const combinedTypes: TsType[] = [...others];
-    if (objects.length > 1) {
-      const allMembers = objects.flatMap(obj => obj.members.toArray());
-      const combinedObject = TsTypeObject.withMembers(IArray.fromArray(allMembers));
-      combinedTypes.unshift(combinedObject);
+    // Combine object types according to Scala logic
+    let withCombinedObjects: IArray<TsType>;
+
+    if (objects.length === 0) {
+      // No combinable objects, use all types as-is
+      withCombinedObjects = types;
     } else if (objects.length === 1) {
-      combinedTypes.unshift(objects[0]);
+      // Just one combinable object, don't combine - use all types as-is
+      withCombinedObjects = types;
+    } else {
+      // Multiple combinable objects - combine them into one and add to others
+      const allMembers: TsMember[] = [];
+      for (const obj of objects) {
+        for (let i = 0; i < obj.members.length; i++) {
+          allMembers.push(obj.members.apply(i));
+        }
+      }
+
+      // Remove duplicates by member name and type
+      const distinctMembers = allMembers.filter((member, index, arr) =>
+        arr.findIndex(m => m.asString === member.asString) === index
+      );
+
+      const combinedObject = TsTypeObject.create(
+        Comments.empty(),
+        IArray.fromArray(distinctMembers)
+      );
+
+      withCombinedObjects = IArray.fromArray([combinedObject, ...others]);
     }
 
-    const flattened = TsTypeIntersect.flatten(IArray.fromArray(combinedTypes));
+    const flattened = TsTypeIntersect.flatten(withCombinedObjects);
     const distinct = IArray.fromArray([...new Set(flattened.toArray().map(t => t.asString))].map(str =>
       flattened.toArray().find(t => t.asString === str)!
     ));
