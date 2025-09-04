@@ -31,10 +31,6 @@ import {
   TsGlobal,
   TsDeclClass,
   TsDeclInterface,
-  TsDeclEnum,
-  TsDeclVar,
-  TsDeclFunction,
-  TsDeclTypeAlias,
   TsTypeParam,
   TsFunSig,
   TsFunParam,
@@ -92,7 +88,8 @@ import {
   TsDeclEnum,
   TsDeclTypeAlias,
   TsDeclVar,
-  TsDeclFunction
+  TsDeclFunction,
+  TsMember
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
