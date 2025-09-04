@@ -4293,11 +4293,11 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
       const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([mappedObj, normalObj]));
 
-      // The current implementation combines the mapped type with the normal object type
-      // This is a minor difference from the Scala implementation but still functional
-      expect(result._tag).toBe('TsTypeObject');
-      const objResult = result as TsTypeObject;
-      expect(objResult.members.length).toBe(1); // Only the normal property is kept
+      // Mapped types should not be combined with normal object types
+      // This matches the Scala implementation behavior exactly
+      expect(result._tag).toBe('TsTypeIntersect');
+      const intersectResult = result as TsTypeIntersect;
+      expect(intersectResult.types.length).toBe(2);
     });
 
     it('should flatten nested intersections', () => {

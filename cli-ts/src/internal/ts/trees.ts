@@ -3719,6 +3719,39 @@ export const TsTypeIntersect = {
   },
 
   /**
+   * Removes duplicate types using reference equality first, then deep comparison
+   * This replaces the problematic asString-based deduplication
+   */
+  distinctTypes: (types: IArray<TsType>): IArray<TsType> => {
+    if (types.length <= 1) {
+      return types;
+    }
+
+    const result: TsType[] = [];
+    const typesArray = types.toArray();
+
+    for (let i = 0; i < typesArray.length; i++) {
+      const current = typesArray[i];
+      let isDuplicate = false;
+
+      // Check if this type is already in the result
+      for (let j = 0; j < result.length; j++) {
+        if (result[j] === current) {
+          // Reference equality - definitely a duplicate
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate) {
+        result.push(current);
+      }
+    }
+
+    return IArray.fromArray(result);
+  },
+
+  /**
    * Creates a simplified intersection type, combining object types where possible
    * This corresponds to TsTypeIntersect.simplified in the original Scala code
    */
@@ -3736,17 +3769,20 @@ export const TsTypeIntersect = {
       }
     }
 
-    // Combine object types according to Scala logic
+    // Combine object types according to Scala logic - exact pattern matching
     let withCombinedObjects: IArray<TsType>;
 
     if (objects.length === 0) {
+      // case (Empty, all) => all
       // No combinable objects, use all types as-is
       withCombinedObjects = types;
     } else if (objects.length === 1) {
-      // Just one combinable object, don't combine - use all types as-is
+      // case (IArray.exactlyOne(_), _) => types
+      // Just one combinable object, keep original order
       withCombinedObjects = types;
     } else {
-      // Multiple combinable objects - combine them into one and add to others
+      // case (objects, rest) => TsTypeObject(NoComments, objects.flatMap(_.members).distinct) +: rest
+      // Multiple combinable objects - combine them into one and prepend to rest
       const allMembers: TsMember[] = [];
       for (const obj of objects) {
         for (let i = 0; i < obj.members.length; i++) {
@@ -3754,23 +3790,25 @@ export const TsTypeIntersect = {
         }
       }
 
-      // Remove duplicates by member name and type
-      const distinctMembers = allMembers.filter((member, index, arr) =>
-        arr.findIndex(m => m.asString === member.asString) === index
-      );
+      // Remove duplicates by reference equality (like Scala's distinct)
+      const distinctMembers: TsMember[] = [];
+      for (const member of allMembers) {
+        if (!distinctMembers.includes(member)) {
+          distinctMembers.push(member);
+        }
+      }
 
       const combinedObject = TsTypeObject.create(
         Comments.empty(),
         IArray.fromArray(distinctMembers)
       );
 
+      // Prepend combined object to others (like Scala's +:)
       withCombinedObjects = IArray.fromArray([combinedObject, ...others]);
     }
 
     const flattened = TsTypeIntersect.flatten(withCombinedObjects);
-    const distinct = IArray.fromArray([...new Set(flattened.toArray().map(t => t.asString))].map(str =>
-      flattened.toArray().find(t => t.asString === str)!
-    ));
+    const distinct = TsTypeIntersect.distinctTypes(flattened);
 
     if (distinct.length === 0) {
       return TsTypeRef.never;

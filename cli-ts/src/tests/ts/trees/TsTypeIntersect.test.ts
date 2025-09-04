@@ -280,29 +280,16 @@ describe('TsTypeIntersect Tests', () => {
 
       const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([mappedObj, normalObj]));
 
-      // NOTE: There's currently a bug in the TypeScript implementation where objects
-      // with the same asString representation get deduplicated incorrectly.
-      // This causes one of the objects to be lost during the simplification process.
-      // The correct behavior should be to return a TsTypeIntersect with both objects,
-      // but currently it returns a single TsTypeObject.
-      // TODO: Fix the deduplication logic in TsTypeIntersect.simplified
-
-      // Current (incorrect) behavior: returns a single object due to deduplication bug
-      expect(result._tag).toBe('TsTypeObject');
-      if (result._tag === 'TsTypeObject') {
-        const objectResult = result as any;
-        expect(objectResult.members.length).toBe(1);
+      // Should remain as intersection since mapped types are not combined
+      // This matches the Scala behavior exactly
+      expect(result._tag).toBe('TsTypeIntersect');
+      if (result._tag === 'TsTypeIntersect') {
+        const intersectResult = result as any;
+        expect(intersectResult.types.length).toBe(2);
+        const resultTypes = intersectResult.types.toArray();
+        expect(resultTypes.some((t: any) => t._tag === 'TsTypeObject' && TsType.isTypeMapping(t.members))).toBe(true);
+        expect(resultTypes.some((t: any) => t._tag === 'TsTypeObject' && !TsType.isTypeMapping(t.members))).toBe(true);
       }
-
-      // Correct behavior should be:
-      // expect(result._tag).toBe('TsTypeIntersect');
-      // if (result._tag === 'TsTypeIntersect') {
-      //   const intersectResult = result as any;
-      //   expect(intersectResult.types.length).toBe(2);
-      //   const resultTypes = intersectResult.types.toArray();
-      //   expect(resultTypes.some((t: any) => t._tag === 'TsTypeObject' && TsType.isTypeMapping(t.members))).toBe(true);
-      //   expect(resultTypes.some((t: any) => t._tag === 'TsTypeObject' && !TsType.isTypeMapping(t.members))).toBe(true);
-      // }
     });
 
     it('combines empty object types', () => {
