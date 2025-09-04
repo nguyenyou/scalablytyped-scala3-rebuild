@@ -91,7 +91,7 @@ import {
   TsDeclVar,
   TsDeclFunction,
   TsMember,
-  TsIdentSimple
+  TsIdentSimple, TsContainerOrDecl
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -445,7 +445,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
         const codePath = CodePath.noPath();
 
         const parsedFile = TsParsedFile.create(comments, directives, members, codePath);
-        const newMembers = IArray.fromArray([]);
+        const newMembers = IArray.fromArray<TsContainerOrDecl>([]);
         const newParsedFile = parsedFile.withMembers(newMembers);
 
         expect(newParsedFile._tag).toBe('TsParsedFile');
@@ -558,7 +558,7 @@ describe('trees - Phase 3: Container Types', () => {
         const jsLocation = JsLocation.zero();
 
         const namespace = TsDeclNamespace.create(comments, declared, name, members, codePath, jsLocation);
-        const newMembers = IArray.fromArray([]);
+        const newMembers = IArray.fromArray<TsContainerOrDecl>([]);
         const newNamespace = namespace.withMembers(newMembers);
 
         expect(newNamespace._tag).toBe('TsDeclNamespace');
@@ -798,7 +798,7 @@ describe('trees - Phase 3: Container Types', () => {
         const codePath = CodePath.noPath();
 
         const global = TsGlobal.create(comments, declared, members, codePath);
-        const newMembers = IArray.fromArray([]);
+        const newMembers = IArray.fromArray<TsContainerOrDecl>([]);
         const newGlobal = global.withMembers(newMembers);
 
         expect(newGlobal._tag).toBe('TsGlobal');
@@ -1580,7 +1580,7 @@ describe('trees - Phase 6: Type System', () => {
       it('should create union types', () => {
         const stringType = TsTypeRef.string;
         const numberType = TsTypeRef.number;
-        const types = IArray.fromArray([stringType, numberType]);
+        const types = IArray.fromArray<TsType>([stringType, numberType]);
         const unionType = TsTypeUnion.create(types);
 
         expect(unionType._tag).toBe('TsTypeUnion');
@@ -1593,8 +1593,8 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const booleanType = TsTypeRef.boolean;
 
-        const innerUnion = TsTypeUnion.create(IArray.fromArray([stringType, numberType]));
-        const outerTypes = IArray.fromArray([innerUnion, booleanType]);
+        const innerUnion = TsTypeUnion.create(IArray.fromArray<TsType>([stringType, numberType]));
+        const outerTypes = IArray.fromArray<TsType>([innerUnion, booleanType]);
 
         const flattened = TsTypeUnion.flatten(outerTypes);
 
@@ -1609,7 +1609,7 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const types = IArray.fromArray([stringType, numberType]);
 
-        const simplified = TsTypeUnion.simplified(types);
+        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, numberType, booleanType]));
 
         expect(simplified._tag).toBe('TsTypeUnion');
         expect((simplified as any).types.length).toBe(2);
@@ -1619,7 +1619,7 @@ describe('trees - Phase 6: Type System', () => {
         const stringType = TsTypeRef.string;
         const types = IArray.fromArray([stringType]);
 
-        const simplified = TsTypeUnion.simplified(types);
+        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, numberType]));
 
         expect(simplified).toBe(stringType);
       });
@@ -1651,7 +1651,7 @@ describe('trees - Phase 6: Type System', () => {
       it('should create intersection types', () => {
         const type1 = TsTypeRef.string;
         const type2 = TsTypeRef.number;
-        const types = IArray.fromArray([type1, type2]);
+        const types = IArray.fromArray<TsType>([type1, type2]);
         const intersectType = TsTypeIntersect.create(types);
 
         expect(intersectType._tag).toBe('TsTypeIntersect');
@@ -1664,8 +1664,8 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const booleanType = TsTypeRef.boolean;
 
-        const innerIntersect = TsTypeIntersect.create(IArray.fromArray([stringType, numberType]));
-        const outerTypes = IArray.fromArray([innerIntersect, booleanType]);
+        const innerIntersect = TsTypeIntersect.create(IArray.fromArray<TsType>([stringType, numberType]));
+        const outerTypes = IArray.fromArray<TsType>([innerIntersect, booleanType]);
 
         const flattened = TsTypeIntersect.flatten(outerTypes);
 
@@ -1680,7 +1680,7 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const types = IArray.fromArray([stringType, numberType]);
 
-        const simplified = TsTypeIntersect.simplified(types);
+        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType, booleanType]));
 
         expect(simplified._tag).toBe('TsTypeIntersect');
         expect((simplified as any).types.length).toBe(2);
@@ -1690,7 +1690,7 @@ describe('trees - Phase 6: Type System', () => {
         const stringType = TsTypeRef.string;
         const types = IArray.fromArray([stringType]);
 
-        const simplified = TsTypeIntersect.simplified(types);
+        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType]));
 
         expect(simplified).toBe(stringType);
       });
@@ -3175,17 +3175,21 @@ describe('trees - Phase 10: Enum Members', () => {
 
         const initialized = TsEnumMember.initializeMembers(members);
 
-        if (isSome(initialized.apply(0).expr)) {
-          expect(TsExpr.format(initialized.apply(0).expr.value)).toBe('100');
+        const x = initialized.apply(0).expr 
+        if (isSome(x)) {
+          expect(TsExpr.format(x.value)).toBe('100');
         }
-        if (isSome(initialized.apply(1).expr)) {
-          expect(TsExpr.format(initialized.apply(1).expr.value)).toBe('101');
+        const y = initialized.apply(1).expr
+        if (isSome(y)) {
+          expect(TsExpr.format(y.value)).toBe('101');
         }
-        if (isSome(initialized.apply(2).expr)) {
-          expect(TsExpr.format(initialized.apply(2).expr.value)).toBe('5');
+        const z = initialized.apply(2).expr
+        if (isSome(z)) {
+          expect(TsExpr.format(z.value)).toBe('5');
         }
-        if (isSome(initialized.apply(3).expr)) {
-          expect(TsExpr.format(initialized.apply(3).expr.value)).toBe('6');
+        const w = initialized.apply(3).expr
+        if (isSome(w)) {
+          expect(TsExpr.format(w.value)).toBe('6');
         }
       });
     });
