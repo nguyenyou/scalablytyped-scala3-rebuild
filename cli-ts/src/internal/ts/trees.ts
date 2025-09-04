@@ -2915,6 +2915,54 @@ export const TsDeclEnum = {
   },
 
   /**
+   * Creates a simple enum declaration
+   */
+  simple: (name: TsIdentSimple, members: IArray<TsEnumMember>): TsDeclEnum =>
+    TsDeclEnum.create(
+      Comments.empty(),
+      false,
+      false,
+      name,
+      members,
+      true,
+      none,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a const enum declaration
+   */
+  const: (name: TsIdentSimple, members: IArray<TsEnumMember>): TsDeclEnum =>
+    TsDeclEnum.create(
+      Comments.empty(),
+      false,
+      true,
+      name,
+      members,
+      false, // const enums don't create runtime values
+      none,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a declared enum declaration
+   */
+  declared: (name: TsIdentSimple, members: IArray<TsEnumMember>): TsDeclEnum =>
+    TsDeclEnum.create(
+      Comments.empty(),
+      true,
+      false,
+      name,
+      members,
+      true,
+      none,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
    * Type guard
    */
   isEnum: (tree: TsTree): tree is TsDeclEnum => tree._tag === 'TsDeclEnum'
@@ -2962,6 +3010,81 @@ export const TsDeclVar = {
   },
 
   /**
+   * Creates a simple variable declaration
+   */
+  simple: (name: TsIdentSimple, tpe: TsType): TsDeclVar =>
+    TsDeclVar.create(
+      Comments.empty(),
+      false,
+      false,
+      name,
+      some(tpe),
+      none,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a const variable declaration
+   */
+  const: (name: TsIdentSimple, tpe: TsType, expr: Option<TsExpr> = none): TsDeclVar =>
+    TsDeclVar.create(
+      Comments.empty(),
+      false,
+      true,
+      name,
+      some(tpe),
+      expr,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a let variable declaration
+   */
+  let: (name: TsIdentSimple, tpe: TsType, expr: Option<TsExpr> = none): TsDeclVar =>
+    TsDeclVar.create(
+      Comments.empty(),
+      false,
+      false,
+      name,
+      some(tpe),
+      expr,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a declared variable declaration
+   */
+  declared: (name: TsIdentSimple, tpe: TsType): TsDeclVar =>
+    TsDeclVar.create(
+      Comments.empty(),
+      true,
+      false,
+      name,
+      some(tpe),
+      none,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates an untyped variable declaration
+   */
+  untyped: (name: TsIdentSimple, expr: TsExpr): TsDeclVar =>
+    TsDeclVar.create(
+      Comments.empty(),
+      false,
+      false,
+      name,
+      none,
+      some(expr),
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
    * Type guard
    */
   isVar: (tree: TsTree): tree is TsDeclVar => tree._tag === 'TsDeclVar'
@@ -3005,6 +3128,53 @@ export const TsDeclFunction = {
   },
 
   /**
+   * Creates a simple function declaration
+   */
+  simple: (name: TsIdentSimple, signature: TsFunSig): TsDeclFunction =>
+    TsDeclFunction.create(
+      Comments.empty(),
+      false,
+      name,
+      signature,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a declared function declaration
+   */
+  declared: (name: TsIdentSimple, signature: TsFunSig): TsDeclFunction =>
+    TsDeclFunction.create(
+      Comments.empty(),
+      true,
+      name,
+      signature,
+      JsLocation.zero(),
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a function declaration with parameters and return type
+   */
+  withSignature: (
+    name: TsIdentSimple,
+    params: IArray<TsFunParam>,
+    returnType: TsType,
+    tparams: IArray<TsTypeParam> = IArray.Empty
+  ): TsDeclFunction => {
+    const signature = TsFunSig.create(Comments.empty(), tparams, params, some(returnType));
+    return TsDeclFunction.simple(name, signature);
+  },
+
+  /**
+   * Creates a simple function declaration with no parameters
+   */
+  noParams: (name: TsIdentSimple, returnType: TsType): TsDeclFunction => {
+    const signature = TsFunSig.create(Comments.empty(), IArray.Empty, IArray.Empty, some(returnType));
+    return TsDeclFunction.simple(name, signature);
+  },
+
+  /**
    * Type guard
    */
   isFunction: (tree: TsTree): tree is TsDeclFunction => tree._tag === 'TsDeclFunction'
@@ -3044,6 +3214,45 @@ export const TsDeclTypeAlias = {
       asString: `TsDeclTypeAlias(${name.value})`
     };
   },
+
+  /**
+   * Creates a simple type alias declaration
+   */
+  simple: (name: TsIdentSimple, alias: TsType): TsDeclTypeAlias =>
+    TsDeclTypeAlias.create(
+      Comments.empty(),
+      false,
+      name,
+      IArray.Empty,
+      alias,
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a generic type alias declaration
+   */
+  generic: (name: TsIdentSimple, tparams: IArray<TsTypeParam>, alias: TsType): TsDeclTypeAlias =>
+    TsDeclTypeAlias.create(
+      Comments.empty(),
+      false,
+      name,
+      tparams,
+      alias,
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
+
+  /**
+   * Creates a declared type alias declaration
+   */
+  declared: (name: TsIdentSimple, alias: TsType): TsDeclTypeAlias =>
+    TsDeclTypeAlias.create(
+      Comments.empty(),
+      true,
+      name,
+      IArray.Empty,
+      alias,
+      CodePath.hasPath(TsIdent.simple('lib'), TsQIdent.of(TsIdent.simple('lib'), name))
+    ),
 
   /**
    * Type guard
@@ -5378,6 +5587,14 @@ export const TsTypeTemplateLiteral = {
    */
   isTypeTemplateLiteral: (tpe: TsType): tpe is TsTypeTemplateLiteral => tpe._tag === 'TsTypeTemplateLiteral'
 };
+
+
+
+
+
+
+
+
 
 /**
  * Utility functions for type mapping and advanced type operations

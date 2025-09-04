@@ -88,7 +88,11 @@ import {
   TsTemplatePartLiteral,
   TsTemplatePartType,
   TsTypeTemplateLiteral,
-  TsType
+  TsType,
+  TsDeclEnum,
+  TsDeclTypeAlias,
+  TsDeclVar,
+  TsDeclFunction
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
@@ -3897,6 +3901,289 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
       const mapped = TsMemberTypeMapped.withKeyRemapping(key, from, as, to);
       expect(mapped.asString).toContain(' as ');
       expect(mapped.asString).toContain('TsTypeTemplateLiteral');
+    });
+  });
+});
+
+describe('trees - Phase 13: Declaration System Completion', () => {
+  describe('TsDeclEnum', () => {
+    describe('construction', () => {
+      it('should create a simple enum declaration', () => {
+        const name = TsIdent.simple('Color');
+        const members = IArray.fromArray([
+          TsEnumMember.auto(TsIdent.simple('Red')),
+          TsEnumMember.auto(TsIdent.simple('Green')),
+          TsEnumMember.auto(TsIdent.simple('Blue'))
+        ]);
+        const enumDecl = TsDeclEnum.simple(name, members);
+
+        expect(enumDecl._tag).toBe('TsDeclEnum');
+        expect(enumDecl.name).toBe(name);
+        expect(enumDecl.members).toBe(members);
+        expect(enumDecl.declared).toBe(false);
+        expect(enumDecl.isConst).toBe(false);
+        expect(enumDecl.isValue).toBe(true);
+      });
+
+      it('should create a const enum declaration', () => {
+        const name = TsIdent.simple('Status');
+        const members = IArray.fromArray([
+          TsEnumMember.auto(TsIdent.simple('Active')),
+          TsEnumMember.auto(TsIdent.simple('Inactive'))
+        ]);
+        const enumDecl = TsDeclEnum.const(name, members);
+
+        expect(enumDecl._tag).toBe('TsDeclEnum');
+        expect(enumDecl.isConst).toBe(true);
+        expect(enumDecl.isValue).toBe(false); // const enums don't create runtime values
+      });
+
+      it('should create a declared enum declaration', () => {
+        const name = TsIdent.simple('Direction');
+        const members = IArray.fromArray([
+          TsEnumMember.auto(TsIdent.simple('Up')),
+          TsEnumMember.auto(TsIdent.simple('Down'))
+        ]);
+        const enumDecl = TsDeclEnum.declared(name, members);
+
+        expect(enumDecl._tag).toBe('TsDeclEnum');
+        expect(enumDecl.declared).toBe(true);
+        expect(enumDecl.isValue).toBe(true);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify enum declarations', () => {
+        const enumDecl = TsDeclEnum.simple(TsIdent.simple('Test'), IArray.Empty);
+        expect(TsDeclEnum.isEnum(enumDecl)).toBe(true);
+
+        const notEnum = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsDeclEnum.isEnum(notEnum)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsDeclTypeAlias', () => {
+    describe('construction', () => {
+      it('should create a simple type alias declaration', () => {
+        const name = TsIdent.simple('StringOrNumber');
+        const alias = TsTypeUnion.create(IArray.fromArray([TsTypeRef.string, TsTypeRef.number]));
+        const typeAlias = TsDeclTypeAlias.simple(name, alias);
+
+        expect(typeAlias._tag).toBe('TsDeclTypeAlias');
+        expect(typeAlias.name).toBe(name);
+        expect(typeAlias.alias).toBe(alias);
+        expect(typeAlias.declared).toBe(false);
+        expect(typeAlias.tparams.length).toBe(0);
+      });
+
+      it('should create a generic type alias declaration', () => {
+        const name = TsIdent.simple('GenericType');
+        const tparam = TsTypeParam.simple(TsIdent.simple('T'));
+        const tparams = IArray.fromArray([tparam]);
+        const alias = TsTypeRef.fromIdent(TsIdent.simple('T'));
+        const typeAlias = TsDeclTypeAlias.generic(name, tparams, alias);
+
+        expect(typeAlias._tag).toBe('TsDeclTypeAlias');
+        expect(typeAlias.tparams.length).toBe(1);
+        expect(typeAlias.tparams.apply(0)).toBe(tparam);
+      });
+
+      it('should create a declared type alias declaration', () => {
+        const name = TsIdent.simple('ExternalType');
+        const alias = TsTypeRef.string;
+        const typeAlias = TsDeclTypeAlias.declared(name, alias);
+
+        expect(typeAlias._tag).toBe('TsDeclTypeAlias');
+        expect(typeAlias.declared).toBe(true);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify type alias declarations', () => {
+        const typeAlias = TsDeclTypeAlias.simple(TsIdent.simple('Test'), TsTypeRef.string);
+        expect(TsDeclTypeAlias.isTypeAlias(typeAlias)).toBe(true);
+
+        const notTypeAlias = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsDeclTypeAlias.isTypeAlias(notTypeAlias)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsDeclVar', () => {
+    describe('construction', () => {
+      it('should create a simple variable declaration', () => {
+        const name = TsIdent.simple('myVar');
+        const tpe = TsTypeRef.string;
+        const varDecl = TsDeclVar.simple(name, tpe);
+
+        expect(varDecl._tag).toBe('TsDeclVar');
+        expect(varDecl.name).toBe(name);
+        expect(varDecl.tpe._tag).toBe('Some');
+        expect(varDecl.tpe.value).toBe(tpe);
+        expect(varDecl.declared).toBe(false);
+        expect(varDecl.readOnly).toBe(false);
+        expect(varDecl.expr._tag).toBe('None');
+      });
+
+      it('should create a const variable declaration', () => {
+        const name = TsIdent.simple('myConst');
+        const tpe = TsTypeRef.number;
+        const varDecl = TsDeclVar.const(name, tpe);
+
+        expect(varDecl._tag).toBe('TsDeclVar');
+        expect(varDecl.readOnly).toBe(true);
+      });
+
+      it('should create a let variable declaration', () => {
+        const name = TsIdent.simple('myLet');
+        const tpe = TsTypeRef.boolean;
+        const varDecl = TsDeclVar.let(name, tpe);
+
+        expect(varDecl._tag).toBe('TsDeclVar');
+        expect(varDecl.readOnly).toBe(false);
+      });
+
+      it('should create a declared variable declaration', () => {
+        const name = TsIdent.simple('globalVar');
+        const tpe = TsTypeRef.string;
+        const varDecl = TsDeclVar.declared(name, tpe);
+
+        expect(varDecl._tag).toBe('TsDeclVar');
+        expect(varDecl.declared).toBe(true);
+      });
+
+      it('should create an untyped variable declaration', () => {
+        const name = TsIdent.simple('untypedVar');
+        const expr = TsExprLiteral.create(TsLiteral.str('hello'));
+        const varDecl = TsDeclVar.untyped(name, expr);
+
+        expect(varDecl._tag).toBe('TsDeclVar');
+        expect(varDecl.tpe._tag).toBe('None');
+        expect(varDecl.expr._tag).toBe('Some');
+        expect(varDecl.expr.value).toBe(expr);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify variable declarations', () => {
+        const varDecl = TsDeclVar.simple(TsIdent.simple('test'), TsTypeRef.string);
+        expect(TsDeclVar.isVar(varDecl)).toBe(true);
+
+        const notVar = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsDeclVar.isVar(notVar)).toBe(false);
+      });
+    });
+  });
+
+  describe('TsDeclFunction', () => {
+    describe('construction', () => {
+      it('should create a simple function declaration', () => {
+        const name = TsIdent.simple('myFunction');
+        const signature = TsFunSig.create(
+          Comments.empty(),
+          IArray.Empty,
+          IArray.Empty,
+          some(TsTypeRef.string)
+        );
+        const funcDecl = TsDeclFunction.simple(name, signature);
+
+        expect(funcDecl._tag).toBe('TsDeclFunction');
+        expect(funcDecl.name).toBe(name);
+        expect(funcDecl.signature).toBe(signature);
+        expect(funcDecl.declared).toBe(false);
+      });
+
+      it('should create a declared function declaration', () => {
+        const name = TsIdent.simple('externalFunction');
+        const signature = TsFunSig.create(
+          Comments.empty(),
+          IArray.Empty,
+          IArray.Empty,
+          some(TsTypeRef.void)
+        );
+        const funcDecl = TsDeclFunction.declared(name, signature);
+
+        expect(funcDecl._tag).toBe('TsDeclFunction');
+        expect(funcDecl.declared).toBe(true);
+      });
+
+      it('should create a function declaration with signature', () => {
+        const name = TsIdent.simple('processData');
+        const param = TsFunParam.simple(TsIdent.simple('data'), TsTypeRef.string);
+        const params = IArray.fromArray([param]);
+        const returnType = TsTypeRef.number;
+        const funcDecl = TsDeclFunction.withSignature(name, params, returnType);
+
+        expect(funcDecl._tag).toBe('TsDeclFunction');
+        expect(funcDecl.signature.params.length).toBe(1);
+        expect(funcDecl.signature.resultType._tag).toBe('Some');
+        expect(funcDecl.signature.resultType.value).toBe(returnType);
+      });
+
+      it('should create a function declaration with no parameters', () => {
+        const name = TsIdent.simple('getValue');
+        const returnType = TsTypeRef.string;
+        const funcDecl = TsDeclFunction.noParams(name, returnType);
+
+        expect(funcDecl._tag).toBe('TsDeclFunction');
+        expect(funcDecl.signature.params.length).toBe(0);
+        expect(funcDecl.signature.resultType._tag).toBe('Some');
+        expect(funcDecl.signature.resultType.value).toBe(returnType);
+      });
+    });
+
+    describe('type guards', () => {
+      it('should identify function declarations', () => {
+        const funcDecl = TsDeclFunction.noParams(TsIdent.simple('test'), TsTypeRef.void);
+        expect(TsDeclFunction.isFunction(funcDecl)).toBe(true);
+
+        const notFunction = { _tag: 'SomethingElse', asString: 'test' };
+        expect(TsDeclFunction.isFunction(notFunction)).toBe(false);
+      });
+    });
+  });
+
+  describe('string representation', () => {
+    it('should format enum declarations', () => {
+      const enumDecl = TsDeclEnum.simple(TsIdent.simple('Color'), IArray.Empty);
+      expect(enumDecl.asString).toBe('TsDeclEnum(Color)');
+
+      const constEnum = TsDeclEnum.const(TsIdent.simple('Status'), IArray.Empty);
+      expect(constEnum.asString).toBe('TsDeclEnum(Status)');
+
+      const declaredEnum = TsDeclEnum.declared(TsIdent.simple('Direction'), IArray.Empty);
+      expect(declaredEnum.asString).toBe('TsDeclEnum(Direction)');
+    });
+
+    it('should format type alias declarations', () => {
+      const typeAlias = TsDeclTypeAlias.simple(TsIdent.simple('StringOrNumber'), TsTypeRef.string);
+      expect(typeAlias.asString).toBe('TsDeclTypeAlias(StringOrNumber)');
+
+      const declaredAlias = TsDeclTypeAlias.declared(TsIdent.simple('ExternalType'), TsTypeRef.string);
+      expect(declaredAlias.asString).toBe('TsDeclTypeAlias(ExternalType)');
+    });
+
+    it('should format variable declarations', () => {
+      const varDecl = TsDeclVar.simple(TsIdent.simple('myVar'), TsTypeRef.string);
+      expect(varDecl.asString).toBe('TsDeclVar(myVar)');
+
+      const constDecl = TsDeclVar.const(TsIdent.simple('myConst'), TsTypeRef.number);
+      expect(constDecl.asString).toBe('TsDeclVar(myConst)');
+
+      const declaredVar = TsDeclVar.declared(TsIdent.simple('globalVar'), TsTypeRef.string);
+      expect(declaredVar.asString).toBe('TsDeclVar(globalVar)');
+    });
+
+    it('should format function declarations', () => {
+      const funcDecl = TsDeclFunction.noParams(TsIdent.simple('getValue'), TsTypeRef.string);
+      expect(funcDecl.asString).toBe('TsDeclFunction(getValue)');
+
+      const declaredFunc = TsDeclFunction.declared(
+        TsIdent.simple('externalFunction'),
+        TsFunSig.create(Comments.empty(), IArray.Empty, IArray.Empty, some(TsTypeRef.void))
+      );
+      expect(declaredFunc.asString).toBe('TsDeclFunction(externalFunction)');
     });
   });
 });
