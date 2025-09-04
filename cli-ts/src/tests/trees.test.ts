@@ -3562,7 +3562,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
 
   describe('string representation', () => {
     it('should format constructor types', () => {
-      const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+      const signature = TsTypeFunction.create(TsFunSig.simple(IArray.Empty, some(TsTypeRef.string)));
       const constructor = TsTypeConstructor.abstract(signature);
       expect(constructor.asString).toContain('TsTypeConstructor(abstract new');
     });
@@ -3800,7 +3800,7 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
       });
 
       it('should not detect non-mapped types as mapped', () => {
-        const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+        const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
         const members = IArray.fromArray([prop] as any);
 
         expect(TsType.isTypeMapping(members)).toBe(false);
@@ -3811,7 +3811,7 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
         const from = TsTypeKeyOf.create(TsTypeRef.string);
         const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
         const mapped = TsMemberTypeMapped.simple(key, from, to);
-        const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+        const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
         const members = IArray.fromArray([mapped, prop] as any);
 
         expect(TsType.isTypeMapping(members)).toBe(false);
@@ -3880,7 +3880,9 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
 
         const extractedMember = TsType.getMappedMember(mappedType);
         expect(extractedMember._tag).toBe('Some');
-        expect(extractedMember.value).toBe(mapped);
+        if (isSome(extractedMember)) {
+          expect(extractedMember.value).toBe(mapped);
+        }
 
         const notMappedType = TsTypeObject.create(Comments.empty(), IArray.Empty);
         const noMember = TsType.getMappedMember(notMappedType);
@@ -4072,7 +4074,9 @@ describe('trees - Phase 13: Declaration System Completion', () => {
         expect(varDecl._tag).toBe('TsDeclVar');
         expect(varDecl.name).toBe(name);
         expect(varDecl.tpe._tag).toBe('Some');
-        expect(varDecl.tpe.value).toBe(tpe);
+        if (isSome(varDecl.tpe)) {
+          expect(varDecl.tpe.value).toBe(tpe);
+        }
         expect(varDecl.declared).toBe(false);
         expect(varDecl.readOnly).toBe(false);
         expect(varDecl.expr._tag).toBe('None');
@@ -4164,7 +4168,7 @@ describe('trees - Phase 13: Declaration System Completion', () => {
 
       it('should create a function declaration with signature', () => {
         const name = TsIdent.simple('processData');
-        const param = TsFunParam.simple(TsIdent.simple('data'), TsTypeRef.string);
+        const param = TsFunParam.typed(TsIdent.simple('data'), TsTypeRef.string);
         const params = IArray.fromArray([param]);
         const returnType = TsTypeRef.number;
         const funcDecl = TsDeclFunction.withSignature(name, params, returnType);
@@ -4172,7 +4176,9 @@ describe('trees - Phase 13: Declaration System Completion', () => {
         expect(funcDecl._tag).toBe('TsDeclFunction');
         expect(funcDecl.signature.params.length).toBe(1);
         expect(funcDecl.signature.resultType._tag).toBe('Some');
-        expect(funcDecl.signature.resultType.value).toBe(returnType);
+        if (isSome(funcDecl.signature.resultType)) {
+          expect(funcDecl.signature.resultType.value).toBe(returnType);
+        }
       });
 
       it('should create a function declaration with no parameters', () => {
@@ -4183,7 +4189,9 @@ describe('trees - Phase 13: Declaration System Completion', () => {
         expect(funcDecl._tag).toBe('TsDeclFunction');
         expect(funcDecl.signature.params.length).toBe(0);
         expect(funcDecl.signature.resultType._tag).toBe('Some');
-        expect(funcDecl.signature.resultType.value).toBe(returnType);
+        if (isSome(funcDecl.signature.resultType)) {
+          expect(funcDecl.signature.resultType.value).toBe(returnType);
+        }
       });
     });
 
@@ -4252,18 +4260,18 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
     it('should return single type for one-element intersection', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType]));
       expect(result).toBe(stringType);
     });
 
     it('should combine multiple object types into one', () => {
-      const prop1 = TsMemberProperty.simple(TsIdent.simple('prop1'), TsTypeRef.string);
-      const prop2 = TsMemberProperty.simple(TsIdent.simple('prop2'), TsTypeRef.number);
+      const prop1 = TsMemberProperty.typed(TsIdent.simple('prop1'), TsTypeRef.string);
+      const prop2 = TsMemberProperty.typed(TsIdent.simple('prop2'), TsTypeRef.number);
 
       const obj1 = TsTypeObject.withMembers(IArray.fromArray([prop1] as TsMember[]));
       const obj2 = TsTypeObject.withMembers(IArray.fromArray([prop2] as TsMember[]));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([obj1, obj2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([obj1, obj2]));
 
       expect(result._tag).toBe('TsTypeObject');
       const objResult = result as TsTypeObject;
@@ -4277,7 +4285,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
       const mapped = TsMemberTypeMapped.simple(key, from, to);
       const mappedObj = TsTypeObject.withMembers(IArray.fromArray([mapped] as TsMember[]));
 
-      const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+      const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
       const normalObj = TsTypeObject.withMembers(IArray.fromArray([prop] as TsMember[]));
 
       const result = TsTypeIntersect.simplified(IArray.fromArray([mappedObj, normalObj]));
@@ -4392,7 +4400,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
     });
 
     it('should not detect non-mapped types as mapped', () => {
-      const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+      const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
       const members = IArray.fromArray([prop] as TsMember[]);
 
       expect(TsType.isTypeMapping(members)).toBe(false);
@@ -4416,7 +4424,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
     });
 
     it('should return none for non-mapped types', () => {
-      const prop = TsMemberProperty.simple(TsIdent.simple('prop'), TsTypeRef.string);
+      const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
       const objType = TsTypeObject.withMembers(IArray.fromArray([prop] as TsMember[]));
 
       const extracted = TsType.getMappedMember(objType);
