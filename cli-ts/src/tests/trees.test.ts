@@ -1609,7 +1609,7 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const types = IArray.fromArray([stringType, numberType]);
 
-        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, numberType, booleanType]));
+        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, numberType]));
 
         expect(simplified._tag).toBe('TsTypeUnion');
         expect((simplified as any).types.length).toBe(2);
@@ -1619,7 +1619,7 @@ describe('trees - Phase 6: Type System', () => {
         const stringType = TsTypeRef.string;
         const types = IArray.fromArray([stringType]);
 
-        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, numberType]));
+        const simplified = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType]));
 
         expect(simplified).toBe(stringType);
       });
@@ -1680,7 +1680,7 @@ describe('trees - Phase 6: Type System', () => {
         const numberType = TsTypeRef.number;
         const types = IArray.fromArray([stringType, numberType]);
 
-        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType, booleanType]));
+        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType]));
 
         expect(simplified._tag).toBe('TsTypeIntersect');
         expect((simplified as any).types.length).toBe(2);
@@ -1690,7 +1690,7 @@ describe('trees - Phase 6: Type System', () => {
         const stringType = TsTypeRef.string;
         const types = IArray.fromArray([stringType]);
 
-        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType]));
+        const simplified = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType]));
 
         expect(simplified).toBe(stringType);
       });
@@ -3794,14 +3794,14 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
         const from = TsTypeKeyOf.create(TsTypeRef.string);
         const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
         const mapped = TsMemberTypeMapped.simple(key, from, to);
-        const members = IArray.fromArray([mapped] as any);
+        const members = IArray.fromArray<TsMember>([mapped as TsMember]);
 
         expect(TsType.isTypeMapping(members)).toBe(true);
       });
 
       it('should not detect non-mapped types as mapped', () => {
         const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
-        const members = IArray.fromArray([prop] as any);
+        const members = IArray.fromArray<TsMember>([prop]);
 
         expect(TsType.isTypeMapping(members)).toBe(false);
       });
@@ -3812,7 +3812,7 @@ describe('trees - Phase 12: Mapped Types and Template Literals', () => {
         const to = TsTypeLookup.create(TsTypeRef.string, TsTypeRef.fromIdent(key));
         const mapped = TsMemberTypeMapped.simple(key, from, to);
         const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
-        const members = IArray.fromArray([mapped, prop] as any);
+        const members = IArray.fromArray<TsMember>([mapped as TsMember, prop]);
 
         expect(TsType.isTypeMapping(members)).toBe(false);
       });
@@ -4288,7 +4288,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
       const prop = TsMemberProperty.typed(TsIdent.simple('prop'), TsTypeRef.string);
       const normalObj = TsTypeObject.withMembers(IArray.fromArray([prop] as TsMember[]));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([mappedObj, normalObj]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([mappedObj, normalObj]));
 
       // The current implementation combines the mapped type with the normal object type
       // This is a minor difference from the Scala implementation but still functional
@@ -4302,8 +4302,8 @@ describe('trees - Phase 14: Type System Optimizations', () => {
       const type2 = TsTypeRef.number;
       const type3 = TsTypeRef.boolean;
 
-      const nested = TsTypeIntersect.create(IArray.fromArray([type2, type3]));
-      const result = TsTypeIntersect.simplified(IArray.fromArray([type1, nested]));
+      const nested = TsTypeIntersect.create(IArray.fromArray<TsType>([type2, type3]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([type1, nested]));
 
       expect(result._tag).toBe('TsTypeIntersect');
       const intersectResult = result as TsTypeIntersect;
@@ -4312,7 +4312,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
     it('should remove duplicates', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringType, stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, stringType]));
       expect(result).toBe(stringType);
     });
   });
@@ -4326,7 +4326,7 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
     it('should return single type for one-element union', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeUnion.simplified(IArray.fromArray([stringType]));
+      const result = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType]));
       expect(result).toBe(stringType);
     });
 
@@ -4335,8 +4335,8 @@ describe('trees - Phase 14: Type System Optimizations', () => {
       const type2 = TsTypeRef.number;
       const type3 = TsTypeRef.boolean;
 
-      const nested = TsTypeUnion.create(IArray.fromArray([type2, type3]));
-      const result = TsTypeUnion.simplified(IArray.fromArray([type1, nested]));
+      const nested = TsTypeUnion.create(IArray.fromArray<TsType>([type2, type3]));
+      const result = TsTypeUnion.simplified(IArray.fromArray<TsType>([type1, nested]));
 
       expect(result._tag).toBe('TsTypeUnion');
       const unionResult = result as TsTypeUnion;
@@ -4345,14 +4345,14 @@ describe('trees - Phase 14: Type System Optimizations', () => {
 
     it('should remove duplicates', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeUnion.simplified(IArray.fromArray([stringType, stringType]));
+      const result = TsTypeUnion.simplified(IArray.fromArray<TsType>([stringType, stringType]));
       expect(result).toBe(stringType);
     });
 
     it('should create union for multiple distinct types', () => {
       const type1 = TsTypeRef.string;
       const type2 = TsTypeRef.number;
-      const result = TsTypeUnion.simplified(IArray.fromArray([type1, type2]));
+      const result = TsTypeUnion.simplified(IArray.fromArray<TsType>([type1, type2]));
 
       expect(result._tag).toBe('TsTypeUnion');
       const unionResult = result as TsTypeUnion;
