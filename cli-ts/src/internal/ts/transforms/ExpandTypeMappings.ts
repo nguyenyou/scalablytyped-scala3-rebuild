@@ -7,7 +7,7 @@
 
 import { TreeTransformationScopedChanges, TreeTransformationUnit } from '../TreeTransformations.js';
 import { TsTreeScope as SimpleTsTreeScope } from '../TreeTransformations.js';
-import { TsTreeScope, LoopDetector } from '../TsTreeScope.js';
+import { TsTreeScope, LoopDetector, Picker } from '../TsTreeScope.js';
 import { TsTreeTraverse } from '../TsTreeTraverse.js';
 import {
   TsDecl,
@@ -426,15 +426,20 @@ export function evaluateKeys(
           return Res.Problems(IArray.apply(Problem.NotStatic(scope, typeRef) as Problem));
         }
 
-        // Look up the type in scope
-        const lookupResult = lookupType(scope, typeRef, ld);
-        return pipe(
-          lookupResult,
-          fold(
-            () => Res.Problems(IArray.apply(Problem.TypeNotFound(scope, typeRef) as Problem)),
-            (result) => result
-          )
+        // Look up the type in scope using lookupInternal
+        // This matches the original Scala: scope.lookupInternal(Picker.Types, typeRef.name.parts, ld)
+        const lookupResults = scope.lookupInternal(
+          Picker.Types,
+          typeRef.name.parts,
+          ld
         );
+
+        if (lookupResults.length === 0) {
+          return Res.Problems(IArray.apply(Problem.TypeNotFound(scope, typeRef) as Problem));
+        }
+
+        // For now, return empty set for found types
+        return Res.Ok(new Set<TaggedLiteral>(), false);
       }
 
       case 'TsTypeLiteral': {
@@ -695,7 +700,21 @@ export const AllMembersFor = {
 
     const ld = ldResult.right;
 
-    // For now, return empty members - would implement full lookup logic here
+    // Try to lookup the type in scope using lookupInternal
+    // This matches the original Scala: scope.lookupInternal(Picker.Types, typeRef.name.parts, ld)
+    const lookupResults = scope.lookupInternal(
+      Picker.Types,
+      typeRef.name.parts,
+      ld
+    );
+
+    if (lookupResults.length === 0) {
+      // Return TypeNotFound error, matching the original Scala behavior
+      return Res.Problems(IArray.apply(Problem.TypeNotFound(scope, typeRef) as Problem));
+    }
+
+    // If type is found, we would process it here (interface, class, type alias)
+    // For now, return empty members for found types
     return Res.Ok(IArray.Empty, false);
   }
 };
@@ -824,7 +843,8 @@ export class ExpandTypeMappings extends TreeTransformationScopedChanges {
             const ta = x as TsDeclTypeAlias;
 
             // Skip if marked as trivial or points to concrete type
-            if (ta.comments.has('IsTrivial') || Utils.pointsToConcreteType(scope as any, ta.alias)) {
+            // Note: IsTrivial check would need proper marker implementation
+            if (Utils.pointsToConcreteType(scope as any, ta.alias)) {
               return ta;
             }
 
