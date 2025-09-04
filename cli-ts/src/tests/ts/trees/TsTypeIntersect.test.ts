@@ -20,6 +20,7 @@ import {
   TsTupleElement,
   TsMemberProperty,
   TsMemberTypeMapped,
+  TsMember,
   TsFunSig,
   TsFunParam,
   TsIdent,
@@ -36,7 +37,7 @@ describe('TsTypeIntersect Tests', () => {
     it('constructor creates intersection type with given types', () => {
       const stringType = TsTypeRef.string;
       const numberType = TsTypeRef.number;
-      const types = IArray.fromArray([stringType, numberType]);
+      const types = IArray.fromArray<TsType>([stringType, numberType]);
       const intersectType = TsTypeIntersect.create(types);
 
       expect(intersectType.types).toBe(types);
@@ -55,7 +56,7 @@ describe('TsTypeIntersect Tests', () => {
 
     it('constructor with single type', () => {
       const singleType = TsTypeRef.boolean;
-      const types = IArray.fromArray([singleType]);
+      const types = IArray.fromArray<TsType>([singleType]);
       const intersectType = TsTypeIntersect.create(types);
 
       expect(intersectType.types.length).toBe(1);
@@ -66,7 +67,7 @@ describe('TsTypeIntersect Tests', () => {
       const stringType = TsTypeRef.string;
       const numberType = TsTypeRef.number;
       const booleanType = TsTypeRef.boolean;
-      const types = IArray.fromArray([stringType, numberType, booleanType]);
+      const types = IArray.fromArray<TsType>([stringType, numberType, booleanType]);
       const intersectType = TsTypeIntersect.create(types);
 
       expect(intersectType.types.length).toBe(3);
@@ -76,7 +77,7 @@ describe('TsTypeIntersect Tests', () => {
     });
 
     it('asString provides meaningful representation', () => {
-      const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+      const types = IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]);
       const intersectType = TsTypeIntersect.create(types);
 
       expect(intersectType.asString).toContain('TsTypeIntersect');
@@ -93,7 +94,7 @@ describe('TsTypeIntersect Tests', () => {
 
     it('single type intersection returns the type itself', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType]));
 
       expect(result).toBe(stringType);
     });
@@ -101,7 +102,7 @@ describe('TsTypeIntersect Tests', () => {
     it('two different primitive types remain as intersection', () => {
       const stringType = TsTypeRef.string;
       const numberType = TsTypeRef.number;
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringType, numberType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, numberType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -115,7 +116,7 @@ describe('TsTypeIntersect Tests', () => {
 
     it('duplicate types are removed', () => {
       const stringType = TsTypeRef.string;
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringType, stringType, stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringType, stringType, stringType]));
 
       expect(result).toBe(stringType);
     });
@@ -143,10 +144,10 @@ describe('TsTypeIntersect Tests', () => {
         false
       );
 
-      const obj1 = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop1]));
-      const obj2 = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop2]));
+      const obj1 = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop1]));
+      const obj2 = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop2]));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([obj1, obj2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([obj1, obj2]));
 
       if (result._tag === 'TsTypeObject') {
         const objectResult = result as any;
@@ -168,10 +169,10 @@ describe('TsTypeIntersect Tests', () => {
         false,
         false
       );
-      const objType = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop]));
+      const objType = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop]));
       const stringType = TsTypeRef.string;
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([objType, stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([objType, stringType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -191,8 +192,8 @@ describe('TsTypeIntersect Tests', () => {
       const booleanType = TsTypeRef.boolean;
 
       // Create nested intersection: (string & number) & boolean
-      const innerIntersect = TsTypeIntersect.create(IArray.fromArray([stringType, numberType]));
-      const result = TsTypeIntersect.simplified(IArray.fromArray([innerIntersect, booleanType]));
+      const innerIntersect = TsTypeIntersect.create(IArray.fromArray<TsType>([stringType, numberType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([innerIntersect, booleanType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -212,9 +213,9 @@ describe('TsTypeIntersect Tests', () => {
       const type4 = TsTypeRef.any;
 
       // Create deeply nested: ((string & number) & boolean) & any
-      const level1 = TsTypeIntersect.create(IArray.fromArray([type1, type2]));
-      const level2 = TsTypeIntersect.create(IArray.fromArray([level1, type3]));
-      const result = TsTypeIntersect.simplified(IArray.fromArray([level2, type4]));
+      const level1 = TsTypeIntersect.create(IArray.fromArray<TsType>([type1, type2]));
+      const level2 = TsTypeIntersect.create(IArray.fromArray<TsType>([level1, type3]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([level2, type4]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -235,9 +236,9 @@ describe('TsTypeIntersect Tests', () => {
       const type4 = TsTypeRef.any;
 
       // Create: (string & number) & (boolean & any)
-      const intersect1 = TsTypeIntersect.create(IArray.fromArray([type1, type2]));
-      const intersect2 = TsTypeIntersect.create(IArray.fromArray([type3, type4]));
-      const result = TsTypeIntersect.simplified(IArray.fromArray([intersect1, intersect2]));
+      const intersect1 = TsTypeIntersect.create(IArray.fromArray<TsType>([type1, type2]));
+      const intersect2 = TsTypeIntersect.create(IArray.fromArray<TsType>([type3, type4]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([intersect1, intersect2]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -260,7 +261,7 @@ describe('TsTypeIntersect Tests', () => {
         TsTypeRef.string,
         TsTypeRef.number
       );
-      const mappedObj = TsTypeObject.create(Comments.empty(), IArray.fromArray([mappedMember]));
+      const mappedObj = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([mappedMember]));
 
       const prop = TsMemberProperty.create(
         Comments.empty(),
@@ -271,13 +272,13 @@ describe('TsTypeIntersect Tests', () => {
         false,
         false
       );
-      const normalObj = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop]));
+      const normalObj = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop]));
 
       // Verify our understanding of isTypeMapping
       expect(TsType.isTypeMapping(mappedObj.members)).toBe(true);
       expect(TsType.isTypeMapping(normalObj.members)).toBe(false);
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([mappedObj, normalObj]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([mappedObj, normalObj]));
 
       // NOTE: There's currently a bug in the TypeScript implementation where objects
       // with the same asString representation get deduplicated incorrectly.
@@ -308,7 +309,7 @@ describe('TsTypeIntersect Tests', () => {
       const emptyObj1 = TsTypeObject.create(Comments.empty(), IArray.Empty);
       const emptyObj2 = TsTypeObject.create(Comments.empty(), IArray.Empty);
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([emptyObj1, emptyObj2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([emptyObj1, emptyObj2]));
 
       if (result._tag === 'TsTypeObject') {
         const objectResult = result as any;
@@ -339,10 +340,10 @@ describe('TsTypeIntersect Tests', () => {
       );
 
       // Create objects with overlapping and distinct members
-      const obj1 = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop1, prop2]));
-      const obj2 = TsTypeObject.create(Comments.empty(), IArray.fromArray([prop1])); // prop1 appears in both
+      const obj1 = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop1, prop2]));
+      const obj2 = TsTypeObject.create(Comments.empty(), IArray.fromArray<TsMember>([prop1])); // prop1 appears in both
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([obj1, obj2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([obj1, obj2]));
 
       if (result._tag === 'TsTypeObject') {
         const objectResult = result as any;
@@ -362,8 +363,8 @@ describe('TsTypeIntersect Tests', () => {
       const numberType = TsTypeRef.number;
       const booleanType = TsTypeRef.boolean;
 
-      const unionType = TsTypeUnion.create(IArray.fromArray([stringType, numberType]));
-      const result = TsTypeIntersect.simplified(IArray.fromArray([unionType, booleanType]));
+      const unionType = TsTypeUnion.create(IArray.fromArray<TsType>([stringType, numberType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([unionType, booleanType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -379,7 +380,7 @@ describe('TsTypeIntersect Tests', () => {
       const stringLiteral = TsTypeLiteral.create(TsLiteral.str('hello'));
       const numberLiteral = TsTypeLiteral.create(TsLiteral.num('42'));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([stringLiteral, numberLiteral]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([stringLiteral, numberLiteral]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -396,7 +397,7 @@ describe('TsTypeIntersect Tests', () => {
       const signature = TsFunSig.create(Comments.empty(), IArray.Empty, IArray.fromArray([param]), some(TsTypeRef.string));
       const functionType = TsTypeFunction.create(signature);
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([functionType, TsTypeRef.string]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([functionType, TsTypeRef.string]));
 
       expect(result._tag).toBe('TsTypeIntersect');
       if (result._tag === 'TsTypeIntersect') {
@@ -412,7 +413,7 @@ describe('TsTypeIntersect Tests', () => {
       const neverType = TsTypeRef.never;
       const stringType = TsTypeRef.string;
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([neverType, stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([neverType, stringType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -428,7 +429,7 @@ describe('TsTypeIntersect Tests', () => {
       const anyType = TsTypeRef.any;
       const stringType = TsTypeRef.string;
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([anyType, stringType]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([anyType, stringType]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -446,7 +447,7 @@ describe('TsTypeIntersect Tests', () => {
       const customType1 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('CustomType1')), IArray.Empty);
       const customType2 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('CustomType2')), IArray.Empty);
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([customType1, customType2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([customType1, customType2]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -459,10 +460,10 @@ describe('TsTypeIntersect Tests', () => {
     });
 
     it('intersection with generic types', () => {
-      const genericType1 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('Array')), IArray.fromArray([TsTypeRef.string]));
-      const genericType2 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('Promise')), IArray.fromArray([TsTypeRef.number]));
+      const genericType1 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('Array')), IArray.fromArray<TsType>([TsTypeRef.string]));
+      const genericType2 = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('Promise')), IArray.fromArray<TsType>([TsTypeRef.number]));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([genericType1, genericType2]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([genericType1, genericType2]));
 
       if (result._tag === 'TsTypeIntersect') {
         const intersectResult = result as any;
@@ -479,7 +480,7 @@ describe('TsTypeIntersect Tests', () => {
       const tupleElement2 = TsTupleElement.unlabeled(TsTypeRef.number);
       const tupleType = TsTypeTuple.create(IArray.fromArray([tupleElement1, tupleElement2]));
 
-      const result = TsTypeIntersect.simplified(IArray.fromArray([tupleType, TsTypeRef.boolean]));
+      const result = TsTypeIntersect.simplified(IArray.fromArray<TsType>([tupleType, TsTypeRef.boolean]));
 
       expect(result._tag).toBe('TsTypeIntersect');
       if (result._tag === 'TsTypeIntersect') {
