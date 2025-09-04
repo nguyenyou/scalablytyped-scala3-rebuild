@@ -382,7 +382,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
     describe('construction', () => {
       it('should create a parsed file', () => {
         const comments = Comments.empty();
-        const directives: IArray<Directive> = IArray.fromArray([Directive.noStdLib()]);
+        const directives = IArray.fromArray<Directive>([Directive.noStdLib()]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -398,7 +398,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
       it('should detect standard library files', () => {
         const comments = Comments.empty();
-        const directives: IArray<Directive> = IArray.fromArray([Directive.noStdLib()]);
+        const directives = IArray.fromArray<Directive>([Directive.noStdLib()]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -408,7 +408,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
       it('should detect non-standard library files', () => {
         const comments = Comments.empty();
-        const directives: IArray<Directive> = IArray.fromArray([Directive.typesRef('react')]);
+        const directives = IArray.fromArray<Directive>([Directive.typesRef('react')]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -1384,7 +1384,7 @@ describe('trees - Phase 6: Type System', () => {
       it('should create a generic type reference', () => {
         const name = TsQIdent.ofStrings('Array');
         const stringType = TsTypeRef.string;
-        const tparams = IArray.fromArray([stringType]);
+        const tparams = IArray.fromArray<TsType>([stringType]);
         const typeRef = TsTypeRef.generic(name, tparams);
 
         expect(typeRef._tag).toBe('TsTypeRef');
@@ -1636,7 +1636,7 @@ describe('trees - Phase 6: Type System', () => {
 
     describe('type guards', () => {
       it('should identify union types', () => {
-        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const types = IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]);
         const unionType = TsTypeUnion.create(types);
         expect(TsTypeUnion.isTypeUnion(unionType)).toBe(true);
 
@@ -1707,7 +1707,7 @@ describe('trees - Phase 6: Type System', () => {
 
     describe('type guards', () => {
       it('should identify intersection types', () => {
-        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const types = IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]);
         const intersectType = TsTypeIntersect.create(types);
         expect(TsTypeIntersect.isTypeIntersect(intersectType)).toBe(true);
 
@@ -3282,7 +3282,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
   describe('TsTypeTuple', () => {
     describe('construction', () => {
       it('should create a tuple from types', () => {
-        const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+        const types = IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]);
         const tuple = TsTypeTuple.fromTypes(types);
 
         expect(tuple._tag).toBe('TsTypeTuple');
@@ -3537,7 +3537,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
     });
 
     it('should format tuples', () => {
-      const types = IArray.fromArray([TsTypeRef.string, TsTypeRef.number]);
+      const types = IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]);
       const tuple = TsTypeTuple.fromTypes(types);
       expect(tuple.asString).toContain('TsTypeTuple([');
       expect(tuple.asString).toContain('TsTypeRef(TsQIdent(string))');
@@ -3968,7 +3968,7 @@ describe('trees - Phase 13: Declaration System Completion', () => {
     describe('construction', () => {
       it('should create a simple type alias declaration', () => {
         const name = TsIdent.simple('StringOrNumber');
-        const alias = TsTypeUnion.create(IArray.fromArray([TsTypeRef.string, TsTypeRef.number]));
+        const alias = TsTypeUnion.create(IArray.fromArray<TsType>([TsTypeRef.string, TsTypeRef.number]));
         const typeAlias = TsDeclTypeAlias.simple(name, alias);
 
         expect(typeAlias._tag).toBe('TsDeclTypeAlias');
