@@ -1,6 +1,7 @@
 package org.scalablytyped.converter.internal
+package ts
+package trees
 
-import org.scalablytyped.converter.internal.ts.{TsIdentLibrary, TsIdentLibrarySimple, TsIdentLibraryScoped}
 import utest.*
 
 object TsIdentLibraryTests extends TestSuite {
