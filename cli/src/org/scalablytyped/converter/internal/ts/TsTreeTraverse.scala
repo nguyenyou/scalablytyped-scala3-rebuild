@@ -22,8 +22,8 @@ object TsTreeTraverse {
       a match {
         case x: TsTree if x ne tree =>
           go(extract, buf)(x)
-        case xs: TraversableOnce[_] =>
-          val it = xs.toIterator
+        case xs: IterableOnce[_] =>
+          val it = xs.iterator
           while (it.hasNext) {
             rec(it.next())
           }
