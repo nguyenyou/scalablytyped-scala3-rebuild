@@ -8,12 +8,13 @@ import { describe, it, expect } from 'bun:test';
 import { some, none } from 'fp-ts/Option';
 import { IArray } from '../internal/IArray.js';
 import { Comments } from '../internal/Comments.js';
-import { Comment } from '../internal/Comment.js';
+import { Comment, Raw } from '../internal/Comment.js';
 import { CodePath } from '../internal/ts/CodePath.js';
 import { Directive } from '../internal/ts/Directive.js';
 import {
   TsIdent,
   TsIdentLibrary,
+  TsIdentLibraryScoped,
   TsIdentModule,
   TsQIdent,
   TsLiteral,
@@ -89,12 +90,14 @@ import {
   TsDeclTypeAlias,
   TsDeclVar,
   TsDeclFunction,
-  TsMember
+  TsMember,
+  TsIdentSimple
 } from '../internal/ts/trees.js';
 import { JsLocation } from '../internal/ts/JsLocation.js';
 import { TsProtectionLevel } from '../internal/ts/TsProtectionLevel.js';
 import { MethodType } from '../internal/ts/MethodType.js';
 import { ExportType } from '../internal/ts/ExportType.js';
+import * as O from 'fp-ts/Option';
 
 describe('trees - Phase 1: Base Types and Identifiers', () => {
   describe('TsIdent', () => {
@@ -207,8 +210,9 @@ describe('trees - Phase 1: Base Types and Identifiers', () => {
         expect(lib._tag).toBe('TsIdentLibraryScoped');
         expect(lib.value).toBe('@angular/core');
         if (lib._tag === 'TsIdentLibraryScoped') {
-          expect(lib.scope).toBe('angular');
-          expect(lib.name).toBe('core');
+          const scopedLib = lib as TsIdentLibraryScoped;
+          expect(scopedLib.scope).toBe('angular');
+          expect(scopedLib.name).toBe('core');
         }
       });
 
@@ -378,7 +382,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
     describe('construction', () => {
       it('should create a parsed file', () => {
         const comments = Comments.empty();
-        const directives = IArray.fromArray([Directive.noStdLib()]);
+        const directives: IArray<Directive> = IArray.fromArray([Directive.noStdLib()]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -394,7 +398,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
       it('should detect standard library files', () => {
         const comments = Comments.empty();
-        const directives = IArray.fromArray([Directive.noStdLib()]);
+        const directives: IArray<Directive> = IArray.fromArray([Directive.noStdLib()]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -404,7 +408,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
       it('should detect non-standard library files', () => {
         const comments = Comments.empty();
-        const directives = IArray.fromArray([Directive.typesRef('react')]);
+        const directives: IArray<Directive> = IArray.fromArray([Directive.typesRef('react')]);
         const members = IArray.Empty;
         const codePath = CodePath.noPath();
 
@@ -1140,7 +1144,7 @@ describe('trees - Phase 5: Function Signatures and Parameters', () => {
       it('should support addComment', () => {
         const name = TsIdent.simple('T');
         const typeParam = TsTypeParam.simple(name);
-        const comment: Comment = { text: 'Type parameter T', type: 'line' };
+        const comment: Comment = new Raw('Type parameter T');
         const newTypeParam = typeParam.addComment(comment);
 
         expect(newTypeParam._tag).toBe('TsTypeParam');
@@ -1223,7 +1227,7 @@ describe('trees - Phase 5: Function Signatures and Parameters', () => {
       it('should support addComment', () => {
         const name = TsIdent.simple('param');
         const param = TsFunParam.simple(name);
-        const comment: Comment = { text: 'Parameter description', type: 'line' };
+        const comment: Comment = new Raw('Parameter description');
         const newParam = param.addComment(comment);
 
         expect(newParam._tag).toBe('TsFunParam');
@@ -1333,7 +1337,7 @@ describe('trees - Phase 5: Function Signatures and Parameters', () => {
 
       it('should support addComment', () => {
         const signature = TsFunSig.noParams(none);
-        const comment: Comment = { text: 'Function signature description', type: 'line' };
+        const comment: Comment = new Raw('Function signature description');
         const newSignature = signature.addComment(comment);
 
         expect(newSignature._tag).toBe('TsFunSig');
@@ -1430,7 +1434,7 @@ describe('trees - Phase 6: Type System', () => {
 
       it('should support addComment', () => {
         const typeRef = TsTypeRef.string;
-        const comment: Comment = { text: 'String type', type: 'line' };
+        const comment: Comment = new Raw('String type');
         const newTypeRef = typeRef.addComment(comment);
 
         expect(newTypeRef._tag).toBe('TsTypeRef');
@@ -1529,7 +1533,7 @@ describe('trees - Phase 6: Type System', () => {
 
       it('should support addComment', () => {
         const objectType = TsTypeObject.empty();
-        const comment: Comment = { text: 'Object type', type: 'line' };
+        const comment: Comment = new Raw('Object type');
         const newObjectType = objectType.addComment(comment);
 
         expect(newObjectType._tag).toBe('TsTypeObject');
@@ -1753,7 +1757,7 @@ describe('trees - Phase 7: Members', () => {
       it('should support addComment', () => {
         const signature = TsFunSig.noParams(none);
         const callMember = TsMemberCall.public(signature);
-        const comment: Comment = { text: 'Call signature', type: 'line' };
+        const comment: Comment = new Raw('Call signature');
         const newCallMember = callMember.addComment(comment);
 
         expect(newCallMember._tag).toBe('TsMemberCall');
@@ -1812,7 +1816,7 @@ describe('trees - Phase 7: Members', () => {
       it('should support addComment', () => {
         const signature = TsFunSig.noParams(some(TsTypeRef.any));
         const ctorMember = TsMemberCtor.public(signature);
-        const comment: Comment = { text: 'Constructor signature', type: 'line' };
+        const comment: Comment = new Raw('Constructor signature');
         const newCtorMember = ctorMember.addComment(comment);
 
         expect(newCtorMember._tag).toBe('TsMemberCtor');
@@ -1903,7 +1907,7 @@ describe('trees - Phase 7: Members', () => {
         const name = TsIdent.simple('test');
         const signature = TsFunSig.noParams(none);
         const methodMember = TsMemberFunction.method(name, signature);
-        const comment: Comment = { text: 'Method description', type: 'line' };
+        const comment: Comment = new Raw('Method description');
         const newMethodMember = methodMember.addComment(comment);
 
         expect(newMethodMember._tag).toBe('TsMemberFunction');
@@ -2020,7 +2024,7 @@ describe('trees - Phase 7: Members', () => {
 
       it('should support addComment', () => {
         const indexMember = TsMemberIndex.stringIndex(TsTypeRef.any);
-        const comment: Comment = { text: 'Index signature', type: 'line' };
+        const comment: Comment = new Raw('Index signature');
         const newIndexMember = indexMember.addComment(comment);
 
         expect(newIndexMember._tag).toBe('TsMemberIndex');
@@ -2105,7 +2109,7 @@ describe('trees - Phase 7: Members', () => {
       it('should support addComment', () => {
         const name = TsIdent.simple('test');
         const property = TsMemberProperty.simple(name);
-        const comment: Comment = { text: 'Property description', type: 'line' };
+        const comment: Comment = new Raw('Property description');
         const newProperty = property.addComment(comment);
 
         expect(newProperty._tag).toBe('TsMemberProperty');
@@ -2154,8 +2158,8 @@ describe('trees - Phase 8: Import/Export System', () => {
         const ident2 = TsIdent.simple('useEffect');
         const alias = TsIdent.simple('effect');
         const idents = IArray.fromArray([
-          [ident1, none] as [TsIdent, Option<TsIdentSimple>],
-          [ident2, some(alias)] as [TsIdent, Option<TsIdentSimple>]
+          [ident1, none] as [TsIdent, O.Option<TsIdentSimple>],
+          [ident2, some(alias)] as [TsIdent, O.Option<TsIdentSimple>]
         ]);
         const imported = TsImportedDestructured.create(idents);
 
@@ -2342,8 +2346,8 @@ describe('trees - Phase 8: Import/Export System', () => {
         const name2 = TsQIdent.ofStrings('myClass');
         const alias = TsIdent.simple('MyClass');
         const idents = IArray.fromArray([
-          [name1, none] as [TsQIdent, Option<TsIdentSimple>],
-          [name2, some(alias)] as [TsQIdent, Option<TsIdentSimple>]
+          [name1, none] as [TsQIdent, O.Option<TsIdentSimple>],
+          [name2, some(alias)] as [TsQIdent, O.Option<TsIdentSimple>]
         ]);
         const exportee = TsExporteeNames.create(idents, none);
 
