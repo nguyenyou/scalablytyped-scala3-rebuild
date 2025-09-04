@@ -581,3 +581,344 @@ describe('TsExpr - Type Inference', () => {
     });
   });
 });
+
+describe('TsExpr - Expression Transformation', () => {
+  describe('TsExpr.visit', () => {
+    it('should visit Ref expression', () => {
+      const ref = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldName')));
+      const transformed = TsExpr.visit(ref, (expr) => {
+        if (TsExpr.isRef(expr) && expr.value.parts.apply(0).value === 'oldName') {
+          return TsExprRef.create(TsQIdent.of(TsIdent.simple('newName')));
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isRef(transformed)).toBe(true);
+      const refResult = transformed as TsExprRef;
+      expect(refResult.value.parts.apply(0).value).toBe('newName');
+    });
+
+    it('should visit Literal expression', () => {
+      const literal = TsExprLiteral.create(TsLiteral.str('old'));
+      const transformed = TsExpr.visit(literal, (expr) => {
+        if (TsExpr.isLiteral(expr)) {
+          const litExpr = expr as TsExprLiteral;
+          if (TsLiteral.isStr(litExpr.value) && (litExpr.value as any).value === 'old') {
+            return TsExprLiteral.create(TsLiteral.str('new'));
+          }
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isLiteral(transformed)).toBe(true);
+      const litResult = transformed as TsExprLiteral;
+      expect(TsLiteral.isStr(litResult.value)).toBe(true);
+      expect((litResult.value as any).value).toBe('new');
+    });
+
+    it('should visit Cast expression recursively', () => {
+      const innerExpr = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldName')));
+      const cast = TsExprCast.create(innerExpr, TsTypeRef.string);
+      const transformed = TsExpr.visit(cast, (expr) => {
+        if (TsExpr.isRef(expr) && expr.value.parts.apply(0).value === 'oldName') {
+          return TsExprRef.create(TsQIdent.of(TsIdent.simple('newName')));
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isCast(transformed)).toBe(true);
+      const castResult = transformed as TsExprCast;
+      expect(TsExpr.isRef(castResult.expr)).toBe(true);
+      const innerRef = castResult.expr as TsExprRef;
+      expect(innerRef.value.parts.apply(0).value).toBe('newName');
+    });
+
+    it('should visit ArrayOf expression recursively', () => {
+      const innerExpr = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldName')));
+      const arrayOf = TsExprArrayOf.create(innerExpr);
+      const transformed = TsExpr.visit(arrayOf, (expr) => {
+        if (TsExpr.isRef(expr) && expr.value.parts.apply(0).value === 'oldName') {
+          return TsExprRef.create(TsQIdent.of(TsIdent.simple('newName')));
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isArrayOf(transformed)).toBe(true);
+      const arrayResult = transformed as TsExprArrayOf;
+      expect(TsExpr.isRef(arrayResult.expr)).toBe(true);
+      const innerRef = arrayResult.expr as TsExprRef;
+      expect(innerRef.value.parts.apply(0).value).toBe('newName');
+    });
+
+    it('should visit Call expression recursively', () => {
+      const function_ = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldFunc')));
+      const param = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldParam')));
+      const call = TsExprCall.create(function_, IArray.fromArray<TsExpr>([param]));
+      const transformed = TsExpr.visit(call, (expr) => {
+        if (TsExpr.isRef(expr)) {
+          const refExpr = expr as TsExprRef;
+          const oldValue = refExpr.value.parts.apply(0).value;
+          if (oldValue.startsWith('old')) {
+            const newValue = oldValue.replace('old', 'new');
+            return TsExprRef.create(TsQIdent.of(TsIdent.simple(newValue)));
+          }
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isCall(transformed)).toBe(true);
+      const callResult = transformed as TsExprCall;
+      expect(TsExpr.isRef(callResult.function)).toBe(true);
+      const funcRef = callResult.function as TsExprRef;
+      expect(funcRef.value.parts.apply(0).value).toBe('newFunc');
+
+      expect(callResult.params.length).toBe(1);
+      expect(TsExpr.isRef(callResult.params.apply(0))).toBe(true);
+      const paramRef = callResult.params.apply(0) as TsExprRef;
+      expect(paramRef.value.parts.apply(0).value).toBe('newParam');
+    });
+
+    it('should visit Unary expression recursively', () => {
+      const innerExpr = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldName')));
+      const unary = TsExprUnary.create('!', innerExpr);
+      const transformed = TsExpr.visit(unary, (expr) => {
+        if (TsExpr.isRef(expr) && expr.value.parts.apply(0).value === 'oldName') {
+          return TsExprRef.create(TsQIdent.of(TsIdent.simple('newName')));
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isUnary(transformed)).toBe(true);
+      const unaryResult = transformed as TsExprUnary;
+      expect(unaryResult.op).toBe('!');
+      expect(TsExpr.isRef(unaryResult.expr)).toBe(true);
+      const innerRef = unaryResult.expr as TsExprRef;
+      expect(innerRef.value.parts.apply(0).value).toBe('newName');
+    });
+
+    it('should visit BinaryOp expression recursively', () => {
+      const left = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldLeft')));
+      const right = TsExprRef.create(TsQIdent.of(TsIdent.simple('oldRight')));
+      const binaryOp = TsExprBinaryOp.create(left, '+', right);
+      const transformed = TsExpr.visit(binaryOp, (expr) => {
+        if (TsExpr.isRef(expr)) {
+          const refExpr = expr as TsExprRef;
+          const oldValue = refExpr.value.parts.apply(0).value;
+          if (oldValue.startsWith('old')) {
+            const newValue = oldValue.replace('old', 'new');
+            return TsExprRef.create(TsQIdent.of(TsIdent.simple(newValue)));
+          }
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isBinaryOp(transformed)).toBe(true);
+      const binaryResult = transformed as TsExprBinaryOp;
+      expect(binaryResult.op).toBe('+');
+
+      expect(TsExpr.isRef(binaryResult.one)).toBe(true);
+      const leftRef = binaryResult.one as TsExprRef;
+      expect(leftRef.value.parts.apply(0).value).toBe('newLeft');
+
+      expect(TsExpr.isRef(binaryResult.two)).toBe(true);
+      const rightRef = binaryResult.two as TsExprRef;
+      expect(rightRef.value.parts.apply(0).value).toBe('newRight');
+    });
+  });
+});
+
+describe('TsExpr - Edge Cases and Error Conditions', () => {
+  describe('Complex nested expressions', () => {
+    it('should format complex nested expressions', () => {
+      const innerCall = TsExprCall.create(
+        TsExprRef.create(TsQIdent.of(TsIdent.simple('innerFunc'))),
+        IArray.fromArray<TsExpr>([TsExprLiteral.create(TsLiteral.str('arg'))])
+      );
+      const outerCall = TsExprCall.create(
+        TsExprRef.create(TsQIdent.of(TsIdent.simple('outerFunc'))),
+        IArray.fromArray<TsExpr>([innerCall])
+      );
+      const formatted = TsExpr.format(outerCall);
+
+      expect(formatted).toContain('outerFunc');
+      expect(formatted).toContain('innerFunc');
+      expect(formatted).toContain('"arg"');
+    });
+
+    it('should infer types for deeply nested expressions', () => {
+      const deeplyNested = TsExprArrayOf.create(
+        TsExprCast.create(
+          TsExprUnary.create('!', TsExprLiteral.create(TsLiteral.bool(true))),
+          TsTypeRef.boolean
+        )
+      );
+      const inferredType = TsExpr.typeOf(deeplyNested);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('Array');
+      expect(typeRef.tparams.length).toBe(1);
+
+      const elementType = typeRef.tparams.apply(0);
+      expect(elementType._tag).toBe('TsTypeRef');
+      const elementTypeRef = elementType as TsTypeRef;
+      expect(elementTypeRef.name.parts.apply(0).value).toBe('boolean');
+    });
+
+    it('should handle identity transformation', () => {
+      const expr = TsExprBinaryOp.create(
+        TsExprLiteral.create(TsLiteral.num('1')),
+        '+',
+        TsExprLiteral.create(TsLiteral.num('2'))
+      );
+      const transformed = TsExpr.visit(expr, (e) => e);
+
+      // Should be structurally equivalent
+      expect(TsExpr.format(transformed)).toBe(TsExpr.format(expr));
+      expect(transformed._tag).toBe(expr._tag);
+    });
+  });
+
+  describe('Extractor edge cases', () => {
+    it('should handle zero in Num extractor', () => {
+      const zeroLit = TsLiteral.num('0');
+      const extracted = TsExpr.Num.unapply(zeroLit);
+
+      expect(extracted).toBeDefined();
+      expect(extracted).toBe(0);
+    });
+
+    it('should reject negative numbers in Num extractor', () => {
+      const negativeLit = TsLiteral.num('-42');
+      const extracted = TsExpr.Num.unapply(negativeLit);
+
+      expect(extracted).toBeUndefined();
+    });
+
+    it('should handle decimal numbers in Num extractor', () => {
+      const decimalLit = TsLiteral.num('3.14159');
+      const extracted = TsExpr.Num.unapply(decimalLit);
+
+      expect(extracted).toBeDefined();
+      expect(extracted).toBe(3.14159);
+    });
+
+    it('should handle zero in Num.Long extractor', () => {
+      const zeroLit = TsLiteral.num('0');
+      const extracted = TsExpr.Num.Long.unapply(zeroLit);
+
+      expect(extracted).toBeDefined();
+      expect(extracted).toBe(0);
+    });
+
+    it('should handle max safe integer in Num.Long extractor', () => {
+      const maxSafeLit = TsLiteral.num(Number.MAX_SAFE_INTEGER.toString());
+      const extracted = TsExpr.Num.Long.unapply(maxSafeLit);
+
+      expect(extracted).toBeDefined();
+      expect(extracted).toBe(Number.MAX_SAFE_INTEGER);
+    });
+  });
+});
+
+describe('TsExpr - Integration Tests', () => {
+  describe('Complex expression scenarios', () => {
+    it('should handle complex expression formatting and type inference', () => {
+      const complexExpr = TsExprBinaryOp.create(
+        TsExprCall.create(
+          TsExprRef.create(TsQIdent.of(TsIdent.simple('Math'), TsIdent.simple('max'))),
+          IArray.fromArray<TsExpr>([
+            TsExprLiteral.create(TsLiteral.num('10')),
+            TsExprLiteral.create(TsLiteral.num('20'))
+          ])
+        ),
+        '+',
+        TsExprCast.create(
+          TsExprLiteral.create(TsLiteral.str('5')),
+          TsTypeRef.number
+        )
+      );
+
+      const formatted = TsExpr.format(complexExpr);
+      expect(formatted).toContain('Math');
+      expect(formatted).toContain('max');
+      expect(formatted).toContain('10');
+      expect(formatted).toContain('20');
+      expect(formatted).toContain('"5"');
+      expect(formatted).toContain('as');
+      expect(formatted).toContain('+');
+
+      const inferredType = TsExpr.typeOf(complexExpr);
+      // Call returns any, so BinaryOp widens to any -> Default
+      expect(inferredType._tag).toBe('TsTypeUnion');
+    });
+
+    it('should preserve structure in visit transformation', () => {
+      const originalExpr = TsExprArrayOf.create(
+        TsExprBinaryOp.create(
+          TsExprRef.create(TsQIdent.of(TsIdent.simple('x'))),
+          '*',
+          TsExprLiteral.create(TsLiteral.num('2'))
+        )
+      );
+
+      const transformed = TsExpr.visit(originalExpr, (expr) => {
+        if (TsExpr.isLiteral(expr)) {
+          const litExpr = expr as TsExprLiteral;
+          if (TsLiteral.isNum(litExpr.value) && (litExpr.value as any).value === '2') {
+            return TsExprLiteral.create(TsLiteral.num('3'));
+          }
+        }
+        return expr;
+      });
+
+      expect(TsExpr.isArrayOf(transformed)).toBe(true);
+      const arrayResult = transformed as TsExprArrayOf;
+      expect(TsExpr.isBinaryOp(arrayResult.expr)).toBe(true);
+      const binaryResult = arrayResult.expr as TsExprBinaryOp;
+      expect(binaryResult.op).toBe('*');
+      expect(TsExpr.isLiteral(binaryResult.two)).toBe(true);
+      const litResult = binaryResult.two as TsExprLiteral;
+      expect(TsLiteral.isNum(litResult.value)).toBe(true);
+      expect((litResult.value as any).value).toBe('3');
+    });
+
+    it('should handle all expression types in a single complex transformation', () => {
+      // Create a complex expression that uses all expression types
+      const complexExpr = TsExprArrayOf.create(
+        TsExprCast.create(
+          TsExprBinaryOp.create(
+            TsExprUnary.create('!', TsExprLiteral.create(TsLiteral.bool(false))),
+            '&&',
+            TsExprCall.create(
+              TsExprRef.create(TsQIdent.of(TsIdent.simple('test'))),
+              IArray.fromArray<TsExpr>([TsExprLiteral.create(TsLiteral.str('param'))])
+            )
+          ),
+          TsTypeRef.boolean
+        )
+      );
+
+      // Transform all string literals
+      const transformed = TsExpr.visit(complexExpr, (expr) => {
+        if (TsExpr.isLiteral(expr)) {
+          const litExpr = expr as TsExprLiteral;
+          if (TsLiteral.isStr(litExpr.value)) {
+            const strValue = (litExpr.value as any).value;
+            return TsExprLiteral.create(TsLiteral.str(`transformed_${strValue}`));
+          }
+        }
+        return expr;
+      });
+
+      const formatted = TsExpr.format(transformed);
+      expect(formatted).toContain('transformed_param');
+      expect(formatted).not.toContain('"param"');
+
+      // Verify structure is preserved
+      expect(TsExpr.isArrayOf(transformed)).toBe(true);
+      const arrayResult = transformed as TsExprArrayOf;
+      expect(TsExpr.isCast(arrayResult.expr)).toBe(true);
+    });
+  });
+});
