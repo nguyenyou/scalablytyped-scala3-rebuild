@@ -4,36 +4,51 @@
  * Represents JavaScript location information for TypeScript declarations
  */
 
-import { TsTree, TsIdent, TsQIdent, TsIdentModule } from './trees.js';
+import { TsTree, TsIdent, TsQIdent, TsIdentModule, TsNamedDecl, TsDeclModule, TsAugmentedModule, TsGlobal } from './trees.js';
+import { IArray } from '../IArray.js';
 import { Option, some, none } from 'fp-ts/Option';
 
 /**
  * Represents a module specification for JavaScript locations
+ * Port of org.scalablytyped.converter.internal.ts.ModuleSpec
  */
 export interface ModuleSpec {
-  readonly _tag: 'Namespaced' | 'Named';
-  readonly path?: TsQIdent;
+  readonly _tag: 'Defaulted' | 'Namespaced' | 'Specified';
 }
 
 /**
- * Namespaced module specification
+ * Defaulted module specification - imports the default export
+ */
+export interface DefaultedModuleSpec extends ModuleSpec {
+  readonly _tag: 'Defaulted';
+}
+
+/**
+ * Namespaced module specification - imports the entire module as a namespace
  */
 export interface NamespacedModuleSpec extends ModuleSpec {
   readonly _tag: 'Namespaced';
 }
 
 /**
- * Named module specification
+ * Specified module specification - imports specific named exports
  */
-export interface NamedModuleSpec extends ModuleSpec {
-  readonly _tag: 'Named';
-  readonly path: TsQIdent;
+export interface SpecifiedModuleSpec extends ModuleSpec {
+  readonly _tag: 'Specified';
+  readonly tsIdents: IArray<TsIdent>;
 }
 
 /**
- * Constructor functions for ModuleSpec
+ * Constructor functions and utilities for ModuleSpec
  */
 export const ModuleSpec = {
+  /**
+   * Creates a defaulted module specification
+   */
+  defaulted: (): DefaultedModuleSpec => ({
+    _tag: 'Defaulted'
+  }),
+
   /**
    * Creates a namespaced module specification
    */
@@ -42,28 +57,57 @@ export const ModuleSpec = {
   }),
 
   /**
-   * Creates a named module specification
+   * Creates a specified module specification
    */
-  named: (path: TsQIdent): NamedModuleSpec => ({
-    _tag: 'Named',
-    path
+  specified: (tsIdents: IArray<TsIdent>): SpecifiedModuleSpec => ({
+    _tag: 'Specified',
+    tsIdents
   }),
 
   /**
-   * Adds an identifier to a module specification
+   * Creates a ModuleSpec from a single TsIdent
+   */
+  fromIdent: (ident: TsIdent): ModuleSpec => {
+    if (TsIdent.isDefault(ident)) {
+      return ModuleSpec.defaulted();
+    } else if (TsIdent.isNamespaced(ident)) {
+      return ModuleSpec.namespaced();
+    } else {
+      return ModuleSpec.specified(IArray.fromArray([ident]));
+    }
+  },
+
+  /**
+   * Adds an identifier to a module specification (+ operator)
    */
   add: (spec: ModuleSpec, ident: TsIdent): ModuleSpec => {
-    switch (spec._tag) {
-      case 'Namespaced':
-        return ModuleSpec.named(TsQIdent.single(ident));
-      case 'Named':
-        return ModuleSpec.named(TsQIdent.append(spec.path!, ident));
+    // Skip namespaced identifiers
+    if (TsIdent.isNamespaced(ident)) {
+      return spec;
     }
-  }
+
+    switch (spec._tag) {
+      case 'Defaulted':
+        return ModuleSpec.specified(IArray.fromArray([TsIdent.default(), ident]));
+      case 'Namespaced':
+        return ModuleSpec.specified(IArray.fromArray([ident]));
+      case 'Specified':
+        const specifiedSpec = spec as SpecifiedModuleSpec;
+        return ModuleSpec.specified(specifiedSpec.tsIdents.append(ident));
+    }
+  },
+
+  /**
+   * Type guards
+   */
+  isDefaulted: (spec: ModuleSpec): spec is DefaultedModuleSpec => spec._tag === 'Defaulted',
+  isNamespaced: (spec: ModuleSpec): spec is NamespacedModuleSpec => spec._tag === 'Namespaced',
+  isSpecified: (spec: ModuleSpec): spec is SpecifiedModuleSpec => spec._tag === 'Specified'
 };
 
 /**
  * Base interface for JavaScript locations
+ * Port of org.scalablytyped.converter.internal.ts.JsLocation
  */
 export interface JsLocation {
   readonly _tag: 'Zero' | 'Global' | 'Module' | 'Both';
@@ -140,11 +184,11 @@ export const JsLocation = {
   }),
 
   /**
-   * Adds an identifier to a location
+   * Adds an identifier to a location (+ operator)
    */
   add: (location: JsLocation, ident: TsIdent): JsLocation => {
     // Skip namespaced identifiers
-    if (ident.value === '^') {
+    if (TsIdent.isNamespaced(ident)) {
       return location;
     }
 
@@ -166,12 +210,91 @@ export const JsLocation = {
   },
 
   /**
-   * Navigates into a tree node
+   * Navigates into a tree node (/ operator)
    */
   navigate: (location: JsLocation, tree: TsTree): JsLocation => {
-    // This is a simplified version - the full implementation would need
-    // access to all tree types which we'll implement in later phases
+    switch (location._tag) {
+      case 'Zero':
+        return JsLocation.navigateZero(tree);
+      case 'Global':
+        return JsLocation.navigateGlobal(location as JsLocationGlobal, tree);
+      case 'Module':
+        return JsLocation.navigateModule(location as JsLocationModule, tree);
+      case 'Both':
+        return JsLocation.navigateBoth(location as JsLocationBoth, tree);
+    }
+  },
+
+  /**
+   * Navigation for Zero location
+   */
+  navigateZero: (tree: TsTree): JsLocation => {
+    if (TsDeclModule.isModule(tree)) {
+      const module = tree as TsDeclModule;
+      return JsLocation.module(module.name, ModuleSpec.namespaced());
+    } else if (TsAugmentedModule.isAugmentedModule(tree)) {
+      const augModule = tree as TsAugmentedModule;
+      return JsLocation.module(augModule.name, ModuleSpec.namespaced());
+    } else if (TsTree.isNamedDecl(tree)) {
+      const namedDecl = tree as TsNamedDecl;
+      if (!TsIdent.isNamespaced(namedDecl.name)) {
+        return JsLocation.global(TsQIdent.of(namedDecl.name));
+      }
+    } else if (TsGlobal.isGlobal(tree)) {
+      return JsLocation.zero();
+    }
+    return JsLocation.zero();
+  },
+
+  /**
+   * Navigation for Global location
+   */
+  navigateGlobal: (location: JsLocationGlobal, tree: TsTree): JsLocation => {
+    if (TsDeclModule.isModule(tree)) {
+      const module = tree as TsDeclModule;
+      return JsLocation.module(module.name, ModuleSpec.namespaced());
+    } else if (TsAugmentedModule.isAugmentedModule(tree)) {
+      const augModule = tree as TsAugmentedModule;
+      return JsLocation.module(augModule.name, ModuleSpec.namespaced());
+    } else if (TsTree.isNamedDecl(tree)) {
+      const namedDecl = tree as TsNamedDecl;
+      if (!TsIdent.isNamespaced(namedDecl.name)) {
+        return JsLocation.global(TsQIdent.append(location.jsPath, namedDecl.name));
+      }
+    } else if (TsGlobal.isGlobal(tree)) {
+      return JsLocation.zero();
+    }
     return location;
+  },
+
+  /**
+   * Navigation for Module location
+   */
+  navigateModule: (location: JsLocationModule, tree: TsTree): JsLocationModule => {
+    if (TsDeclModule.isModule(tree)) {
+      const module = tree as TsDeclModule;
+      return JsLocation.module(module.name, ModuleSpec.namespaced()) as JsLocationModule;
+    } else if (TsAugmentedModule.isAugmentedModule(tree)) {
+      const augModule = tree as TsAugmentedModule;
+      return JsLocation.module(augModule.name, ModuleSpec.namespaced()) as JsLocationModule;
+    } else if (TsTree.isNamedDecl(tree)) {
+      const namedDecl = tree as TsNamedDecl;
+      return JsLocation.module(location.module, ModuleSpec.add(location.spec, namedDecl.name)) as JsLocationModule;
+    }
+    return location;
+  },
+
+  /**
+   * Navigation for Both location
+   */
+  navigateBoth: (location: JsLocationBoth, tree: TsTree): JsLocation => {
+    const globalResult = JsLocation.navigateGlobal(location.global, tree);
+    if (JsLocation.isGlobal(globalResult)) {
+      const moduleResult = JsLocation.navigateModule(location.module, tree);
+      return JsLocation.both(moduleResult, globalResult);
+    } else {
+      return globalResult;
+    }
   },
 
   /**
@@ -192,6 +315,20 @@ export interface HasJsLocation {
 }
 
 /**
+ * JsLocation.Has trait - equivalent to Scala's JsLocation.Has
+ */
+export interface JsLocationHas {
+  readonly jsLocation: JsLocation;
+  withJsLocation(newLocation: JsLocation): JsLocationHas;
+}
+
+/**
  * Singleton instances
  */
 export const JsLocationZero: JsLocationZero = JsLocation.zero();
+
+/**
+ * Singleton constants for commonly used ModuleSpec instances
+ */
+export const ModuleSpecDefaulted: DefaultedModuleSpec = ModuleSpec.defaulted();
+export const ModuleSpecNamespaced: NamespacedModuleSpec = ModuleSpec.namespaced();

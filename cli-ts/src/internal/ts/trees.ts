@@ -2256,6 +2256,30 @@ export const TsIdent = {
     return a._tag === b._tag && a.value === b.value;
   },
 
+  /**
+   * Returns the default export identifier
+   */
+  default: (): TsIdentSimple => TsIdentDefault,
+
+  /**
+   * Returns the namespaced identifier
+   */
+  namespaced: (): TsIdentSimple => TsIdentNamespaced,
+
+  /**
+   * Checks if an identifier is the default export identifier
+   */
+  isDefault: (ident: TsIdent): boolean => {
+    return ident.value === 'default';
+  },
+
+  /**
+   * Checks if an identifier is the namespaced identifier
+   */
+  isNamespaced: (ident: TsIdent): boolean => {
+    return ident.value === '^';
+  },
+
   // Special library identifiers for backward compatibility
   get std(): TsIdentLibrary {
     return TsIdentStd;
@@ -5886,5 +5910,23 @@ export const TsType = {
    */
   isLookup: (tpe: TsType): boolean => {
     return tpe._tag === 'TsTypeLookup';
+  }
+};
+
+/**
+ * Utilities for TsTree
+ */
+export const TsTree = {
+  /**
+   * Checks if a tree is a named declaration
+   */
+  isNamedDecl: (tree: TsTree): tree is TsNamedDecl => {
+    return tree._tag === 'TsDeclClass' ||
+           tree._tag === 'TsDeclInterface' ||
+           tree._tag === 'TsDeclEnum' ||
+           tree._tag === 'TsDeclFunction' ||
+           tree._tag === 'TsDeclVar' ||
+           tree._tag === 'TsDeclTypeAlias' ||
+           tree._tag === 'TsDeclNamespace';
   }
 };
