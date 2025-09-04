@@ -216,6 +216,13 @@ export class IArray<T> {
     return this.array[index];
   }
 
+  get(index: number): T {
+    if (index < 0 || index >= this.length) {
+      throw new Error(`Index ${index} out of bounds for length ${this.length}`);
+    }
+    return this.array[index];
+  }
+
   applyOrElse<U>(index: number, defaultFn: (index: number) => U): T | U {
     return this.isDefinedAt(index) ? this.apply(index) : defaultFn(index);
   }

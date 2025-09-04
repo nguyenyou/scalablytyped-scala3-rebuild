@@ -4878,7 +4878,21 @@ export const TsExpr = {
         if (TsLiteral.isStr(litExpr.value)) {
           return `"${(litExpr.value as TsLiteralStr).value}"`;
         } else if (TsLiteral.isNum(litExpr.value)) {
-          return (litExpr.value as TsLiteralNum).value;
+          const numLit = litExpr.value as TsLiteralNum;
+          // Check if this is a long number that needs .0 suffix
+          const longValue = TsExpr.Num.Long.unapply(numLit);
+          if (longValue !== undefined) {
+            // JavaScript's Number.MAX_SAFE_INTEGER is 2^53 - 1 = 9007199254740991
+            // Scala's Int.MaxValue is 2147483647
+            // We'll use Int.MaxValue equivalent for consistency with Scala
+            const INT_MAX_VALUE = 2147483647;
+            if (longValue > INT_MAX_VALUE) {
+              return `${longValue}.0`;
+            } else {
+              return longValue.toString();
+            }
+          }
+          return numLit.value;
         } else if (TsLiteral.isBool(litExpr.value)) {
           return (litExpr.value as TsLiteralBool).value.toString();
         }
@@ -4901,6 +4915,74 @@ export const TsExpr = {
         return `[${TsExpr.format(arrayExpr.expr)}]`;
       default:
         return 'unknown';
+    }
+  },
+
+  /**
+   * Extractor pattern for numeric literals (equivalent to Scala's Num object)
+   */
+  Num: {
+    /**
+     * Extracts number from TsType
+     */
+    unapplyType: (x: TsType): number | undefined => {
+      if (x._tag === 'TsTypeLiteral') {
+        const typeLit = x as TsTypeLiteral;
+        return TsExpr.Num.unapply(typeLit.literal);
+      }
+      return undefined;
+    },
+
+    /**
+     * Extracts number from TsLiteral
+     */
+    unapply: (x: TsLiteral): number | undefined => {
+      if (TsLiteral.isNum(x)) {
+        const numLit = x as TsLiteralNum;
+        const value = numLit.value;
+        // Check if value contains only digits and dots (no other characters)
+        if (/^[0-9.]+$/.test(value)) {
+          const parsed = parseFloat(value);
+          if (!isNaN(parsed)) {
+            return parsed;
+          }
+        }
+      }
+      return undefined;
+    },
+
+    /**
+     * Long extractor (equivalent to Scala's Num.Long object)
+     */
+    Long: {
+      /**
+       * Extracts Long from TsType
+       */
+      unapplyType: (x: TsType): number | undefined => {
+        if (x._tag === 'TsTypeLiteral') {
+          const typeLit = x as TsTypeLiteral;
+          return TsExpr.Num.Long.unapply(typeLit.literal);
+        }
+        return undefined;
+      },
+
+      /**
+       * Extracts Long from TsLiteral
+       */
+      unapply: (x: TsLiteral): number | undefined => {
+        if (TsLiteral.isNum(x)) {
+          const numLit = x as TsLiteralNum;
+          const value = numLit.value;
+          // Check if value contains only digits (no decimals or other characters)
+          if (/^[0-9]+$/.test(value)) {
+            const parsed = parseInt(value, 10);
+            if (!isNaN(parsed)) {
+              return parsed;
+            }
+          }
+        }
+        return undefined;
+      }
     }
   },
 
