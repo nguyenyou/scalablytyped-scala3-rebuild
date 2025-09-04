@@ -506,7 +506,7 @@ describe('LibraryResolver', () => {
 
         const longName = moduleNames.apply(moduleNames.length - 1);
         // For scoped libraries, the scope and name are handled separately
-        expect(longName.scopeOpt).toBe('angular');
+        expect(O.isSome(longName.scopeOpt) && longName.scopeOpt.value).toBe('angular');
         expect(longName.fragments.includes('core')).toBe(true);
         expect(longName.fragments.includes('testing')).toBe(true);
       });

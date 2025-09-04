@@ -8,7 +8,7 @@ import { Option } from 'fp-ts/Option';
 import { LibraryVersion } from '../LibraryVersion';
 import { PackageJson } from '../ts/PackageJson';
 import { InFolder } from '../files';
-import { Comments } from '../scalajs/Comments';
+import { Comments } from '../Comments';
 
 /**
  * Interface for calculating library versions

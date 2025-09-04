@@ -2275,8 +2275,15 @@ export const TsIdentLibrary = {
     const scopedMatch = str.match(/^@([^/]+)\/(.+)$/);
     if (scopedMatch) {
       const [, scope, name] = scopedMatch;
-      // Special case: @types/name -> just name
+      // Special case: @types/name -> check if name contains __
       if (scope === 'types') {
+        // If name contains __, it's actually a scoped package
+        const underscoreMatch = name.match(/^(.+)__(.+)$/);
+        if (underscoreMatch) {
+          const [, innerScope, innerName] = underscoreMatch;
+          return TsIdent.libraryScoped(innerScope, innerName);
+        }
+        // Otherwise it's a simple package
         return TsIdent.librarySimple(name);
       }
       return TsIdent.libraryScoped(scope, name);

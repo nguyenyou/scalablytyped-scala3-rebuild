@@ -5,7 +5,8 @@
 import { describe, it, expect } from 'bun:test';
 import { IArray } from '../internal/IArray.js';
 import { QualifiedName } from '../internal/scalajs/QualifiedName.js';
-import { TsIdentModule } from '../internal/ts/trees.js';
+import { TsIdentModule, TsIdent } from '../internal/ts/trees.js';
+import * as O from 'fp-ts/Option';
 import {
   Comment,
   Raw,
@@ -83,8 +84,8 @@ describe('Comment', () => {
     });
 
     it('should create ModuleAliases markers', () => {
-      const module1 = new TsIdentModule(undefined, ['lodash']);
-      const module2 = new TsIdentModule('types', ['node']);
+      const module1 = TsIdent.module(O.none, ['lodash']);
+      const module2 = TsIdent.module(O.some('types'), ['node']);
       const aliases = IArray.fromArray([module1, module2]);
       const marker = new ModuleAliases(aliases);
       

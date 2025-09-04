@@ -1,40 +1,41 @@
 import { ModuleNameParser } from '@/internal/ts/ModuleNameParser';
 import { TsIdentModule } from '@/internal/ts/trees';
 import { describe, test, expect } from "bun:test";
+import * as O from 'fp-ts/Option';
 
 describe("ModuleNameParser", () => {
   describe("Happy Path - Basic Functionality", () => {
     test("simple module name from string literal", () => {
       const result = ModuleNameParser.fromString("lodash");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash"]);
       expect(result.value).toBe("lodash");
     });
 
     test("simple module name from fragments", () => {
       const result = ModuleNameParser.apply(["lodash"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash"]);
       expect(result.value).toBe("lodash");
     });
 
     test("scoped module name", () => {
       const result = ModuleNameParser.fromString("@angular/core");
-      expect(result.scopeOpt).toBe("angular");
+      expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe("angular");
       expect(result.fragments).toEqual(["core"]);
       expect(result.value).toBe("@angular/core");
     });
 
     test("multi-fragment module path", () => {
       const result = ModuleNameParser.fromString("lodash/fp/curry");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash", "fp", "curry"]);
       expect(result.value).toBe("lodash/fp/curry");
     });
 
     test("scoped module with multiple fragments", () => {
       const result = ModuleNameParser.fromString("@babel/plugin-transform-runtime");
-      expect(result.scopeOpt).toBe("babel");
+      expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe("babel");
       expect(result.fragments).toEqual(["plugin-transform-runtime"]);
       expect(result.value).toBe("@babel/plugin-transform-runtime");
     });
@@ -43,59 +44,59 @@ describe("ModuleNameParser", () => {
   describe("Core Functionality - Fragment Processing", () => {
     test("removes @types prefix", () => {
       const result = ModuleNameParser.apply(["@types", "node"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["node"]);
       expect(result.value).toBe("node");
     });
 
     test("handles tilde prefix", () => {
       const result = ModuleNameParser.apply(["~lodash"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash"]);
       expect(result.value).toBe("lodash");
     });
 
     test("converts double underscore to scoped package", () => {
       const result = ModuleNameParser.apply(["angular__core"], true);
-      expect(result.scopeOpt).toBe("angular");
+      expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe("angular");
       expect(result.fragments).toEqual(["core"]);
       expect(result.value).toBe("@angular/core");
     });
 
     test("removes .d.ts extension", () => {
       const result = ModuleNameParser.apply(["lodash.d.ts"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash"]);
       expect(result.value).toBe("lodash");
     });
 
     test("removes .ts extension", () => {
       const result = ModuleNameParser.apply(["utils.ts"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["utils"]);
       expect(result.value).toBe("utils");
     });
 
     test("removes index fragment when keepIndexFragment is false", () => {
       const result1 = ModuleNameParser.apply(["lodash", "index"], false);
-      expect(result1.scopeOpt).toBeUndefined();
+      expect(O.isNone(result1.scopeOpt)).toBe(true);
       expect(result1.fragments).toEqual(["lodash"]);
       expect(result1.value).toBe("lodash");
 
       const result2 = ModuleNameParser.apply(["lodash", "index.d.ts"], false);
-      expect(result2.scopeOpt).toBeUndefined();
+      expect(O.isNone(result2.scopeOpt)).toBe(true);
       expect(result2.fragments).toEqual(["lodash"]);
       expect(result2.value).toBe("lodash");
     });
 
     test("keeps index fragment when keepIndexFragment is true", () => {
       const result1 = ModuleNameParser.apply(["lodash", "index"], true);
-      expect(result1.scopeOpt).toBeUndefined();
+      expect(O.isNone(result1.scopeOpt)).toBe(true);
       expect(result1.fragments).toEqual(["lodash", "index"]);
       expect(result1.value).toBe("lodash/index");
 
       const result2 = ModuleNameParser.apply(["lodash", "index.d.ts"], true);
-      expect(result2.scopeOpt).toBeUndefined();
+      expect(O.isNone(result2.scopeOpt)).toBe(true);
       expect(result2.fragments).toEqual(["lodash", "index"]);
       expect(result2.value).toBe("lodash/index");
     });
@@ -104,28 +105,28 @@ describe("ModuleNameParser", () => {
   describe("Edge Cases", () => {
     test("single character module name", () => {
       const result = ModuleNameParser.fromString("a");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["a"]);
       expect(result.value).toBe("a");
     });
 
     test("relative module paths are preserved", () => {
       const result = ModuleNameParser.fromString("./relative/path");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual([".", "relative", "path"]);
       expect(result.value).toBe("./relative/path");
     });
 
     test("parent relative module paths", () => {
       const result = ModuleNameParser.fromString("../parent/module");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["..", "parent", "module"]);
       expect(result.value).toBe("../parent/module");
     });
 
     test("complex scoped package with multiple transformations", () => {
       const result = ModuleNameParser.apply(["@types", "babel__core", "index.d.ts"], false);
-      expect(result.scopeOpt).toBe("babel");
+      expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe("babel");
       expect(result.fragments).toEqual(["core"]);
       expect(result.value).toBe("@babel/core");
     });
@@ -134,28 +135,28 @@ describe("ModuleNameParser", () => {
       const result = ModuleNameParser.apply(["~angular__core"], true);
       // In TypeScript implementation, tilde is processed but then the fragment
       // doesn't get re-processed for double underscore in the same pass
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["angular__core"]);
       expect(result.value).toBe("angular__core");
     });
 
     test("multiple file extensions", () => {
       const result = ModuleNameParser.apply(["module.spec.ts"], true);
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["module.spec"]);
       expect(result.value).toBe("module.spec");
     });
 
     test("special characters in module names", () => {
       const result = ModuleNameParser.fromString("lodash-es");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["lodash-es"]);
       expect(result.value).toBe("lodash-es");
     });
 
     test("numeric module names", () => {
       const result = ModuleNameParser.fromString("v8-compile-cache");
-      expect(result.scopeOpt).toBeUndefined();
+      expect(O.isNone(result.scopeOpt)).toBe(true);
       expect(result.fragments).toEqual(["v8-compile-cache"]);
       expect(result.value).toBe("v8-compile-cache");
     });
@@ -183,7 +184,7 @@ describe("ModuleNameParser", () => {
     test("malformed double underscore pattern", () => {
       // TypeScript version handles this by creating a scoped package with empty name
       const result = ModuleNameParser.apply(["malformed__"], true);
-      expect(result.scopeOpt).toBe("malformed");
+      expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe("malformed");
       expect(result.fragments).toEqual([""]);
       expect(result.value).toBe("@malformed/");
     });
@@ -203,9 +204,9 @@ describe("ModuleNameParser", () => {
       packages.forEach(([input, expectedScope, expectedFragments]) => {
         const result = ModuleNameParser.fromString(input);
         if (expectedScope === undefined) {
-          expect(result.scopeOpt).toBeUndefined();
+          expect(O.isNone(result.scopeOpt)).toBe(true);
         } else {
-          expect(result.scopeOpt).toBe(expectedScope);
+          expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe(expectedScope);
         }
         expect(result.fragments).toEqual(expectedFragments);
       });
@@ -222,9 +223,9 @@ describe("ModuleNameParser", () => {
       files.forEach(([input, expectedScope, expectedFragments]) => {
         const result = ModuleNameParser.fromString(input);
         if (expectedScope === undefined) {
-          expect(result.scopeOpt).toBeUndefined();
+          expect(O.isNone(result.scopeOpt)).toBe(true);
         } else {
-          expect(result.scopeOpt).toBe(expectedScope);
+          expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe(expectedScope);
         }
         expect(result.fragments).toEqual(expectedFragments);
       });
@@ -240,9 +241,9 @@ describe("ModuleNameParser", () => {
       packages.forEach(([input, expectedScope, expectedFragments]) => {
         const result = ModuleNameParser.apply([input], true);
         if (expectedScope === undefined) {
-          expect(result.scopeOpt).toBeUndefined();
+          expect(O.isNone(result.scopeOpt)).toBe(true);
         } else {
-          expect(result.scopeOpt).toBe(expectedScope);
+          expect(O.isSome(result.scopeOpt) && result.scopeOpt.value).toBe(expectedScope);
         }
         expect(result.fragments).toEqual(expectedFragments);
       });

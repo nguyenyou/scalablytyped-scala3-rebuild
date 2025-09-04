@@ -139,7 +139,7 @@ export class LibraryResolver {
     const mockStdLib = new LibTsSource.StdLibSource(
       new InFolder('/mock/typescript'),
       IArray.Empty,
-      { value: "typescript", type: "simple" } as TsIdentLibrary
+      TsIdent.librarySimple("typescript")
     );
     const mockSources = IArray.Empty as IArray<LibTsSource.FromFolder>;
     const mockIgnored = new Set<TsIdentLibrary>();
@@ -158,10 +158,10 @@ export namespace LibraryResolver {
   export function moduleNameFor(source: LibTsSource, file: InFile): IArray<TsIdentModule> {
     const shortened: O.Option<TsIdentModule> =
       source.shortenedFiles.contains(file) ? O.some((() => {
-        if (source.libName instanceof TsIdentLibraryScoped) {
-          return new TsIdentModule(source.libName.scope, [source.libName.name]);
-        } else if (source.libName instanceof TsIdentLibrarySimple) {
-          return new TsIdentModule(undefined, [source.libName.value]);
+        if (TsIdentLibrary.isScoped(source.libName)) {
+          return TsIdent.module(O.some(source.libName.scope), [source.libName.name]);
+        } else if (TsIdentLibrary.isSimple(source.libName)) {
+          return TsIdent.module(O.none, [source.libName.value]);
         } else {
           throw new Error(`Unknown library type: ${source.libName}`);
         }
@@ -184,7 +184,10 @@ export namespace LibraryResolver {
 
       const relativePath = path.relative(source.folder.path, file.path);
       const segments = relativePath.split(path.sep).filter(s => s.length > 0);
-      const fragments = [source.libName.__value, ...segments];
+
+      // For scoped libraries, use the __value representation for module names
+      const libFragment = source.libName.__value;
+      const fragments = [libFragment, ...segments];
 
       return ModuleNameParser.apply(fragments, keepIndexPath);
     })();
@@ -195,14 +198,14 @@ export namespace LibraryResolver {
     const inParallelDirectory = ret.toArray()
       .map(module => {
         if (module.fragments.includes('lib')) {
-          return new TsIdentModule(
+          return TsIdent.module(
             module.scopeOpt,
-            module.fragments.map(f => f === 'lib' ? 'es' : f)
+            module.fragments.map((f: string) => f === 'lib' ? 'es' : f)
           );
         } else if (module.fragments.includes('es')) {
-          return new TsIdentModule(
+          return TsIdent.module(
             module.scopeOpt,
-            module.fragments.map(f => f === 'es' ? 'lib' : f)
+            module.fragments.map((f: string) => f === 'es' ? 'lib' : f)
           );
         }
         return null;

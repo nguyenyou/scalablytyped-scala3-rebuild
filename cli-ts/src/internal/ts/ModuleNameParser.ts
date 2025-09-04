@@ -2,7 +2,9 @@
  * TypeScript port of org.scalablytyped.converter.internal.ts.ModuleNameParser
  */
 
-import { TsIdentModule } from './trees.js';
+import { TsIdentModule, TsIdent } from './trees.js';
+import { IArray } from '../IArray.js';
+import { Option, none, some } from 'fp-ts/Option';
 
 /**
  * Parser for TypeScript module names with various transformations
@@ -54,17 +56,17 @@ export namespace ModuleNameParser {
     
     // Handle relative module names (handled in ResolveExternalReferences)
     if (head.startsWith('.')) {
-      return new TsIdentModule(undefined, fragments);
+      return TsIdent.module(none, fragments);
     }
-    
+
     // Handle scoped packages
     if (head.startsWith('@') && rewritten.length > 1) {
       const scope = head.slice(1); // Remove @ prefix
       const rest = rewritten.slice(1);
-      return new TsIdentModule(scope, rest);
+      return TsIdent.module(some(scope), rest);
     }
-    
+
     // Handle regular packages
-    return new TsIdentModule(undefined, rewritten);
+    return TsIdent.module(none, rewritten);
   }
 }

@@ -7,6 +7,7 @@
 import { IArray } from '../IArray';
 import { Comments } from '../Comments';
 import { CodePath } from './CodePath';
+import { TsIdent, TsQIdent } from './trees';
 
 /**
  * Compiler directive like /// <reference types="node" />
@@ -44,7 +45,11 @@ export class TsParsedFile {
    * Whether this is a standard library file
    */
   get isStdLib(): boolean {
-    return this.codePath.path.includes('lib.') || this.codePath.path.includes('typescript/lib');
+    if (CodePath.isHasPath(this.codePath)) {
+      const pathStr = this.codePath.codePath.asString;
+      return pathStr.includes('lib.') || pathStr.includes('typescript/lib');
+    }
+    return false;
   }
 
   /**
@@ -54,7 +59,7 @@ export class TsParsedFile {
     const mockComments = Comments.empty();
     const mockDirectives = IArray.Empty as IArray<Directive>;
     const mockMembers = IArray.Empty as IArray<TsContainerOrDecl>;
-    const mockCodePath = codePath || CodePath.from("mock-file.d.ts");
+    const mockCodePath = codePath || CodePath.hasPath(TsIdent.simple("mock"), TsQIdent.ofStrings("mock-file.d.ts"));
 
     return new TsParsedFile(
       mockComments,
