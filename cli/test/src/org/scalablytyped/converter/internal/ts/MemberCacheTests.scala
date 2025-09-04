@@ -407,5 +407,211 @@ object MemberCacheTests extends TestSuite {
         assert(cache.unnamed.isEmpty) // all are named declarations
       }
     }
+
+    test("HasClassMembers - Basic Functionality") {
+      test("empty members collection") {
+        val hasClassMembers = TestHasClassMembers(IArray.Empty)
+
+        assert(hasClassMembers.membersByName.isEmpty)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("single named member") {
+        val memberFunction = createMockMemberFunction("testMethod")
+        val hasClassMembers = TestHasClassMembers(IArray(memberFunction))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(memberFunction.name))
+        assert(hasClassMembers.membersByName(memberFunction.name).head == memberFunction)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("single unnamed member - call signature") {
+        val memberCall = createMockMemberCall()
+        val hasClassMembers = TestHasClassMembers(IArray(memberCall))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(TsIdent.Apply))
+        assert(hasClassMembers.membersByName(TsIdent.Apply).head == memberCall)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("single unnamed member - constructor") {
+        val memberCtor = createMockMemberCtor()
+        val hasClassMembers = TestHasClassMembers(IArray(memberCtor))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(TsIdent.constructor))
+        assert(hasClassMembers.membersByName(TsIdent.constructor).head == memberCtor)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("mixed member types") {
+        val memberFunction = createMockMemberFunction("testMethod")
+        val memberProperty = createMockMemberProperty("testProp")
+        val memberCall = createMockMemberCall()
+        val memberCtor = createMockMemberCtor()
+
+        val hasClassMembers = TestHasClassMembers(IArray(memberFunction, memberProperty, memberCall, memberCtor))
+
+        assert(hasClassMembers.membersByName.size == 4)
+        assert(hasClassMembers.membersByName.contains(memberFunction.name))
+        assert(hasClassMembers.membersByName.contains(memberProperty.name))
+        assert(hasClassMembers.membersByName.contains(TsIdent.Apply))
+        assert(hasClassMembers.membersByName.contains(TsIdent.constructor))
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("multiple members with same name") {
+        val memberFunction1 = createMockMemberFunction("sameName")
+        val memberFunction2 = createMockMemberFunction("sameName")
+        val hasClassMembers = TestHasClassMembers(IArray(memberFunction1, memberFunction2))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(memberFunction1.name))
+        assert(hasClassMembers.membersByName(memberFunction1.name).length == 2)
+        assert(hasClassMembers.membersByName(memberFunction1.name).contains(memberFunction1))
+        assert(hasClassMembers.membersByName(memberFunction1.name).contains(memberFunction2))
+      }
+
+      test("multiple call signatures") {
+        val memberCall1 = createMockMemberCall()
+        val memberCall2 = createMockMemberCall()
+        val hasClassMembers = TestHasClassMembers(IArray(memberCall1, memberCall2))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(TsIdent.Apply))
+        assert(hasClassMembers.membersByName(TsIdent.Apply).length == 2)
+        assert(hasClassMembers.membersByName(TsIdent.Apply).contains(memberCall1))
+        assert(hasClassMembers.membersByName(TsIdent.Apply).contains(memberCall2))
+      }
+
+      test("multiple constructors") {
+        val memberCtor1 = createMockMemberCtor()
+        val memberCtor2 = createMockMemberCtor()
+        val hasClassMembers = TestHasClassMembers(IArray(memberCtor1, memberCtor2))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(TsIdent.constructor))
+        assert(hasClassMembers.membersByName(TsIdent.constructor).length == 2)
+        assert(hasClassMembers.membersByName(TsIdent.constructor).contains(memberCtor1))
+        assert(hasClassMembers.membersByName(TsIdent.constructor).contains(memberCtor2))
+      }
+    }
+
+    test("MemberCache - Edge Cases and Error Conditions") {
+      test("large number of members") {
+        val members = (1 to 100).map(i => createMockClass(s"Class$i")).toArray
+        val cache = TestMemberCache(IArray.fromArray(members))
+
+        assert(cache.nameds.length == 100)
+        assert(cache.membersByName.size == 100)
+        assert(cache.exports.isEmpty)
+        assert(cache.imports.isEmpty)
+        assert(cache.unnamed.isEmpty)
+        assert(!cache.isModule)
+      }
+
+      test("mixed large collection") {
+        val classes = (1 to 50).map(i => createMockClass(s"Class$i"))
+        val exports = (1 to 25).map(i => createMockExport(s"Export$i"))
+        val imports = (1 to 25).map(i => createMockImport(s"module$i"))
+        val allMembers = classes ++ exports ++ imports
+
+        val cache = TestMemberCache(IArray.fromArray(allMembers.toArray))
+
+        assert(cache.nameds.length == 50)
+        assert(cache.exports.length == 25)
+        assert(cache.imports.length == 25)
+        assert(cache.unnamed.isEmpty)
+        assert(cache.isModule) // has exports and imports
+        assert(cache.membersByName.size == 50)
+      }
+
+      test("duplicate names across different member types") {
+        val mockClass = createMockClass("DuplicateName")
+        val mockInterface = createMockInterface("DuplicateName")
+        val mockVar = createMockVar("DuplicateName")
+        val cache = TestMemberCache(IArray(mockClass, mockInterface, mockVar))
+
+        assert(cache.nameds.length == 3)
+        assert(cache.membersByName.size == 1)
+        assert(cache.membersByName.contains(mockClass.name))
+        assert(cache.membersByName(mockClass.name).length == 3)
+        assert(cache.membersByName(mockClass.name).contains(mockClass))
+        assert(cache.membersByName(mockClass.name).contains(mockInterface))
+        assert(cache.membersByName(mockClass.name).contains(mockVar))
+      }
+
+      test("only local imports - not a module") {
+        val localImport1 = createMockImport("local1", isLocal = true)
+        val localImport2 = createMockImport("local2", isLocal = true)
+        val localImport3 = createMockImport("local3", isLocal = true)
+        val cache = TestMemberCache(IArray(localImport1, localImport2, localImport3))
+
+        assert(cache.imports.length == 3)
+        assert(!cache.isModule) // only local imports don't make it a module
+        assert(cache.nameds.isEmpty)
+        assert(cache.exports.isEmpty)
+        assert(cache.unnamed.isEmpty)
+      }
+
+      test("complex module scenario with augmented modules") {
+        val regularModule = createMockModule("RegularModule")
+        val augmentedModule1 = createMockAugmentedModule("AugmentedModule1")
+        val augmentedModule2 = createMockAugmentedModule("AugmentedModule2")
+        val augmentedModule3 = createMockAugmentedModule("AugmentedModule1") // same name as first
+
+        val cache = TestMemberCache(IArray(regularModule, augmentedModule1, augmentedModule2, augmentedModule3))
+
+        assert(cache.modules.size == 1)
+        assert(cache.modules.contains(regularModule.name))
+        assert(cache.augmentedModules.length == 3)
+        assert(cache.augmentedModulesMap.size == 2) // two unique names
+        assert(cache.augmentedModulesMap.contains(augmentedModule1.name))
+        assert(cache.augmentedModulesMap.contains(augmentedModule2.name))
+        assert(cache.augmentedModulesMap(augmentedModule1.name).length == 2) // two with same name
+        assert(cache.augmentedModulesMap(augmentedModule2.name).length == 1)
+      }
+    }
+
+    test("HasClassMembers - Edge Cases and Error Conditions") {
+      test("large number of class members") {
+        val members = (1 to 100).map(i => createMockMemberFunction(s"method$i")).toArray
+        val hasClassMembers = TestHasClassMembers(IArray.fromArray(members))
+
+        assert(hasClassMembers.membersByName.size == 100)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("mixed member types with duplicates") {
+        val function1 = createMockMemberFunction("sameName")
+        val function2 = createMockMemberFunction("sameName")
+        val property1 = createMockMemberProperty("sameName")
+        val property2 = createMockMemberProperty("sameName")
+
+        val hasClassMembers = TestHasClassMembers(IArray(function1, function2, property1, property2))
+
+        assert(hasClassMembers.membersByName.size == 1)
+        assert(hasClassMembers.membersByName.contains(function1.name))
+        assert(hasClassMembers.membersByName(function1.name).length == 4)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+
+      test("many call signatures and constructors") {
+        val calls = (1 to 10).map(_ => createMockMemberCall())
+        val ctors = (1 to 5).map(_ => createMockMemberCtor())
+        val allMembers = calls ++ ctors
+
+        val hasClassMembers = TestHasClassMembers(IArray.fromArray(allMembers.toArray))
+
+        assert(hasClassMembers.membersByName.size == 2)
+        assert(hasClassMembers.membersByName.contains(TsIdent.Apply))
+        assert(hasClassMembers.membersByName.contains(TsIdent.constructor))
+        assert(hasClassMembers.membersByName(TsIdent.Apply).length == 10)
+        assert(hasClassMembers.membersByName(TsIdent.constructor).length == 5)
+        assert(hasClassMembers.unnamed.isEmpty)
+      }
+    }
   }
 }
