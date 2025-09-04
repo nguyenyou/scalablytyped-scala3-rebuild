@@ -446,7 +446,10 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
         const parsedFile = TsParsedFile.create(comments, directives, members, codePath);
         const newMembers = IArray.fromArray<TsContainerOrDecl>([]);
-        const newParsedFile = parsedFile.withMembers(newMembers);
+        it('should ', () => {
+          
+        });
+        const newParsedFile = parsedFile.withMembers(newMembers) as TsParsedFile;
 
         expect(newParsedFile._tag).toBe('TsParsedFile');
         expect(newParsedFile.members).toBe(newMembers);
@@ -463,7 +466,7 @@ describe('trees - Phase 2: Core Declaration Traits', () => {
 
         const parsedFile = TsParsedFile.create(comments, directives, members, codePath);
         const newCodePath = CodePath.hasPath(TsIdent.simple('test'), TsQIdent.empty());
-        const newParsedFile = parsedFile.withCodePath(newCodePath);
+        const newParsedFile = parsedFile.withCodePath(newCodePath) as TsParsedFile;
 
         expect(newParsedFile._tag).toBe('TsParsedFile');
         expect(newParsedFile.codePath).toBe(newCodePath);
