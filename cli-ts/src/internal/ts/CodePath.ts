@@ -4,7 +4,7 @@
  * Represents path information for TypeScript files
  */
 
-import { TsIdent, TsQIdent, TsTree } from './trees.js';
+import { TsIdent, TsQIdent, TsTree, TsNamedDecl, TsGlobal, TsIdentGlobal } from './trees.js';
 import { Option, some, none } from 'fp-ts/Option';
 
 /**
@@ -12,6 +12,7 @@ import { Option, some, none } from 'fp-ts/Option';
  */
 export interface CodePath {
   readonly _tag: 'NoPath' | 'HasPath';
+  readonly asString: string;
 
   /**
    * Adds an identifier to the path
@@ -39,6 +40,7 @@ export interface CodePath {
  */
 export interface CodePathNoPath extends CodePath {
   readonly _tag: 'NoPath';
+  readonly asString: string;
 }
 
 /**
@@ -49,9 +51,10 @@ export interface CodePathHasPath extends CodePath {
   readonly inLibrary: TsIdent;
   readonly codePathPart: TsQIdent;
   readonly codePath: TsQIdent;
+  readonly asString: string;
 
   /**
-   * Navigates into a tree node
+   * Navigates into a tree node (equivalent to Scala's / operator)
    */
   navigate(tree: TsTree): CodePathHasPath;
 }
@@ -70,13 +73,15 @@ export const CodePath = {
     forceHasPath: () => {
       throw new Error('Expected code path');
     },
-    replaceLast: () => CodePath.noPath()
+    replaceLast: () => CodePath.noPath(),
+    asString: 'CodePath.NoPath'
   }),
 
   /**
    * Creates a has-path instance
    */
   hasPath: (inLibrary: TsIdent, codePathPart: TsQIdent): CodePathHasPath => {
+    // Lazy computation of codePath - prepend inLibrary to codePathPart
     const codePath = TsQIdent.of(inLibrary, ...codePathPart.parts.toArray());
 
     return {
@@ -85,21 +90,30 @@ export const CodePath = {
       codePathPart,
       codePath,
       add: (ident: TsIdent) => CodePath.hasPath(inLibrary, TsQIdent.append(codePathPart, ident)),
-      get: () => some(CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath),
-      forceHasPath: () => CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath,
+      get: () => some(CodePath.hasPath(inLibrary, codePathPart)),
+      forceHasPath: () => CodePath.hasPath(inLibrary, codePathPart),
       replaceLast: (newLast: TsIdent) => {
         const parts = codePathPart.parts.toArray();
         if (parts.length === 0) {
-          return CodePath.noPath();
+          return CodePath.hasPath(inLibrary, TsQIdent.of(newLast));
         }
         const newParts = parts.slice(0, -1).concat([newLast]);
         return CodePath.hasPath(inLibrary, TsQIdent.of(...newParts));
       },
       navigate: (tree: TsTree) => {
-        // This is a simplified version - full implementation would need
-        // access to all tree types which we'll implement in later phases
-        return CodePath.hasPath(inLibrary, codePathPart) as CodePathHasPath;
-      }
+        // Pattern matching equivalent for TypeScript
+        if (isNamedDecl(tree)) {
+          // For TsNamedDecl, add the name to the path
+          return CodePath.hasPath(inLibrary, TsQIdent.append(codePathPart, tree.name));
+        } else if (isGlobal(tree)) {
+          // For TsGlobal, add the Global identifier
+          return CodePath.hasPath(inLibrary, TsQIdent.append(codePathPart, TsIdentGlobal));
+        } else {
+          // For other tree types, return unchanged
+          return CodePath.hasPath(inLibrary, codePathPart);
+        }
+      },
+      asString: `CodePath.HasPath(${inLibrary.value}, ${codePathPart.asString})`
     };
   },
 
@@ -110,8 +124,17 @@ export const CodePath = {
   isHasPath: (path: CodePath): path is CodePathHasPath => path._tag === 'HasPath'
 };
 
+// Type guards for tree navigation
+function isNamedDecl(tree: TsTree): tree is TsNamedDecl {
+  return 'name' in tree && typeof (tree as any).name === 'object';
+}
+
+function isGlobal(tree: TsTree): tree is TsGlobal {
+  return tree._tag === 'TsGlobal';
+}
+
 /**
- * Trait for objects that have a code path
+ * Trait for objects that have a code path (equivalent to Scala's CodePath.Has)
  */
 export interface HasCodePath {
   readonly codePath: CodePath;
