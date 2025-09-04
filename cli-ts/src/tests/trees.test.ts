@@ -2169,7 +2169,7 @@ describe('trees - Phase 8: Import/Export System', () => {
       });
 
       it('should create a simple destructured import', () => {
-        const idents = IArray.fromArray([
+        const idents = IArray.fromArray<TsIdent>([
           TsIdent.simple('useState'),
           TsIdent.simple('useEffect')
         ]);
@@ -2182,7 +2182,7 @@ describe('trees - Phase 8: Import/Export System', () => {
       });
 
       it('should identify destructured imports', () => {
-        const idents = IArray.fromArray([TsIdent.simple('test')]);
+        const idents = IArray.fromArray<TsIdent>([TsIdent.simple('test')]);
         const imported = TsImportedDestructured.simple(idents);
         expect(TsImportedDestructured.isImportedDestructured(imported)).toBe(true);
 
@@ -2282,7 +2282,7 @@ describe('trees - Phase 8: Import/Export System', () => {
   describe('TsImport', () => {
     describe('construction', () => {
       it('should create a named import', () => {
-        const names = IArray.fromArray([
+        const names = IArray.fromArray<TsIdent>([
           TsIdent.simple('useState'),
           TsIdent.simple('useEffect')
         ]);
@@ -2318,7 +2318,7 @@ describe('trees - Phase 8: Import/Export System', () => {
       });
 
       it('should create a type-only import', () => {
-        const names = IArray.fromArray([TsIdent.simple('Props')]);
+        const names = IArray.fromArray<TsIdent>([TsIdent.simple('Props')]);
         const module = TsIdentModule.simple('./types');
         const importDecl = TsImport.typeOnly(names, module);
 
@@ -2330,7 +2330,7 @@ describe('trees - Phase 8: Import/Export System', () => {
 
     describe('type guards', () => {
       it('should identify imports', () => {
-        const names = IArray.fromArray([TsIdent.simple('test')]);
+        const names = IArray.fromArray<TsIdent>([TsIdent.simple('test')]);
         const module = TsIdentModule.simple('test-module');
         const importDecl = TsImport.named(names, module);
         expect(TsImport.isImport(importDecl)).toBe(true);
@@ -2612,7 +2612,7 @@ describe('trees - Phase 9: Expression System', () => {
         const func = TsExprRef.simple('myFunction');
         const arg1 = TsExprLiteral.string('arg1');
         const arg2 = TsExprLiteral.number('42');
-        const params = IArray.fromArray([arg1, arg2]);
+        const params = IArray.fromArray<TsExpr>([arg1, arg2]);
         const call = TsExprCall.create(func, params);
 
         expect(call._tag).toBe('TsExprCall');
@@ -2633,7 +2633,7 @@ describe('trees - Phase 9: Expression System', () => {
       it('should create a method call', () => {
         const obj = TsExprRef.simple('myObject');
         const arg = TsExprLiteral.string('test');
-        const params = IArray.fromArray([arg]);
+        const params = IArray.fromArray<TsExpr>([arg]);
         const call = TsExprCall.method(obj, 'doSomething', params);
 
         expect(call._tag).toBe('TsExprCall');
@@ -2844,7 +2844,7 @@ describe('trees - Phase 9: Expression System', () => {
       it('should format function call expressions', () => {
         const func = TsExprRef.simple('myFunc');
         const arg = TsExprLiteral.string('arg');
-        const call = TsExprCall.create(func, IArray.fromArray([arg]));
+        const call = TsExprCall.create(func, IArray.fromArray<TsExpr>([arg]));
         const formatted = TsExpr.format(call);
 
         expect(formatted).toBe('TsQIdent(myFunc)("arg")');
@@ -3200,7 +3200,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
   describe('TsTypeConstructor', () => {
     describe('construction', () => {
       it('should create a concrete constructor type', () => {
-        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const signature = TsTypeFunction.create(TsFunSig.simple(IArray.Empty, some(TsTypeRef.string)));
         const constructor = TsTypeConstructor.concrete(signature);
 
         expect(constructor._tag).toBe('TsTypeConstructor');
@@ -3209,7 +3209,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
       });
 
       it('should create an abstract constructor type', () => {
-        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const signature = TsTypeFunction.create(TsFunSig.simple(IArray.Empty, some(TsTypeRef.string)));
         const constructor = TsTypeConstructor.abstract(signature);
 
         expect(constructor._tag).toBe('TsTypeConstructor');
@@ -3220,7 +3220,7 @@ describe('trees - Phase 11: Advanced Type Features', () => {
 
     describe('type guards', () => {
       it('should identify constructor types', () => {
-        const signature = TsTypeFunction.create(TsFunSig.simple([], TsTypeRef.string));
+        const signature = TsTypeFunction.create(TsFunSig.simple(IArray.Empty, some(TsTypeRef.string)));
         const constructor = TsTypeConstructor.concrete(signature);
         expect(TsTypeConstructor.isTypeConstructor(constructor)).toBe(true);
 
