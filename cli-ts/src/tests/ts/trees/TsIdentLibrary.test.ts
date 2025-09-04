@@ -1,4 +1,4 @@
-import { TsIdentLibrary } from '@/internal/ts/trees';
+import { TsIdentLibrary } from '@/internal/ts/trees.ts';
 import { describe, test, expect } from "bun:test";
 
 describe("TsIdentLibrary", () => {
