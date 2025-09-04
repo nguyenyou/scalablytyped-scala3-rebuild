@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import { some, none } from 'fp-ts/Option';
+import { some, none, isSome } from 'fp-ts/Option';
 import { IArray } from '../internal/IArray.js';
 import { Comments } from '../internal/Comments.js';
 import { Comment, Raw } from '../internal/Comment.js';
@@ -2198,7 +2198,9 @@ describe('trees - Phase 8: Import/Export System', () => {
 
         expect(imported._tag).toBe('TsImportedStar');
         expect(imported.asOpt._tag).toBe('Some');
-        expect(imported.asOpt.value).toBe(alias);
+        if (isSome(imported.asOpt)) {
+          expect(imported.asOpt.value).toBe(alias);
+        }
       });
 
       it('should create a star import without alias', () => {
@@ -2376,7 +2378,9 @@ describe('trees - Phase 8: Import/Export System', () => {
         expect(exportee._tag).toBe('TsExporteeNames');
         expect(exportee.idents.length).toBe(1);
         expect(exportee.fromOpt._tag).toBe('Some');
-        expect(exportee.fromOpt.value).toBe(module);
+        if (isSome(exportee.fromOpt)) {
+          expect(exportee.fromOpt.value).toBe(module);
+        }
       });
 
       it('should identify named exportees', () => {
@@ -2420,7 +2424,9 @@ describe('trees - Phase 8: Import/Export System', () => {
 
         expect(exportee._tag).toBe('TsExporteeStar');
         expect(exportee.as._tag).toBe('Some');
-        expect(exportee.as.value).toBe(alias);
+        if (isSome(exportee.as)) {
+          expect(exportee.as.value).toBe(alias);
+        }
         expect(exportee.from).toBe(module);
       });
 
@@ -2489,7 +2495,9 @@ describe('trees - Phase 8: Import/Export System', () => {
         expect(exportDecl.exported._tag).toBe('TsExporteeStar');
         const starExportee = exportDecl.exported as any;
         expect(starExportee.as._tag).toBe('Some');
-        expect(starExportee.as.value).toBe(alias);
+        if (isSome(starExportee.as)) {
+          expect(starExportee.as.value).toBe(alias);
+        }
       });
 
       it('should create a type-only export', () => {
@@ -2511,7 +2519,9 @@ describe('trees - Phase 8: Import/Export System', () => {
         expect(exportDecl.exported._tag).toBe('TsExporteeNames');
         const namesExportee = exportDecl.exported as any;
         expect(namesExportee.fromOpt._tag).toBe('Some');
-        expect(namesExportee.fromOpt.value).toBe(module);
+        if (isSome(namesExportee.fromOpt)) {
+          expect(namesExportee.fromOpt.value).toBe(module);
+        }
       });
     });
 
@@ -2950,10 +2960,12 @@ describe('trees - Phase 10: Enum Members', () => {
         expect(member.name).toBe(name);
         expect(member.expr._tag).toBe('Some');
 
-        const expr = member.expr.value;
-        expect(TsExpr.isLiteral(expr)).toBe(true);
-        expect(TsLiteral.isNum((expr as any).value)).toBe(true);
-        expect((expr as any).value.value).toBe('1');
+        if (isSome(member.expr)) {
+          const expr = member.expr.value;
+          expect(TsExpr.isLiteral(expr)).toBe(true);
+          expect(TsLiteral.isNum((expr as any).value)).toBe(true);
+          expect((expr as any).value.value).toBe('1');
+        }
       });
 
       it('should create a string enum member', () => {
@@ -2964,10 +2976,12 @@ describe('trees - Phase 10: Enum Members', () => {
         expect(member.name).toBe(name);
         expect(member.expr._tag).toBe('Some');
 
-        const expr = member.expr.value;
-        expect(TsExpr.isLiteral(expr)).toBe(true);
-        expect(TsLiteral.isStr((expr as any).value)).toBe(true);
-        expect((expr as any).value.value).toBe('blue');
+        if (isSome(member.expr)) {
+          const expr = member.expr.value;
+          expect(TsExpr.isLiteral(expr)).toBe(true);
+          expect(TsLiteral.isStr((expr as any).value)).toBe(true);
+          expect((expr as any).value.value).toBe('blue');
+        }
       });
 
       it('should create an enum member with expression', () => {
@@ -2981,7 +2995,9 @@ describe('trees - Phase 10: Enum Members', () => {
         expect(member._tag).toBe('TsEnumMember');
         expect(member.name).toBe(name);
         expect(member.expr._tag).toBe('Some');
-        expect(member.expr.value).toBe(expr);
+        if (isSome(member.expr)) {
+          expect(member.expr.value).toBe(expr);
+        }
       });
 
       it('should create an enum member with comments', () => {
@@ -3035,22 +3051,30 @@ describe('trees - Phase 10: Enum Members', () => {
         // First should be 0
         const first = initialized.apply(0);
         expect(first.expr._tag).toBe('Some');
-        expect(TsExpr.format(first.expr.value)).toBe('0');
+        if (isSome(first.expr)) {
+          expect(TsExpr.format(first.expr.value)).toBe('0');
+        }
 
         // Second should be 1
         const second = initialized.apply(1);
         expect(second.expr._tag).toBe('Some');
-        expect(TsExpr.format(second.expr.value)).toBe('1');
+        if (isSome(second.expr)) {
+          expect(TsExpr.format(second.expr.value)).toBe('1');
+        }
 
         // Third should remain 10
         const third = initialized.apply(2);
         expect(third.expr._tag).toBe('Some');
-        expect(TsExpr.format(third.expr.value)).toBe('10');
+        if (isSome(third.expr)) {
+          expect(TsExpr.format(third.expr.value)).toBe('10');
+        }
 
         // Fourth should be 11 (10 + 1)
         const fourth = initialized.apply(3);
         expect(fourth.expr._tag).toBe('Some');
-        expect(TsExpr.format(fourth.expr.value)).toBe('11');
+        if (isSome(fourth.expr)) {
+          expect(TsExpr.format(fourth.expr.value)).toBe('11');
+        }
       });
 
       it('should get effective value of enum members', () => {
