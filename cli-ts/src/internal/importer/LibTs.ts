@@ -7,8 +7,7 @@
 import { Option } from 'fp-ts/Option';
 import { SortedMap } from '../collections';
 import { LibraryVersion } from '../LibraryVersion';
-import { TsIdentLibrary } from '../ts/trees';
-import { TsParsedFile } from '../ts/TsParsedFile';
+import { TsIdentLibrary, TsParsedFile } from '../ts/trees';
 import { LibTsSource } from './LibTsSource';
 import { Digest } from '../Digest';
 
