@@ -3637,7 +3637,7 @@ export const TsTypeUnion = {
     return {
       _tag: 'TsTypeUnion',
       types,
-      asString: `TsTypeUnion(${types.length} types)`
+      asString: `TsTypeUnion(${types.toArray().map(t => t.asString).join(' | ')})`
     };
   },
 
