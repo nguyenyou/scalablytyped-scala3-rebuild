@@ -152,7 +152,7 @@ export const MemberCache = {
 
     // Group named declarations by name (using string keys for proper grouping)
     const membersByNameMap = new Map<string, IArray<TsNamedDecl>>();
-    for (const named of nameds.array) {
+    for (const named of nameds) {
       // Check if the named declaration has a name property
       if (!named || !('name' in named) || !named.name) {
         continue;
@@ -192,7 +192,7 @@ export const MemberCache = {
 
     // Group augmented modules by name (using string keys for proper grouping)
     const augmentedModulesStringMap = new Map<string, IArray<TsAugmentedModule>>();
-    for (const aug of augmentedModules.array) {
+    for (const aug of augmentedModules) {
       // Check if the augmented module has a name property
       if (!aug || !('name' in aug) || !aug.name) {
         continue;
@@ -252,7 +252,7 @@ export const HasClassMembers = {
     const membersByNameStringMap = new Map<string, IArray<TsMember>>();
     const keyToIdent = new Map<string, TsIdentSimple>();
 
-    for (const member of named.array) {
+    for (const member of named) {
       let keyString: string;
       let ident: TsIdentSimple;
 
