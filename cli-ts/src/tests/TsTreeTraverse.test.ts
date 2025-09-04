@@ -181,7 +181,7 @@ describe("TsTreeTraverse Tests", () => {
       const class1 = createMockClass("Class1");
       const class2 = createMockClass("Class2");
       const interface1 = createMockInterface("Interface1");
-      const trees = IArray.apply(class1, class2, interface1);
+      const trees = IArray.fromArray([class1 as TsTree, class2 as TsTree, interface1 as TsTree]);
 
       const result = TsTreeTraverse.collectIArray(trees, (tree: TsTree) => {
         if (tree._tag === 'TsDeclClass' || tree._tag === 'TsDeclInterface') {
@@ -199,7 +199,7 @@ describe("TsTreeTraverse Tests", () => {
     test("collect extracts all matching nodes", () => {
       const memberProp = createMemberProperty("prop1");
       const memberFunc = createMemberFunction("func1");
-      const members = IArray.apply(memberProp, memberFunc);
+      const members = IArray.fromArray([memberProp as TsMember, memberFunc as TsMember]);
       const mockClass = createMockClass("TestClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -223,7 +223,7 @@ describe("TsTreeTraverse Tests", () => {
     test("traverse class with members", () => {
       const memberProp = createMemberProperty("property");
       const memberFunc = createMemberFunction("method");
-      const members = IArray.apply(memberProp, memberFunc);
+      const members = IArray.fromArray([memberProp as TsMember, memberFunc as TsMember]);
       const mockClass = createMockClass("TestClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -243,7 +243,7 @@ describe("TsTreeTraverse Tests", () => {
     test("traverse interface with members", () => {
       const memberProp = createMemberProperty("interfaceProp");
       const memberFunc = createMemberFunction("interfaceMethod");
-      const members = IArray.apply(memberProp, memberFunc);
+      const members = IArray.fromArray([memberProp as TsMember, memberFunc as TsMember]);
       const mockInterface = createMockInterface("TestInterface", members);
 
       const result = TsTreeTraverse.collect(mockInterface, (tree: TsTree) => {
@@ -262,7 +262,7 @@ describe("TsTreeTraverse Tests", () => {
       const nestedClass = createMockClass("NestedClass");
       const nestedInterface = createMockInterface("NestedInterface");
       const nestedVar = createMockVar("nestedVar");
-      const members = IArray.apply(nestedClass, nestedInterface, nestedVar);
+      const members = IArray.fromArray([nestedClass as TsContainerOrDecl, nestedInterface as TsContainerOrDecl, nestedVar as TsContainerOrDecl]);
       const mockModule = createMockModule("TestModule", members);
 
       const result = TsTreeTraverse.collect(mockModule, (tree: TsTree) => {
@@ -289,7 +289,7 @@ describe("TsTreeTraverse Tests", () => {
       const numberType = createTypeRef("number");
       const memberProp = createMemberProperty("prop", stringType);
       const memberFunc = createMemberFunction("func");
-      const members = IArray.apply(memberProp, memberFunc);
+      const members = IArray.fromArray([memberProp as TsMember, memberFunc as TsMember]);
       const mockClass = createMockClass("TestClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -309,7 +309,7 @@ describe("TsTreeTraverse Tests", () => {
       const class1 = createMockClass("FileClass");
       const interface1 = createMockInterface("FileInterface");
       const module1 = createMockModule("FileModule");
-      const members = IArray.apply(class1, interface1, module1);
+      const members = IArray.fromArray([class1 as TsContainerOrDecl, interface1 as TsContainerOrDecl, module1 as TsContainerOrDecl]);
       const parsedFile = createParsedFile(members);
 
       const result = TsTreeTraverse.collect(parsedFile, (tree: TsTree) => {
@@ -327,9 +327,9 @@ describe("TsTreeTraverse Tests", () => {
 
     test("nested modules with deep hierarchy", () => {
       const innerVar = createMockVar("innerVar");
-      const innerModule = createMockModule("InnerModule", IArray.apply(innerVar));
-      const middleModule = createMockModule("MiddleModule", IArray.apply(innerModule));
-      const outerModule = createMockModule("OuterModule", IArray.apply(middleModule));
+      const innerModule = createMockModule("InnerModule", IArray.fromArray([innerVar as TsContainerOrDecl]));
+      const middleModule = createMockModule("MiddleModule", IArray.fromArray([innerModule as TsContainerOrDecl]));
+      const outerModule = createMockModule("OuterModule", IArray.fromArray([middleModule as TsContainerOrDecl]));
 
       const result = TsTreeTraverse.collect(outerModule, (tree: TsTree) => {
         if (tree._tag === 'TsDeclVar') {
@@ -347,7 +347,7 @@ describe("TsTreeTraverse Tests", () => {
       const prop2 = createMemberProperty("prop2", TsTypeRef.number);
       const method1 = createMemberFunction("method1");
       const method2 = createMemberFunction("method2");
-      const members = IArray.apply(prop1, prop2, method1, method2);
+      const members = IArray.fromArray([prop1 as TsMember, prop2 as TsMember, method1 as TsMember, method2 as TsMember]);
       const mockClass = createMockClass("ComplexClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -430,7 +430,7 @@ describe("TsTreeTraverse Tests", () => {
       const memberProp1 = createMemberProperty("publicProp");
       const memberProp2 = createMemberProperty("privateProp");
       const memberFunc = createMemberFunction("testMethod");
-      const members = IArray.apply(memberProp1, memberProp2, memberFunc);
+      const members = IArray.fromArray([memberProp1 as TsMember, memberProp2 as TsMember, memberFunc as TsMember]);
       const mockClass = createMockClass("TestClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -450,7 +450,7 @@ describe("TsTreeTraverse Tests", () => {
     test("extract nested identifiers", () => {
       const typeRef = createTypeRef("MyType");
       const memberProp = createMemberProperty("prop", typeRef);
-      const mockClass = createMockClass("TestClass", IArray.apply(memberProp));
+      const mockClass = createMockClass("TestClass", IArray.fromArray([memberProp as TsMember]));
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
         if (tree._tag === 'TsIdentSimple') {
@@ -470,7 +470,7 @@ describe("TsTreeTraverse Tests", () => {
       const class1 = createMockClass("TestClass");
       const interface1 = createMockInterface("TestInterface");
       const var1 = createMockVar("testVar");
-      const module1 = createMockModule("TestModule", IArray.apply(class1, interface1, var1));
+      const module1 = createMockModule("TestModule", IArray.fromArray([class1 as TsContainerOrDecl, interface1 as TsContainerOrDecl, var1 as TsContainerOrDecl]));
 
       const result = TsTreeTraverse.collect(module1, (tree: TsTree) => {
         if ((tree._tag === 'TsDeclClass' || tree._tag === 'TsDeclInterface' ||
@@ -493,7 +493,7 @@ describe("TsTreeTraverse Tests", () => {
       const numberType = createTypeRef("number");
       const prop1 = createMemberProperty("stringProp", stringType);
       const prop2 = createMemberProperty("numberProp", numberType);
-      const members = IArray.apply(prop1, prop2);
+      const members = IArray.fromArray([prop1 as TsMember, prop2 as TsMember]);
       const mockClass = createMockClass("ComplexClass", members);
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -519,7 +519,7 @@ describe("TsTreeTraverse Tests", () => {
       const members = Array.from({ length: 50 }, (_, i) =>
         createMemberProperty(`prop${i + 1}`)
       );
-      const mockClass = createMockClass("LargeClass", IArray.fromArray(members));
+      const mockClass = createMockClass("LargeClass", IArray.fromArray(members.map(m => m as TsMember)));
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
         if (tree._tag === 'TsMemberProperty') {
@@ -535,9 +535,9 @@ describe("TsTreeTraverse Tests", () => {
     test("deeply nested structure traversal", () => {
       // Create nested modules
       const innerVar = createMockVar("innerVar");
-      const innerModule = createMockModule("InnerModule", IArray.apply(innerVar));
-      const middleModule = createMockModule("MiddleModule", IArray.apply(innerModule));
-      const outerModule = createMockModule("OuterModule", IArray.apply(middleModule));
+      const innerModule = createMockModule("InnerModule", IArray.fromArray([innerVar as TsContainerOrDecl]));
+      const middleModule = createMockModule("MiddleModule", IArray.fromArray([innerModule as TsContainerOrDecl]));
+      const outerModule = createMockModule("OuterModule", IArray.fromArray([middleModule as TsContainerOrDecl]));
 
       const result = TsTreeTraverse.collect(outerModule, (tree: TsTree) => {
         if (tree._tag === 'TsDeclVar') {
@@ -554,7 +554,7 @@ describe("TsTreeTraverse Tests", () => {
       const members = Array.from({ length: 20 }, (_, i) =>
         createMemberProperty(`prop${i + 1}`)
       );
-      const mockClass = createMockClass("TestClass", IArray.fromArray(members));
+      const mockClass = createMockClass("TestClass", IArray.fromArray(members.map(m => m as TsMember)));
 
       const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
         return "node"; // Match everything
@@ -572,10 +572,10 @@ describe("TsTreeTraverse Tests", () => {
 
   describe("TsTreeTraverse - Integration with collectIArray", () => {
     test("collect from multiple complex trees", () => {
-      const class1 = createMockClass("Class1", IArray.apply(createMemberProperty("prop1")));
-      const class2 = createMockClass("Class2", IArray.apply(createMemberProperty("prop2")));
-      const interface1 = createMockInterface("Interface1", IArray.apply(createMemberFunction("method1")));
-      const trees = IArray.apply(class1, class2, interface1);
+      const class1 = createMockClass("Class1", IArray.fromArray([createMemberProperty("prop1") as TsMember]));
+      const class2 = createMockClass("Class2", IArray.fromArray([createMemberProperty("prop2") as TsMember]));
+      const interface1 = createMockInterface("Interface1", IArray.fromArray([createMemberFunction("method1") as TsMember]));
+      const trees = IArray.fromArray([class1 as TsTree, class2 as TsTree, interface1 as TsTree]);
 
       const result = TsTreeTraverse.collectIArray(trees, (tree: TsTree) => {
         if (tree._tag === 'TsDeclClass' || tree._tag === 'TsDeclInterface' ||
@@ -596,7 +596,7 @@ describe("TsTreeTraverse Tests", () => {
       const typeRef1 = createTypeRef("string");
       const typeRef2 = createTypeRef("number");
       const class1 = createMockClass("TestClass");
-      const trees = IArray.apply(typeRef1, typeRef2, class1);
+      const trees = IArray.fromArray([typeRef1 as TsTree, typeRef2 as TsTree, class1 as TsTree]);
 
       const typeResults = TsTreeTraverse.collectIArray(trees, (tree: TsTree) => {
         if (tree._tag === 'TsTypeRef') {
@@ -624,7 +624,7 @@ describe("TsTreeTraverse Tests", () => {
       const trees = Array.from({ length: 30 }, (_, i) =>
         createTypeRef(`Type${i + 1}`)
       );
-      const treeArray = IArray.fromArray(trees);
+      const treeArray = IArray.fromArray(trees.map(t => t as TsTree));
 
       const result = TsTreeTraverse.collectIArray(treeArray, (tree: TsTree) => {
         if (tree._tag === 'TsTypeRef') {
@@ -648,10 +648,10 @@ describe("TsTreeTraverse Tests", () => {
     });
 
     test("collectIArray functional equivalence with collect", () => {
-      const mockClass = createMockClass("TestClass", IArray.apply(
-        createMemberProperty("prop1"),
-        createMemberFunction("method1")
-      ));
+      const mockClass = createMockClass("TestClass", IArray.fromArray([
+        createMemberProperty("prop1") as TsMember,
+        createMemberFunction("method1") as TsMember
+      ]));
 
       // Test that collect and collectIArray with single element produce same results
       const collectResult = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
@@ -661,7 +661,7 @@ describe("TsTreeTraverse Tests", () => {
         return undefined;
       });
 
-      const collectIArrayResult = TsTreeTraverse.collectIArray(IArray.apply(mockClass), (tree: TsTree) => {
+      const collectIArrayResult = TsTreeTraverse.collectIArray(IArray.fromArray([mockClass as TsTree]), (tree: TsTree) => {
         if (tree._tag === 'TsIdentSimple') {
           return (tree as TsIdentSimple).value;
         }
