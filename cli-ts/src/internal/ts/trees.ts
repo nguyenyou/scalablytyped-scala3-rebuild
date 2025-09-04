@@ -5013,11 +5013,27 @@ export const TsExpr = {
         const leftType = TsExpr.typeOf(binaryExpr.one);
         const rightType = TsExpr.typeOf(binaryExpr.two);
 
-        // Handle numeric operations
-        if (binaryExpr.op === '+' || binaryExpr.op === '*') {
-          if (TsExpr.isNumericLiteral(leftType) && TsExpr.isNumericLiteral(rightType)) {
-            // Could implement actual arithmetic here
-            return TsTypeRef.number;
+        // Handle numeric operations with actual computation
+        const leftNum = TsExpr.Num.unapplyType(leftType);
+        const rightNum = TsExpr.Num.unapplyType(rightType);
+
+        if (leftNum !== undefined && rightNum !== undefined) {
+          if (binaryExpr.op === '+') {
+            return TsTypeLiteral.create(TsLiteral.num((leftNum + rightNum).toString()));
+          } else if (binaryExpr.op === '*') {
+            return TsTypeLiteral.create(TsLiteral.num((leftNum * rightNum).toString()));
+          }
+        }
+
+        // Handle long operations
+        const leftLong = TsExpr.Num.Long.unapplyType(leftType);
+        const rightLong = TsExpr.Num.Long.unapplyType(rightType);
+
+        if (leftLong !== undefined && rightLong !== undefined) {
+          if (binaryExpr.op === '<<') {
+            return TsTypeLiteral.create(TsLiteral.num((leftLong << rightLong).toString()));
+          } else if (binaryExpr.op === '>>') {
+            return TsTypeLiteral.create(TsLiteral.num((leftLong >> rightLong).toString()));
           }
         }
 
@@ -5051,8 +5067,12 @@ export const TsExpr = {
 
     if (tpe._tag === 'TsTypeRef') {
       const refType = tpe as TsTypeRef;
-      if (refType.name.asString === 'string' || refType.name.asString === 'number') {
-        return tpe;
+      // Check the actual identifier value, not the asString representation
+      if (refType.name.parts.length === 1) {
+        const identValue = refType.name.parts.apply(0).value;
+        if (identValue === 'string' || identValue === 'number') {
+          return tpe;
+        }
       }
     }
 

@@ -346,3 +346,238 @@ describe('TsExpr - Extractor Patterns', () => {
     });
   });
 });
+
+describe('TsExpr - Type Inference', () => {
+  describe('TsExpr.typeOf basic cases', () => {
+    it('should return Default for Ref', () => {
+      const ref = TsExprRef.create(TsQIdent.of(TsIdent.simple('myVar')));
+      const inferredType = TsExpr.typeOf(ref);
+
+      expect(inferredType._tag).toBe('TsTypeUnion');
+      const unionType = inferredType as TsTypeUnion;
+      expect(unionType.types.length).toBe(2);
+    });
+
+    it('should return TsTypeLiteral for Literal', () => {
+      const stringLit = TsExprLiteral.create(TsLiteral.str('hello'));
+      const inferredType = TsExpr.typeOf(stringLit);
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralStr');
+      expect((typeLit.literal as any).value).toBe('hello');
+    });
+
+    it('should return any for Call', () => {
+      const function_ = TsExprRef.create(TsQIdent.of(TsIdent.simple('func')));
+      const call = TsExprCall.create(function_, IArray.Empty);
+      const inferredType = TsExpr.typeOf(call);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('any');
+    });
+
+    it('should return widened type for Unary', () => {
+      const expr = TsExprLiteral.create(TsLiteral.str('hello'));
+      const unary = TsExprUnary.create('!', expr);
+      const inferredType = TsExpr.typeOf(unary);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('string');
+    });
+
+    it('should return target type for Cast', () => {
+      const expr = TsExprLiteral.create(TsLiteral.num('42'));
+      const cast = TsExprCast.create(expr, TsTypeRef.string);
+      const inferredType = TsExpr.typeOf(cast);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('string');
+    });
+
+    it('should return Array type for ArrayOf', () => {
+      const element = TsExprLiteral.create(TsLiteral.str('item'));
+      const arrayOf = TsExprArrayOf.create(element);
+      const inferredType = TsExpr.typeOf(arrayOf);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('Array');
+      expect(typeRef.tparams.length).toBe(1);
+
+      const elementType = typeRef.tparams.apply(0);
+      expect(elementType._tag).toBe('TsTypeLiteral');
+      const elementTypeLit = elementType as TsTypeLiteral;
+      expect(elementTypeLit.literal._tag).toBe('TsLiteralStr');
+      expect((elementTypeLit.literal as any).value).toBe('item');
+    });
+  });
+
+  describe('TsExpr.typeOf binary operations', () => {
+    it('should compute numeric addition', () => {
+      const left = TsExprLiteral.create(TsLiteral.num('1'));
+      const right = TsExprLiteral.create(TsLiteral.num('2'));
+      const binaryOp = TsExprBinaryOp.create(left, '+', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralNum');
+      expect((typeLit.literal as any).value).toBe('3');
+    });
+
+    it('should compute numeric multiplication', () => {
+      const left = TsExprLiteral.create(TsLiteral.num('3'));
+      const right = TsExprLiteral.create(TsLiteral.num('4'));
+      const binaryOp = TsExprBinaryOp.create(left, '*', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralNum');
+      expect((typeLit.literal as any).value).toBe('12');
+    });
+
+    it('should compute long left shift', () => {
+      const left = TsExprLiteral.create(TsLiteral.num('8'));
+      const right = TsExprLiteral.create(TsLiteral.num('2'));
+      const binaryOp = TsExprBinaryOp.create(left, '<<', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralNum');
+      expect((typeLit.literal as any).value).toBe('32');
+    });
+
+    it('should compute long right shift', () => {
+      const left = TsExprLiteral.create(TsLiteral.num('32'));
+      const right = TsExprLiteral.create(TsLiteral.num('2'));
+      const binaryOp = TsExprBinaryOp.create(left, '>>', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralNum');
+      expect((typeLit.literal as any).value).toBe('8');
+    });
+
+    it('should return widened type for non-numeric operation', () => {
+      const left = TsExprLiteral.create(TsLiteral.str('hello'));
+      const right = TsExprLiteral.create(TsLiteral.str('world'));
+      const binaryOp = TsExprBinaryOp.create(left, '+', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('string');
+    });
+
+    it('should return widened type for unsupported operation', () => {
+      const left = TsExprLiteral.create(TsLiteral.num('1'));
+      const right = TsExprLiteral.create(TsLiteral.num('2'));
+      const binaryOp = TsExprBinaryOp.create(left, '-', right);
+      const inferredType = TsExpr.typeOf(binaryOp);
+
+      expect(inferredType._tag).toBe('TsTypeRef');
+      const typeRef = inferredType as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('number');
+    });
+  });
+
+  describe('TsExpr.typeOfOpt', () => {
+    it('should return type for Some expression', () => {
+      const expr = TsExprLiteral.create(TsLiteral.str('hello'));
+      const inferredType = TsExpr.typeOfOpt({ _tag: 'Some', value: expr });
+
+      expect(inferredType._tag).toBe('TsTypeLiteral');
+      const typeLit = inferredType as TsTypeLiteral;
+      expect(typeLit.literal._tag).toBe('TsLiteralStr');
+      expect((typeLit.literal as any).value).toBe('hello');
+    });
+
+    it('should return Default for None', () => {
+      const inferredType = TsExpr.typeOfOpt({ _tag: 'None' });
+
+      expect(inferredType).toEqual(TsExpr.Default);
+    });
+  });
+
+  describe('TsExpr.widen', () => {
+    it('should widen string literal', () => {
+      const stringLitType = TsTypeLiteral.create(TsLiteral.str('hello'));
+      const widened = TsExpr.widen(stringLitType);
+
+      expect(widened._tag).toBe('TsTypeRef');
+      const typeRef = widened as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('string');
+    });
+
+    it('should widen number literal', () => {
+      const numLitType = TsTypeLiteral.create(TsLiteral.num('42'));
+      const widened = TsExpr.widen(numLitType);
+
+      expect(widened._tag).toBe('TsTypeRef');
+      const typeRef = widened as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('number');
+    });
+
+    it('should widen boolean literal', () => {
+      const boolLitType = TsTypeLiteral.create(TsLiteral.bool(true));
+      const widened = TsExpr.widen(boolLitType);
+
+      expect(widened._tag).toBe('TsTypeRef');
+      const typeRef = widened as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('boolean');
+    });
+
+    it('should keep string type ref as string', () => {
+      const widened = TsExpr.widen(TsTypeRef.string);
+
+      expect(widened._tag).toBe('TsTypeRef');
+      const typeRef = widened as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('string');
+    });
+
+    it('should keep number type ref as number', () => {
+      const widened = TsExpr.widen(TsTypeRef.number);
+
+      expect(widened._tag).toBe('TsTypeRef');
+      const typeRef = widened as TsTypeRef;
+      expect(typeRef.name.parts.apply(0).value).toBe('number');
+    });
+
+    it('should return Default for other types', () => {
+      const customType = TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple('CustomType')), IArray.Empty);
+      const widened = TsExpr.widen(customType);
+
+      expect(widened._tag).toBe('TsTypeUnion');
+      const unionType = widened as TsTypeUnion;
+      expect(unionType.types.length).toBe(2);
+    });
+  });
+
+  describe('TsExpr.Default constant', () => {
+    it('should be union of string and number', () => {
+      expect(TsExpr.Default._tag).toBe('TsTypeUnion');
+      const unionType = TsExpr.Default as TsTypeUnion;
+      expect(unionType.types.length).toBe(2);
+
+      const typeArray = unionType.types.toArray();
+      const hasString = typeArray.some(t =>
+        t._tag === 'TsTypeRef' &&
+        (t as TsTypeRef).name.parts.apply(0).value === 'string'
+      );
+      const hasNumber = typeArray.some(t =>
+        t._tag === 'TsTypeRef' &&
+        (t as TsTypeRef).name.parts.apply(0).value === 'number'
+      );
+
+      expect(hasString).toBe(true);
+      expect(hasNumber).toBe(true);
+    });
+  });
+});
