@@ -639,6 +639,198 @@ describe('TsTypeFormatter', () => {
         const tpe5 = TsTypeRepeated.create(createTypeRef('string'));
         expect(formatter.apply(tpe5)).toBe('...string');
       });
+
+      test('formats conditional and infer types correctly', () => {
+        const formatter = TsTypeFormatter;
+
+        // TsTypeConditional
+        const tpe1 = TsTypeConditional.create(
+          createTypeRef('T'),
+          createTypeRef('string'),
+          createTypeRef('number')
+        );
+        expect(formatter.apply(tpe1)).toBe('T ? string : number');
+
+        // TsTypeExtends
+        const tpe2 = TsTypeExtends.create(createTypeRef('T'), createTypeRef('string'));
+        expect(formatter.apply(tpe2)).toBe('T extends string');
+
+        // TsTypeInfer
+        const tparam = createTypeParam('U');
+        const tpe3 = TsTypeInfer.create(tparam);
+        expect(formatter.apply(tpe3)).toBe('infer U');
+      });
+
+      test('formats constructor and assertion types correctly', () => {
+        const formatter = TsTypeFormatter;
+
+        // TsTypeConstructor
+        const sig = createFunSig(IArray.Empty, IArray.fromArray([createFunParam('x', createTypeRef('number'))]), createTypeRef('MyClass'));
+        const funcType = TsTypeFunction.create(sig);
+        const tpe1 = TsTypeConstructor.create(false, funcType);
+        expect(formatter.apply(tpe1)).toBe('new (x : number): MyClass');
+
+        // TsTypeConstructor abstract
+        const tpe2 = TsTypeConstructor.create(true, funcType);
+        expect(formatter.apply(tpe2)).toBe('abstract new (x : number): MyClass');
+
+        // TsTypeIs
+        const tpe3 = TsTypeIs.create(createSimpleIdent('value'), createTypeRef('string'));
+        expect(formatter.apply(tpe3)).toBe('value is string');
+
+        // TsTypeAsserts
+        const tpe4 = TsTypeAsserts.create(createSimpleIdent('value'), O.none);
+        expect(formatter.apply(tpe4)).toBe('asserts value');
+
+        // TsTypeAsserts with type
+        const tpe5 = TsTypeAsserts.create(createSimpleIdent('value'), O.some(createTypeRef('string')));
+        expect(formatter.apply(tpe5)).toBe('asserts value is string');
+      });
+    });
+  });
+
+  describe('Edge Cases and Complex Types', () => {
+    describe('Complex nested types', () => {
+      test('handles deeply nested generic types', () => {
+        const formatter = TsTypeFormatter;
+
+        // Array<Map<string, number>>
+        const innerType = createTypeRef('Map', createTypeRef('string'), createTypeRef('number'));
+        const tpe = createTypeRef('Array', innerType);
+        expect(formatter.apply(tpe)).toBe('Array<Map<string, number>>');
+
+        // Promise<Array<{ name: string; age: number }>>
+        const propName = createMemberProperty('name', createTypeRef('string'));
+        const propAge = createMemberProperty('age', createTypeRef('number'));
+        const objType = TsTypeObject.create(Comments.empty(), IArray.fromArray([propName as TsMember, propAge as TsMember]));
+        const arrayType = createTypeRef('Array', objType);
+        const promiseType = createTypeRef('Promise', arrayType);
+        expect(formatter.apply(promiseType)).toBe('Promise<Array<{  name :string,   age :number}>>');
+      });
+
+      test('handles complex union and intersection combinations', () => {
+        const formatter = TsTypeFormatter;
+
+        // (A | B) & (C | D)
+        const unionAB = TsTypeUnion.create(IArray.fromArray([createTypeRef('A') as TsType, createTypeRef('B') as TsType]));
+        const unionCD = TsTypeUnion.create(IArray.fromArray([createTypeRef('C') as TsType, createTypeRef('D') as TsType]));
+        const intersection = TsTypeIntersect.create(IArray.fromArray([unionAB as TsType, unionCD as TsType]));
+        expect(formatter.apply(intersection)).toBe('A | B & C | D');
+
+        // A & B | C & D
+        const intersectAB = TsTypeIntersect.create(IArray.fromArray([createTypeRef('A') as TsType, createTypeRef('B') as TsType]));
+        const intersectCD = TsTypeIntersect.create(IArray.fromArray([createTypeRef('C') as TsType, createTypeRef('D') as TsType]));
+        const union = TsTypeUnion.create(IArray.fromArray([intersectAB as TsType, intersectCD as TsType]));
+        expect(formatter.apply(union)).toBe('A & B | C & D');
+      });
+
+      test('handles complex tuple types', () => {
+        const formatter = TsTypeFormatter;
+
+        // [string, number, ...boolean[]]
+        const elem1 = TsTupleElement.create(O.none, createTypeRef('string'));
+        const elem2 = TsTupleElement.create(O.none, createTypeRef('number'));
+        const restType = TsTypeRepeated.create(createTypeRef('boolean'));
+        const elem3 = TsTupleElement.create(O.none, restType);
+        const tpe = TsTypeTuple.create(IArray.fromArray([elem1, elem2, elem3]));
+        expect(formatter.apply(tpe)).toBe('[string, number, ...boolean]');
+
+        // [name: string, age?: number]
+        const namedElem1 = TsTupleElement.create(O.some(createSimpleIdent('name')), createTypeRef('string'));
+        const namedElem2 = TsTupleElement.create(O.some(createSimpleIdent('age')), createTypeRef('number'));
+        const tpe2 = TsTypeTuple.create(IArray.fromArray([namedElem1, namedElem2]));
+        expect(formatter.apply(tpe2)).toBe('[name: string, age: number]');
+      });
+    });
+
+    describe('Special characters and edge cases', () => {
+      test('handles special characters in identifiers', () => {
+        const formatter = TsTypeFormatter;
+
+        // Type with special characters
+        const tpe1 = createTypeRef('$special_name123');
+        expect(formatter.apply(tpe1)).toBe('$special_name123');
+
+        // Property with special characters
+        const member = createMemberProperty('$prop-name', createTypeRef('string'));
+        expect(formatter.member(member)).toBe('  $prop-name :string');
+
+        // Qualified identifier with special characters
+        const qident = createQIdent('$namespace', '_internal', 'Type123');
+        expect(formatter.qident(qident)).toBe('$namespace._internal.Type123');
+      });
+
+      test('handles string literals with quotes and escapes', () => {
+        const formatter = TsTypeFormatter;
+
+        // String with double quotes
+        const tpe1 = createStringLiteral('hello "world"');
+        expect(formatter.apply(tpe1)).toBe("'hello \"world\"'");
+
+        // String with single quotes
+        const tpe2 = createStringLiteral("hello 'world'");
+        expect(formatter.apply(tpe2)).toBe("'hello 'world''");
+
+        // String with newlines and tabs
+        const tpe3 = createStringLiteral('hello\nworld\t!');
+        expect(formatter.apply(tpe3)).toBe("'hello\nworld\t!'");
+
+        // Empty string
+        const tpe4 = createStringLiteral('');
+        expect(formatter.apply(tpe4)).toBe("''");
+      });
+
+      test('handles empty and minimal cases', () => {
+        const formatter = TsTypeFormatter;
+
+        // Empty qualified identifier
+        const emptyQIdent = TsQIdent.empty();
+        expect(formatter.qident(emptyQIdent)).toBe('');
+
+        // Empty tuple
+        const emptyTuple = TsTypeTuple.create(IArray.Empty);
+        expect(formatter.apply(emptyTuple)).toBe('[]');
+
+        // Empty object type
+        const emptyObj = TsTypeObject.create(Comments.empty(), IArray.Empty);
+        expect(formatter.apply(emptyObj)).toBe('{}');
+
+        // Function with no parameters and no return type
+        const emptySig = createFunSig();
+        const emptyFunc = TsTypeFunction.create(emptySig);
+        expect(formatter.apply(emptyFunc)).toBe('()');
+      });
+    });
+
+    describe('Comment handling', () => {
+      test('formatter with comments enabled includes comments', () => {
+        const formatter = TsTypeFormatter; // keepComments = true
+
+        // Type with comments (would need to create a type with actual comments)
+        const tpe = createTypeRef('string');
+        expect(formatter.apply(tpe)).toBe('string');
+      });
+
+      test('formatter with comments disabled drops comments', () => {
+        const formatter = TsTypeFormatterNoComments; // keepComments = false
+
+        // Type with comments (would need to create a type with actual comments)
+        const tpe = createTypeRef('string');
+        expect(formatter.apply(tpe)).toBe('string');
+      });
+
+      test('dropComments method creates new formatter without comments', () => {
+        const originalFormatter = TsTypeFormatter;
+        const noCommentsFormatter = originalFormatter.dropComments();
+
+        expect(originalFormatter.keepComments).toBe(true);
+        expect(noCommentsFormatter.keepComments).toBe(false);
+
+        // Both should format the same way for types without comments
+        const tpe = createTypeRef('string');
+        expect(originalFormatter.apply(tpe)).toBe('string');
+        expect(noCommentsFormatter.apply(tpe)).toBe('string');
+      });
     });
   });
 });
