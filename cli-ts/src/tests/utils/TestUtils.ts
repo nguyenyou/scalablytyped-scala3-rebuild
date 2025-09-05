@@ -11,21 +11,42 @@ import {
   TsDeclInterface,
   TsDeclNamespace,
   TsDeclVar,
+  TsDeclModule,
+  TsDeclFunction,
+  TsDeclTypeAlias,
   TsTypeRef,
   TsTypeIntersect,
   TsTypeQuery,
+  TsTypeObject,
   TsMemberProperty,
   TsMemberFunction,
+  TsMemberCall,
+  TsMemberCtor,
   TsIdent,
   TsQIdent,
   TsIdentSimple,
+  TsIdentModule,
+  TsIdentLibrarySimple,
+  TsIdentLibraryScoped,
   TsFunSig,
+  TsTypeParam,
   MethodType,
-  TsProtectionLevel
+  TsProtectionLevel,
+  TsExport,
+  TsExporteeTree,
+  TsImport,
+  TsImportedIdent,
+  TsImporteeLocal,
+  TsImporteeFrom,
+  TsAugmentedModule,
+  TsParsedFile,
+  TsType,
 } from '@/internal/ts/trees.js';
-import { TsTreeScope } from '@/internal/ts/TsTreeScope.js';
+import { ExportType } from '@/internal/ts/ExportType.js';
+import {LoopDetector, TsTreeScope} from '@/internal/ts/TsTreeScope.js';
 import { IArray } from '@/internal/IArray.js';
 import { Comments } from '@/internal/Comments.js';
+import { Raw } from '@/internal/Comment.js';
 import { JsLocation } from '@/internal/ts/JsLocation.js';
 import { CodePath } from '@/internal/ts/CodePath.js';
 import { Logger } from '@/internal/logging/index.js';
@@ -231,7 +252,7 @@ export function createMockNamespace(name: string, members: IArray<any> = IArray.
 
 /**
  * Creates a mock TsDeclVar (variable declaration) with all required properties.
- * 
+ *
  * @param name - The variable name
  * @param tpe - Optional type of the variable
  * @param readOnly - Whether the variable is readonly (defaults to false)
@@ -251,6 +272,105 @@ export function createMockVariable(name: string, tpe?: TsTypeRef, readOnly: bool
     codePath: CodePath.noPath(),
     withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
     withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
+    withName: function(n: any) { return { ...this, name: n }; },
+    withComments: function(cs: any) { return { ...this, comments: cs }; },
+    addComment: function(c: any) { return this; }
+  };
+}
+
+/**
+ * Creates a mock TsDeclModule with all required properties.
+ *
+ * @param name - The module name
+ * @param members - Optional module members
+ * @returns A mock TsDeclModule
+ */
+export function createMockModule(name: string, members: IArray<any> = IArray.Empty): TsDeclModule {
+  return {
+    _tag: 'TsDeclModule',
+    asString: `module ${name}`,
+    comments: Comments.empty(),
+    declared: false,
+    name: TsIdent.module(none, [name]),
+    members,
+    codePath: CodePath.noPath(),
+    jsLocation: JsLocation.zero(),
+    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
+    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
+    membersByName: new Map(),
+    unnamed: IArray.Empty,
+    nameds: IArray.Empty,
+    exports: IArray.Empty,
+    imports: IArray.Empty,
+    isModule: true,
+    withName: function(n: any) {
+      // Convert module to namespace when changing name
+      return createMockNamespace(n.value || n, this.members);
+    },
+    withComments: function(cs: any) { return { ...this, comments: cs }; },
+    addComment: function(c: any) { return this; },
+    withMembers: function(ms: any) { return { ...this, members: ms }; },
+    modules: new Map(),
+    augmentedModules: IArray.Empty,
+    augmentedModulesMap: new Map()
+  };
+}
+
+/**
+ * Creates a mock TsDeclFunction with all required properties.
+ *
+ * @param name - The function name
+ * @param returnType - Optional return type (defaults to void)
+ * @param comments - Optional comments
+ * @returns A mock TsDeclFunction
+ */
+export function createMockFunction(
+  name: string,
+  returnType?: TsType,
+  comments: Comments = Comments.empty()
+): TsDeclFunction {
+  const signature = TsFunSig.create(
+    Comments.empty(),
+    IArray.Empty, // tparams
+    IArray.Empty, // params
+    some(returnType || TsTypeRef.void)
+  );
+
+  return {
+    _tag: 'TsDeclFunction',
+    asString: `function ${name}()`,
+    comments,
+    declared: false,
+    name: TsIdent.simple(name),
+    signature,
+    jsLocation: JsLocation.zero(),
+    codePath: CodePath.noPath(),
+    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
+    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
+    withName: function(n: any) { return { ...this, name: n }; },
+    withComments: function(cs: any) { return { ...this, comments: cs }; },
+    addComment: function(c: any) { return this; }
+  };
+}
+
+/**
+ * Creates a mock TsDeclTypeAlias with all required properties.
+ *
+ * @param name - The type alias name
+ * @param alias - The aliased type
+ * @returns A mock TsDeclTypeAlias
+ */
+export function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
+  return {
+    _tag: 'TsDeclTypeAlias',
+    asString: `type ${name} = ${alias.asString}`,
+    comments: Comments.empty(),
+    declared: false,
+    name: TsIdent.simple(name),
+    tparams: IArray.Empty,
+    alias,
+    codePath: CodePath.noPath(),
+    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
     withName: function(n: any) { return { ...this, name: n }; },
     withComments: function(cs: any) { return { ...this, comments: cs }; },
     addComment: function(c: any) { return this; }
@@ -293,16 +413,18 @@ export function createMockProperty(
 
 /**
  * Creates a mock TsMemberFunction with all required properties.
- * 
+ *
  * @param name - The method name
  * @param returnType - Optional return type (defaults to void)
  * @param isStatic - Whether the method is static (defaults to false)
+ * @param comments - Optional comments
  * @returns A mock TsMemberFunction
  */
 export function createMockMethod(
-  name: string, 
+  name: string,
   returnType?: any,
-  isStatic: boolean = false
+  isStatic: boolean = false,
+  comments: Comments = Comments.empty()
 ): TsMemberFunction {
   const signature = TsFunSig.create(
     Comments.empty(),
@@ -314,13 +436,63 @@ export function createMockMethod(
   return {
     _tag: 'TsMemberFunction',
     asString: `${name}(): ${returnType?.asString || 'void'}`,
-    comments: Comments.empty(),
+    comments,
     level: TsProtectionLevel.default(),
     name: TsIdent.simple(name),
     methodType: MethodType.normal(),
     signature: signature,
     isStatic,
     isReadOnly: false,
+    withComments: function(cs: any) { return { ...this, comments: cs }; },
+    addComment: function(c: any) { return this; }
+  };
+}
+
+/**
+ * Creates a mock TsMemberCall with all required properties.
+ *
+ * @param comments - Optional comments
+ * @returns A mock TsMemberCall
+ */
+export function createMockMemberCall(comments: Comments = Comments.empty()): TsMemberCall {
+  const signature = TsFunSig.create(
+    Comments.empty(),
+    IArray.Empty, // tparams
+    IArray.Empty, // params
+    some(TsTypeRef.any)
+  );
+
+  return {
+    _tag: 'TsMemberCall',
+    asString: `()`,
+    comments,
+    level: TsProtectionLevel.default(),
+    signature,
+    withComments: function(cs: any) { return { ...this, comments: cs }; },
+    addComment: function(c: any) { return this; }
+  };
+}
+
+/**
+ * Creates a mock TsMemberCtor with all required properties.
+ *
+ * @param comments - Optional comments
+ * @returns A mock TsMemberCtor
+ */
+export function createMockMemberCtor(comments: Comments = Comments.empty()): TsMemberCtor {
+  const signature = TsFunSig.create(
+    Comments.empty(),
+    IArray.Empty, // tparams
+    IArray.Empty, // params
+    some(TsTypeRef.any)
+  );
+
+  return {
+    _tag: 'TsMemberCtor',
+    asString: `constructor()`,
+    comments,
+    level: TsProtectionLevel.default(),
+    signature,
     withComments: function(cs: any) { return { ...this, comments: cs }; },
     addComment: function(c: any) { return this; }
   };
@@ -357,7 +529,7 @@ export function createIdent(name: string): TsIdent {
  * @returns An IArray containing the items
  */
 export function createIArray<T>(items: T[]): IArray<T> {
-  return IArray.fromArray(items);
+  return IArray.fromArray<T>(items);
 }
 
 /**
@@ -367,6 +539,223 @@ export function createIArray<T>(items: T[]): IArray<T> {
  */
 export function createEmptyIArray<T>(): IArray<T> {
   return IArray.Empty;
+}
+
+// ============================================================================
+// Library and Identifier Creation Utilities
+// ============================================================================
+
+/**
+ * Creates a simple library identifier.
+ *
+ * @param name - The library name
+ * @returns A TsIdentLibrarySimple
+ */
+export function createSimpleLibrary(name: string): TsIdentLibrarySimple {
+  return TsIdent.librarySimple(name);
+}
+
+/**
+ * Creates a scoped library identifier.
+ *
+ * @param scope - The scope name
+ * @param name - The library name
+ * @returns A TsIdentLibraryScoped
+ */
+export function createScopedLibrary(scope: string, name: string): TsIdentLibraryScoped {
+  return TsIdent.libraryScoped(scope, name);
+}
+
+/**
+ * Creates a simple identifier.
+ *
+ * @param name - The identifier name
+ * @returns A TsIdentSimple
+ */
+export function createSimpleIdent(name: string): TsIdentSimple {
+  return TsIdent.simple(name);
+}
+
+/**
+ * Creates a module identifier.
+ *
+ * @param name - The module name
+ * @returns A TsIdentModule
+ */
+export function createModuleIdent(name: string): TsIdentModule {
+  return TsIdent.module(none, [name]);
+}
+
+/**
+ * Creates a type parameter.
+ *
+ * @param name - The type parameter name
+ * @returns A TsTypeParam
+ */
+export function createTypeParam(name: string): TsTypeParam {
+  return {
+    _tag: 'TsTypeParam',
+    comments: Comments.empty(),
+    name: createSimpleIdent(name),
+    upperBound: none,
+    default: none,
+    withComments: (cs) => createTypeParam(name),
+    addComment: (c) => createTypeParam(name),
+    asString: `TsTypeParam(${name})`
+  };
+}
+
+/**
+ * Creates a mock parsed file.
+ *
+ * @param libName - The library name
+ * @returns A mock TsParsedFile
+ */
+export function createMockParsedFile(libName: string): TsParsedFile {
+  return TsParsedFile.createMock();
+}
+
+/**
+ * Creates a CodePath.
+ *
+ * @param libName - Optional library name (defaults to 'test-lib')
+ * @param pathName - Optional path name (defaults to 'TestPath')
+ * @returns A CodePath
+ */
+export function createCodePath(libName: string = 'test-lib', pathName: string = 'TestPath'): CodePath {
+  return CodePath.hasPath(
+    TsIdent.librarySimple(libName),
+    TsQIdent.of(createSimpleIdent(pathName))
+  );
+}
+
+/**
+ * Creates a JsLocation.
+ *
+ * @returns A JsLocation at zero position
+ */
+export function createJsLocation(): JsLocation {
+  return JsLocation.zero();
+}
+
+/**
+ * Creates comments from raw strings.
+ *
+ * @param raw - The raw comment string
+ * @returns Comments object
+ */
+export function createCommentsWithRaw(raw: string): Comments {
+  return Comments.apply([new Raw(raw)]);
+}
+
+/**
+ * Creates comments from multiple raw strings.
+ *
+ * @param raws - The raw comment strings
+ * @returns Comments object
+ */
+export function createCommentsWithMultiple(...raws: string[]): Comments {
+  return Comments.apply(raws.map(raw => new Raw(raw)));
+}
+
+// ============================================================================
+// Export and Import Creation Utilities
+// ============================================================================
+
+/**
+ * Creates a mock export declaration.
+ *
+ * @param name - The export name
+ * @returns A mock TsExport
+ */
+export function createMockExport(name: string): TsExport {
+  const exportee = TsExporteeTree.create(createMockVariable(name));
+  return TsExport.create(
+    Comments.empty(),
+    false, // typeOnly
+    ExportType.named(),
+    exportee
+  );
+}
+
+/**
+ * Creates a mock import declaration.
+ *
+ * @param moduleName - The module name to import from
+ * @param isLocal - Whether it's a local import (defaults to false)
+ * @returns A mock TsImport
+ */
+export function createMockImport(moduleName: string, isLocal: boolean = false): TsImport {
+  const importee = isLocal
+    ? TsImporteeLocal.create(TsQIdent.ofStrings('localModule'))
+    : TsImporteeFrom.create(createModuleIdent(moduleName));
+
+  const imported = IArray.fromArray([
+    TsImportedIdent.create(createSimpleIdent(moduleName))
+  ] as any[]);
+
+  return TsImport.create(
+    false, // typeOnly
+    imported,
+    importee
+  );
+}
+
+/**
+ * Creates a mock augmented module.
+ *
+ * @param name - The module name
+ * @returns A mock TsAugmentedModule
+ */
+export function createMockAugmentedModule(name: string): TsAugmentedModule {
+  return TsAugmentedModule.create(
+    Comments.empty(),
+    createModuleIdent(name),
+    IArray.Empty, // members
+    CodePath.noPath(),
+    JsLocation.zero()
+  );
+}
+
+// ============================================================================
+// Specialized Mock Functions
+// ============================================================================
+
+/**
+ * Creates a mock function signature.
+ *
+ * @param returnType - Optional return type (defaults to any)
+ * @returns A mock TsFunSig
+ */
+export function createMockFunSig(returnType?: TsType): TsFunSig {
+  return TsFunSig.create(
+    Comments.empty(),
+    IArray.Empty, // tparams
+    IArray.Empty, // params
+    some(returnType || TsTypeRef.any)
+  );
+}
+
+/**
+ * Creates a basic TsLib structure.
+ *
+ * @param name - The library name
+ * @returns A basic library object
+ */
+export function createBasicTsLib(name: TsIdentLibrarySimple | TsIdentLibraryScoped) {
+  return {
+    libName: name,
+    packageJsonOpt: undefined
+  };
+}
+
+/**
+ * Creates a mock logger.
+ *
+ * @returns A mock Logger
+ */
+export function createMockLogger(): Logger<void> {
+  return Logger.DevNull();
 }
 
 // ============================================================================

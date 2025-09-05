@@ -3,62 +3,44 @@
  */
 
 import { describe, it, expect } from 'bun:test';
-import { some, none } from 'fp-ts/Option';
 import { IArray } from '@/internal/IArray.js';
-import { Comments } from '@/internal/Comments.js';
-import { CodePath } from '@/internal/ts/CodePath.js';
-import { JsLocation } from '@/internal/ts/JsLocation.js';
-import { TsProtectionLevel } from '@/internal/ts/TsProtectionLevel.js';
-import { MethodType } from '@/internal/ts/MethodType.js';
-import { ExportType } from '@/internal/ts/ExportType.js';
 import {
   MemberCache,
   HasClassMembers
 } from '@/internal/ts/MemberCache.js';
+import { TsIdent, TsIdentSimple } from '@/internal/ts/trees.js';
+import {
+  createMockClass,
+  createMockInterface,
+  createMockVariable,
+  createMockModule,
+  createMockAugmentedModule,
+  createMockExport,
+  createMockImport,
+  createMockMethod,
+  createMockProperty,
+  createMockMemberCall,
+  createMockMemberCtor,
+  createSimpleIdent,
+  createModuleIdent,
+  createIArray
+} from '@/tests/utils/TestUtils.js';
 
-// Import tree types and constructors
+// Import only the types we need for the test implementations
 import type {
   TsContainerOrDecl,
   TsNamedDecl,
   TsExport,
   TsImport,
-  TsImportee,
-  TsIdent,
-  TsIdentSimple,
   TsIdentModule,
   TsDeclModule,
   TsAugmentedModule,
-  TsMember,
-  TsMemberCall,
-  TsMemberFunction,
-  TsMemberProperty,
-  TsMemberCtor,
-  TsImported
+  TsMember
 } from '../internal/ts/trees.js';
 
 import {
-  TsIdent as TsIdentConstructor,
-  TsIdentModule as TsIdentModuleConstructor,
-  TsDeclClass,
-  TsDeclInterface,
-  TsDeclVar,
-  TsDeclModule as TsDeclModuleConstructor,
-  TsAugmentedModule as TsAugmentedModuleConstructor,
-  TsExport as TsExportConstructor,
-  TsImport as TsImportConstructor,
-  TsImporteeFrom,
-  TsImporteeLocal,
-  TsImportedIdent,
-  TsExporteeTree,
-  TsQIdent,
-  TsFunSig,
-  TsTypeRef,
-  TsMemberFunction as TsMemberFunctionConstructor,
-  TsMemberProperty as TsMemberPropertyConstructor,
-  TsMemberCall as TsMemberCallConstructor,
-  TsMemberCtor as TsMemberCtorConstructor,
-  TsIdentApply,
-  TsIdentConstructor as TsIdentConstructorIdent
+  TsIdentConstructor as TsIdentConstructorIdent,
+  TsIdentApply
 } from '../internal/ts/trees.js';
 
 // Test implementations of the interfaces for testing
@@ -89,162 +71,15 @@ class TestHasClassMembers implements HasClassMembers {
   readonly unnamed!: IArray<TsMember>;
 }
 
-// Helper methods for creating test data
-function createSimpleIdent(name: string): TsIdentSimple {
-  return TsIdentConstructor.simple(name);
-}
 
-function createModuleIdent(name: string): TsIdentModule {
-  return TsIdentModuleConstructor.simple(name);
-}
 
-function createMockClass(name: string): TsDeclClass {
-  return TsDeclClass.create(
-    Comments.empty(),
-    false, // declared
-    false, // isAbstract
-    createSimpleIdent(name),
-    IArray.Empty, // tparams
-    none, // parent
-    IArray.Empty, // implements
-    IArray.Empty, // members
-    JsLocation.zero(),
-    CodePath.noPath()
-  );
-}
+// Alias for backward compatibility with existing test code
+const createMockVar = createMockVariable;
 
-function createMockInterface(name: string): TsDeclInterface {
-  return TsDeclInterface.create(
-    Comments.empty(),
-    false, // declared
-    createSimpleIdent(name),
-    IArray.Empty, // tparams
-    IArray.Empty, // inheritance
-    IArray.Empty, // members
-    CodePath.noPath()
-  );
-}
+const createMockMemberFunction = createMockMethod;
+const createMockMemberProperty = createMockProperty;
 
-function createMockVar(name: string): TsDeclVar {
-  return TsDeclVar.create(
-    Comments.empty(),
-    false, // declared
-    false, // readOnly
-    createSimpleIdent(name),
-    none, // tpe
-    none, // expr
-    JsLocation.zero(),
-    CodePath.noPath()
-  );
-}
 
-function createMockModule(name: string): TsDeclModule {
-  return TsDeclModuleConstructor.create(
-    Comments.empty(),
-    false, // declared
-    createModuleIdent(name),
-    IArray.Empty, // members
-    CodePath.noPath(),
-    JsLocation.zero()
-  );
-}
-
-function createMockAugmentedModule(name: string): TsAugmentedModule {
-  return TsAugmentedModuleConstructor.create(
-    Comments.empty(),
-    createModuleIdent(name),
-    IArray.Empty, // members
-    CodePath.noPath(),
-    JsLocation.zero()
-  );
-}
-
-function createMockExport(name: string): TsExport {
-  const exportee = TsExporteeTree.create(createMockVar(name));
-  return TsExportConstructor.create(
-    Comments.empty(),
-    false, // typeOnly
-    ExportType.named(),
-    exportee
-  );
-}
-
-function createMockImport(moduleName: string, isLocal: boolean = false): TsImport {
-  const importee = isLocal
-    ? TsImporteeLocal.create(TsQIdent.ofStrings('localModule'))
-    : TsImporteeFrom.create(createModuleIdent(moduleName));
-
-  const imported = IArray.fromArray([
-    TsImportedIdent.create(createSimpleIdent('imported'))
-  ] as TsImported[]);
-
-  return TsImportConstructor.create(
-    false, // typeOnly
-    imported,
-    importee
-  );
-}
-
-function createMockMemberFunction(name: string): TsMemberFunction {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(TsTypeRef.any)
-  );
-
-  return TsMemberFunctionConstructor.create(
-    Comments.empty(),
-    TsProtectionLevel.default(),
-    createSimpleIdent(name),
-    MethodType.normal(),
-    signature,
-    false, // isStatic
-    false  // isReadOnly
-  );
-}
-
-function createMockMemberProperty(name: string): TsMemberProperty {
-  return TsMemberPropertyConstructor.create(
-    Comments.empty(),
-    TsProtectionLevel.default(),
-    createSimpleIdent(name),
-    some(TsTypeRef.string),
-    none, // expr
-    false, // isStatic
-    false  // isReadOnly
-  );
-}
-
-function createMockMemberCall(): TsMemberCall {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(TsTypeRef.any)
-  );
-
-  return TsMemberCallConstructor.create(
-    Comments.empty(),
-    TsProtectionLevel.default(),
-    signature
-  );
-}
-
-function createMockMemberCtor(): TsMemberCtor {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(TsTypeRef.any)
-  );
-
-  return TsMemberCtorConstructor.create(
-    Comments.empty(),
-    TsProtectionLevel.default(),
-    signature
-  );
-}
 
 describe('MemberCache Tests', () => {
   describe('MemberCache - Basic Functionality', () => {
