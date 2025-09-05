@@ -6,37 +6,22 @@
 
 import { AbstractTreeTransformation } from './TreeTransformation.js';
 import { TsTree } from './trees.js';
-
-/**
- * Interface representing a tree scope that can be extended with new trees.
- * This is analogous to the Scala TsTreeScope.
- */
-export interface TsTreeScope {
-  /**
-   * Creates a new scope by adding a tree to the current scope.
-   * This is equivalent to the '/' operator in Scala.
-   */
-  withTree(tree: TsTree): TsTreeScope;
-  
-  /**
-   * The stack of trees in this scope, from innermost to outermost.
-   */
-  readonly stack: readonly TsTree[];
-}
+import { TsTreeScope } from './TsTreeScope.js';
 
 /**
  * Tree transformation that maintains scoped changes.
  * This is equivalent to TreeTransformationScopedChanges in Scala.
- * 
+ *
  * The scope is updated by adding each tree to the scope stack as we traverse.
  */
 export abstract class TreeTransformationScopedChanges extends AbstractTreeTransformation<TsTreeScope> {
   /**
    * Adds the current tree to the scope when entering it.
    * This creates a new scope with the tree added to the stack.
+   * This is equivalent to the '/' operator in Scala.
    */
   withTree(scope: TsTreeScope, tree: TsTree): TsTreeScope {
-    return scope.withTree(tree);
+    return scope['/'](tree);
   }
 }
 
@@ -55,25 +40,7 @@ export abstract class TreeTransformationUnit extends AbstractTreeTransformation<
   }
 }
 
-/**
- * A simple implementation of TsTreeScope for testing and basic use cases.
- */
-export class SimpleTsTreeScope implements TsTreeScope {
-  constructor(
-    public readonly stack: readonly TsTree[] = []
-  ) {}
 
-  withTree(tree: TsTree): TsTreeScope {
-    return new SimpleTsTreeScope([tree, ...this.stack]);
-  }
-
-  /**
-   * Creates an empty scope.
-   */
-  static empty(): TsTreeScope {
-    return new SimpleTsTreeScope();
-  }
-}
 
 /**
  * Utility functions for working with tree transformations.

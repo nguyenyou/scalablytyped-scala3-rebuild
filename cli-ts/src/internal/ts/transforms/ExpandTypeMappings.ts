@@ -6,10 +6,10 @@
  */
 
 import { TreeTransformationScopedChanges, TreeTransformationUnit } from '../TreeTransformations.js';
-import { TsTreeScope as SimpleTsTreeScope } from '../TreeTransformations.js';
 import { TsTreeScope, LoopDetector, Picker } from '../TsTreeScope.js';
 import { TsTreeTraverse } from '../TsTreeTraverse.js';
 import {
+  TsTree,
   TsDecl,
   TsType,
   TsTypeRef,
@@ -299,7 +299,7 @@ export class Replace extends TreeTransformationScopedChanges {
     super();
   }
 
-  override enterTsType(scope: SimpleTsTreeScope): (x: TsType) => TsType {
+  override enterTsType(scope: TsTreeScope): (x: TsType) => TsType {
     return (x: TsType) => {
       // Direct key replacement
       if (this.isEqual(x, this.key)) {
@@ -324,7 +324,7 @@ export class Replace extends TreeTransformationScopedChanges {
     return JSON.stringify(a) === JSON.stringify(b);
   }
 
-  private findTypeInMembers(scope: SimpleTsTreeScope, from: TsType): TsType | undefined {
+  private findTypeInMembers(scope: TsTreeScope, from: TsType): TsType | undefined {
     // This would implement the member lookup logic from the Scala version
     // For now, return undefined to indicate not found
     return undefined;
@@ -375,7 +375,7 @@ export const Utils = {
   /**
    * Check if a type points to a concrete type (class or interface)
    */
-  pointsToConcreteType: (scope: SimpleTsTreeScope, alias: TsType): boolean => {
+  pointsToConcreteType: (scope: TsTreeScope, alias: TsType): boolean => {
     if (alias._tag !== 'TsTypeRef') {
       return false;
     }
@@ -809,7 +809,7 @@ function getLiteralValue(literal: TsLiteral): string {
  */
 export class ExpandTypeMappings extends TreeTransformationScopedChanges {
 
-  override enterTsDecl(scope: SimpleTsTreeScope): (x: TsDecl) => TsDecl {
+  override enterTsDecl(scope: TsTreeScope): (x: TsDecl) => TsDecl {
     return (x: TsDecl) => {
       try {
         switch (x._tag) {
@@ -913,7 +913,7 @@ function formatType(tpe: TsType): string {
  */
 export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
 
-  override enterTsType(scope: SimpleTsTreeScope): (x: TsType) => TsType {
+  override enterTsType(scope: TsTreeScope): (x: TsType) => TsType {
     return (x: TsType) => {
       try {
         const nameHint = this.getNameHint(x);
@@ -961,9 +961,9 @@ export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
     return x.asString.replace(/[^a-zA-Z0-9]/g, '');
   }
 
-  private isRepeated(scope: SimpleTsTreeScope, nameHint: string): boolean {
+  private isRepeated(scope: TsTreeScope, nameHint: string): boolean {
     // Check if this name hint appears in the scope stack
-    return scope.stack.some(tree => {
+    return scope.stack.some((tree: TsTree) => {
       if (tree._tag === 'TsTypeObject') {
         const obj = tree as TsTypeObject;
         return obj.comments.cs.some(comment => {
@@ -980,8 +980,8 @@ export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
     return false; // Simplified for now
   }
 
-  private isTooDeep(scope: SimpleTsTreeScope): boolean {
-    const numTypeObjects = scope.stack.filter(tree => tree._tag === 'TsTypeObject').length;
+  private isTooDeep(scope: TsTreeScope): boolean {
+    const numTypeObjects = scope.stack.filter((tree: TsTree) => tree._tag === 'TsTypeObject').length;
     return numTypeObjects > 2;
   }
 }

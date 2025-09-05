@@ -11,12 +11,12 @@ import {
   AbstractTreeTransformation,
   TreeTransformation 
 } from '@/internal/ts/TreeTransformation.js';
-import { 
+import {
   TreeTransformationScopedChanges,
   TreeTransformationUnit,
-  SimpleTsTreeScope,
   TreeTransformations
 } from '@/internal/ts/TreeTransformations.js';
+import { TsTreeScope } from '@/internal/ts/TsTreeScope.js';
 import { 
   TsTree,
   TsDeclClass,
@@ -31,6 +31,7 @@ import { IArray } from '@/internal/IArray.js';
 import { NoComments } from '@/internal/Comments.js';
 import { JsLocation } from '@/internal/ts/JsLocation.js';
 import { CodePath } from '@/internal/ts/CodePath.js';
+import { Logger } from '@/internal/logging/index.js';
 
 // Helper function to create a test TsDeclClass
 function createTestClass(name: string): TsDeclClass {
@@ -129,6 +130,16 @@ function createTestParsedFile(): TsParsedFile {
   return mockParsedFile as unknown as TsParsedFile;
 }
 
+// Helper function to create an empty TsTreeScope for testing
+function createEmptyScope(): TsTreeScope {
+  return TsTreeScope.create(
+    TsIdent.librarySimple("test-lib"),
+    false,
+    new Map(),
+    Logger.DevNull()
+  );
+}
+
 describe('TreeTransformation', () => {
   describe('Basic Functionality', () => {
     describe('withTree method', () => {
@@ -139,7 +150,7 @@ describe('TreeTransformation', () => {
           }
         })();
         
-        const initialScope = SimpleTsTreeScope.empty();
+        const initialScope = createEmptyScope();
         const tree = createTestClass('TestClass');
         
         const newScope = transformation.withTree(initialScope, tree);
@@ -163,7 +174,7 @@ describe('TreeTransformation', () => {
 
     describe('default enter methods return unchanged objects', () => {
       const transformation = new (class extends TreeTransformationScopedChanges {})();
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
 
       test('enterTsTree returns unchanged', () => {
         const tree = TsIdent.simple('test');
@@ -192,7 +203,7 @@ describe('TreeTransformation', () => {
 
     describe('default leave methods return unchanged objects', () => {
       const transformation = new (class extends TreeTransformationScopedChanges {})();
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
 
       test('leaveTsParsedFile returns unchanged', () => {
         const parsedFile = createTestParsedFile();
@@ -217,7 +228,7 @@ describe('TreeTransformation', () => {
   describe('Visit Methods', () => {
     describe('visitTsTree dispatches to correct visit method', () => {
       const transformation = new (class extends TreeTransformationScopedChanges {})();
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
 
       test('dispatches TsDeclClass to visitTsContainerOrDecl', () => {
         const declClass = createTestClass('TestClass');
@@ -248,7 +259,7 @@ describe('TreeTransformation', () => {
         }
       })();
       
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const declClass = createTestClass('OriginalClass');
 
       const result = transformation.visitTsDeclClass(scope)(declClass);
@@ -265,7 +276,7 @@ describe('TreeTransformation', () => {
         }
       })();
       
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const declInterface = createTestInterface('OriginalInterface');
 
       const result = transformation.visitTsDeclInterface(scope)(declInterface);
@@ -282,7 +293,7 @@ describe('TreeTransformation', () => {
         }
       })();
       
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const global = createTestGlobal();
 
       const result = transformation.visitTsDeclGlobal(scope)(global);
@@ -291,7 +302,7 @@ describe('TreeTransformation', () => {
 
     test('visitTsParsedFile processes parsed file', () => {
       const transformation = new (class extends TreeTransformationScopedChanges {})();
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const parsedFile = createTestParsedFile();
 
       const result = transformation.visitTsParsedFile(scope)(parsedFile);
@@ -320,7 +331,7 @@ describe('TreeTransformation', () => {
       })();
 
       const combined = transformation1.combine(transformation2);
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const declClass = createTestClass('TestClass');
 
       const result = combined.visitTsDeclClass(scope)(declClass);
@@ -361,7 +372,7 @@ describe('TreeTransformation', () => {
       const transformation2 = new (class extends TreeTransformationScopedChanges {})();
       const combined = transformation1.combine(transformation2);
 
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const tree = TsIdent.simple('test');
       const result = combined.withTree(scope, tree);
 
@@ -373,8 +384,8 @@ describe('TreeTransformation', () => {
 
   describe('TreeTransformations Utility Functions', () => {
     test('identity transformation returns everything unchanged', () => {
-      const identity = TreeTransformations.identity<SimpleTsTreeScope>();
-      const scope = SimpleTsTreeScope.empty();
+      const identity = TreeTransformations.identity<TsTreeScope>();
+      const scope = createEmptyScope();
       const tree = createTestClass('TestClass');
 
       const result = identity.visitTsDeclClass(scope)(tree);
@@ -383,7 +394,7 @@ describe('TreeTransformation', () => {
 
     test('identityScoped returns everything unchanged', () => {
       const identity = TreeTransformations.identityScoped();
-      const scope = SimpleTsTreeScope.empty();
+      const scope = createEmptyScope();
       const tree = createTestClass('TestClass');
 
       const result = identity.visitTsDeclClass(scope)(tree);
@@ -450,7 +461,7 @@ describe('TreeTransformation', () => {
 
     test('transformation with empty tree stack', () => {
       const transformation = new (class extends TreeTransformationScopedChanges {})();
-      const emptyScope = SimpleTsTreeScope.empty();
+      const emptyScope = createEmptyScope();
       const tree = createTestClass('TestClass');
 
       const result = transformation.withTree(emptyScope, tree);
