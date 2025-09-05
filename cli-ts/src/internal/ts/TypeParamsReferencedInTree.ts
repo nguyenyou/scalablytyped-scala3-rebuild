@@ -78,26 +78,20 @@ export const TypeParamsReferencedInTree = {
     // First pass: find direct references to type parameters in the tree
     // We need to handle scope shadowing - type parameters defined in inner scopes shadow outer ones
 
-    const findReferencesWithScope = (currentScope: Map<TsIdent, TsTypeParam>, currentTree: TsTree): IArray<TsIdent> => {
-      const referenced = IArrayBuilder.empty<TsIdent>();
+    const referenced = IArrayBuilder.empty<TsIdent>();
 
-      // Update scope for this tree - remove any type parameters that are shadowed
-      const tparams = HasTParams.apply(currentTree);
+    // Recursive function to traverse the tree with proper scope handling
+    const traverseWithScope = (node: TsTree, currentScope: Map<TsIdent, TsTypeParam>) => {
+      // Check if this node introduces new type parameters that shadow the current scope
+      const nodeTParams = HasTParams.apply(node);
       const effectiveScope = new Map(currentScope);
-      tparams.forEach(tp => {
+      nodeTParams.forEach(tp => {
         effectiveScope.delete(tp.name);
       });
 
-      // Collect all TsTypeRef nodes in this tree and check if they reference type parameters
-      const typeRefs = TsTreeTraverse.collect(currentTree, (node: TsTree) => {
-        if (node._tag === 'TsTypeRef') {
-          return node as TsTypeRef;
-        }
-        return undefined;
-      });
-
-      // Check each type reference to see if it's a simple reference to a type parameter in scope
-      typeRefs.forEach(typeRef => {
+      // If this is a type reference, check if it references a type parameter in scope
+      if (node._tag === 'TsTypeRef') {
+        const typeRef = node as TsTypeRef;
         const exactlyOne = IArrayPatterns.exactlyOne(typeRef.name.parts);
         if (exactlyOne !== undefined) {
           // Find the type parameter by comparing the value, not the object reference
@@ -108,12 +102,20 @@ export const TypeParamsReferencedInTree = {
             }
           }
         }
-      });
+      }
 
-      return referenced.result();
+      // Recursively traverse all children with the effective scope
+      // Use TsTreeTraverse.go to traverse all child nodes
+      TsTreeTraverse.go((childNode: TsTree) => {
+        if (childNode !== node) { // Avoid infinite recursion
+          traverseWithScope(childNode, effectiveScope);
+        }
+        return undefined; // We don't collect anything, just traverse
+      }, [], node);
     };
 
-    const referencedInTree: IArray<TsIdent> = findReferencesWithScope(inScope, tree).distinct();
+    traverseWithScope(tree, inScope);
+    const referencedInTree: IArray<TsIdent> = referenced.result().distinct();
 
     // Second pass: find type parameters referenced in the bounds of the directly referenced ones
     // Collect upper bounds from referenced type parameters
