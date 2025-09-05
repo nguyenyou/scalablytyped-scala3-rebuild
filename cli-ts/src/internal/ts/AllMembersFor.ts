@@ -5,10 +5,10 @@
  * including handling inheritance, type intersections, and member overriding.
  */
 
-import { Either, isLeft, isRight } from "fp-ts/Either";
+import { isLeft } from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
-import { isSome, Option } from "fp-ts/Option";
-import { IArray, PartialFunction, partialFunction } from "../IArray.js";
+import { isSome } from "fp-ts/Option";
+import { IArray, partialFunction } from "../IArray.js";
 import {
 	FillInTParams,
 	type LoopDetector,
@@ -19,26 +19,12 @@ import type {
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclTypeAlias,
-	TsIdentSimple,
 	TsMember,
 	TsMemberProperty,
 	TsType,
-	TsTypeAsserts,
-	TsTypeConstructor,
-	TsTypeFunction,
 	TsTypeIntersect,
-	TsTypeIs,
-	TsTypeKeyOf,
-	TsTypeLiteral,
-	TsTypeLookup,
 	TsTypeObject,
-	TsTypePredicate,
-	TsTypeQuery,
 	TsTypeRef,
-	TsTypeRepeated,
-	TsTypeThis,
-	TsTypeTuple,
-	TsTypeUnion,
 } from "./trees.js";
 
 /**
@@ -71,20 +57,6 @@ export const AllMembersFor = {
 					const objectType = tpe as TsTypeObject;
 					return objectType.members;
 				}
-
-				// All other type variants return empty members
-				case "TsTypeAsserts":
-				case "TsTypeLiteral":
-				case "TsTypeFunction":
-				case "TsTypeConstructor":
-				case "TsTypeIs":
-				case "TsTypeTuple":
-				case "TsTypeQuery":
-				case "TsTypeRepeated":
-				case "TsTypeKeyOf":
-				case "TsTypeLookup":
-				case "TsTypeThis":
-				case "TsTypePredicate":
 				default:
 					return IArray.Empty;
 			}

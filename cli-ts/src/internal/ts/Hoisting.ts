@@ -6,18 +6,15 @@
  * them into standalone function and variable declarations.
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 import { IArray } from "../IArray.js";
 import { AllMembersFor } from "./AllMembersFor.js";
 import type { CodePath } from "./CodePath.js";
 import { JsLocation } from "./JsLocation.js";
-import { MethodType } from "./MethodType.js";
 import type { LoopDetector, TsTreeScope } from "./TsTreeScope.js";
 import {
 	TsDeclFunction,
 	TsDeclVar,
-	TsIdent,
 	TsIdentApply,
 	type TsMember,
 	type TsMemberCall,

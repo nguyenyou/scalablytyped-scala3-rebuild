@@ -19,7 +19,7 @@ export class Suffix {
 		if (this === Suffix.Empty && other === Suffix.Empty) return Suffix.Empty;
 		if (this === Suffix.Empty) return other;
 		if (other === Suffix.Empty) return this;
-		return new Suffix(this.unescaped + "_" + other.unescaped);
+		return new Suffix(`${this.unescaped}_${other.unescaped}`);
 	}
 
 	addOptional<T>(other: T | undefined, toSuffix: ToSuffix<T>): Suffix {
@@ -60,7 +60,7 @@ export class Name {
 	constructor(public readonly unescaped: string) {}
 
 	withSuffix<T>(t: T, toSuffix: ToSuffix<T>): Name {
-		return new Name(this.unescaped + "_" + toSuffix.to(t).unescaped);
+		return new Name(`${this.unescaped}_${toSuffix.to(t).unescaped}`);
 	}
 
 	get value(): string {
@@ -156,7 +156,7 @@ export class Name {
 	// Function arity name generator
 	static FunctionArity(isThis: boolean, arity: number): Name {
 		return new Name(
-			(isThis ? Name.This.unescaped : "") + "Function" + arity.toString(),
+			`${isThis ? Name.This.unescaped : ""}Function${arity.toString()}`,
 		);
 	}
 
@@ -361,7 +361,7 @@ export class ScalaNameEscape {
 	]);
 
 	static apply(ident: string): string {
-		return ScalaNameEscape.needsEscaping(ident) ? "`" + ident + "`" : ident;
+		return ScalaNameEscape.needsEscaping(ident) ? `\`${ident}\`` : ident;
 	}
 
 	private static isValidIdentifier(name: string): boolean {

@@ -15,7 +15,7 @@
  */
 
 import { pipe } from "fp-ts/function";
-import { fold, getOrElse, none, Option, some } from "fp-ts/Option";
+import { getOrElse } from "fp-ts/Option";
 import { Comment } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";

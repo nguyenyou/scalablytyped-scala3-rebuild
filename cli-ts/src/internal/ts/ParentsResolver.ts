@@ -9,7 +9,6 @@
  * so we'll need a much better approach here.
  */
 
-import { none, Option, some } from "fp-ts/Option";
 import { Comments } from "../Comments.js";
 import { IArray, IArrayBuilder } from "../IArray.js";
 import { CodePath } from "./CodePath.js";
@@ -20,7 +19,6 @@ import {
 	type TsDeclClass,
 	TsDeclInterface,
 	type TsDeclTypeAlias,
-	TsIdent,
 	TsIdentDummy,
 	type TsNamedDecl,
 	type TsQIdent,

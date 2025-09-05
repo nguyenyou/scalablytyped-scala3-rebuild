@@ -1,6 +1,6 @@
+import * as fsSync from "node:fs";
 import fs from "node:fs/promises";
-import * as fsSync from "fs";
-import * as path from "path";
+import * as path from "node:path";
 
 /**
  * TypeScript port of org.scalablytyped.converter.internal.files
@@ -154,16 +154,8 @@ export namespace files {
 		const writer = (text: string) => {
 			content += text;
 		};
-
-		try {
-			await writerFn(writer);
-			return await softWriteBytes(
-				filePath,
-				Buffer.from(content, UTF8_ENCODING),
-			);
-		} catch (error) {
-			throw error;
-		}
+		await writerFn(writer);
+		return await softWriteBytes(filePath, Buffer.from(content, UTF8_ENCODING));
 	}
 
 	/**
@@ -259,13 +251,8 @@ export namespace filesSync {
 		const writer = (text: string) => {
 			content += text;
 		};
-
-		try {
-			writerFn(writer);
-			return softWriteBytes(filePath, Buffer.from(content, UTF8_ENCODING));
-		} catch (error) {
-			throw error;
-		}
+		writerFn(writer);
+		return softWriteBytes(filePath, Buffer.from(content, UTF8_ENCODING));
 	}
 
 	/**

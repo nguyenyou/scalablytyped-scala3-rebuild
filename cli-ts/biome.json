@@ -16,13 +16,17 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-      "suspicious": {
-        "noExplicitAny": "off",
-        "noShadowRestrictedNames": "off",
-        "noApproximativeNumericConstant": "off"
-      },
-      "style": {
-        "noNonNullAssertion": "off"
+			"suspicious": {
+				"noExplicitAny": "off",
+				"noShadowRestrictedNames": "off",
+				"noApproximativeNumericConstant": "off",
+        "useIterableCallbackReturn": "off"
+			},
+			"style": {
+				"noNonNullAssertion": "off"
+			},
+      "complexity": {
+        "noStaticOnlyClass": "off"
       }
 		}
 	},

@@ -5,44 +5,37 @@
  * entering and leaving nodes, visiting different node types, and composing transformations.
  */
 
-import { Option } from "fp-ts/Option";
-import {
-	type TsContainer,
-	type TsDecl,
-	type TsDeclClass,
-	type TsDeclEnum,
-	type TsDeclFunction,
-	type TsDeclInterface,
-	type TsDeclModule,
-	type TsDeclNamespace,
-	type TsDeclTypeAlias,
-	type TsDeclVar,
-	type TsGlobal,
-	type TsMember,
-	TsMemberCall,
-	TsMemberCtor,
-	TsMemberFunction,
-	TsMemberIndex,
-	TsMemberProperty,
-	TsMemberTypeMapped,
-	type TsParsedFile,
-	type TsTree,
-	type TsType,
-	type TsTypeAsserts,
-	type TsTypeConditional,
-	type TsTypeConstructor,
-	type TsTypeFunction,
-	type TsTypeIntersect,
-	type TsTypeIs,
-	type TsTypeKeyOf,
-	type TsTypeLiteral,
-	type TsTypeLookup,
-	type TsTypeObject,
-	type TsTypeRef,
-	type TsTypeRepeated,
-	type TsTypeThis,
-	type TsTypeTuple,
-	type TsTypeUnion,
+import type {
+	TsContainer,
+	TsDecl,
+	TsDeclClass,
+	TsDeclEnum,
+	TsDeclFunction,
+	TsDeclInterface,
+	TsDeclModule,
+	TsDeclNamespace,
+	TsDeclTypeAlias,
+	TsDeclVar,
+	TsGlobal,
+	TsMember,
+	TsParsedFile,
+	TsTree,
+	TsType,
+	TsTypeAsserts,
+	TsTypeConditional,
+	TsTypeConstructor,
+	TsTypeFunction,
+	TsTypeIntersect,
+	TsTypeIs,
+	TsTypeKeyOf,
+	TsTypeLiteral,
+	TsTypeLookup,
+	TsTypeObject,
+	TsTypeRef,
+	TsTypeRepeated,
+	TsTypeThis,
+	TsTypeTuple,
+	TsTypeUnion,
 } from "./trees.js";
 
 /**
@@ -154,173 +147,173 @@ export abstract class AbstractTreeTransformation<T>
 	}
 
 	// Default enter methods - return unchanged
-	enterTsTree(t: T): (x: TsTree) => TsTree {
+	enterTsTree(_t: T): (x: TsTree) => TsTree {
 		return (x: TsTree) => x;
 	}
 
-	enterTsDecl(t: T): (x: TsDecl) => TsDecl {
+	enterTsDecl(_t: T): (x: TsDecl) => TsDecl {
 		return (x: TsDecl) => x;
 	}
 
-	enterTsType(t: T): (x: TsType) => TsType {
+	enterTsType(_t: T): (x: TsType) => TsType {
 		return (x: TsType) => x;
 	}
 
-	enterTsContainer(t: T): (x: TsContainer) => TsContainer {
+	enterTsContainer(_t: T): (x: TsContainer) => TsContainer {
 		return (x: TsContainer) => x;
 	}
 
-	enterTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile {
+	enterTsParsedFile(_t: T): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => x;
 	}
 
-	enterTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass {
+	enterTsDeclClass(_t: T): (x: TsDeclClass) => TsDeclClass {
 		return (x: TsDeclClass) => x;
 	}
 
-	enterTsDeclInterface(t: T): (x: TsDeclInterface) => TsDeclInterface {
+	enterTsDeclInterface(_t: T): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => x;
 	}
 
-	enterTsDeclNamespace(t: T): (x: TsDeclNamespace) => TsDeclNamespace {
+	enterTsDeclNamespace(_t: T): (x: TsDeclNamespace) => TsDeclNamespace {
 		return (x: TsDeclNamespace) => x;
 	}
 
-	enterTsDeclModule(t: T): (x: TsDeclModule) => TsDeclModule {
+	enterTsDeclModule(_t: T): (x: TsDeclModule) => TsDeclModule {
 		return (x: TsDeclModule) => x;
 	}
 
-	enterTsDeclVar(t: T): (x: TsDeclVar) => TsDeclVar {
+	enterTsDeclVar(_t: T): (x: TsDeclVar) => TsDeclVar {
 		return (x: TsDeclVar) => x;
 	}
 
-	enterTsDeclFunction(t: T): (x: TsDeclFunction) => TsDeclFunction {
+	enterTsDeclFunction(_t: T): (x: TsDeclFunction) => TsDeclFunction {
 		return (x: TsDeclFunction) => x;
 	}
 
-	enterTsDeclTypeAlias(t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	enterTsDeclTypeAlias(_t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => x;
 	}
 
-	enterTsDeclEnum(t: T): (x: TsDeclEnum) => TsDeclEnum {
+	enterTsDeclEnum(_t: T): (x: TsDeclEnum) => TsDeclEnum {
 		return (x: TsDeclEnum) => x;
 	}
 
-	enterTsGlobal(t: T): (x: TsGlobal) => TsGlobal {
+	enterTsGlobal(_t: T): (x: TsGlobal) => TsGlobal {
 		return (x: TsGlobal) => x;
 	}
 
-	enterTsMember(t: T): (x: TsMember) => TsMember {
+	enterTsMember(_t: T): (x: TsMember) => TsMember {
 		return (x: TsMember) => x;
 	}
 
 	// Specific type enter methods - default implementations return unchanged
-	enterTsTypeRef(t: T): (x: TsTypeRef) => TsTypeRef {
+	enterTsTypeRef(_t: T): (x: TsTypeRef) => TsTypeRef {
 		return (x: TsTypeRef) => x;
 	}
 
-	enterTsTypeFunction(t: T): (x: TsTypeFunction) => TsTypeFunction {
+	enterTsTypeFunction(_t: T): (x: TsTypeFunction) => TsTypeFunction {
 		return (x: TsTypeFunction) => x;
 	}
 
-	enterTsTypeIntersect(t: T): (x: TsTypeIntersect) => TsTypeIntersect {
+	enterTsTypeIntersect(_t: T): (x: TsTypeIntersect) => TsTypeIntersect {
 		return (x: TsTypeIntersect) => x;
 	}
 
-	enterTsTypeUnion(t: T): (x: TsTypeUnion) => TsTypeUnion {
+	enterTsTypeUnion(_t: T): (x: TsTypeUnion) => TsTypeUnion {
 		return (x: TsTypeUnion) => x;
 	}
 
-	enterTsTypeTuple(t: T): (x: TsTypeTuple) => TsTypeTuple {
+	enterTsTypeTuple(_t: T): (x: TsTypeTuple) => TsTypeTuple {
 		return (x: TsTypeTuple) => x;
 	}
 
-	enterTsTypeObject(t: T): (x: TsTypeObject) => TsTypeObject {
+	enterTsTypeObject(_t: T): (x: TsTypeObject) => TsTypeObject {
 		return (x: TsTypeObject) => x;
 	}
 
-	enterTsTypeAsserts(t: T): (x: TsTypeAsserts) => TsTypeAsserts {
+	enterTsTypeAsserts(_t: T): (x: TsTypeAsserts) => TsTypeAsserts {
 		return (x: TsTypeAsserts) => x;
 	}
 
-	enterTsTypeIs(t: T): (x: TsTypeIs) => TsTypeIs {
+	enterTsTypeIs(_t: T): (x: TsTypeIs) => TsTypeIs {
 		return (x: TsTypeIs) => x;
 	}
 
-	enterTsTypeKeyOf(t: T): (x: TsTypeKeyOf) => TsTypeKeyOf {
+	enterTsTypeKeyOf(_t: T): (x: TsTypeKeyOf) => TsTypeKeyOf {
 		return (x: TsTypeKeyOf) => x;
 	}
 
-	enterTsTypeConditional(t: T): (x: TsTypeConditional) => TsTypeConditional {
+	enterTsTypeConditional(_t: T): (x: TsTypeConditional) => TsTypeConditional {
 		return (x: TsTypeConditional) => x;
 	}
 
-	enterTsTypeLookup(t: T): (x: TsTypeLookup) => TsTypeLookup {
+	enterTsTypeLookup(_t: T): (x: TsTypeLookup) => TsTypeLookup {
 		return (x: TsTypeLookup) => x;
 	}
 
-	enterTsTypeThis(t: T): (x: TsTypeThis) => TsTypeThis {
+	enterTsTypeThis(_t: T): (x: TsTypeThis) => TsTypeThis {
 		return (x: TsTypeThis) => x;
 	}
 
-	enterTsTypeRepeated(t: T): (x: TsTypeRepeated) => TsTypeRepeated {
+	enterTsTypeRepeated(_t: T): (x: TsTypeRepeated) => TsTypeRepeated {
 		return (x: TsTypeRepeated) => x;
 	}
 
-	enterTsTypeConstructor(t: T): (x: TsTypeConstructor) => TsTypeConstructor {
+	enterTsTypeConstructor(_t: T): (x: TsTypeConstructor) => TsTypeConstructor {
 		return (x: TsTypeConstructor) => x;
 	}
 
-	enterTsTypeLiteral(t: T): (x: TsTypeLiteral) => TsTypeLiteral {
+	enterTsTypeLiteral(_t: T): (x: TsTypeLiteral) => TsTypeLiteral {
 		return (x: TsTypeLiteral) => x;
 	}
 
 	// Default leave methods - return unchanged
-	leaveTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile {
+	leaveTsParsedFile(_t: T): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => x;
 	}
 
-	leaveTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass {
+	leaveTsDeclClass(_t: T): (x: TsDeclClass) => TsDeclClass {
 		return (x: TsDeclClass) => x;
 	}
 
-	leaveTsDeclInterface(t: T): (x: TsDeclInterface) => TsDeclInterface {
+	leaveTsDeclInterface(_t: T): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => x;
 	}
 
-	leaveTsDeclNamespace(t: T): (x: TsDeclNamespace) => TsDeclNamespace {
+	leaveTsDeclNamespace(_t: T): (x: TsDeclNamespace) => TsDeclNamespace {
 		return (x: TsDeclNamespace) => x;
 	}
 
-	leaveTsDeclModule(t: T): (x: TsDeclModule) => TsDeclModule {
+	leaveTsDeclModule(_t: T): (x: TsDeclModule) => TsDeclModule {
 		return (x: TsDeclModule) => x;
 	}
 
-	leaveTsDeclVar(t: T): (x: TsDeclVar) => TsDeclVar {
+	leaveTsDeclVar(_t: T): (x: TsDeclVar) => TsDeclVar {
 		return (x: TsDeclVar) => x;
 	}
 
-	leaveTsDeclFunction(t: T): (x: TsDeclFunction) => TsDeclFunction {
+	leaveTsDeclFunction(_t: T): (x: TsDeclFunction) => TsDeclFunction {
 		return (x: TsDeclFunction) => x;
 	}
 
-	leaveTsDeclTypeAlias(t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	leaveTsDeclTypeAlias(_t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => x;
 	}
 
-	leaveTsDeclEnum(t: T): (x: TsDeclEnum) => TsDeclEnum {
+	leaveTsDeclEnum(_t: T): (x: TsDeclEnum) => TsDeclEnum {
 		return (x: TsDeclEnum) => x;
 	}
 
-	leaveTsGlobal(t: T): (x: TsGlobal) => TsGlobal {
+	leaveTsGlobal(_t: T): (x: TsGlobal) => TsGlobal {
 		return (x: TsGlobal) => x;
 	}
 
-	leaveTsMember(t: T): (x: TsMember) => TsMember {
+	leaveTsMember(_t: T): (x: TsMember) => TsMember {
 		return (x: TsMember) => x;
 	}
 
-	leaveTsType(t: T): (x: TsType) => TsType {
+	leaveTsType(_t: T): (x: TsType) => TsType {
 		return (x: TsType) => x;
 	}
 
@@ -588,26 +581,26 @@ export abstract class AbstractTreeTransformation<T>
 		}
 	}
 
-	protected processMemberRecursively(t: T, member: TsMember): TsMember {
+	protected processMemberRecursively(_t: T, member: TsMember): TsMember {
 		// Default implementation - no recursive processing
 		return member;
 	}
 
 	protected processParsedFileRecursively(
-		t: T,
+		_t: T,
 		file: TsParsedFile,
 	): TsParsedFile {
 		// Default implementation - no recursive processing
 		return file;
 	}
 
-	protected processClassRecursively(t: T, cls: TsDeclClass): TsDeclClass {
+	protected processClassRecursively(_t: T, cls: TsDeclClass): TsDeclClass {
 		// Default implementation - no recursive processing
 		return cls;
 	}
 
 	protected processInterfaceRecursively(
-		t: T,
+		_t: T,
 		iface: TsDeclInterface,
 	): TsDeclInterface {
 		// Default implementation - no recursive processing
@@ -615,25 +608,25 @@ export abstract class AbstractTreeTransformation<T>
 	}
 
 	protected processNamespaceRecursively(
-		t: T,
+		_t: T,
 		ns: TsDeclNamespace,
 	): TsDeclNamespace {
 		// Default implementation - no recursive processing
 		return ns;
 	}
 
-	protected processModuleRecursively(t: T, mod: TsDeclModule): TsDeclModule {
+	protected processModuleRecursively(_t: T, mod: TsDeclModule): TsDeclModule {
 		// Default implementation - no recursive processing
 		return mod;
 	}
 
-	protected processVarRecursively(t: T, varDecl: TsDeclVar): TsDeclVar {
+	protected processVarRecursively(_t: T, varDecl: TsDeclVar): TsDeclVar {
 		// Default implementation - no recursive processing
 		return varDecl;
 	}
 
 	protected processFunctionRecursively(
-		t: T,
+		_t: T,
 		func: TsDeclFunction,
 	): TsDeclFunction {
 		// Default implementation - no recursive processing
@@ -641,19 +634,19 @@ export abstract class AbstractTreeTransformation<T>
 	}
 
 	protected processTypeAliasRecursively(
-		t: T,
+		_t: T,
 		alias: TsDeclTypeAlias,
 	): TsDeclTypeAlias {
 		// Default implementation - no recursive processing
 		return alias;
 	}
 
-	protected processEnumRecursively(t: T, enumDecl: TsDeclEnum): TsDeclEnum {
+	protected processEnumRecursively(_t: T, enumDecl: TsDeclEnum): TsDeclEnum {
 		// Default implementation - no recursive processing
 		return enumDecl;
 	}
 
-	protected processGlobalRecursively(t: T, global: TsGlobal): TsGlobal {
+	protected processGlobalRecursively(_t: T, global: TsGlobal): TsGlobal {
 		// Default implementation - no recursive processing
 		return global;
 	}
@@ -666,7 +659,7 @@ export abstract class AbstractTreeTransformation<T>
 class CombinedTransformation<T, U> extends AbstractTreeTransformation<T> {
 	constructor(
 		private first: TreeTransformation<T>,
-		private second: TreeTransformation<U>,
+		_second: TreeTransformation<U>,
 	) {
 		super();
 	}

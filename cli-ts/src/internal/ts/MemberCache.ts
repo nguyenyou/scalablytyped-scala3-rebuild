@@ -5,9 +5,7 @@
  * partitioning members by type, grouping by name, and module detection.
  */
 
-import { pipe } from "fp-ts/function";
-import { isSome, none, Option, some } from "fp-ts/Option";
-import { IArray, PartialFunction, partialFunction } from "../IArray.js";
+import { IArray, partialFunction } from "../IArray.js";
 
 // Import actual types from trees.ts to avoid conflicts
 import type {
@@ -19,11 +17,7 @@ import type {
 	TsIdentModule,
 	TsIdentSimple,
 	TsImport,
-	TsImportee,
-	TsImporteeLocal,
 	TsMember,
-	TsMemberCall,
-	TsMemberCtor,
 	TsMemberFunction,
 	TsMemberProperty,
 	TsNamedDecl,
@@ -165,7 +159,7 @@ export const MemberCache = {
 
 		// Convert back to Map<TsIdent, IArray<TsNamedDecl>>
 		const membersByName = new Map<TsIdent, IArray<TsNamedDecl>>();
-		for (const [key, members] of membersByNameMap) {
+		for (const [_key, members] of membersByNameMap) {
 			// Use the first member's name as the key to preserve the original TsIdent object
 			membersByName.set(members.head.name, members);
 		}
@@ -217,7 +211,7 @@ export const MemberCache = {
 			TsIdentModule,
 			IArray<TsAugmentedModule>
 		>();
-		for (const [key, modules] of augmentedModulesStringMap) {
+		for (const [_key, modules] of augmentedModulesStringMap) {
 			// Use the first module's name as the key to preserve the original TsIdentModule object
 			augmentedModulesMap.set(modules.head.name, modules);
 		}

@@ -4,7 +4,6 @@
  * Represents the different types of method declarations in TypeScript
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 
 /**

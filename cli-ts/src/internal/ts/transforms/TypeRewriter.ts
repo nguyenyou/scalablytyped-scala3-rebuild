@@ -6,21 +6,19 @@
  */
 
 import { pipe } from "fp-ts/function";
-import { fold, none, Option, some } from "fp-ts/Option";
+import { fold, none, some } from "fp-ts/Option";
 import { IArray } from "../../IArray.js";
 import { AbstractTreeTransformation } from "../TreeTransformation.js";
-import {
-	type TsDeclClass,
-	type TsDeclInterface,
-	type TsDeclTypeAlias,
-	TsFunParam,
-	type TsFunSig,
-	type TsIdentSimple,
-	TsQIdent,
-	type TsTree,
-	type TsType,
-	type TsTypeParam,
-	type TsTypeRef,
+import type {
+	TsDeclClass,
+	TsDeclInterface,
+	TsDeclTypeAlias,
+	TsFunSig,
+	TsIdentSimple,
+	TsTree,
+	TsType,
+	TsTypeParam,
+	TsTypeRef,
 } from "../trees.js";
 
 /**
@@ -184,7 +182,7 @@ export class TypeRewriter extends AbstractTreeTransformation<
 	 * Transform an interface declaration
 	 */
 	private transformInterface(
-		replacements: Map<TsType, TsType>,
+		_replacements: Map<TsType, TsType>,
 		x: TsDeclInterface,
 	): TsDeclInterface {
 		// For now, return the interface unchanged - full implementation would recursively transform all types
@@ -196,7 +194,7 @@ export class TypeRewriter extends AbstractTreeTransformation<
 	 * Transform a class declaration
 	 */
 	private transformClass(
-		replacements: Map<TsType, TsType>,
+		_replacements: Map<TsType, TsType>,
 		x: TsDeclClass,
 	): TsDeclClass {
 		// For now, return the class unchanged - full implementation would recursively transform all types

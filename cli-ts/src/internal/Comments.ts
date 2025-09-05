@@ -71,7 +71,7 @@ function isRaw(comment: Comment): comment is Raw {
 /**
  * Helper function to create a partial function for marker extraction
  */
-function createMarkerPartialFunction<T>(
+function _createMarkerPartialFunction<T>(
 	pf: (marker: Marker) => T,
 ): PartialFunction<Comment, T> {
 	return partialFunction(
@@ -154,7 +154,7 @@ export class Comments {
 	 * Check if the comments contain a marker of a specific type
 	 * Equivalent to Scala's `def has[T <: Marker: ClassTag]: Boolean`
 	 */
-	has<T extends Marker>(markerConstructor: any): boolean {
+	has<_T extends Marker>(markerConstructor: any): boolean {
 		// Handle singleton markers (like IsTrivial) that have an instance property
 		if ("instance" in markerConstructor && markerConstructor.instance) {
 			return this.cs.some((comment) => comment === markerConstructor.instance);

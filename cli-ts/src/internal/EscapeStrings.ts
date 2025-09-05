@@ -39,11 +39,11 @@ function go(
 
 		// Handle Unicode characters
 		if (ch > 0xfff) {
-			result.push("\\u" + hex(ch));
+			result.push(`\\u${hex(ch)}`);
 		} else if (ch > 0xff) {
-			result.push("\\u0" + hex(ch));
+			result.push(`\\u0${hex(ch)}`);
 		} else if (ch > 0x7f) {
-			result.push("\\u00" + hex(ch));
+			result.push(`\\u00${hex(ch)}`);
 		} else if (ch < 32) {
 			// Handle control characters
 			switch (ch) {
@@ -64,9 +64,9 @@ function go(
 					break;
 				default:
 					if (ch > 0xf) {
-						result.push("\\u00" + hex(ch));
+						result.push(`\\u00${hex(ch)}`);
 					} else {
-						result.push("\\u000" + hex(ch));
+						result.push(`\\u000${hex(ch)}`);
 					}
 					break;
 			}

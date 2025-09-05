@@ -33,7 +33,7 @@ type CacheKey<Id> = readonly [Id, IsCircular];
 export class PhaseCache<Id, U> {
 	private readonly cache: Map<string, Ref<PhaseRes<Id, U>>>;
 
-	constructor(initialCapacity: number = 1000) {
+	constructor(_initialCapacity: number = 1000) {
 		this.cache = new Map();
 	}
 

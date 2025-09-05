@@ -1,8 +1,7 @@
+import * as path from "node:path";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
-import { none } from "fp-ts/Option";
 import * as fs from "fs-extra";
-import * as path from "path";
 import { Flavour } from "@/Flavour.ts";
 import { InFolder } from "@/internal/files.ts";
 import {
@@ -16,8 +15,6 @@ import {
 	Versions,
 } from "@/internal/importer/ConversionOptions.ts";
 import { NormalFlavourImpl } from "@/internal/importer/FlavourImpl.js";
-import { LibScalaJs } from "@/internal/importer/LibScalaJs.js";
-import { LibTs } from "@/internal/importer/LibTs.js";
 import { Json, type LibTsSource } from "@/internal/importer/LibTsSource.js";
 import { Phase1ReadTypescript } from "@/internal/importer/Phase1ReadTypescript.js";
 import { Phase2ToScalaJs } from "@/internal/importer/Phase2ToScalaJs.js";
@@ -161,7 +158,7 @@ export class TracingCommand extends BaseCommand {
 				error: (msg: string) => this.error(`[${id.libName.value}] ${msg}`),
 				debug: (msg: string) =>
 					this.info(`[${id.libName.value}] DEBUG: ${msg}`),
-				withContext: (key: string, value: string) => getLogger(id),
+				withContext: (_key: string, _value: string) => getLogger(id),
 			} as Logger<void>;
 		};
 

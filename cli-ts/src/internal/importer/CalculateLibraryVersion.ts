@@ -27,10 +27,10 @@ export interface CalculateLibraryVersion {
  */
 export class PackageJsonOnly implements CalculateLibraryVersion {
 	calculate(
-		folder: InFolder,
+		_folder: InFolder,
 		isStdLib: boolean,
 		packageJsonOpt: Option<PackageJson>,
-		comments: Comments,
+		_comments: Comments,
 	): LibraryVersion {
 		const version =
 			packageJsonOpt._tag === "Some"
@@ -50,10 +50,10 @@ export class PackageJsonOnly implements CalculateLibraryVersion {
  */
 export class MockCalculateLibraryVersion implements CalculateLibraryVersion {
 	calculate(
-		folder: InFolder,
+		_folder: InFolder,
 		isStdLib: boolean,
-		packageJsonOpt: Option<PackageJson>,
-		comments: Comments,
+		_packageJsonOpt: Option<PackageJson>,
+		_comments: Comments,
 	): LibraryVersion {
 		return LibraryVersion.create(isStdLib, "1.0.0-mock", null);
 	}

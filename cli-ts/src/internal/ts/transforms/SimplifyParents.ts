@@ -16,7 +16,7 @@ import { none, some } from "fp-ts/Option";
 import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
-import { Picker, type TsTreeScope } from "../TsTreeScope.js";
+import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
 	TsDeclClass,
 	TsDeclInterface,

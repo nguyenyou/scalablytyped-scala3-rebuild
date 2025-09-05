@@ -113,7 +113,7 @@ export const TsTreeTraverse = {
 					try {
 						const value = current[key];
 						TsTreeTraverse.rec(extract, results, originalTree, value);
-					} catch (e) {}
+					} catch (_e) {}
 				}
 			}
 		}
@@ -191,7 +191,7 @@ export const TsTreeTraverse = {
 			}
 
 			return true;
-		} catch (e) {
+		} catch (_e) {
 			return false;
 		}
 	},

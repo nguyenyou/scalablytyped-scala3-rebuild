@@ -4,7 +4,6 @@
  * Represents the different readonly modifiers for TypeScript properties
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 
 /**

@@ -49,7 +49,7 @@ export class NormalFlavourImpl implements FlavourImpl {
 		public readonly versions: Versions,
 	) {}
 
-	rewrittenTree(scope: any, tree: PackageTree): PackageTree {
+	rewrittenTree(_scope: any, tree: PackageTree): PackageTree {
 		// DUMMY IMPLEMENTATION: Return unchanged tree
 		return tree;
 	}

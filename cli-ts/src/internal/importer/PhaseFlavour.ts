@@ -4,13 +4,13 @@
  * Applies flavour-specific transformations to Scala.js libraries
  */
 
-import { Either, left, right } from "fp-ts/Either";
+import { right } from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 import { type SortedMap, SortedSet } from "../collections";
 import type { Logger } from "../logging";
 import { flatMap, PhaseRes } from "../phases/PhaseRes";
-import { type GetDeps, type IsCircular, Phase } from "../phases/types";
+import type { GetDeps, IsCircular } from "../phases/types";
 import type { Name } from "../scalajs/Name";
 import type { PackageTree } from "../scalajs/PackageTree";
 import type { FlavourImpl } from "./FlavourImpl";
@@ -38,7 +38,7 @@ export class PhaseFlavour {
 		source: LibTsSource,
 		lib: LibScalaJs,
 		getDeps: GetDeps<LibTsSource, LibScalaJs>,
-		isCircular: IsCircular,
+		_isCircular: IsCircular,
 		logger: Logger<void>,
 	): PhaseRes<LibTsSource, LibScalaJs> {
 		const flavourLogger = logger;
@@ -177,7 +177,7 @@ export class PhaseFlavour {
 	 */
 	private applyMockFlavourRewrite(
 		tree: PackageTree,
-		scope: any,
+		_scope: any,
 		logger: Logger<void>,
 	): PackageTree {
 		logger.info("Mock transformation: Flavour rewritten tree");
@@ -190,7 +190,7 @@ export class PhaseFlavour {
 	 */
 	private applyMockMangler(
 		tree: PackageTree,
-		scope: any,
+		_scope: any,
 		logger: Logger<void>,
 	): PackageTree {
 		logger.info("Mock transformation: Mangler");
@@ -203,7 +203,7 @@ export class PhaseFlavour {
 	 */
 	private applyMockPrivateWithin(
 		tree: PackageTree,
-		scope: any,
+		_scope: any,
 		logger: Logger<void>,
 	): PackageTree {
 		if (this.config.maybePrivateWithin._tag === "Some") {
@@ -220,7 +220,7 @@ export class PhaseFlavour {
 	 */
 	private applyMockSorter(
 		tree: PackageTree,
-		scope: any,
+		_scope: any,
 		logger: Logger<void>,
 	): PackageTree {
 		logger.info("Mock transformation: Sorter");

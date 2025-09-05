@@ -44,7 +44,7 @@ export namespace Formatter {
 	};
 
 	export const UnitFormatter: Formatter<void> = {
-		apply: (_: void) => "",
+		apply: (_: undefined) => "",
 	};
 
 	export const UndefinedFormatter: Formatter<undefined> = {

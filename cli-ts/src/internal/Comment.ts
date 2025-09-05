@@ -36,9 +36,6 @@
  * - Explicit type guards for pattern matching
  */
 
-import { pipe } from "fp-ts/function";
-import * as O from "fp-ts/Option";
-import { Option } from "fp-ts/Option";
 import type { IArray } from "./IArray.js";
 import type { QualifiedName } from "./scalajs/QualifiedName.js";
 import type { TsIdentModule } from "./ts/trees.js";

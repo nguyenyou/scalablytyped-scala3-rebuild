@@ -8,7 +8,6 @@ import type { PackageJson } from "./PackageJson.js";
 import type {
 	TsAugmentedModule,
 	TsContainer,
-	TsDecl,
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclModule,
@@ -18,8 +17,6 @@ import type {
 	TsExport,
 	TsIdentLibrary,
 	TsIdentModule,
-	TsIdentSimple,
-	TsImport,
 	TsImportee,
 	TsMember,
 	TsMemberTypeMapped,
@@ -662,7 +659,7 @@ export namespace TsTreeScope {
 		get moduleScopes(): Map<TsIdentModule, Scoped> {
 			if (!this._moduleScopes) {
 				this._moduleScopes = new Map();
-				for (const [_, [lib, dep, depScope]] of this.depScopes.entries()) {
+				for (const [_, [_lib, dep, _depScope]] of this.depScopes.entries()) {
 					if (dep._tag === "TsParsedFile") {
 						// Add module scopes from parsed file
 						// Note: This is a simplified implementation
@@ -679,7 +676,7 @@ export namespace TsTreeScope {
 		get moduleAuxScopes(): Map<TsIdentModule, Scoped> {
 			if (!this._moduleAuxScopes) {
 				this._moduleAuxScopes = new Map();
-				for (const [_, [lib, dep, depScope]] of this.depScopes.entries()) {
+				for (const [_, [_lib, dep, _depScope]] of this.depScopes.entries()) {
 					if (dep._tag === "TsParsedFile") {
 						// Add augmented module scopes from parsed file
 						// Note: This is a simplified implementation
@@ -827,7 +824,7 @@ export namespace TsTreeScope {
 
 			// Search through all dependencies
 			const results: [T, TsTreeScope][] = [];
-			for (const [_, [lib, libFile, libScope]] of this.depScopes.entries()) {
+			for (const [_, [_lib, libFile, libScope]] of this.depScopes.entries()) {
 				const result = this.search(
 					libScope,
 					picker,
@@ -996,7 +993,7 @@ export namespace TsTreeScope {
 					this.current._tag === "TsDeclModule" ||
 					this.current._tag === "TsGlobal"
 				) {
-					const container = this.current as TsContainer;
+					const _container = this.current as TsContainer;
 					// In a full implementation, we would extract exports from container
 					this._exports = IArray.Empty; // Simplified
 				} else {
@@ -1017,7 +1014,7 @@ export namespace TsTreeScope {
 					this.current._tag === "TsDeclModule" ||
 					this.current._tag === "TsGlobal"
 				) {
-					const container = this.current as TsContainer;
+					const _container = this.current as TsContainer;
 					this._moduleScopes = new Map(this.outer.moduleScopes);
 					// In a full implementation, we would iterate through container.modules
 					// and add module scopes using addModuleScope
@@ -1040,7 +1037,7 @@ export namespace TsTreeScope {
 					this.current._tag === "TsDeclModule" ||
 					this.current._tag === "TsGlobal"
 				) {
-					const container = this.current as TsContainer;
+					const _container = this.current as TsContainer;
 					// In a full implementation, we would iterate through container.augmentedModulesMap
 					// and merge augmented modules using FlattenTrees.mergeAugmentedModule
 				}
@@ -1299,9 +1296,9 @@ export namespace TsTreeScope {
 		 * Search within a variable
 		 */
 		private searchInVariable<T extends TsNamedDecl>(
-			picker: Picker<T>,
-			variable: TsDeclVar,
-			wanted: IArray<TsIdent>,
+			_picker: Picker<T>,
+			_variable: TsDeclVar,
+			_wanted: IArray<TsIdent>,
 		): IArray<[T, TsTreeScope]> {
 			// Simplified implementation - in full version would search through variable type
 			return IArray.Empty;
@@ -1311,15 +1308,15 @@ export namespace TsTreeScope {
 		 * Exported from module lookup
 		 */
 		private exportedFromModule<T extends TsNamedDecl>(
-			picker: Picker<T>,
-			wanted: IArray<TsIdent>,
-			loopDetector: LoopDetector,
+			_picker: Picker<T>,
+			_wanted: IArray<TsIdent>,
+			_loopDetector: LoopDetector,
 		): IArray<[T, TsTreeScope]> {
 			if (
 				this.current._tag === "TsDeclNamespace" ||
 				this.current._tag === "TsDeclModule"
 			) {
-				const module = this.current as TsDeclNamespaceOrModule;
+				const _module = this.current as TsDeclNamespaceOrModule;
 				// In full implementation, would use Exports.lookupExportFrom
 				return IArray.Empty;
 			}
@@ -1330,9 +1327,9 @@ export namespace TsTreeScope {
 		 * Imported from module lookup
 		 */
 		private importedFromModule<T extends TsNamedDecl>(
-			picker: Picker<T>,
-			wanted: IArray<TsIdent>,
-			loopDetector: LoopDetector,
+			_picker: Picker<T>,
+			_wanted: IArray<TsIdent>,
+			_loopDetector: LoopDetector,
 		): IArray<[T, TsTreeScope]> {
 			if (
 				this.current._tag === "TsParsedFile" ||
@@ -1340,7 +1337,7 @@ export namespace TsTreeScope {
 				this.current._tag === "TsDeclModule" ||
 				this.current._tag === "TsGlobal"
 			) {
-				const container = this.current as TsContainer;
+				const _container = this.current as TsContainer;
 				// In full implementation, would use Imports.lookupFromImports
 				return IArray.Empty;
 			}
@@ -1479,8 +1476,6 @@ export namespace TsTreeScope {
  * Mock implementation for testing
  */
 export class MockTsTreeScope implements TsTreeScope {
-	constructor() {}
-
 	static create(): MockTsTreeScope {
 		return new MockTsTreeScope();
 	}
@@ -1526,37 +1521,37 @@ export class MockTsTreeScope implements TsTreeScope {
 		return new TsTreeScope.Scoped(this, current, false);
 	}
 
-	lookup(qname: TsQIdent, skipValidation = false): IArray<TsNamedDecl> {
+	lookup(_qname: TsQIdent, _skipValidation = false): IArray<TsNamedDecl> {
 		return IArray.Empty;
 	}
 
 	lookupIncludeScope(
-		qname: TsQIdent,
-		skipValidation = false,
+		_qname: TsQIdent,
+		_skipValidation = false,
 	): IArray<[TsNamedDecl, TsTreeScope]> {
 		return IArray.Empty;
 	}
 
-	lookupType(qname: TsQIdent, skipValidation = false): IArray<TsNamedDecl> {
+	lookupType(_qname: TsQIdent, _skipValidation = false): IArray<TsNamedDecl> {
 		return IArray.Empty;
 	}
 
 	lookupTypeIncludeScope(
-		qname: TsQIdent,
-		skipValidation = false,
+		_qname: TsQIdent,
+		_skipValidation = false,
 	): IArray<[TsNamedDecl, TsTreeScope]> {
 		return IArray.Empty;
 	}
 
 	lookupInternal<T extends TsNamedDecl>(
-		picker: Picker<T>,
-		wanted: IArray<TsIdent>,
-		loopDetector: LoopDetector,
+		_picker: Picker<T>,
+		_wanted: IArray<TsIdent>,
+		_loopDetector: LoopDetector,
 	): IArray<[T, TsTreeScope]> {
 		return IArray.Empty;
 	}
 
-	isAbstract(qname: TsQIdent): boolean {
+	isAbstract(_qname: TsQIdent): boolean {
 		return false;
 	}
 
@@ -1572,7 +1567,7 @@ export class MockTsTreeScope implements TsTreeScope {
 		return false;
 	}
 
-	fatalMaybe(message: string): void {
+	fatalMaybe(_message: string): void {
 		// Do nothing in mock
 	}
 
@@ -1600,7 +1595,7 @@ export const FillInTParams = {
 	 */
 	forInterface: (
 		decl: TsDeclInterface,
-		tparams: IArray<TsType>,
+		_tparams: IArray<TsType>,
 	): TsDeclInterface => {
 		// Stub implementation - just return the original declaration
 		// In a full implementation, this would substitute type parameters
@@ -1610,7 +1605,7 @@ export const FillInTParams = {
 	/**
 	 * Fill in type parameters for a class declaration
 	 */
-	forClass: (decl: TsDeclClass, tparams: IArray<TsType>): TsDeclClass => {
+	forClass: (decl: TsDeclClass, _tparams: IArray<TsType>): TsDeclClass => {
 		// Stub implementation - just return the original declaration
 		// In a full implementation, this would substitute type parameters
 		return decl;
@@ -1621,7 +1616,7 @@ export const FillInTParams = {
 	 */
 	forTypeAlias: (
 		decl: TsDeclTypeAlias,
-		tparams: IArray<TsType>,
+		_tparams: IArray<TsType>,
 	): TsDeclTypeAlias => {
 		// Stub implementation - just return the original declaration
 		// In a full implementation, this would substitute type parameters

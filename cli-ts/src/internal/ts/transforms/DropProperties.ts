@@ -10,23 +10,18 @@
  */
 
 import type { IArray } from "../../IArray.js";
-import {
-	TransformClassMembers,
-	TransformMembers,
-} from "../TreeTransformations.js";
+import { TransformMembers } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
-import {
-	type HasClassMembers,
-	type TsContainer,
-	type TsContainerOrDecl,
-	type TsDeclClass,
-	type TsDeclInterface,
-	TsIdent,
-	type TsMember,
-	type TsMemberProperty,
-	type TsNamedValueDecl,
-	type TsTypeObject,
-	TsTypeRef,
+import type {
+	HasClassMembers,
+	TsContainer,
+	TsContainerOrDecl,
+	TsDeclClass,
+	TsDeclInterface,
+	TsMember,
+	TsMemberProperty,
+	TsNamedValueDecl,
+	TsTypeObject,
 } from "../trees.js";
 
 /**
@@ -47,7 +42,7 @@ export class DropProperties extends TransformMembers {
 	/**
 	 * Filter container members to remove unwanted declarations.
 	 */
-	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
+	newMembers(_scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
 		return x.members.filter((member: TsContainerOrDecl) => {
 			// Filter out __promisify__ named value declarations
 			if (this.isNamedValueDecl(member)) {
@@ -61,7 +56,7 @@ export class DropProperties extends TransformMembers {
 	/**
 	 * Filter class members to remove unwanted properties.
 	 */
-	newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
+	newClassMembers(_scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
 		return x.members.filter((member: TsMember) => {
 			// Only filter TsMemberProperty, let other member types pass through
 			if (member._tag !== "TsMemberProperty") {

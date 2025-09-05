@@ -8,12 +8,7 @@
 import { none, type Option, some } from "fp-ts/Option";
 import type { HasClassMembers } from "./MemberCache.js";
 import type {
-	TsDeclClass,
-	TsDeclEnum,
-	TsDeclInterface,
-	TsDeclModule,
 	TsDeclNamespace,
-	TsDeclTypeAlias,
 	TsDeclVar,
 	TsNamedDecl,
 	TsNamedValueDecl,

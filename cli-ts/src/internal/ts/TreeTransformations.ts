@@ -50,7 +50,7 @@ export abstract class TreeTransformationUnit extends AbstractTreeTransformation<
 	/**
 	 * Returns void since no context is maintained.
 	 */
-	withTree(context: void, tree: TsTree): void {
+	withTree(_context: undefined, _tree: TsTree) {
 		return undefined;
 	}
 }
@@ -162,7 +162,7 @@ export namespace TreeTransformations {
 	 */
 	export function identity<T>(): AbstractTreeTransformation<T> {
 		return new (class extends AbstractTreeTransformation<T> {
-			withTree(t: T, tree: TsTree): T {
+			withTree(t: T, _tree: TsTree): T {
 				return t;
 			}
 		})();

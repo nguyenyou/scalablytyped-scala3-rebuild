@@ -4,7 +4,6 @@
  */
 
 import { type Either, left, right } from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
 import type { Logger } from "../logging";
 
 /**

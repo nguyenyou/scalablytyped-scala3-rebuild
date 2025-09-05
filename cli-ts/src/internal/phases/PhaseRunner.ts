@@ -7,12 +7,7 @@ import { SortedMap, type SortedSet } from "../collections";
 import type { Logger } from "../logging";
 import { PhaseEvent, type PhaseListener } from "./PhaseListener";
 import { PhaseRes } from "./PhaseRes";
-import {
-	type RecPhase,
-	RecPhaseBase,
-	RecPhaseInitial,
-	RecPhaseNext,
-} from "./RecPhase";
+import { type RecPhase, RecPhaseInitial, RecPhaseNext } from "./RecPhase";
 import type { GetDeps, IsCircular } from "./types";
 
 /**

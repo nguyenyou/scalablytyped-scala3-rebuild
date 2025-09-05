@@ -4,9 +4,9 @@
  * numbering, timestamps, and human-readable output to both console and file.
  */
 
+import * as path from "node:path";
 import chalk from "chalk";
 import * as fs from "fs-extra";
-import * as path from "path";
 
 export class ExecutionLogger {
 	private stepCounter = 0;
@@ -67,7 +67,7 @@ export class ExecutionLogger {
 		this.logWriter.write(`Started at: ${startTime}\n`);
 		this.logWriter.write(`Working directory: ${this.workingDirectory}\n`);
 		this.logWriter.write(`Output directory: ${this.outputDirectory}\n`);
-		this.logWriter.write("=".repeat(50) + "\n");
+		this.logWriter.write(`${"=".repeat(50)}\n`);
 		this.logWriter.write("\n");
 	}
 
@@ -83,7 +83,7 @@ export class ExecutionLogger {
 
 		// Log to file
 		if (this.logWriter) {
-			this.logWriter.write(stepMessage + "\n");
+			this.logWriter.write(`${stepMessage}\n`);
 		}
 	}
 
@@ -98,7 +98,7 @@ export class ExecutionLogger {
 
 		// Log to file
 		if (this.logWriter) {
-			this.logWriter.write(progressMessage + "\n");
+			this.logWriter.write(`${progressMessage}\n`);
 		}
 	}
 
@@ -115,7 +115,7 @@ export class ExecutionLogger {
 
 		// Log to file
 		if (this.logWriter) {
-			this.logWriter.write(errorMessage + "\n");
+			this.logWriter.write(`${errorMessage}\n`);
 		}
 	}
 
@@ -128,7 +128,7 @@ export class ExecutionLogger {
 
 		// Log to file
 		if (this.logWriter) {
-			this.logWriter.write(message + "\n");
+			this.logWriter.write(`${message}\n`);
 		}
 	}
 
@@ -143,7 +143,7 @@ export class ExecutionLogger {
 				.substring(0, 19);
 
 			this.logWriter.write("\n");
-			this.logWriter.write("=".repeat(50) + "\n");
+			this.logWriter.write(`${"=".repeat(50)}\n`);
 			this.logWriter.write(
 				`Execution ${success ? "completed successfully" : "failed"} at: ${endTime}\n`,
 			);

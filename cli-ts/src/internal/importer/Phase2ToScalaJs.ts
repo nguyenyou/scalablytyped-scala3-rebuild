@@ -5,18 +5,17 @@
  * scala.js limitations, like ensuring no methods erase to the same signature
  */
 
-import { Either, left, right } from "fp-ts/Either";
+import { right } from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
-import { none, Option, some } from "fp-ts/Option";
 import { type SortedMap, SortedSet } from "../collections";
 import type { Logger } from "../logging";
 import { flatMap, PhaseRes } from "../phases/PhaseRes";
-import { type GetDeps, type IsCircular, Phase } from "../phases/types";
+import type { GetDeps, IsCircular } from "../phases/types";
 import type { Selection } from "../Selection";
 import { Name } from "../scalajs/Name";
 import { PackageTree } from "../scalajs/PackageTree";
 import type { TsIdentLibrary } from "../ts/trees";
-import { type ScalaVersion, Versions } from "./ConversionOptions";
+import type { ScalaVersion } from "./ConversionOptions";
 import type { FlavourImpl } from "./FlavourImpl";
 import { LibScalaJs } from "./LibScalaJs";
 import type { LibTs } from "./LibTs";
@@ -39,7 +38,7 @@ export interface Phase2Config {
  * scala.js limitations, like ensuring no methods erase to the same signature
  */
 export class Phase2ToScalaJs {
-	constructor(private readonly config: Phase2Config) {}
+	constructor(readonly _config: Phase2Config) {}
 
 	/**
 	 * Apply the phase transformation
@@ -48,7 +47,7 @@ export class Phase2ToScalaJs {
 		source: LibTsSource,
 		tsLibrary: LibTs,
 		getDeps: GetDeps<LibTsSource, LibScalaJs>,
-		isCircular: IsCircular,
+		_isCircular: IsCircular,
 		logger: Logger<void>,
 	): PhaseRes<LibTsSource, LibScalaJs> {
 		logger.info(
@@ -104,7 +103,7 @@ export class Phase2ToScalaJs {
 
 		// DUMMY IMPLEMENTATION: Just return the dependencies as a set
 		const deps = new Set<LibTsSource>();
-		for (const [source, lib] of tsLibrary.dependencies) {
+		for (const [source, _lib] of tsLibrary.dependencies) {
 			deps.add(source);
 		}
 
@@ -174,7 +173,7 @@ export namespace Phase2ToScalaJs {
 	 */
 	export function createMockScalaTransforms(
 		outputPkg: Name,
-		scalaVersion: ScalaVersion,
+		_scalaVersion: ScalaVersion,
 		logger: Logger<void>,
 	): ((tree: PackageTree) => PackageTree)[] {
 		logger.info(`Creating mock Scala transforms for ${outputPkg.value}`);

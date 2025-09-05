@@ -53,7 +53,7 @@ export class AddComments extends TreeTransformationUnit {
 	 * @param t The transformation context (unused for unit transformations)
 	 * @returns A function that transforms a TsMember
 	 */
-	enterTsMember(t: void): (x: TsMember) => TsMember {
+	enterTsMember(_t: undefined): (x: TsMember) => TsMember {
 		return (x: TsMember) => {
 			switch (x._tag) {
 				case "TsMemberCall": {

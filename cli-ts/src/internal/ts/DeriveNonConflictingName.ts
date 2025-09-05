@@ -14,7 +14,6 @@
 import { none, type Option, some } from "fp-ts/Option";
 import { IArray, NumberOrdering, partialFunction } from "../IArray.js";
 import {
-	Indexing,
 	type IndexingDict,
 	type IndexingSingle,
 	TsIdent,
@@ -25,7 +24,6 @@ import {
 	type TsMemberFunction,
 	type TsMemberIndex,
 	type TsMemberProperty,
-	TsQIdent,
 	type TsType,
 	type TsTypeRef,
 } from "./trees.js";
@@ -215,7 +213,7 @@ export const DeriveNonConflictingName = {
 						(member) => {
 							const index = member as TsMemberIndex;
 							const dict = index.indexing as IndexingDict;
-							const short = Detail.pretty("Dict" + dict.name.value);
+							const short = Detail.pretty(`Dict${dict.name.value}`);
 							const inTypeStr = some(Detail.prettyType(dict.tpe));
 							const outTypeStr = Detail.prettyTypeOpt(index.valueType);
 
@@ -308,7 +306,7 @@ export const DeriveNonConflictingName = {
 };
 
 // Helper function to implement firstDefined functionality
-function firstDefined<T, U>(
+function _firstDefined<T, U>(
 	iterable: Iterable<T>,
 	f: (item: T) => Option<U>,
 ): Option<U> {

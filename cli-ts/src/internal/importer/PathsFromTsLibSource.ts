@@ -6,8 +6,8 @@
  * to specific patterns used by DefinitelyTyped and other TypeScript libraries.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { InFile, type InFolder } from "../files.js";
 import { IArray } from "../IArray.js";
 
@@ -99,7 +99,7 @@ export namespace PathsFromTsLibSource {
 						}
 					}
 				}
-			} catch (error) {
+			} catch (_error) {
 				// Silently ignore directories we can't read (permissions, etc.)
 				// This matches the behavior of os.walk which would skip inaccessible directories
 			}

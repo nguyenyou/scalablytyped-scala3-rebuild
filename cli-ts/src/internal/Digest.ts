@@ -4,7 +4,7 @@
  * Provides MD5 digest functionality for content hashing.
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import type { IArray } from "./IArray.js";
 
 /**

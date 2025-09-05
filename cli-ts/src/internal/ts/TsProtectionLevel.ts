@@ -4,7 +4,6 @@
  * Represents the different protection levels for TypeScript class members
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 
 /**

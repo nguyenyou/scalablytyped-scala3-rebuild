@@ -9,7 +9,6 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import { Comments } from "../Comments.js";
 import type { IArray } from "../IArray.js";
-import { MethodType } from "./MethodType.js";
 import type { OptionalModifier } from "./OptionalModifier.js";
 import type { ReadonlyModifier } from "./ReadonlyModifier.js";
 import type { TsProtectionLevel } from "./TsProtectionLevel.js";
@@ -47,7 +46,6 @@ import {
 	type TsTypeQuery,
 	type TsTypeRef,
 	type TsTypeRepeated,
-	TsTypeThis,
 	type TsTypeTuple,
 	type TsTypeUnion,
 } from "./trees.js";
@@ -464,7 +462,7 @@ class TsTypeFormatterImpl implements TsTypeFormatter {
 					O.map((opt) => `is ${this.apply(opt)}`),
 					O.getOrElse(() => ""),
 				);
-				return `asserts ${asserts.ident.value}${isOptStr ? " " + isOptStr : ""}`;
+				return `asserts ${asserts.ident.value}${isOptStr ? ` ${isOptStr}` : ""}`;
 			}
 
 			case "TsTypeUnion": {

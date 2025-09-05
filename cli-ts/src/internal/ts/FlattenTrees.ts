@@ -7,16 +7,10 @@
 
 import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
-import { Comment, IsTrivial } from "../Comment.js";
+import { IsTrivial } from "../Comment.js";
 import { Comments } from "../Comments.js";
-import {
-	IArray,
-	IArrayBuilder,
-	PartialFunction,
-	partialFunction,
-} from "../IArray.js";
+import { IArray, IArrayBuilder, partialFunction } from "../IArray.js";
 import { CodePath } from "./CodePath.js";
-import { Directive } from "./Directive.js";
 import { JsLocation } from "./JsLocation.js";
 import { TsTreeTraverse } from "./TsTreeTraverse.js";
 import {
@@ -33,7 +27,6 @@ import {
 	TsDeclVar,
 	TsGlobal,
 	TsIdent,
-	TsIdentSimple,
 	type TsMember,
 	TsMemberIndex,
 	TsMemberProperty,
@@ -44,7 +37,6 @@ import {
 	TsTypeIntersect,
 	type TsTypeParam,
 	TsTypeQuery,
-	TsTypeRef,
 } from "./trees.js";
 
 /**

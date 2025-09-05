@@ -4,9 +4,7 @@
  * Represents JavaScript location information for TypeScript declarations
  */
 
-import { none, Option, some } from "fp-ts/Option";
-import { DefaultedModuleSpec, ModuleSpec } from "@/internal/ts/ModuleSpec.ts";
-import { IArray } from "../IArray.js";
+import { ModuleSpec } from "@/internal/ts/ModuleSpec.ts";
 import {
 	TsAugmentedModule,
 	TsDeclModule,

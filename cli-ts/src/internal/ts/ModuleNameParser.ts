@@ -2,8 +2,7 @@
  * TypeScript port of org.scalablytyped.converter.internal.ts.ModuleNameParser
  */
 
-import { none, Option, some } from "fp-ts/Option";
-import { IArray } from "../IArray.js";
+import { none, some } from "fp-ts/Option";
 import { TsIdent, type TsIdentModule } from "./trees.js";
 
 /**

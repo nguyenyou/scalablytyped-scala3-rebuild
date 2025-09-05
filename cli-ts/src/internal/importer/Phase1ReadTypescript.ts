@@ -5,14 +5,11 @@
  * the tree. For instance defaulted parameters are filled in. The point is to go from a complex tree to a simpler tree
  */
 
-import { type Either, left, right } from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
-import { none, Option, some } from "fp-ts/Option";
-import { SortedMap, SortedSet } from "../collections";
+import { type Either, right } from "fp-ts/Either";
 import type { InFile } from "../files";
 import type { Logger } from "../logging";
 import { PhaseRes } from "../phases/PhaseRes";
-import { type GetDeps, type IsCircular, Phase } from "../phases/types";
+import type { GetDeps, IsCircular } from "../phases/types";
 import type { Selection } from "../Selection";
 import { type TsIdentLibrary, TsParsedFile } from "../ts/trees";
 import type { CalculateLibraryVersion } from "./CalculateLibraryVersion";
@@ -46,7 +43,7 @@ export class Phase1ReadTypescript {
 	apply(
 		source: LibTsSource,
 		_input: LibTsSource,
-		getDeps: GetDeps<LibTsSource, LibTs>,
+		_getDeps: GetDeps<LibTsSource, LibTs>,
 		isCircular: IsCircular,
 		logger: Logger<void>,
 	): PhaseRes<LibTsSource, LibTs> {
@@ -121,7 +118,7 @@ export namespace Phase1ReadTypescript {
 	 */
 	export function createMockPipeline(
 		libName: TsIdentLibrary,
-		expandTypeMappings: Selection<TsIdentLibrary>,
+		_expandTypeMappings: Selection<TsIdentLibrary>,
 		involvesReact: boolean,
 		logger: Logger<void>,
 	): ((file: TsParsedFile) => TsParsedFile)[] {

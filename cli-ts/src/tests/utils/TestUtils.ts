@@ -6,7 +6,7 @@
  * and reducing code duplication.
  */
 
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option, some } from "fp-ts/Option";
 import { Raw } from "@/internal/Comment.js";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
@@ -863,9 +863,7 @@ export function createMockExport(name: string): TsExport {
 export function createMockExportDecl(name: string): TsExport {
 	const exportee: TsExporteeNames = {
 		_tag: "TsExporteeNames",
-		idents: createIArray([
-			[createQIdent(name), none as Option<TsIdentSimple>],
-		]),
+		idents: createIArray([[createQIdent(name), none as Option<TsIdentSimple>]]),
 		fromOpt: none,
 		asString: `TsExporteeNames(${name})`,
 	};

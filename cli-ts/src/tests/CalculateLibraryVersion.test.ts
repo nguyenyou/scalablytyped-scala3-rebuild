@@ -7,10 +7,10 @@ import * as O from "fp-ts/Option";
 import { InFolder } from "../internal/files.js";
 import {
 	CalculateLibraryVersion,
-	type Comments,
 	PackageJsonOnly,
 } from "../internal/ts/CalculateLibraryVersion.js";
 import { PackageJson } from "../internal/ts/PackageJson.js";
+import { Comments } from "../internal/Comments.js";
 
 // Mock Comments implementation for testing
 const mockComments: Comments = {

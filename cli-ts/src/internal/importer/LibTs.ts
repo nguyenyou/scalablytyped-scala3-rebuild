@@ -4,9 +4,7 @@
  * Represents a TypeScript library after Phase1 processing
  */
 
-import { Option } from "fp-ts/Option";
 import { SortedMap } from "../collections";
-import { Digest } from "../Digest";
 import { LibraryVersion } from "../LibraryVersion";
 import { type TsIdentLibrary, TsParsedFile } from "../ts/trees";
 import type { LibTsSource } from "./LibTsSource";

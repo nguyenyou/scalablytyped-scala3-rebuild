@@ -89,7 +89,7 @@ export function formatComment(s: string): string {
 	// If the comment doesn't end with a newline, add a singular space
 	const resultStr = result.join("");
 	if (resultStr.endsWith("*/")) {
-		return resultStr + " ";
+		return `${resultStr} `;
 	}
 
 	return resultStr;

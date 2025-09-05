@@ -5,18 +5,15 @@
  * It handles recursive alias resolution, thin interface resolution, and union/intersection type processing.
  */
 
-import { pipe } from "fp-ts/function";
-import { fold, getOrElse, none, Option, some } from "fp-ts/Option";
 import { Comment } from "../Comment.js";
 import { Comments } from "../Comments.js";
-import { IArray, PartialFunction, partialFunction } from "../IArray.js";
+import { partialFunction } from "../IArray.js";
 import { FillInTParams } from "./FillInTParams.js";
 import type { TsTreeScope } from "./TsTreeScope.js";
 import { TsTypeFormatter } from "./TsTypeFormatter.js";
 import type {
 	TsDeclInterface,
 	TsDeclTypeAlias,
-	TsMember,
 	TsNamedDecl,
 	TsType,
 } from "./trees.js";

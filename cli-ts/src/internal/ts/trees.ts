@@ -3927,7 +3927,7 @@ export const TsFunParam = {
 				}
 				return false;
 			},
-			asString: `TsFunParam(${name.value}${tpe._tag === "Some" ? ": " + tpe.value.asString : ""})`,
+			asString: `TsFunParam(${name.value}${tpe._tag === "Some" ? `: ${tpe.value.asString}` : ""})`,
 		};
 	},
 
@@ -4793,7 +4793,7 @@ export const TsMemberProperty = {
 					isStatic,
 					isReadOnly,
 				),
-			asString: `TsMemberProperty(${name.value}${tpe._tag === "Some" ? ": " + tpe.value.asString : ""})`,
+			asString: `TsMemberProperty(${name.value}${tpe._tag === "Some" ? `: ${tpe.value.asString}` : ""})`,
 		};
 	},
 
@@ -4939,7 +4939,7 @@ export const TsImportedStar = {
 		return {
 			_tag: "TsImportedStar",
 			asOpt,
-			asString: `TsImportedStar(${asOpt._tag === "Some" ? "as " + asOpt.value.value : "no alias"})`,
+			asString: `TsImportedStar(${asOpt._tag === "Some" ? `as ${asOpt.value.value}` : "no alias"})`,
 		};
 	},
 
@@ -5107,7 +5107,7 @@ export const TsExporteeNames = {
 			_tag: "TsExporteeNames",
 			idents,
 			fromOpt,
-			asString: `TsExporteeNames(${idents.length} exports${fromOpt._tag === "Some" ? " from " + fromOpt.value.value : ""})`,
+			asString: `TsExporteeNames(${idents.length} exports${fromOpt._tag === "Some" ? ` from ${fromOpt.value.value}` : ""})`,
 		};
 	},
 
@@ -5169,7 +5169,7 @@ export const TsExporteeStar = {
 			_tag: "TsExporteeStar",
 			as,
 			from,
-			asString: `TsExporteeStar(${as._tag === "Some" ? "as " + as.value.value : "no alias"} from ${from.value})`,
+			asString: `TsExporteeStar(${as._tag === "Some" ? `as ${as.value.value}` : "no alias"} from ${from.value})`,
 		};
 	},
 
@@ -5676,7 +5676,7 @@ export const TsExpr = {
 				// Check if value contains only digits and dots (no other characters)
 				if (/^[0-9.]+$/.test(value)) {
 					const parsed = parseFloat(value);
-					if (!isNaN(parsed)) {
+					if (!Number.isNaN(parsed)) {
 						return parsed;
 					}
 				}
@@ -5709,7 +5709,7 @@ export const TsExpr = {
 					// Check if value contains only digits (no decimals or other characters)
 					if (/^[0-9]+$/.test(value)) {
 						const parsed = parseInt(value, 10);
-						if (!isNaN(parsed)) {
+						if (!Number.isNaN(parsed)) {
 							return parsed;
 						}
 					}
@@ -5922,7 +5922,7 @@ export const TsEnumMember = {
 			comments,
 			name,
 			expr,
-			asString: `TsEnumMember(${name.value}${expr._tag === "Some" ? " = " + TsExpr.format(expr.value) : ""})`,
+			asString: `TsEnumMember(${name.value}${expr._tag === "Some" ? ` = ${TsExpr.format(expr.value)}` : ""})`,
 			withComments: (cs: Comments) => TsEnumMember.create(cs, name, expr),
 			addComment: (c: Comment) =>
 				TsEnumMember.create(comments.add(c), name, expr),
@@ -5986,7 +5986,7 @@ export const TsEnumMember = {
 				const expr = member.expr.value;
 				if (TsExpr.isLiteral(expr) && TsLiteral.isNum(expr.value)) {
 					const numValue = parseInt((expr.value as any).value, 10);
-					if (!isNaN(numValue)) {
+					if (!Number.isNaN(numValue)) {
 						lastUnspecifiedIndex = numValue + 1;
 					}
 				}
@@ -6097,7 +6097,7 @@ export const TsTypeAsserts = {
 		_tag: "TsTypeAsserts",
 		ident,
 		isOpt,
-		asString: `TsTypeAsserts(asserts ${ident.value}${isOpt._tag === "Some" ? " is " + isOpt.value.asString : ""})`,
+		asString: `TsTypeAsserts(asserts ${ident.value}${isOpt._tag === "Some" ? ` is ${isOpt.value.asString}` : ""})`,
 	}),
 
 	/**
@@ -6130,7 +6130,7 @@ export const TsTupleElement = {
 		_tag: "TsTupleElement",
 		label,
 		tpe,
-		asString: `TsTupleElement(${label._tag === "Some" ? label.value.value + ": " : ""}${tpe.asString})`,
+		asString: `TsTupleElement(${label._tag === "Some" ? `${label.value.value}: ` : ""}${tpe.asString})`,
 	}),
 
 	/**
@@ -6409,7 +6409,7 @@ export const TsMemberTypeMapped = {
 				optionalize,
 				to,
 			),
-		asString: `TsMemberTypeMapped([${key.value} in ${from.asString}]${as._tag === "Some" ? " as " + as.value.asString : ""}: ${to.asString})`,
+		asString: `TsMemberTypeMapped([${key.value} in ${from.asString}]${as._tag === "Some" ? ` as ${as.value.asString}` : ""}: ${to.asString})`,
 	}),
 
 	/**
@@ -6539,7 +6539,7 @@ export const TsTypeTemplateLiteral = {
 			.map((p) =>
 				p._tag === "TsTemplatePartLiteral"
 					? (p as TsTemplatePartLiteral).value
-					: "${" + (p as TsTemplatePartType).tpe.asString + "}",
+					: `\${${(p as TsTemplatePartType).tpe.asString}}`,
 			)
 			.join("")}\`)`,
 	}),

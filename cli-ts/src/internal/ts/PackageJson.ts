@@ -86,7 +86,7 @@ function findLibraryInMap<V>(
 }
 
 // Helper function to check if Map contains TsIdentLibrary by value comparison
-function mapHasLibrary(
+function _mapHasLibrary(
 	map: Map<TsIdentLibrary, any>,
 	targetLib: TsIdentLibrary,
 ): boolean {
@@ -99,7 +99,7 @@ function mapHasLibrary(
 }
 
 // Helper function to get value from Map using TsIdentLibrary value comparison
-function mapGetLibrary<V>(
+function _mapGetLibrary<V>(
 	map: Map<TsIdentLibrary, V>,
 	targetLib: TsIdentLibrary,
 ): V | undefined {

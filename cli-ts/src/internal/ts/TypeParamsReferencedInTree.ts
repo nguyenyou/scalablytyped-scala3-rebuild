@@ -7,17 +7,10 @@
  */
 
 import { pipe } from "fp-ts/function";
-import { fold, isSome, none, Option, some } from "fp-ts/Option";
+import { fold } from "fp-ts/Option";
 import { IArray, IArrayBuilder, IArrayPatterns } from "../IArray.js";
-import { AbstractTreeTransformation } from "./TreeTransformation.js";
 import { TsTreeTraverse } from "./TsTreeTraverse.js";
-import {
-	type TsIdent,
-	TsQIdent,
-	type TsTree,
-	type TsTypeParam,
-	type TsTypeRef,
-} from "./trees.js";
+import type { TsIdent, TsTree, TsTypeParam, TsTypeRef } from "./trees.js";
 
 /**
  * Utility for extracting type parameters from trees that have them
@@ -94,7 +87,7 @@ export const TypeParamsReferencedInTree = {
 			const effectiveScope = new Map(currentScope);
 			nodeTParams.forEach((tp) => {
 				// Remove any type parameters from scope that have the same name (by value)
-				for (const [scopeIdent, scopeTParam] of currentScope.entries()) {
+				for (const [scopeIdent, _scopeTParam] of currentScope.entries()) {
 					if (scopeIdent.value === tp.name.value) {
 						effectiveScope.delete(scopeIdent);
 					}
@@ -107,7 +100,7 @@ export const TypeParamsReferencedInTree = {
 				const exactlyOne = IArrayPatterns.exactlyOne(typeRef.name.parts);
 				if (exactlyOne !== undefined) {
 					// Find the type parameter by comparing the value, not the object reference
-					for (const [scopeIdent, scopeTParam] of effectiveScope.entries()) {
+					for (const [scopeIdent, _scopeTParam] of effectiveScope.entries()) {
 						if (scopeIdent.value === exactlyOne.value) {
 							referenced.addOne(scopeIdent);
 							break;
@@ -159,7 +152,7 @@ export const TypeParamsReferencedInTree = {
 					const exactlyOne = IArrayPatterns.exactlyOne(typeRef.name.parts);
 					if (exactlyOne !== undefined) {
 						// Find the type parameter by comparing the value, not the object reference
-						for (const [scopeIdent, scopeTParam] of inScope.entries()) {
+						for (const [scopeIdent, _scopeTParam] of inScope.entries()) {
 							if (scopeIdent.value === exactlyOne.value) {
 								return scopeIdent;
 							}

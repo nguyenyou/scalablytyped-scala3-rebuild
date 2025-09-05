@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { TsTreeScope } from "../internal/ts/TsTreeScope.js";
 import {
-	createBasicTsLib,
-	createIArray,
 	createMockClass,
-	createMockExportDecl,
-	createMockInterface,
 	createMockLogger,
 	createMockModule,
 	createMockNamespace,
@@ -14,13 +10,9 @@ import {
 	createQIdent,
 	createQIdentFromParts,
 	createScopedLibrary,
-	createSimpleIdent,
 	createSimpleLibrary,
 	createTypeParam,
 } from "./utils/TestUtils.js";
-import {TsQIdent} from "@/internal/ts/trees.ts";
-
-
 
 describe("TsTreeScope", () => {
 	describe("Construction and Basic Properties", () => {

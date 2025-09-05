@@ -8,16 +8,7 @@ import { flatMap, fromNullable, none, type Option } from "fp-ts/Option";
 import type { InFolder } from "../files.js";
 import { LibraryVersion } from "../LibraryVersion.js";
 import type { PackageJson } from "./PackageJson.js";
-
-// Comments interface - simplified version for this context
-// In a full implementation, this would be imported from a proper Comments module
-export interface Comments {
-	readonly cs: readonly Comment[];
-	isEmpty: boolean;
-	nonEmpty: boolean;
-}
-
-export type Comment = {};
+import type { Comments } from "../Comments.js";
 
 /**
  * Interface for calculating library version information
@@ -56,10 +47,10 @@ class PackageJsonOnlyImpl implements CalculateLibraryVersion {
 	 * @returns LibraryVersion with version from package.json if available
 	 */
 	apply(
-		sourceFolder: InFolder,
+		_sourceFolder: InFolder,
 		isStdLib: boolean,
 		packageJsonOpt: Option<PackageJson>,
-		comments: Comments,
+		_comments: Comments,
 	): LibraryVersion {
 		// Extract version from package.json using fp-ts flatMap
 		// Equivalent to Scala: packageJsonOpt.flatMap(_.version)

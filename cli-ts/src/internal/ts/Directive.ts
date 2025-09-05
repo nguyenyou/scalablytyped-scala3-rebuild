@@ -4,7 +4,6 @@
  * Represents TypeScript directive types for reference comments and compiler directives
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 
 /**
