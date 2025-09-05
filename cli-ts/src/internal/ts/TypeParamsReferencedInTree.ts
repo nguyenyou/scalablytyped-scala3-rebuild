@@ -86,7 +86,12 @@ export const TypeParamsReferencedInTree = {
       const nodeTParams = HasTParams.apply(node);
       const effectiveScope = new Map(currentScope);
       nodeTParams.forEach(tp => {
-        effectiveScope.delete(tp.name);
+        // Remove any type parameters from scope that have the same name (by value)
+        for (const [scopeIdent, scopeTParam] of currentScope.entries()) {
+          if (scopeIdent.value === tp.name.value) {
+            effectiveScope.delete(scopeIdent);
+          }
+        }
       });
 
       // If this is a type reference, check if it references a type parameter in scope
