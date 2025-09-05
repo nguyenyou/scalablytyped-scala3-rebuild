@@ -1,6 +1,6 @@
-package org.scalablytyped.converter.internal.ts
+package org.scalablytyped.converter.internal
+package ts
 
-import org.scalablytyped.converter.internal.*
 import org.scalablytyped.converter.internal.logging.Logger
 import utest.*
 

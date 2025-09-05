@@ -1,7 +1,7 @@
-package org.scalablytyped.converter.internal.ts.trees
+package org.scalablytyped.converter.internal
+package ts
+package trees
 
-import org.scalablytyped.converter.internal.*
-import org.scalablytyped.converter.internal.ts.*
 import utest.*
 
 object TsTypeIntersectTests extends TestSuite {

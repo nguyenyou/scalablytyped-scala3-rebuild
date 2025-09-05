@@ -1,7 +1,7 @@
-package org.scalablytyped.converter.internal.ts.transforms
+package org.scalablytyped.converter.internal
+package ts
+package transforms
 
-import org.scalablytyped.converter.internal.*
-import org.scalablytyped.converter.internal.ts.*
 import utest.*
 
 object TypeRewriterTests extends TestSuite {

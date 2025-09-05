@@ -1,7 +1,7 @@
-package org.scalablytyped.converter.internal.ts.transforms
+package org.scalablytyped.converter.internal
+package ts
+package transforms
 
-import org.scalablytyped.converter.internal.*
-import org.scalablytyped.converter.internal.ts.*
 import org.scalablytyped.converter.internal.ts.TsTreeScope.LoopDetector
 import org.scalablytyped.converter.internal.ts.transforms.ExpandTypeMappings.{Ok, Res}
 import org.scalablytyped.converter.internal.logging.Logger

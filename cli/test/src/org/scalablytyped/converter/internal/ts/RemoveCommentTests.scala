@@ -1,6 +1,6 @@
-package org.scalablytyped.converter.internal.ts
+package org.scalablytyped.converter.internal
+package ts
 
-import org.scalablytyped.converter.internal.*
 import utest.*
 
 object RemoveCommentTests extends TestSuite {
