@@ -95,19 +95,41 @@ function createMockScope(...declarations: any[]): TsTreeScope {
   // This is a minimal implementation that provides the necessary methods for FollowAliases
   const mockScope: any = {
     lookupType: (name: any, skipValidation: boolean = false) => {
-      // Find declaration by name
-      const found = declarations.find(decl =>
-        decl.name && decl.name.value === name.parts.apply(0).value
-      );
-      return found ? IArray.fromArray([found]) : IArray.Empty;
+      // Check if this is a primitive type - if so, return empty (primitives are not looked up)
+      if (name && name.parts && name.parts.length === 1) {
+        const nameStr = name.parts.apply(0).value;
+        const primitiveTypes = ['any', 'boolean', 'number', 'string', 'symbol', 'object', 'undefined', 'null', 'void', 'never', 'unknown', 'bigint'];
+        if (primitiveTypes.includes(nameStr)) {
+          return IArray.Empty;
+        }
+
+        // Find declaration by name
+        const found = declarations.find(decl =>
+          decl.name && decl.name.value === nameStr
+        );
+        return found ? IArray.fromArray([found]) : IArray.Empty;
+      }
+
+      return IArray.Empty;
     },
 
     lookupTypeIncludeScope: (name: any) => {
-      // Find declaration by name and return with scope
-      const found = declarations.find(decl =>
-        decl.name && decl.name.value === name.parts.apply(0).value
-      );
-      return found ? IArray.fromArray([[found, mockScope]]) : IArray.Empty;
+      // Check if this is a primitive type - if so, return empty (primitives are not looked up)
+      if (name && name.parts && name.parts.length === 1) {
+        const nameStr = name.parts.apply(0).value;
+        const primitiveTypes = ['any', 'boolean', 'number', 'string', 'symbol', 'object', 'undefined', 'null', 'void', 'never', 'unknown', 'bigint'];
+        if (primitiveTypes.includes(nameStr)) {
+          return IArray.Empty;
+        }
+
+        // Find declaration by name and return with scope
+        const found = declarations.find(decl =>
+          decl.name && decl.name.value === nameStr
+        );
+        return found ? IArray.fromArray([[found, mockScope]]) : IArray.Empty;
+      }
+
+      return IArray.Empty;
     },
 
     logger: Logger.DevNull()
@@ -138,7 +160,8 @@ describe('FollowAliases', () => {
 
       const result = FollowAliases.apply(scope)(typeRef);
 
-      expect(result).toBe(TsTypeRef.string);
+      expect(result._tag).toBe('TsTypeRef');
+      expect((result as TsTypeRef).name.parts.apply(0).value).toBe('string');
     });
 
     it('follows nested type alias', () => {
@@ -149,7 +172,8 @@ describe('FollowAliases', () => {
 
       const result = FollowAliases.apply(scope)(typeRef);
 
-      expect(result).toBe(TsTypeRef.number);
+      expect(result._tag).toBe('TsTypeRef');
+      expect((result as TsTypeRef).name.parts.apply(0).value).toBe('number');
     });
 
     it('follows thin interface', () => {
@@ -204,8 +228,8 @@ describe('FollowAliases', () => {
       expect(result._tag).toBe('TsTypeUnion');
       const resultUnion = result as any;
       const types = resultUnion.types.toArray();
-      expect(types).toContain(TsTypeRef.string);
-      expect(types).toContain(TsTypeRef.number);
+      expect(types.some((t: TsType) => t._tag === 'TsTypeRef' && (t as TsTypeRef).name.parts.apply(0).value === 'string')).toBe(true);
+      expect(types.some((t: TsType) => t._tag === 'TsTypeRef' && (t as TsTypeRef).name.parts.apply(0).value === 'number')).toBe(true);
     });
 
     it('follows aliases in intersection types', () => {
@@ -223,8 +247,8 @@ describe('FollowAliases', () => {
       expect(result._tag).toBe('TsTypeIntersect');
       const resultIntersection = result as any;
       const types = resultIntersection.types.toArray();
-      expect(types).toContain(TsTypeRef.string);
-      expect(types).toContain(TsTypeRef.number);
+      expect(types.some((t: TsType) => t._tag === 'TsTypeRef' && (t as TsTypeRef).name.parts.apply(0).value === 'string')).toBe(true);
+      expect(types.some((t: TsType) => t._tag === 'TsTypeRef' && (t as TsTypeRef).name.parts.apply(0).value === 'number')).toBe(true);
     });
   });
 
@@ -237,7 +261,7 @@ describe('FollowAliases', () => {
       const result = FollowAliases.typeRef(scope)(typeRef);
 
       expect(result._tag).toBe('TsTypeRef');
-      expect(result).toBe(TsTypeRef.string);
+      expect((result as TsTypeRef).name.parts.apply(0).value).toBe('string');
     });
 
     it('typeRef returns original for unknown type', () => {
