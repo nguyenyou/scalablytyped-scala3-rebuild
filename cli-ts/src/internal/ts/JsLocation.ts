@@ -7,103 +7,7 @@
 import { TsTree, TsIdent, TsQIdent, TsIdentModule, TsNamedDecl, TsDeclModule, TsAugmentedModule, TsGlobal } from './trees.js';
 import { IArray } from '../IArray.js';
 import { Option, some, none } from 'fp-ts/Option';
-
-/**
- * Represents a module specification for JavaScript locations
- * Port of org.scalablytyped.converter.internal.ts.ModuleSpec
- */
-export interface ModuleSpec {
-  readonly _tag: 'Defaulted' | 'Namespaced' | 'Specified';
-}
-
-/**
- * Defaulted module specification - imports the default export
- */
-export interface DefaultedModuleSpec extends ModuleSpec {
-  readonly _tag: 'Defaulted';
-}
-
-/**
- * Namespaced module specification - imports the entire module as a namespace
- */
-export interface NamespacedModuleSpec extends ModuleSpec {
-  readonly _tag: 'Namespaced';
-}
-
-/**
- * Specified module specification - imports specific named exports
- */
-export interface SpecifiedModuleSpec extends ModuleSpec {
-  readonly _tag: 'Specified';
-  readonly tsIdents: IArray<TsIdent>;
-}
-
-/**
- * Constructor functions and utilities for ModuleSpec
- */
-export const ModuleSpec = {
-  /**
-   * Creates a defaulted module specification
-   */
-  defaulted: (): DefaultedModuleSpec => ({
-    _tag: 'Defaulted'
-  }),
-
-  /**
-   * Creates a namespaced module specification
-   */
-  namespaced: (): NamespacedModuleSpec => ({
-    _tag: 'Namespaced'
-  }),
-
-  /**
-   * Creates a specified module specification
-   */
-  specified: (tsIdents: IArray<TsIdent>): SpecifiedModuleSpec => ({
-    _tag: 'Specified',
-    tsIdents
-  }),
-
-  /**
-   * Creates a ModuleSpec from a single TsIdent
-   */
-  fromIdent: (ident: TsIdent): ModuleSpec => {
-    if (TsIdent.isDefault(ident)) {
-      return ModuleSpec.defaulted();
-    } else if (TsIdent.isNamespaced(ident)) {
-      return ModuleSpec.namespaced();
-    } else {
-      return ModuleSpec.specified(IArray.fromArray([ident]));
-    }
-  },
-
-  /**
-   * Adds an identifier to a module specification (+ operator)
-   */
-  add: (spec: ModuleSpec, ident: TsIdent): ModuleSpec => {
-    // Skip namespaced identifiers
-    if (TsIdent.isNamespaced(ident)) {
-      return spec;
-    }
-
-    switch (spec._tag) {
-      case 'Defaulted':
-        return ModuleSpec.specified(IArray.fromArray([TsIdent.default(), ident]));
-      case 'Namespaced':
-        return ModuleSpec.specified(IArray.fromArray([ident]));
-      case 'Specified':
-        const specifiedSpec = spec as SpecifiedModuleSpec;
-        return ModuleSpec.specified(specifiedSpec.tsIdents.append(ident));
-    }
-  },
-
-  /**
-   * Type guards
-   */
-  isDefaulted: (spec: ModuleSpec): spec is DefaultedModuleSpec => spec._tag === 'Defaulted',
-  isNamespaced: (spec: ModuleSpec): spec is NamespacedModuleSpec => spec._tag === 'Namespaced',
-  isSpecified: (spec: ModuleSpec): spec is SpecifiedModuleSpec => spec._tag === 'Specified'
-};
+import {DefaultedModuleSpec, ModuleSpec} from "@/internal/ts/ModuleSpec.ts";
 
 /**
  * Base interface for JavaScript locations
@@ -326,9 +230,3 @@ export interface JsLocationHas {
  * Singleton instances
  */
 export const JsLocationZero: JsLocationZero = JsLocation.zero();
-
-/**
- * Singleton constants for commonly used ModuleSpec instances
- */
-export const ModuleSpecDefaulted: DefaultedModuleSpec = ModuleSpec.defaulted();
-export const ModuleSpecNamespaced: NamespacedModuleSpec = ModuleSpec.namespaced();

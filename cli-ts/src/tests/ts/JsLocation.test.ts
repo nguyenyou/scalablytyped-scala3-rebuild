@@ -4,9 +4,6 @@ import {
   JsLocationGlobal, 
   JsLocationModule, 
   JsLocationBoth,
-  ModuleSpec,
-  ModuleSpecDefaulted,
-  ModuleSpecNamespaced,
   HasJsLocation,
   JsLocationHas
 } from '@/internal/ts/JsLocation.js';
@@ -27,6 +24,7 @@ import { Comments } from '@/internal/Comments.js';
 import { CodePath } from '@/internal/ts/CodePath.js';
 import { describe, test, expect } from "bun:test";
 import { none, some } from 'fp-ts/Option';
+import {ModuleSpec} from "@/internal/ts/ModuleSpec.ts";
 
 describe("JsLocation", () => {
   describe("JsLocation.Zero - Construction and Basic Properties", () => {
@@ -161,13 +159,13 @@ describe("JsLocation", () => {
     });
 
     test("ModuleSpec from TsIdent", () => {
-      const defaultSpec = ModuleSpec.fromIdent(TsIdent.default());
+      const defaultSpec = ModuleSpec.apply(TsIdent.default());
       expect(ModuleSpec.isDefaulted(defaultSpec)).toBe(true);
 
-      const namespacedSpec = ModuleSpec.fromIdent(TsIdent.namespaced());
+      const namespacedSpec = ModuleSpec.apply(TsIdent.namespaced());
       expect(ModuleSpec.isNamespaced(namespacedSpec)).toBe(true);
 
-      const otherSpec = ModuleSpec.fromIdent(TsIdent.simple("test"));
+      const otherSpec = ModuleSpec.apply(TsIdent.simple("test"));
       expect(ModuleSpec.isSpecified(otherSpec)).toBe(true);
     });
   });
@@ -864,13 +862,6 @@ describe("JsLocation", () => {
     test("JsLocationZero singleton", () => {
       expect(JsLocationZero._tag).toBe('Zero');
       expect(JsLocation.isZero(JsLocationZero)).toBe(true);
-    });
-
-    test("ModuleSpec singletons", () => {
-      expect(ModuleSpecDefaulted._tag).toBe('Defaulted');
-      expect(ModuleSpecNamespaced._tag).toBe('Namespaced');
-      expect(ModuleSpec.isDefaulted(ModuleSpecDefaulted)).toBe(true);
-      expect(ModuleSpec.isNamespaced(ModuleSpecNamespaced)).toBe(true);
     });
   });
 });
