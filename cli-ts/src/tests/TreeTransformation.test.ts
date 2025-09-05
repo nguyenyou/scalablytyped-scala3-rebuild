@@ -509,17 +509,27 @@ describe("TreeTransformation", () => {
 		});
 
 		test("type guards work correctly", () => {
-			const transformation =
-				new (class extends TreeTransformationScopedChanges {})();
+			// Create a subclass that exposes the protected methods for testing
+			class TestableTransformation extends TreeTransformationScopedChanges {
+				public testIsTsDecl(x: any): boolean {
+					return this.isTsDecl(x);
+				}
+
+				public testIsTsType(x: any): boolean {
+					return this.isTsType(x);
+				}
+			}
+
+			const transformation = new TestableTransformation();
 
 			const declClass = createTestClass("TestClass");
 			const typeRef = TsTypeRef.string;
 			const ident = TsIdent.simple("test");
 
-			expect(transformation.isTsDecl(declClass)).toBe(true);
-			expect(transformation.isTsType(typeRef)).toBe(true);
-			expect(transformation.isTsDecl(ident)).toBe(false);
-			expect(transformation.isTsType(ident)).toBe(false);
+			expect(transformation.testIsTsDecl(declClass)).toBe(true);
+			expect(transformation.testIsTsType(typeRef)).toBe(true);
+			expect(transformation.testIsTsDecl(ident)).toBe(false);
+			expect(transformation.testIsTsType(ident)).toBe(false);
 		});
 	});
 });
