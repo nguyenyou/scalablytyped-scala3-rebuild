@@ -213,7 +213,7 @@ describe('DeriveNonConflictingName - Conflict Resolution', () => {
     const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
     // Should try longer version or different combination
     expect(result).not.toBe("Name");
-    expect(result.length).toBeGreaterThan(0);
+    expect((result as string).length).toBeGreaterThan(0);
   });
 
   test('all variants conflict, fallback to numbered', () => {
@@ -230,5 +230,119 @@ describe('DeriveNonConflictingName - Conflict Resolution', () => {
     const conflicts = new Set(["Test"]);
     const result = DeriveNonConflictingName.apply("Test", members)(conflictingTryCreate(conflicts));
     expect(result).toBe("TestValue");
+  });
+});
+
+describe('DeriveNonConflictingName - Detail Class Functionality', () => {
+  test('Detail.pretty formats names correctly', () => {
+    expect(Detail.pretty("userName")).toBe("UserName");
+    expect(Detail.pretty("user_name")).toBe("Username");
+    expect(Detail.pretty("user123name")).toBe("User123name");
+    expect(Detail.pretty("123invalid")).toBe("123invalid");
+    expect(Detail.pretty("")).toBe("");
+  });
+
+  test('Detail.prettyType formats types correctly', () => {
+    const stringType = TsTypeRef.string;
+    const result = Detail.prettyType(stringType);
+    expect(result).toBe("String");
+
+    const voidType = TsTypeRef.void;
+    const voidResult = Detail.prettyType(voidType);
+    expect(voidResult).toBe("Void");
+  });
+
+  test('Detail.prettyType handles Option types', () => {
+    const someType = some(TsTypeRef.string);
+    const result = Detail.prettyTypeOpt(someType);
+    expect(result._tag).toBe('Some');
+    if (result._tag === 'Some') {
+      expect(result.value).toContain("String");
+    }
+
+    const noneType = none;
+    const noneResult = Detail.prettyTypeOpt(noneType);
+    expect(noneResult._tag).toBe('None');
+  });
+
+  test('Detail pick method', () => {
+    const detail = new Detail("Short", "LongVersion");
+    expect(detail.pick(false)).toBe("Short");
+    expect(detail.pick(true)).toBe("LongVersion");
+  });
+
+  test('Detail ordering', () => {
+    const detail1 = new Detail("Alpha", "AlphaLong");
+    const detail2 = new Detail("Beta", "BetaLong");
+    const detail3 = new Detail("Alpha", "DifferentLong");
+
+    const sorted = IArray.fromArray([detail2, detail1, detail3]).sorted(Detail.compare);
+    expect(sorted.apply(0).short).toBe("Alpha");
+    expect(sorted.apply(1).short).toBe("Alpha");
+    expect(sorted.apply(2).short).toBe("Beta");
+  });
+});
+
+describe('DeriveNonConflictingName - Edge Cases and Boundary Conditions', () => {
+  test('empty property name', () => {
+    const property = createMockProperty("");
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    expect(result).toBe("");
+  });
+
+  test('property with None type', () => {
+    const property = createMockProperty("test", none);
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    expect(result).toBe("Test");
+  });
+
+  test('special characters in names', () => {
+    const property = createMockProperty("user-name");
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    expect(result).toBe("Username");
+  });
+
+  test('numeric names', () => {
+    const property = createMockProperty("123");
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    expect(result).toBe("123");
+  });
+
+  test('very long member names', () => {
+    const longName = "a".repeat(100);
+    const property = createMockProperty(longName);
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    expect((result as string).length).toBe(100);
+    expect((result as string).startsWith("A")).toBe(true);
+  });
+
+  test('many members with conflicts', () => {
+    const properties = Array.from({length: 10}, (_, i) => createMockProperty(`prop${i + 1}`));
+    const members = IArray.fromArray<TsMember>(properties);
+    const conflicts = new Set(["Prop1", "Prop2", "Prop3"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    expect((result as string).length).toBeGreaterThan(0);
+    expect(conflicts.has(result as string)).toBe(false);
+  });
+});
+
+describe('DeriveNonConflictingName - Fallback Mechanism', () => {
+  test('fallback increments correctly', () => {
+    const members = IArray.Empty;
+    const conflicts = new Set(["Test0", "Test1", "Test2"]);
+    const result = DeriveNonConflictingName.apply("Test", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("Test3");
+  });
+
+  test('fallback with empty prefix', () => {
+    const members = IArray.Empty;
+    const conflicts = new Set(["0", "1", "2", "3", "4"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("5");
   });
 });
