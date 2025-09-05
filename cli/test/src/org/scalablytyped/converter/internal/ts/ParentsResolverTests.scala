@@ -488,5 +488,163 @@ object ParentsResolverTests extends TestSuite {
         assert(result.unresolved.isEmpty)
       }
     }
+
+    test("ParentsResolver - edge cases and error handling") {
+      test("handles empty inheritance arrays") {
+        val emptyClass = createMockClass("EmptyClass", parent = None, implements = Empty)
+        val emptyInterface = createMockInterface("EmptyInterface", inheritance = Empty)
+        val scope = createMockScope(emptyClass, emptyInterface)
+
+        val classResult = ParentsResolver(scope, emptyClass)
+        val interfaceResult = ParentsResolver(scope, emptyInterface)
+
+        assert(classResult.value == emptyClass)
+        assert(classResult.parents.isEmpty)
+        assert(classResult.unresolved.isEmpty)
+
+        assert(interfaceResult.value == emptyInterface)
+        assert(interfaceResult.parents.isEmpty)
+        assert(interfaceResult.unresolved.isEmpty)
+      }
+
+      test("handles type parameters in inheritance") {
+        val genericInterface = createMockInterface("GenericInterface",
+          inheritance = IArray(TsTypeRef(NoComments, createQIdent("BaseInterface"), IArray(TsTypeRef.string))))
+        val baseInterface = createMockInterface("BaseInterface")
+        val scope = createMockScope(baseInterface, genericInterface)
+
+        val result = ParentsResolver(scope, genericInterface)
+
+        assert(result.value == genericInterface)
+        assert(result.parents.length == 1)
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "BaseInterface")
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles complex nested type alias chains") {
+        val baseInterface = createMockInterface("BaseInterface")
+        val alias1 = createMockTypeAlias("Alias1", TsTypeRef(createQIdent("BaseInterface")))
+        val alias2 = createMockTypeAlias("Alias2", TsTypeRef(createQIdent("Alias1")))
+        val alias3 = createMockTypeAlias("Alias3", TsTypeRef(createQIdent("Alias2")))
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("Alias3"))))
+        val scope = createMockScope(baseInterface, alias1, alias2, alias3, derivedInterface)
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.length == 1)
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "BaseInterface")
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles type alias to primitive types") {
+        val primitiveAlias = createMockTypeAlias("StringAlias", TsTypeRef.string)
+        val scope = createMockScope(primitiveAlias)
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("StringAlias"))))
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.isEmpty)
+        assert(result.unresolved.length == 1)
+        assert(result.unresolved.head == TsTypeRef.string)
+      }
+
+      test("handles type alias to literal types") {
+        val literalAlias = createMockTypeAlias("LiteralAlias", TsTypeLiteral(TsLiteral.Str("hello")))
+        val scope = createMockScope(literalAlias)
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("LiteralAlias"))))
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.isEmpty)
+        assert(result.unresolved.length == 1)
+        assert(result.unresolved.head.isInstanceOf[TsTypeLiteral])
+      }
+
+      test("handles mixed union with resolved and unresolved types") {
+        val knownInterface = createMockInterface("KnownInterface")
+        val mixedUnion = TsTypeUnion(IArray(
+          TsTypeRef(createQIdent("KnownInterface")),
+          TsTypeRef(createQIdent("UnknownInterface")),
+          TsTypeRef.string
+        ))
+        val unionAlias = createMockTypeAlias("MixedUnionAlias", mixedUnion)
+        val scope = createMockScope(knownInterface, unionAlias)
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("MixedUnionAlias"))))
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.length == 1)
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "KnownInterface")
+        assert(result.unresolved.length == 2) // UnknownInterface and string
+        val unresolvedTypes = result.unresolved.toSet
+        assert(unresolvedTypes.contains(TsTypeRef(createQIdent("UnknownInterface"))))
+        assert(unresolvedTypes.contains(TsTypeRef.string))
+      }
+
+      test("handles empty object type in type alias") {
+        val emptyObjectAlias = createMockTypeAlias("EmptyObjectAlias", TsTypeObject(NoComments, Empty))
+        val scope = createMockScope(emptyObjectAlias)
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("EmptyObjectAlias"))))
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.length == 1)
+        // Should create a synthetic interface for the empty object type
+        assert(result.parents.head.isInstanceOf[TsDeclInterface])
+        val syntheticInterface = result.parents.head.asInstanceOf[TsDeclInterface]
+        assert(syntheticInterface.members.isEmpty)
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles large inheritance hierarchies efficiently") {
+        // Create a chain of 20 interfaces
+        val interfaces = (0 to 19).map { i =>
+          if (i == 0) {
+            createMockInterface(s"Interface$i")
+          } else {
+            createMockInterface(s"Interface$i", inheritance = IArray(TsTypeRef(createQIdent(s"Interface${i-1}"))))
+          }
+        }
+        val scope = createMockScope(interfaces*)
+
+        val result = ParentsResolver(scope, interfaces.last)
+
+        assert(result.value == interfaces.last)
+        assert(result.parents.length == 19) // Should include all ancestors except itself
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        (0 to 18).foreach { i =>
+          assert(parentNames.contains(s"Interface$i"))
+        }
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles multiple inheritance with duplicates") {
+        val baseInterface = createMockInterface("BaseInterface")
+        val scope = createMockScope(baseInterface)
+        val multiInterface = createMockInterface("MultiInterface",
+          inheritance = IArray(
+            TsTypeRef(createQIdent("BaseInterface")),
+            TsTypeRef(createQIdent("BaseInterface")), // Duplicate
+            TsTypeRef(createQIdent("BaseInterface"))  // Another duplicate
+          ))
+
+        val result = ParentsResolver(scope, multiInterface)
+
+        assert(result.value == multiInterface)
+        assert(result.parents.length == 1) // Should deduplicate
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "BaseInterface")
+        assert(result.unresolved.isEmpty)
+      }
+    }
   }
 }
