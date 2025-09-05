@@ -1,27 +1,27 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.TreeTransformations
- * 
+ *
  * Provides concrete implementations of TreeTransformation for common use cases.
  */
 
-import { AbstractTreeTransformation } from './TreeTransformation.js';
-import {
-  TsTree,
-  TsParsedFile,
-  TsGlobal,
-  TsDeclNamespace,
-  TsDeclModule,
-  TsAugmentedModule,
-  TsDeclClass,
-  TsDeclInterface,
-  TsTypeObject,
-  TsContainer,
-  TsContainerOrDecl,
-  HasClassMembers,
-  TsMember
-} from './trees.js';
-import { TsTreeScope } from './TsTreeScope.js';
-import { IArray } from '../IArray.js';
+import type { IArray } from "../IArray.js";
+import { AbstractTreeTransformation } from "./TreeTransformation.js";
+import type { TsTreeScope } from "./TsTreeScope.js";
+import type {
+	HasClassMembers,
+	TsAugmentedModule,
+	TsContainer,
+	TsContainerOrDecl,
+	TsDeclClass,
+	TsDeclInterface,
+	TsDeclModule,
+	TsDeclNamespace,
+	TsGlobal,
+	TsMember,
+	TsParsedFile,
+	TsTree,
+	TsTypeObject,
+} from "./trees.js";
 
 /**
  * Tree transformation that maintains scoped changes.
@@ -30,29 +30,29 @@ import { IArray } from '../IArray.js';
  * The scope is updated by adding each tree to the scope stack as we traverse.
  */
 export abstract class TreeTransformationScopedChanges extends AbstractTreeTransformation<TsTreeScope> {
-  /**
-   * Adds the current tree to the scope when entering it.
-   * This creates a new scope with the tree added to the stack.
-   * This is equivalent to the '/' operator in Scala.
-   */
-  withTree(scope: TsTreeScope, tree: TsTree): TsTreeScope {
-    return scope['/'](tree);
-  }
+	/**
+	 * Adds the current tree to the scope when entering it.
+	 * This creates a new scope with the tree added to the stack.
+	 * This is equivalent to the '/' operator in Scala.
+	 */
+	withTree(scope: TsTreeScope, tree: TsTree): TsTreeScope {
+		return scope["/"](tree);
+	}
 }
 
 /**
  * Tree transformation that doesn't maintain any context.
  * This is equivalent to TreeTransformationUnit in Scala.
- * 
+ *
  * Useful for transformations that don't need to track scope or context.
  */
 export abstract class TreeTransformationUnit extends AbstractTreeTransformation<void> {
-  /**
-   * Returns void since no context is maintained.
-   */
-  withTree(context: void, tree: TsTree): void {
-    return undefined;
-  }
+	/**
+	 * Returns void since no context is maintained.
+	 */
+	withTree(context: void, tree: TsTree): void {
+		return undefined;
+	}
 }
 
 /**
@@ -60,45 +60,56 @@ export abstract class TreeTransformationUnit extends AbstractTreeTransformation<
  * Equivalent to the Scala TransformMembers trait.
  */
 export abstract class TransformMembers extends TreeTransformationScopedChanges {
-  /**
-   * Override this method to define how members should be transformed.
-   */
-  abstract newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl>;
+	/**
+	 * Override this method to define how members should be transformed.
+	 */
+	abstract newMembers(
+		scope: TsTreeScope,
+		x: TsContainer,
+	): IArray<TsContainerOrDecl>;
 
-  override enterTsParsedFile(scope: TsTreeScope): (x: TsParsedFile) => TsParsedFile {
-    return (x: TsParsedFile) => ({
-      ...x,
-      members: this.newMembers(scope, x)
-    });
-  }
+	override enterTsParsedFile(
+		scope: TsTreeScope,
+	): (x: TsParsedFile) => TsParsedFile {
+		return (x: TsParsedFile) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
 
-  override enterTsGlobal(scope: TsTreeScope): (x: TsGlobal) => TsGlobal {
-    return (x: TsGlobal) => ({
-      ...x,
-      members: this.newMembers(scope, x)
-    });
-  }
+	override enterTsGlobal(scope: TsTreeScope): (x: TsGlobal) => TsGlobal {
+		return (x: TsGlobal) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
 
-  override enterTsDeclNamespace(scope: TsTreeScope): (x: TsDeclNamespace) => TsDeclNamespace {
-    return (x: TsDeclNamespace) => ({
-      ...x,
-      members: this.newMembers(scope, x)
-    });
-  }
+	override enterTsDeclNamespace(
+		scope: TsTreeScope,
+	): (x: TsDeclNamespace) => TsDeclNamespace {
+		return (x: TsDeclNamespace) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
 
-  override enterTsDeclModule(scope: TsTreeScope): (x: TsDeclModule) => TsDeclModule {
-    return (x: TsDeclModule) => ({
-      ...x,
-      members: this.newMembers(scope, x)
-    });
-  }
+	override enterTsDeclModule(
+		scope: TsTreeScope,
+	): (x: TsDeclModule) => TsDeclModule {
+		return (x: TsDeclModule) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
 
-  enterTsAugmentedModule(scope: TsTreeScope): (x: TsAugmentedModule) => TsAugmentedModule {
-    return (x: TsAugmentedModule) => ({
-      ...x,
-      members: this.newMembers(scope, x)
-    });
-  }
+	enterTsAugmentedModule(
+		scope: TsTreeScope,
+	): (x: TsAugmentedModule) => TsAugmentedModule {
+		return (x: TsAugmentedModule) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
 }
 
 /**
@@ -106,109 +117,118 @@ export abstract class TransformMembers extends TreeTransformationScopedChanges {
  * Equivalent to the Scala TransformClassMembers trait.
  */
 export abstract class TransformClassMembers extends TreeTransformationScopedChanges {
-  /**
-   * Override this method to define how class members should be transformed.
-   */
-  abstract newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember>;
+	/**
+	 * Override this method to define how class members should be transformed.
+	 */
+	abstract newClassMembers(
+		scope: TsTreeScope,
+		x: HasClassMembers,
+	): IArray<TsMember>;
 
-  override enterTsDeclClass(scope: TsTreeScope): (x: TsDeclClass) => TsDeclClass {
-    return (x: TsDeclClass) => ({
-      ...x,
-      members: this.newClassMembers(scope, x)
-    });
-  }
+	override enterTsDeclClass(
+		scope: TsTreeScope,
+	): (x: TsDeclClass) => TsDeclClass {
+		return (x: TsDeclClass) => ({
+			...x,
+			members: this.newClassMembers(scope, x),
+		});
+	}
 
-  override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
-    return (x: TsDeclInterface) => ({
-      ...x,
-      members: this.newClassMembers(scope, x)
-    });
-  }
+	override enterTsDeclInterface(
+		scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => ({
+			...x,
+			members: this.newClassMembers(scope, x),
+		});
+	}
 
-  override enterTsTypeObject(scope: TsTreeScope): (x: TsTypeObject) => TsTypeObject {
-    return (x: TsTypeObject) => ({
-      ...x,
-      members: this.newClassMembers(scope, x)
-    });
-  }
+	override enterTsTypeObject(
+		scope: TsTreeScope,
+	): (x: TsTypeObject) => TsTypeObject {
+		return (x: TsTypeObject) => ({
+			...x,
+			members: this.newClassMembers(scope, x),
+		});
+	}
 }
-
-
 
 /**
  * Utility functions for working with tree transformations.
  */
 export namespace TreeTransformations {
-  /**
-   * Creates a no-op transformation that returns everything unchanged.
-   */
-  export function identity<T>(): AbstractTreeTransformation<T> {
-    return new (class extends AbstractTreeTransformation<T> {
-      withTree(t: T, tree: TsTree): T {
-        return t;
-      }
-    })();
-  }
+	/**
+	 * Creates a no-op transformation that returns everything unchanged.
+	 */
+	export function identity<T>(): AbstractTreeTransformation<T> {
+		return new (class extends AbstractTreeTransformation<T> {
+			withTree(t: T, tree: TsTree): T {
+				return t;
+			}
+		})();
+	}
 
-  /**
-   * Creates a scoped transformation that returns everything unchanged.
-   */
-  export function identityScoped(): TreeTransformationScopedChanges {
-    return new (class extends TreeTransformationScopedChanges {
-      // All methods use default implementations
-    })();
-  }
+	/**
+	 * Creates a scoped transformation that returns everything unchanged.
+	 */
+	export function identityScoped(): TreeTransformationScopedChanges {
+		return new (class extends TreeTransformationScopedChanges {
+			// All methods use default implementations
+		})();
+	}
 
-  /**
-   * Creates a unit transformation that returns everything unchanged.
-   */
-  export function identityUnit(): TreeTransformationUnit {
-    return new (class extends TreeTransformationUnit {
-      // All methods use default implementations
-    })();
-  }
+	/**
+	 * Creates a unit transformation that returns everything unchanged.
+	 */
+	export function identityUnit(): TreeTransformationUnit {
+		return new (class extends TreeTransformationUnit {
+			// All methods use default implementations
+		})();
+	}
 
-  /**
-   * Combines multiple transformations into a single transformation.
-   * Applies transformations from left to right.
-   */
-  export function compose<T>(
-    ...transformations: AbstractTreeTransformation<T>[]
-  ): AbstractTreeTransformation<T> {
-    if (transformations.length === 0) {
-      return identity<T>();
-    }
+	/**
+	 * Combines multiple transformations into a single transformation.
+	 * Applies transformations from left to right.
+	 */
+	export function compose<T>(
+		...transformations: AbstractTreeTransformation<T>[]
+	): AbstractTreeTransformation<T> {
+		if (transformations.length === 0) {
+			return identity<T>();
+		}
 
-    return transformations.reduce((acc, curr) => acc.combine(curr) as AbstractTreeTransformation<T>);
-  }
+		return transformations.reduce(
+			(acc, curr) => acc.combine(curr) as AbstractTreeTransformation<T>,
+		);
+	}
 
-  /**
-   * Combines multiple scoped transformations.
-   */
-  export function composeScoped(
-    ...transformations: TreeTransformationScopedChanges[]
-  ): TreeTransformationScopedChanges {
-    if (transformations.length === 0) {
-      return identityScoped();
-    }
-    
-    return transformations.reduce((acc, curr) => 
-      acc.combine(curr) as TreeTransformationScopedChanges
-    );
-  }
+	/**
+	 * Combines multiple scoped transformations.
+	 */
+	export function composeScoped(
+		...transformations: TreeTransformationScopedChanges[]
+	): TreeTransformationScopedChanges {
+		if (transformations.length === 0) {
+			return identityScoped();
+		}
 
-  /**
-   * Combines multiple unit transformations.
-   */
-  export function composeUnit(
-    ...transformations: TreeTransformationUnit[]
-  ): TreeTransformationUnit {
-    if (transformations.length === 0) {
-      return identityUnit();
-    }
-    
-    return transformations.reduce((acc, curr) => 
-      acc.combine(curr) as TreeTransformationUnit
-    );
-  }
+		return transformations.reduce(
+			(acc, curr) => acc.combine(curr) as TreeTransformationScopedChanges,
+		);
+	}
+
+	/**
+	 * Combines multiple unit transformations.
+	 */
+	export function composeUnit(
+		...transformations: TreeTransformationUnit[]
+	): TreeTransformationUnit {
+		if (transformations.length === 0) {
+			return identityUnit();
+		}
+
+		return transformations.reduce(
+			(acc, curr) => acc.combine(curr) as TreeTransformationUnit,
+		);
+	}
 }

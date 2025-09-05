@@ -1,59 +1,59 @@
 /**
  * Centralized test utilities for creating mock objects and test data.
- * 
+ *
  * This file consolidates all mock creation functions that were previously
  * scattered across individual test files, providing consistent implementations
  * and reducing code duplication.
  */
 
+import { none, some } from "fp-ts/Option";
+import { Raw } from "@/internal/Comment.js";
+import { Comments } from "@/internal/Comments.js";
+import { IArray } from "@/internal/IArray.js";
+import { Logger } from "@/internal/logging/index.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
+import { ExportType } from "@/internal/ts/ExportType.js";
+import { JsLocation } from "@/internal/ts/JsLocation.js";
+import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
-  TsDeclClass,
-  TsDeclInterface,
-  TsDeclNamespace,
-  TsDeclVar,
-  TsDeclModule,
-  TsDeclFunction,
-  TsDeclTypeAlias,
-  TsTypeRef,
-  TsTypeIntersect,
-  TsTypeQuery,
-  TsTypeObject,
-  TsTypeLiteral,
-  TsLiteral,
-  TsMemberProperty,
-  TsMemberFunction,
-  TsMemberCall,
-  TsMemberCtor,
-  TsIdent,
-  TsQIdent,
-  TsIdentSimple,
-  TsIdentModule,
-  TsIdentLibrarySimple,
-  TsIdentLibraryScoped,
-  TsFunSig,
-  TsTypeParam,
-  MethodType,
-  TsProtectionLevel,
-  TsExport,
-  TsExporteeTree,
-  TsImport,
-  TsImportedIdent,
-  TsImporteeLocal,
-  TsImporteeFrom,
-  TsAugmentedModule,
-  TsParsedFile,
-  TsType,
-  TsContainerOrDecl
-} from '@/internal/ts/trees.js';
-import { ExportType } from '@/internal/ts/ExportType.js';
-import {LoopDetector, TsTreeScope} from '@/internal/ts/TsTreeScope.js';
-import { IArray } from '@/internal/IArray.js';
-import { Comments } from '@/internal/Comments.js';
-import { Raw } from '@/internal/Comment.js';
-import { JsLocation } from '@/internal/ts/JsLocation.js';
-import { CodePath } from '@/internal/ts/CodePath.js';
-import { Logger } from '@/internal/logging/index.js';
-import { some, none } from 'fp-ts/Option';
+	MethodType,
+	TsAugmentedModule,
+	type TsContainerOrDecl,
+	type TsDeclClass,
+	type TsDeclFunction,
+	type TsDeclInterface,
+	type TsDeclModule,
+	type TsDeclNamespace,
+	type TsDeclTypeAlias,
+	type TsDeclVar,
+	TsExport,
+	TsExporteeTree,
+	TsFunSig,
+	TsIdent,
+	type TsIdentLibraryScoped,
+	type TsIdentLibrarySimple,
+	type TsIdentModule,
+	type TsIdentSimple,
+	TsImport,
+	TsImportedIdent,
+	TsImporteeFrom,
+	TsImporteeLocal,
+	TsLiteral,
+	type TsMemberCall,
+	type TsMemberCtor,
+	type TsMemberFunction,
+	type TsMemberProperty,
+	TsParsedFile,
+	TsProtectionLevel,
+	TsQIdent,
+	type TsType,
+	type TsTypeIntersect,
+	TsTypeLiteral,
+	TsTypeObject,
+	type TsTypeParam,
+	type TsTypeQuery,
+	TsTypeRef,
+} from "@/internal/ts/trees.js";
 
 // ============================================================================
 // Scope Creation Utilities
@@ -61,27 +61,30 @@ import { some, none } from 'fp-ts/Option';
 
 /**
  * Creates an empty TsTreeScope for testing purposes.
- * 
+ *
  * @param libraryName - Optional library name (defaults to "test-lib")
  * @param declarations - Optional declarations to populate the scope with
  * @returns A mock TsTreeScope instance
  */
-export function createMockScope(libraryName: string = "test-lib", ...declarations: any[]): TsTreeScope {
-  const root = TsTreeScope.create(
-    TsIdent.librarySimple(libraryName),
-    false,
-    new Map(),
-    Logger.DevNull()
-  );
+export function createMockScope(
+	libraryName: string = "test-lib",
+	...declarations: any[]
+): TsTreeScope {
+	const root = TsTreeScope.create(
+		TsIdent.librarySimple(libraryName),
+		false,
+		new Map(),
+		Logger.DevNull(),
+	);
 
-  // If no declarations provided, return the root scope
-  if (declarations.length === 0) {
-    return root;
-  }
+	// If no declarations provided, return the root scope
+	if (declarations.length === 0) {
+		return root;
+	}
 
-  // For now, return the root scope - in a real implementation,
-  // we would need to properly populate the scope with declarations
-  return root;
+	// For now, return the root scope - in a real implementation,
+	// we would need to properly populate the scope with declarations
+	return root;
 }
 
 /**
@@ -95,37 +98,41 @@ export const createEmptyScope = createMockScope;
 
 /**
  * Creates a mock TsTypeRef with all required properties and methods.
- * 
+ *
  * @param name - The type name as a string
  * @param tparams - Optional type parameters (defaults to empty)
  * @param comments - Optional comments (defaults to empty)
  * @returns A properly formed TsTypeRef
  */
-export function createTypeRef(name: string, tparams: IArray<any> = IArray.Empty, comments: Comments = Comments.empty()): TsTypeRef {
-  const qname = TsQIdent.of(TsIdent.simple(name));
-  return {
-    _tag: 'TsTypeRef',
-    asString: `TsTypeRef(${name})`,
-    comments,
-    name: qname,
-    tparams,
-    withComments: (cs: Comments) => createTypeRef(name, tparams, cs),
-    addComment: (c: any) => createTypeRef(name, tparams, comments.add(c))
-  };
+export function createTypeRef(
+	name: string,
+	tparams: IArray<any> = IArray.Empty,
+	comments: Comments = Comments.empty(),
+): TsTypeRef {
+	const qname = TsQIdent.of(TsIdent.simple(name));
+	return {
+		_tag: "TsTypeRef",
+		asString: `TsTypeRef(${name})`,
+		comments,
+		name: qname,
+		tparams,
+		withComments: (cs: Comments) => createTypeRef(name, tparams, cs),
+		addComment: (c: any) => createTypeRef(name, tparams, comments.add(c)),
+	};
 }
 
 /**
  * Creates a TsTypeIntersect representing an intersection of multiple types.
- * 
+ *
  * @param types - The types to intersect
  * @returns A TsTypeIntersect object
  */
 export function createIntersectionType(...types: TsTypeRef[]): TsTypeIntersect {
-  return {
-    _tag: 'TsTypeIntersect',
-    asString: types.map(t => t.asString).join(' & '),
-    types: IArray.fromArray(types as any[]) // Cast to TsType[] since TsTypeRef extends TsType
-  };
+	return {
+		_tag: "TsTypeIntersect",
+		asString: types.map((t) => t.asString).join(" & "),
+		types: IArray.fromArray(types as any[]), // Cast to TsType[] since TsTypeRef extends TsType
+	};
 }
 
 /**
@@ -135,11 +142,11 @@ export function createIntersectionType(...types: TsTypeRef[]): TsTypeIntersect {
  * @returns A TsTypeQuery object
  */
 export function createTypeQuery(expr: TsQIdent): TsTypeQuery {
-  return {
-    _tag: 'TsTypeQuery',
-    asString: `typeof ${expr.asString}`,
-    expr: expr
-  };
+	return {
+		_tag: "TsTypeQuery",
+		asString: `typeof ${expr.asString}`,
+		expr: expr,
+	};
 }
 
 /**
@@ -149,7 +156,7 @@ export function createTypeQuery(expr: TsQIdent): TsTypeQuery {
  * @returns A TsTypeLiteral object
  */
 export function createTypeLiteral(value: string): TsTypeLiteral {
-  return TsTypeLiteral.create(TsLiteral.str(value));
+	return TsTypeLiteral.create(TsLiteral.str(value));
 }
 
 // ============================================================================
@@ -167,50 +174,64 @@ export function createTypeLiteral(value: string): TsTypeLiteral {
  * @returns A mock TsDeclClass
  */
 export function createMockClass(
-  name: string,
-  membersOrParent?: IArray<any> | TsTypeRef,
-  implementsInterfaces?: IArray<TsTypeRef>,
-  members?: IArray<any>,
-  isAbstract: boolean = false
+	name: string,
+	membersOrParent?: IArray<any> | TsTypeRef,
+	implementsInterfaces?: IArray<TsTypeRef>,
+	members?: IArray<any>,
+	isAbstract: boolean = false,
 ): TsDeclClass {
-  // Determine if the second parameter is members or parent
-  let parent: TsTypeRef | undefined;
-  let actualMembers: IArray<any>;
-  let actualImplementsInterfaces: IArray<TsTypeRef>;
+	// Determine if the second parameter is members or parent
+	let parent: TsTypeRef | undefined;
+	let actualMembers: IArray<any>;
+	let actualImplementsInterfaces: IArray<TsTypeRef>;
 
-  if (membersOrParent && '_tag' in membersOrParent && membersOrParent._tag === 'TsTypeRef') {
-    // Second parameter is parent
-    parent = membersOrParent as TsTypeRef;
-    actualMembers = members || IArray.Empty;
-    actualImplementsInterfaces = implementsInterfaces || IArray.Empty;
-  } else {
-    // Second parameter is members (or undefined)
-    parent = undefined;
-    actualMembers = (membersOrParent as IArray<any>) || IArray.Empty;
-    actualImplementsInterfaces = IArray.Empty;
-  }
+	if (
+		membersOrParent &&
+		"_tag" in membersOrParent &&
+		membersOrParent._tag === "TsTypeRef"
+	) {
+		// Second parameter is parent
+		parent = membersOrParent as TsTypeRef;
+		actualMembers = members || IArray.Empty;
+		actualImplementsInterfaces = implementsInterfaces || IArray.Empty;
+	} else {
+		// Second parameter is members (or undefined)
+		parent = undefined;
+		actualMembers = (membersOrParent as IArray<any>) || IArray.Empty;
+		actualImplementsInterfaces = IArray.Empty;
+	}
 
-  return {
-    _tag: 'TsDeclClass',
-    asString: `class ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    isAbstract,
-    name: TsIdent.simple(name),
-    tparams: IArray.Empty,
-    parent: parent ? some(parent) : none,
-    implementsInterfaces: actualImplementsInterfaces,
-    members: actualMembers,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsDeclClass",
+		asString: `class ${name}`,
+		comments: Comments.empty(),
+		declared: false,
+		isAbstract,
+		name: TsIdent.simple(name),
+		tparams: IArray.Empty,
+		parent: parent ? some(parent) : none,
+		implementsInterfaces: actualImplementsInterfaces,
+		members: actualMembers,
+		jsLocation: JsLocation.zero(),
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withJsLocation: function (loc: any) {
+			return { ...this, jsLocation: loc };
+		},
+		membersByName: new Map(),
+		unnamed: IArray.Empty,
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -222,62 +243,85 @@ export function createMockClass(
  * @returns A mock TsDeclInterface
  */
 export function createMockInterface(
-  name: string,
-  members: IArray<any> = IArray.Empty,
-  inheritance?: IArray<TsTypeRef>
+	name: string,
+	members: IArray<any> = IArray.Empty,
+	inheritance?: IArray<TsTypeRef>,
 ): TsDeclInterface {
-  return {
-    _tag: 'TsDeclInterface',
-    asString: `interface ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    name: TsIdent.simple(name),
-    tparams: IArray.Empty,
-    inheritance: inheritance || IArray.Empty,
-    members,
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsDeclInterface",
+		asString: `interface ${name}`,
+		comments: Comments.empty(),
+		declared: false,
+		name: TsIdent.simple(name),
+		tparams: IArray.Empty,
+		inheritance: inheritance || IArray.Empty,
+		members,
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		membersByName: new Map(),
+		unnamed: IArray.Empty,
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
  * Creates a mock TsDeclNamespace with all required properties.
- * 
+ *
  * @param name - The namespace name
  * @param members - Optional namespace members
  * @returns A mock TsDeclNamespace
  */
-export function createMockNamespace(name: string, members: IArray<any> = IArray.Empty): TsDeclNamespace {
-  return {
-    _tag: 'TsDeclNamespace',
-    asString: `namespace ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    name: TsIdent.simple(name),
-    members,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    nameds: IArray.Empty,
-    exports: IArray.Empty,
-    imports: IArray.Empty,
-    isModule: false,
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; },
-    withMembers: function(ms: any) { return { ...this, members: ms }; },
-    modules: new Map(),
-    augmentedModules: IArray.Empty,
-    augmentedModulesMap: new Map()
-  };
+export function createMockNamespace(
+	name: string,
+	members: IArray<any> = IArray.Empty,
+): TsDeclNamespace {
+	return {
+		_tag: "TsDeclNamespace",
+		asString: `namespace ${name}`,
+		comments: Comments.empty(),
+		declared: false,
+		name: TsIdent.simple(name),
+		members,
+		jsLocation: JsLocation.zero(),
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withJsLocation: function (loc: any) {
+			return { ...this, jsLocation: loc };
+		},
+		membersByName: new Map(),
+		unnamed: IArray.Empty,
+		nameds: IArray.Empty,
+		exports: IArray.Empty,
+		imports: IArray.Empty,
+		isModule: false,
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+		withMembers: function (ms: any) {
+			return { ...this, members: ms };
+		},
+		modules: new Map(),
+		augmentedModules: IArray.Empty,
+		augmentedModulesMap: new Map(),
+	};
 }
 
 /**
@@ -288,24 +332,38 @@ export function createMockNamespace(name: string, members: IArray<any> = IArray.
  * @param readOnly - Whether the variable is readonly (defaults to false)
  * @returns A mock TsDeclVar
  */
-export function createMockVariable(name: string, tpe?: TsTypeRef, readOnly: boolean = false): TsDeclVar {
-  return {
-    _tag: 'TsDeclVar',
-    asString: `var ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    readOnly,
-    name: TsIdent.simple(name),
-    tpe: tpe ? some(tpe) : none,
-    expr: none,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+export function createMockVariable(
+	name: string,
+	tpe?: TsTypeRef,
+	readOnly: boolean = false,
+): TsDeclVar {
+	return {
+		_tag: "TsDeclVar",
+		asString: `var ${name}`,
+		comments: Comments.empty(),
+		declared: false,
+		readOnly,
+		name: TsIdent.simple(name),
+		tpe: tpe ? some(tpe) : none,
+		expr: none,
+		jsLocation: JsLocation.zero(),
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withJsLocation: function (loc: any) {
+			return { ...this, jsLocation: loc };
+		},
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -315,35 +373,48 @@ export function createMockVariable(name: string, tpe?: TsTypeRef, readOnly: bool
  * @param members - Optional module members
  * @returns A mock TsDeclModule
  */
-export function createMockModule(name: string, members: IArray<any> = IArray.Empty): TsDeclModule {
-  return {
-    _tag: 'TsDeclModule',
-    asString: `module ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    name: TsIdent.module(none, [name]),
-    members,
-    codePath: CodePath.noPath(),
-    jsLocation: JsLocation.zero(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    nameds: IArray.Empty,
-    exports: IArray.Empty,
-    imports: IArray.Empty,
-    isModule: true,
-    withName: function(n: any) {
-      // Convert module to namespace when changing name
-      return createMockNamespace(n.value || n, this.members);
-    },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; },
-    withMembers: function(ms: any) { return { ...this, members: ms }; },
-    modules: new Map(),
-    augmentedModules: IArray.Empty,
-    augmentedModulesMap: new Map()
-  };
+export function createMockModule(
+	name: string,
+	members: IArray<any> = IArray.Empty,
+): TsDeclModule {
+	return {
+		_tag: "TsDeclModule",
+		asString: `module ${name}`,
+		comments: Comments.empty(),
+		declared: false,
+		name: TsIdent.module(none, [name]),
+		members,
+		codePath: CodePath.noPath(),
+		jsLocation: JsLocation.zero(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withJsLocation: function (loc: any) {
+			return { ...this, jsLocation: loc };
+		},
+		membersByName: new Map(),
+		unnamed: IArray.Empty,
+		nameds: IArray.Empty,
+		exports: IArray.Empty,
+		imports: IArray.Empty,
+		isModule: true,
+		withName: function (n: any) {
+			// Convert module to namespace when changing name
+			return createMockNamespace(n.value || n, this.members);
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+		withMembers: function (ms: any) {
+			return { ...this, members: ms };
+		},
+		modules: new Map(),
+		augmentedModules: IArray.Empty,
+		augmentedModulesMap: new Map(),
+	};
 }
 
 /**
@@ -355,32 +426,42 @@ export function createMockModule(name: string, members: IArray<any> = IArray.Emp
  * @returns A mock TsDeclFunction
  */
 export function createMockFunction(
-  name: string,
-  returnType?: TsType,
-  comments: Comments = Comments.empty()
+	name: string,
+	returnType?: TsType,
+	comments: Comments = Comments.empty(),
 ): TsDeclFunction {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(returnType || TsTypeRef.any)
-  );
+	const signature = TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty, // tparams
+		IArray.Empty, // params
+		some(returnType || TsTypeRef.any),
+	);
 
-  return {
-    _tag: 'TsDeclFunction',
-    asString: `function ${name}()`,
-    comments,
-    declared: false,
-    name: TsIdent.simple(name),
-    signature,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsDeclFunction",
+		asString: `function ${name}()`,
+		comments,
+		declared: false,
+		name: TsIdent.simple(name),
+		signature,
+		jsLocation: JsLocation.zero(),
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withJsLocation: function (loc: any) {
+			return { ...this, jsLocation: loc };
+		},
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -390,21 +471,32 @@ export function createMockFunction(
  * @param alias - The aliased type
  * @returns A mock TsDeclTypeAlias
  */
-export function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
-  return {
-    _tag: 'TsDeclTypeAlias',
-    asString: `type ${name} = ${alias.asString}`,
-    comments: Comments.empty(),
-    declared: false,
-    name: TsIdent.simple(name),
-    tparams: IArray.Empty,
-    alias,
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+export function createMockTypeAlias(
+	name: string,
+	alias: TsType,
+): TsDeclTypeAlias {
+	return {
+		_tag: "TsDeclTypeAlias",
+		asString: `type ${name} = ${alias.asString}`,
+		comments: Comments.empty(),
+		declared: false,
+		name: TsIdent.simple(name),
+		tparams: IArray.Empty,
+		alias,
+		codePath: CodePath.noPath(),
+		withCodePath: function (cp: CodePath) {
+			return { ...this, codePath: cp };
+		},
+		withName: function (n: any) {
+			return { ...this, name: n };
+		},
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 // ============================================================================
@@ -413,7 +505,7 @@ export function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlia
 
 /**
  * Creates a mock TsMemberProperty with all required properties.
- * 
+ *
  * @param name - The property name
  * @param tpe - Optional property type (defaults to string)
  * @param isStatic - Whether the property is static (defaults to false)
@@ -421,24 +513,28 @@ export function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlia
  * @returns A mock TsMemberProperty
  */
 export function createMockProperty(
-  name: string, 
-  tpe?: any, 
-  isStatic: boolean = false,
-  isReadOnly: boolean = false
+	name: string,
+	tpe?: any,
+	isStatic: boolean = false,
+	isReadOnly: boolean = false,
 ): TsMemberProperty {
-  return {
-    _tag: 'TsMemberProperty',
-    asString: `${name}: ${tpe?.asString || 'string'}`,
-    comments: Comments.empty(),
-    level: TsProtectionLevel.default(),
-    name: TsIdent.simple(name),
-    tpe: tpe ? some(tpe) : some(TsTypeRef.string),
-    expr: none,
-    isStatic,
-    isReadOnly,
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsMemberProperty",
+		asString: `${name}: ${tpe?.asString || "string"}`,
+		comments: Comments.empty(),
+		level: TsProtectionLevel.default(),
+		name: TsIdent.simple(name),
+		tpe: tpe ? some(tpe) : some(TsTypeRef.string),
+		expr: none,
+		isStatic,
+		isReadOnly,
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -451,31 +547,35 @@ export function createMockProperty(
  * @returns A mock TsMemberFunction
  */
 export function createMockMethod(
-  name: string,
-  returnType?: any,
-  isStatic: boolean = false,
-  comments: Comments = Comments.empty()
+	name: string,
+	returnType?: any,
+	isStatic: boolean = false,
+	comments: Comments = Comments.empty(),
 ): TsMemberFunction {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(returnType || TsTypeRef.any)
-  );
+	const signature = TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty, // tparams
+		IArray.Empty, // params
+		some(returnType || TsTypeRef.any),
+	);
 
-  return {
-    _tag: 'TsMemberFunction',
-    asString: `${name}(): ${returnType?.asString || 'any'}`,
-    comments,
-    level: TsProtectionLevel.default(),
-    name: TsIdent.simple(name),
-    methodType: MethodType.normal(),
-    signature: signature,
-    isStatic,
-    isReadOnly: false,
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsMemberFunction",
+		asString: `${name}(): ${returnType?.asString || "any"}`,
+		comments,
+		level: TsProtectionLevel.default(),
+		name: TsIdent.simple(name),
+		methodType: MethodType.normal(),
+		signature: signature,
+		isStatic,
+		isReadOnly: false,
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -484,23 +584,29 @@ export function createMockMethod(
  * @param comments - Optional comments
  * @returns A mock TsMemberCall
  */
-export function createMockMemberCall(comments: Comments = Comments.empty()): TsMemberCall {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(TsTypeRef.any)
-  );
+export function createMockMemberCall(
+	comments: Comments = Comments.empty(),
+): TsMemberCall {
+	const signature = TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty, // tparams
+		IArray.Empty, // params
+		some(TsTypeRef.any),
+	);
 
-  return {
-    _tag: 'TsMemberCall',
-    asString: `()`,
-    comments,
-    level: TsProtectionLevel.default(),
-    signature,
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsMemberCall",
+		asString: `()`,
+		comments,
+		level: TsProtectionLevel.default(),
+		signature,
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 /**
@@ -509,23 +615,29 @@ export function createMockMemberCall(comments: Comments = Comments.empty()): TsM
  * @param comments - Optional comments
  * @returns A mock TsMemberCtor
  */
-export function createMockMemberCtor(comments: Comments = Comments.empty()): TsMemberCtor {
-  const signature = TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(TsTypeRef.any)
-  );
+export function createMockMemberCtor(
+	comments: Comments = Comments.empty(),
+): TsMemberCtor {
+	const signature = TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty, // tparams
+		IArray.Empty, // params
+		some(TsTypeRef.any),
+	);
 
-  return {
-    _tag: 'TsMemberCtor',
-    asString: `constructor()`,
-    comments,
-    level: TsProtectionLevel.default(),
-    signature,
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
+	return {
+		_tag: "TsMemberCtor",
+		asString: `constructor()`,
+		comments,
+		level: TsProtectionLevel.default(),
+		signature,
+		withComments: function (cs: any) {
+			return { ...this, comments: cs };
+		},
+		addComment: function (c: any) {
+			return this;
+		},
+	};
 }
 
 // ============================================================================
@@ -539,7 +651,7 @@ export function createMockMemberCtor(comments: Comments = Comments.empty()): TsM
  * @returns A TsQIdent
  */
 export function createQIdent(name: string): TsQIdent {
-  return TsQIdent.of(TsIdent.simple(name));
+	return TsQIdent.of(TsIdent.simple(name));
 }
 
 /**
@@ -549,7 +661,7 @@ export function createQIdent(name: string): TsQIdent {
  * @returns A TsIdent
  */
 export function createIdent(name: string): TsIdent {
-  return TsIdent.simple(name);
+	return TsIdent.simple(name);
 }
 
 /**
@@ -559,7 +671,7 @@ export function createIdent(name: string): TsIdent {
  * @returns An IArray containing the items
  */
 export function createIArray<T>(items: T[]): IArray<T> {
-  return IArray.fromArray<T>(items);
+	return IArray.fromArray<T>(items);
 }
 
 /**
@@ -568,7 +680,7 @@ export function createIArray<T>(items: T[]): IArray<T> {
  * @returns An empty IArray
  */
 export function createEmptyIArray<T>(): IArray<T> {
-  return IArray.Empty;
+	return IArray.Empty;
 }
 
 // ============================================================================
@@ -582,7 +694,7 @@ export function createEmptyIArray<T>(): IArray<T> {
  * @returns A TsIdentLibrarySimple
  */
 export function createSimpleLibrary(name: string): TsIdentLibrarySimple {
-  return TsIdent.librarySimple(name);
+	return TsIdent.librarySimple(name);
 }
 
 /**
@@ -592,8 +704,11 @@ export function createSimpleLibrary(name: string): TsIdentLibrarySimple {
  * @param name - The library name
  * @returns A TsIdentLibraryScoped
  */
-export function createScopedLibrary(scope: string, name: string): TsIdentLibraryScoped {
-  return TsIdent.libraryScoped(scope, name);
+export function createScopedLibrary(
+	scope: string,
+	name: string,
+): TsIdentLibraryScoped {
+	return TsIdent.libraryScoped(scope, name);
 }
 
 /**
@@ -603,7 +718,7 @@ export function createScopedLibrary(scope: string, name: string): TsIdentLibrary
  * @returns A TsIdentSimple
  */
 export function createSimpleIdent(name: string): TsIdentSimple {
-  return TsIdent.simple(name);
+	return TsIdent.simple(name);
 }
 
 /**
@@ -613,7 +728,7 @@ export function createSimpleIdent(name: string): TsIdentSimple {
  * @returns A TsIdentModule
  */
 export function createModuleIdent(name: string): TsIdentModule {
-  return TsIdent.module(none, [name]);
+	return TsIdent.module(none, [name]);
 }
 
 /**
@@ -623,16 +738,16 @@ export function createModuleIdent(name: string): TsIdentModule {
  * @returns A TsTypeParam
  */
 export function createTypeParam(name: string): TsTypeParam {
-  return {
-    _tag: 'TsTypeParam',
-    comments: Comments.empty(),
-    name: createSimpleIdent(name),
-    upperBound: none,
-    default: none,
-    withComments: (cs) => createTypeParam(name),
-    addComment: (c) => createTypeParam(name),
-    asString: `TsTypeParam(${name})`
-  };
+	return {
+		_tag: "TsTypeParam",
+		comments: Comments.empty(),
+		name: createSimpleIdent(name),
+		upperBound: none,
+		default: none,
+		withComments: (cs) => createTypeParam(name),
+		addComment: (c) => createTypeParam(name),
+		asString: `TsTypeParam(${name})`,
+	};
 }
 
 /**
@@ -641,13 +756,15 @@ export function createTypeParam(name: string): TsTypeParam {
  * @param members - The members to include in the parsed file
  * @returns A mock TsParsedFile
  */
-export function createParsedFile(members: IArray<TsContainerOrDecl>): TsParsedFile {
-  return TsParsedFile.create(
-    Comments.empty(),
-    IArray.Empty, // directives
-    members,
-    CodePath.noPath()
-  );
+export function createParsedFile(
+	members: IArray<TsContainerOrDecl>,
+): TsParsedFile {
+	return TsParsedFile.create(
+		Comments.empty(),
+		IArray.Empty, // directives
+		members,
+		CodePath.noPath(),
+	);
 }
 
 /**
@@ -657,7 +774,7 @@ export function createParsedFile(members: IArray<TsContainerOrDecl>): TsParsedFi
  * @returns A mock TsParsedFile
  */
 export function createMockParsedFile(libName: string): TsParsedFile {
-  return TsParsedFile.createMock();
+	return TsParsedFile.createMock();
 }
 
 /**
@@ -667,11 +784,14 @@ export function createMockParsedFile(libName: string): TsParsedFile {
  * @param pathName - Optional path name (defaults to 'TestPath')
  * @returns A CodePath
  */
-export function createCodePath(libName: string = 'test-lib', pathName: string = 'TestPath'): CodePath {
-  return CodePath.hasPath(
-    TsIdent.librarySimple(libName),
-    TsQIdent.of(createSimpleIdent(pathName))
-  );
+export function createCodePath(
+	libName: string = "test-lib",
+	pathName: string = "TestPath",
+): CodePath {
+	return CodePath.hasPath(
+		TsIdent.librarySimple(libName),
+		TsQIdent.of(createSimpleIdent(pathName)),
+	);
 }
 
 /**
@@ -680,7 +800,7 @@ export function createCodePath(libName: string = 'test-lib', pathName: string = 
  * @returns A JsLocation at zero position
  */
 export function createJsLocation(): JsLocation {
-  return JsLocation.zero();
+	return JsLocation.zero();
 }
 
 /**
@@ -690,7 +810,7 @@ export function createJsLocation(): JsLocation {
  * @returns Comments object
  */
 export function createCommentsWithRaw(raw: string): Comments {
-  return Comments.apply([new Raw(raw)]);
+	return Comments.apply([new Raw(raw)]);
 }
 
 /**
@@ -700,7 +820,7 @@ export function createCommentsWithRaw(raw: string): Comments {
  * @returns Comments object
  */
 export function createCommentsWithMultiple(...raws: string[]): Comments {
-  return Comments.apply(raws.map(raw => new Raw(raw)));
+	return Comments.apply(raws.map((raw) => new Raw(raw)));
 }
 
 // ============================================================================
@@ -714,13 +834,13 @@ export function createCommentsWithMultiple(...raws: string[]): Comments {
  * @returns A mock TsExport
  */
 export function createMockExport(name: string): TsExport {
-  const exportee = TsExporteeTree.create(createMockVariable(name));
-  return TsExport.create(
-    Comments.empty(),
-    false, // typeOnly
-    ExportType.named(),
-    exportee
-  );
+	const exportee = TsExporteeTree.create(createMockVariable(name));
+	return TsExport.create(
+		Comments.empty(),
+		false, // typeOnly
+		ExportType.named(),
+		exportee,
+	);
 }
 
 /**
@@ -730,20 +850,23 @@ export function createMockExport(name: string): TsExport {
  * @param isLocal - Whether it's a local import (defaults to false)
  * @returns A mock TsImport
  */
-export function createMockImport(moduleName: string, isLocal: boolean = false): TsImport {
-  const importee = isLocal
-    ? TsImporteeLocal.create(TsQIdent.ofStrings('localModule'))
-    : TsImporteeFrom.create(createModuleIdent(moduleName));
+export function createMockImport(
+	moduleName: string,
+	isLocal: boolean = false,
+): TsImport {
+	const importee = isLocal
+		? TsImporteeLocal.create(TsQIdent.ofStrings("localModule"))
+		: TsImporteeFrom.create(createModuleIdent(moduleName));
 
-  const imported = IArray.fromArray([
-    TsImportedIdent.create(createSimpleIdent(moduleName))
-  ] as any[]);
+	const imported = IArray.fromArray([
+		TsImportedIdent.create(createSimpleIdent(moduleName)),
+	] as any[]);
 
-  return TsImport.create(
-    false, // typeOnly
-    imported,
-    importee
-  );
+	return TsImport.create(
+		false, // typeOnly
+		imported,
+		importee,
+	);
 }
 
 /**
@@ -753,13 +876,13 @@ export function createMockImport(moduleName: string, isLocal: boolean = false): 
  * @returns A mock TsAugmentedModule
  */
 export function createMockAugmentedModule(name: string): TsAugmentedModule {
-  return TsAugmentedModule.create(
-    Comments.empty(),
-    createModuleIdent(name),
-    IArray.Empty, // members
-    CodePath.noPath(),
-    JsLocation.zero()
-  );
+	return TsAugmentedModule.create(
+		Comments.empty(),
+		createModuleIdent(name),
+		IArray.Empty, // members
+		CodePath.noPath(),
+		JsLocation.zero(),
+	);
 }
 
 // ============================================================================
@@ -773,12 +896,12 @@ export function createMockAugmentedModule(name: string): TsAugmentedModule {
  * @returns A mock TsFunSig
  */
 export function createMockFunSig(returnType?: TsType): TsFunSig {
-  return TsFunSig.create(
-    Comments.empty(),
-    IArray.Empty, // tparams
-    IArray.Empty, // params
-    some(returnType || TsTypeRef.any)
-  );
+	return TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty, // tparams
+		IArray.Empty, // params
+		some(returnType || TsTypeRef.any),
+	);
 }
 
 /**
@@ -787,11 +910,13 @@ export function createMockFunSig(returnType?: TsType): TsFunSig {
  * @param name - The library name
  * @returns A basic library object
  */
-export function createBasicTsLib(name: TsIdentLibrarySimple | TsIdentLibraryScoped) {
-  return {
-    libName: name,
-    packageJsonOpt: undefined
-  };
+export function createBasicTsLib(
+	name: TsIdentLibrarySimple | TsIdentLibraryScoped,
+) {
+	return {
+		libName: name,
+		packageJsonOpt: undefined,
+	};
 }
 
 /**
@@ -800,7 +925,7 @@ export function createBasicTsLib(name: TsIdentLibrarySimple | TsIdentLibraryScop
  * @returns A mock Logger
  */
 export function createMockLogger(): Logger<void> {
-  return Logger.DevNull();
+	return Logger.DevNull();
 }
 
 // ============================================================================
@@ -811,54 +936,60 @@ export function createMockLogger(): Logger<void> {
  * Factory for creating common test scenarios with pre-configured objects.
  */
 export const TestScenarios = {
-  /**
-   * Creates a simple class with a parent and some interfaces.
-   */
-  classWithInheritance: (
-    className: string = "TestClass",
-    parentName: string = "BaseClass",
-    interfaceNames: string[] = ["Interface1", "Interface2"]
-  ) => {
-    const parent = createTypeRef(parentName);
-    const interfaces = createIArray(interfaceNames.map(name => createTypeRef(name)));
-    return createMockClass(className, parent, interfaces);
-  },
+	/**
+	 * Creates a simple class with a parent and some interfaces.
+	 */
+	classWithInheritance: (
+		className: string = "TestClass",
+		parentName: string = "BaseClass",
+		interfaceNames: string[] = ["Interface1", "Interface2"],
+	) => {
+		const parent = createTypeRef(parentName);
+		const interfaces = createIArray(
+			interfaceNames.map((name) => createTypeRef(name)),
+		);
+		return createMockClass(className, parent, interfaces);
+	},
 
-  /**
-   * Creates an interface with inheritance.
-   */
-  interfaceWithInheritance: (
-    interfaceName: string = "TestInterface",
-    parentNames: string[] = ["BaseInterface1", "BaseInterface2"]
-  ) => {
-    const parents = createIArray(parentNames.map(name => createTypeRef(name)));
-    return createMockInterface(interfaceName, parents);
-  },
+	/**
+	 * Creates an interface with inheritance.
+	 */
+	interfaceWithInheritance: (
+		interfaceName: string = "TestInterface",
+		parentNames: string[] = ["BaseInterface1", "BaseInterface2"],
+	) => {
+		const parents = createIArray(
+			parentNames.map((name) => createTypeRef(name)),
+		);
+		return createMockInterface(interfaceName, parents);
+	},
 
-  /**
-   * Creates a namespace with various member types.
-   */
-  namespaceWithMembers: (
-    namespaceName: string = "TestNamespace",
-    memberNames: string[] = ["member1", "member2"]
-  ) => {
-    const members = createIArray(memberNames.map(name => createMockVariable(name)));
-    return createMockNamespace(namespaceName, members);
-  },
+	/**
+	 * Creates a namespace with various member types.
+	 */
+	namespaceWithMembers: (
+		namespaceName: string = "TestNamespace",
+		memberNames: string[] = ["member1", "member2"],
+	) => {
+		const members = createIArray(
+			memberNames.map((name) => createMockVariable(name)),
+		);
+		return createMockNamespace(namespaceName, members);
+	},
 
-  /**
-   * Creates a class with various member types.
-   */
-  classWithMembers: (
-    className: string = "TestClass",
-    propertyNames: string[] = ["prop1", "prop2"],
-    methodNames: string[] = ["method1", "method2"]
-  ) => {
-    const properties = propertyNames.map(name => createMockProperty(name));
-    const methods = methodNames.map(name => createMockMethod(name));
-    const members = createIArray([...properties, ...methods]);
-    return createMockClass(className, undefined, undefined, members);
-  }
+	/**
+	 * Creates a class with various member types.
+	 */
+	classWithMembers: (
+		className: string = "TestClass",
+		propertyNames: string[] = ["prop1", "prop2"],
+		methodNames: string[] = ["method1", "method2"],
+	) => {
+		const properties = propertyNames.map((name) => createMockProperty(name));
+		const methods = methodNames.map((name) => createMockMethod(name));
+		const members = createIArray([...properties, ...methods]);
+		return createMockClass(className, undefined, undefined, members);
+	},
 };
 
 // ============================================================================
@@ -869,42 +1000,42 @@ export const TestScenarios = {
  * Type guard to check if an object is a TsDeclClass.
  */
 export function isTsDeclClass(obj: any): obj is TsDeclClass {
-  return obj && obj._tag === 'TsDeclClass';
+	return obj && obj._tag === "TsDeclClass";
 }
 
 /**
  * Type guard to check if an object is a TsDeclInterface.
  */
 export function isTsDeclInterface(obj: any): obj is TsDeclInterface {
-  return obj && obj._tag === 'TsDeclInterface';
+	return obj && obj._tag === "TsDeclInterface";
 }
 
 /**
  * Type guard to check if an object is a TsDeclNamespace.
  */
 export function isTsDeclNamespace(obj: any): obj is TsDeclNamespace {
-  return obj && obj._tag === 'TsDeclNamespace';
+	return obj && obj._tag === "TsDeclNamespace";
 }
 
 /**
  * Type guard to check if an object is a TsDeclVar.
  */
 export function isTsDeclVar(obj: any): obj is TsDeclVar {
-  return obj && obj._tag === 'TsDeclVar';
+	return obj && obj._tag === "TsDeclVar";
 }
 
 /**
  * Type guard to check if an object is a TsMemberProperty.
  */
 export function isTsMemberProperty(obj: any): obj is TsMemberProperty {
-  return obj && obj._tag === 'TsMemberProperty';
+	return obj && obj._tag === "TsMemberProperty";
 }
 
 /**
  * Type guard to check if an object is a TsMemberFunction.
  */
 export function isTsMemberFunction(obj: any): obj is TsMemberFunction {
-  return obj && obj._tag === 'TsMemberFunction';
+	return obj && obj._tag === "TsMemberFunction";
 }
 
 // ============================================================================
@@ -915,34 +1046,34 @@ export function isTsMemberFunction(obj: any): obj is TsMemberFunction {
  * Helper functions for common test assertions.
  */
 export const TestAssertions = {
-  /**
-   * Asserts that an IArray has the expected length.
-   */
-  hasLength: <T>(array: IArray<T>, expectedLength: number): boolean => {
-    return array.length === expectedLength;
-  },
+	/**
+	 * Asserts that an IArray has the expected length.
+	 */
+	hasLength: <T>(array: IArray<T>, expectedLength: number): boolean => {
+		return array.length === expectedLength;
+	},
 
-  /**
-   * Asserts that an IArray contains a specific item.
-   */
-  contains: <T>(array: IArray<T>, item: T): boolean => {
-    return array.toArray().includes(item);
-  },
+	/**
+	 * Asserts that an IArray contains a specific item.
+	 */
+	contains: <T>(array: IArray<T>, item: T): boolean => {
+		return array.toArray().includes(item);
+	},
 
-  /**
-   * Asserts that an IArray does not contain a specific item.
-   */
-  doesNotContain: <T>(array: IArray<T>, item: T): boolean => {
-    return !array.toArray().includes(item);
-  },
+	/**
+	 * Asserts that an IArray does not contain a specific item.
+	 */
+	doesNotContain: <T>(array: IArray<T>, item: T): boolean => {
+		return !array.toArray().includes(item);
+	},
 
-  /**
-   * Asserts that two IArrays have the same contents (order matters).
-   */
-  arraysEqual: <T>(array1: IArray<T>, array2: IArray<T>): boolean => {
-    if (array1.length !== array2.length) return false;
-    const arr1 = array1.toArray();
-    const arr2 = array2.toArray();
-    return arr1.every((item, index) => item === arr2[index]);
-  }
+	/**
+	 * Asserts that two IArrays have the same contents (order matters).
+	 */
+	arraysEqual: <T>(array1: IArray<T>, array2: IArray<T>): boolean => {
+		if (array1.length !== array2.length) return false;
+		const arr1 = array1.toArray();
+		const arr2 = array2.toArray();
+		return arr1.every((item, index) => item === arr2[index]);
+	},
 };

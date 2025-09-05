@@ -6,117 +6,132 @@
  * Sorted set implementation using JavaScript Set with ordering
  */
 export class SortedSet<T> {
-  private items: Set<T>;
-  private compareFn: (a: T, b: T) => number;
+	private items: Set<T>;
+	private compareFn: (a: T, b: T) => number;
 
-  constructor(items: Iterable<T> = [], compareFn?: (a: T, b: T) => number) {
-    this.compareFn = compareFn || ((a, b) => {
-      if (a < b) return -1;
-      if (a > b) return 1;
-      return 0;
-    });
-    
-    this.items = new Set(Array.from(items).sort(this.compareFn));
-  }
+	constructor(items: Iterable<T> = [], compareFn?: (a: T, b: T) => number) {
+		this.compareFn =
+			compareFn ||
+			((a, b) => {
+				if (a < b) return -1;
+				if (a > b) return 1;
+				return 0;
+			});
 
-  static from<T>(items: Iterable<T>, compareFn?: (a: T, b: T) => number): SortedSet<T> {
-    return new SortedSet(items, compareFn);
-  }
+		this.items = new Set(Array.from(items).sort(this.compareFn));
+	}
 
-  add(item: T): SortedSet<T> {
-    const newItems = Array.from(this.items);
-    newItems.push(item);
-    return new SortedSet(newItems, this.compareFn);
-  }
+	static from<T>(
+		items: Iterable<T>,
+		compareFn?: (a: T, b: T) => number,
+	): SortedSet<T> {
+		return new SortedSet(items, compareFn);
+	}
 
-  has(item: T): boolean {
-    return this.items.has(item);
-  }
+	add(item: T): SortedSet<T> {
+		const newItems = Array.from(this.items);
+		newItems.push(item);
+		return new SortedSet(newItems, this.compareFn);
+	}
 
-  get size(): number {
-    return this.items.size;
-  }
+	has(item: T): boolean {
+		return this.items.has(item);
+	}
 
-  isEmpty(): boolean {
-    return this.items.size === 0;
-  }
+	get size(): number {
+		return this.items.size;
+	}
 
-  nonEmpty(): boolean {
-    return this.items.size > 0;
-  }
+	isEmpty(): boolean {
+		return this.items.size === 0;
+	}
 
-  toArray(): T[] {
-    return Array.from(this.items);
-  }
+	nonEmpty(): boolean {
+		return this.items.size > 0;
+	}
 
-  [Symbol.iterator](): Iterator<T> {
-    return this.items[Symbol.iterator]();
-  }
+	toArray(): T[] {
+		return Array.from(this.items);
+	}
+
+	[Symbol.iterator](): Iterator<T> {
+		return this.items[Symbol.iterator]();
+	}
 }
 
 /**
  * Sorted map implementation using JavaScript Map with key ordering
  */
 export class SortedMap<K, V> {
-  private items: Map<K, V>;
-  private compareFn: (a: K, b: K) => number;
+	private items: Map<K, V>;
+	private compareFn: (a: K, b: K) => number;
 
-  constructor(entries: Iterable<[K, V]> = [], compareFn?: (a: K, b: K) => number) {
-    this.compareFn = compareFn || ((a, b) => {
-      if (a < b) return -1;
-      if (a > b) return 1;
-      return 0;
-    });
-    
-    const sortedEntries = Array.from(entries).sort(([a], [b]) => this.compareFn(a, b));
-    this.items = new Map(sortedEntries);
-  }
+	constructor(
+		entries: Iterable<[K, V]> = [],
+		compareFn?: (a: K, b: K) => number,
+	) {
+		this.compareFn =
+			compareFn ||
+			((a, b) => {
+				if (a < b) return -1;
+				if (a > b) return 1;
+				return 0;
+			});
 
-  static from<K, V>(entries: Iterable<[K, V]>, compareFn?: (a: K, b: K) => number): SortedMap<K, V> {
-    return new SortedMap(entries, compareFn);
-  }
+		const sortedEntries = Array.from(entries).sort(([a], [b]) =>
+			this.compareFn(a, b),
+		);
+		this.items = new Map(sortedEntries);
+	}
 
-  set(key: K, value: V): SortedMap<K, V> {
-    const newEntries = Array.from(this.items.entries());
-    newEntries.push([key, value]);
-    return new SortedMap(newEntries, this.compareFn);
-  }
+	static from<K, V>(
+		entries: Iterable<[K, V]>,
+		compareFn?: (a: K, b: K) => number,
+	): SortedMap<K, V> {
+		return new SortedMap(entries, compareFn);
+	}
 
-  get(key: K): V | undefined {
-    return this.items.get(key);
-  }
+	set(key: K, value: V): SortedMap<K, V> {
+		const newEntries = Array.from(this.items.entries());
+		newEntries.push([key, value]);
+		return new SortedMap(newEntries, this.compareFn);
+	}
 
-  has(key: K): boolean {
-    return this.items.has(key);
-  }
+	get(key: K): V | undefined {
+		return this.items.get(key);
+	}
 
-  get size(): number {
-    return this.items.size;
-  }
+	has(key: K): boolean {
+		return this.items.has(key);
+	}
 
-  isEmpty(): boolean {
-    return this.items.size === 0;
-  }
+	get size(): number {
+		return this.items.size;
+	}
 
-  keys(): IterableIterator<K> {
-    return this.items.keys();
-  }
+	isEmpty(): boolean {
+		return this.items.size === 0;
+	}
 
-  values(): IterableIterator<V> {
-    return this.items.values();
-  }
+	keys(): IterableIterator<K> {
+		return this.items.keys();
+	}
 
-  entries(): IterableIterator<[K, V]> {
-    return this.items.entries();
-  }
+	values(): IterableIterator<V> {
+		return this.items.values();
+	}
 
-  forEach(callback: (value: V, key: K) => void): void {
-    for (const [key, value] of this.items) {
-      callback(value, key);
-    }
-  }
+	entries(): IterableIterator<[K, V]> {
+		return this.items.entries();
+	}
 
-  [Symbol.iterator](): Iterator<[K, V]> {
-    return this.items[Symbol.iterator]();
-  }
+	forEach(callback: (value: V, key: K) => void): void {
+		for (const [key, value] of this.items) {
+			callback(value, key);
+		}
+	}
+
+	[Symbol.iterator](): Iterator<[K, V]> {
+		return this.items[Symbol.iterator]();
+	}
 }

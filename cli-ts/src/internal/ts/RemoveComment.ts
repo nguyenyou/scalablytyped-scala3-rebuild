@@ -17,14 +17,14 @@
  *    to ensure only supported types can have comments removed
  */
 
-import { IArray } from '../IArray.js';
-import { Comments } from '../Comments.js';
-import {
-  TsMemberCtor,
-  TsMemberFunction,
-  TsMemberCall,
-  TsDeclFunction
-} from './trees.js';
+import { Comments } from "../Comments.js";
+import type { IArray } from "../IArray.js";
+import type {
+	TsDeclFunction,
+	TsMemberCall,
+	TsMemberCtor,
+	TsMemberFunction,
+} from "./trees.js";
 
 // ============================================================================
 // RemoveComment trait equivalent
@@ -35,11 +35,11 @@ import {
  * Equivalent to Scala's `trait RemoveComment[T]`
  */
 export interface RemoveComment<T> {
-  /**
-   * Remove comments from the given object
-   * Equivalent to Scala's `def remove(t: T): T`
-   */
-  remove(t: T): T;
+	/**
+	 * Remove comments from the given object
+	 * Equivalent to Scala's `def remove(t: T): T`
+	 */
+	remove(t: T): T;
 }
 
 // ============================================================================
@@ -51,12 +51,12 @@ export interface RemoveComment<T> {
  * Equivalent to Scala's `implicit val r0: RemoveComment[TsMemberCtor] = _.copy(comments = NoComments)`
  */
 export const removeCommentTsMemberCtor: RemoveComment<TsMemberCtor> = {
-  remove: (ctor: TsMemberCtor): TsMemberCtor => ({
-    ...ctor,
-    comments: Comments.empty(),
-    withComments: ctor.withComments,
-    addComment: ctor.addComment
-  })
+	remove: (ctor: TsMemberCtor): TsMemberCtor => ({
+		...ctor,
+		comments: Comments.empty(),
+		withComments: ctor.withComments,
+		addComment: ctor.addComment,
+	}),
 };
 
 /**
@@ -64,12 +64,12 @@ export const removeCommentTsMemberCtor: RemoveComment<TsMemberCtor> = {
  * Equivalent to Scala's `implicit val r1: RemoveComment[TsMemberFunction] = _.copy(comments = NoComments)`
  */
 export const removeCommentTsMemberFunction: RemoveComment<TsMemberFunction> = {
-  remove: (func: TsMemberFunction): TsMemberFunction => ({
-    ...func,
-    comments: Comments.empty(),
-    withComments: func.withComments,
-    addComment: func.addComment
-  })
+	remove: (func: TsMemberFunction): TsMemberFunction => ({
+		...func,
+		comments: Comments.empty(),
+		withComments: func.withComments,
+		addComment: func.addComment,
+	}),
 };
 
 /**
@@ -77,12 +77,12 @@ export const removeCommentTsMemberFunction: RemoveComment<TsMemberFunction> = {
  * Equivalent to Scala's `implicit val r2: RemoveComment[TsMemberCall] = _.copy(comments = NoComments)`
  */
 export const removeCommentTsMemberCall: RemoveComment<TsMemberCall> = {
-  remove: (call: TsMemberCall): TsMemberCall => ({
-    ...call,
-    comments: Comments.empty(),
-    withComments: call.withComments,
-    addComment: call.addComment
-  })
+	remove: (call: TsMemberCall): TsMemberCall => ({
+		...call,
+		comments: Comments.empty(),
+		withComments: call.withComments,
+		addComment: call.addComment,
+	}),
 };
 
 /**
@@ -90,15 +90,15 @@ export const removeCommentTsMemberCall: RemoveComment<TsMemberCall> = {
  * Equivalent to Scala's `implicit val r3: RemoveComment[TsDeclFunction] = _.copy(comments = NoComments)`
  */
 export const removeCommentTsDeclFunction: RemoveComment<TsDeclFunction> = {
-  remove: (decl: TsDeclFunction): TsDeclFunction => ({
-    ...decl,
-    comments: Comments.empty(),
-    withComments: decl.withComments,
-    addComment: decl.addComment,
-    withCodePath: decl.withCodePath,
-    withJsLocation: decl.withJsLocation,
-    withName: decl.withName
-  })
+	remove: (decl: TsDeclFunction): TsDeclFunction => ({
+		...decl,
+		comments: Comments.empty(),
+		withComments: decl.withComments,
+		addComment: decl.addComment,
+		withCodePath: decl.withCodePath,
+		withJsLocation: decl.withJsLocation,
+		withName: decl.withName,
+	}),
 };
 
 // ============================================================================
@@ -110,49 +110,48 @@ export const removeCommentTsDeclFunction: RemoveComment<TsDeclFunction> = {
  * Equivalent to Scala's `object RemoveComment`
  */
 export namespace RemoveComment {
+	/**
+	 * RemoveComment instance for TsMemberCtor
+	 * Equivalent to Scala's `implicit val r0`
+	 */
+	export const r0 = removeCommentTsMemberCtor;
 
-  /**
-   * RemoveComment instance for TsMemberCtor
-   * Equivalent to Scala's `implicit val r0`
-   */
-  export const r0 = removeCommentTsMemberCtor;
+	/**
+	 * RemoveComment instance for TsMemberFunction
+	 * Equivalent to Scala's `implicit val r1`
+	 */
+	export const r1 = removeCommentTsMemberFunction;
 
-  /**
-   * RemoveComment instance for TsMemberFunction
-   * Equivalent to Scala's `implicit val r1`
-   */
-  export const r1 = removeCommentTsMemberFunction;
+	/**
+	 * RemoveComment instance for TsMemberCall
+	 * Equivalent to Scala's `implicit val r2`
+	 */
+	export const r2 = removeCommentTsMemberCall;
 
-  /**
-   * RemoveComment instance for TsMemberCall
-   * Equivalent to Scala's `implicit val r2`
-   */
-  export const r2 = removeCommentTsMemberCall;
+	/**
+	 * RemoveComment instance for TsDeclFunction
+	 * Equivalent to Scala's `implicit val r3`
+	 */
+	export const r3 = removeCommentTsDeclFunction;
 
-  /**
-   * RemoveComment instance for TsDeclFunction
-   * Equivalent to Scala's `implicit val r3`
-   */
-  export const r3 = removeCommentTsDeclFunction;
-
-  /**
-   * Keep comments only on the first element of an array, remove from all others
-   * Equivalent to Scala's `def keepFirstOnly[T <: AnyRef: RemoveComment](fs: IArray[T]): IArray[T]`
-   *
-   * @param fs Array of elements that support comment removal
-   * @param removeComment RemoveComment instance for type T
-   * @returns Array with comments preserved only on the first element
-   */
-  export function keepFirstOnly<T>(
-    fs: IArray<T>,
-    removeComment: RemoveComment<T>
-  ): IArray<T> {
-    return fs.zipWithIndex().map(([element, index]) => {
-      if (index === 0) {
-        return element;
-      } else {
-        return removeComment.remove(element);
-      }
-    });
-  }
+	/**
+	 * Keep comments only on the first element of an array, remove from all others
+	 * Equivalent to Scala's `def keepFirstOnly[T <: AnyRef: RemoveComment](fs: IArray[T]): IArray[T]`
+	 *
+	 * @param fs Array of elements that support comment removal
+	 * @param removeComment RemoveComment instance for type T
+	 * @returns Array with comments preserved only on the first element
+	 */
+	export function keepFirstOnly<T>(
+		fs: IArray<T>,
+		removeComment: RemoveComment<T>,
+	): IArray<T> {
+		return fs.zipWithIndex().map(([element, index]) => {
+			if (index === 0) {
+				return element;
+			} else {
+				return removeComment.remove(element);
+			}
+		});
+	}
 }
