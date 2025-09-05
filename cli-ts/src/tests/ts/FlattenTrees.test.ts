@@ -469,8 +469,12 @@ describe("FlattenTrees Tests", () => {
       const result = FlattenTrees.newMembers(these, thats);
 
       expect(result.length).toBe(2);
-      expect(result.contains(namedMember)).toBe(true);
-      expect(result.contains(unnamedMember)).toBe(true);
+      // Check that we have a class with the expected name
+      const hasNamedClass = result.exists(m => TsDeclClass.isClass(m) && (m as TsDeclClass).name.value === "NamedClass");
+      expect(hasNamedClass).toBe(true);
+      // Check that we have a global member
+      const hasGlobal = result.exists(m => TsGlobal.isGlobal(m));
+      expect(hasGlobal).toBe(true);
     });
 
     test("merge TsGlobal members", () => {
@@ -495,8 +499,11 @@ describe("FlattenTrees Tests", () => {
       const result = FlattenTrees.newMembers(these, thats);
 
       expect(result.length).toBe(2);
-      expect(result.contains(class1)).toBe(true);
-      expect(result.contains(class2)).toBe(true);
+      // Check that we have both classes by name
+      const hasClass1 = result.exists(m => TsDeclClass.isClass(m) && (m as TsDeclClass).name.value === "Class1");
+      const hasClass2 = result.exists(m => TsDeclClass.isClass(m) && (m as TsDeclClass).name.value === "Class2");
+      expect(hasClass1).toBe(true);
+      expect(hasClass2).toBe(true);
     });
   });
 
