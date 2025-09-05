@@ -175,3 +175,60 @@ describe('DeriveNonConflictingName - Single Member Types', () => {
     expect(result).toBe("CallFirstNameLastName");
   });
 });
+
+describe('DeriveNonConflictingName - Multiple Members', () => {
+  test('multiple properties sorted by name', () => {
+    const prop1 = createMockProperty("zebra");
+    const prop2 = createMockProperty("alpha");
+    const prop3 = createMockProperty("beta");
+    const members = IArray.fromArray<TsMember>([prop1, prop2, prop3]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    // Should be sorted: Alpha, Beta, Zebra
+    expect(result).toBe("Alpha");
+  });
+
+  test('mixed member types', () => {
+    const property = createMockProperty("name");
+    const func = createMockFunction("getValue");
+    const ctor = createMockCtor();
+    const members = IArray.fromArray<TsMember>([property, func, ctor]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    // Should include constructor first, then sorted members
+    expect(result).toBe("Instantiable");
+  });
+
+  test('prefix with single member', () => {
+    const property = createMockProperty("value");
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("Test", members)(simpleTryCreate);
+    expect(result).toBe("Test");
+  });
+});
+
+describe('DeriveNonConflictingName - Conflict Resolution', () => {
+  test('first choice conflicts, second succeeds', () => {
+    const property = createMockProperty("name");
+    const members = IArray.fromArray<TsMember>([property]);
+    const conflicts = new Set(["Name"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    // Should try longer version or different combination
+    expect(result).not.toBe("Name");
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  test('all variants conflict, fallback to numbered', () => {
+    const property = createMockProperty("test");
+    const members = IArray.fromArray<TsMember>([property]);
+    const conflicts = new Set(["Test", "TestString", "0", "1", "2"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("3");
+  });
+
+  test('prefix conflicts resolved with members', () => {
+    const property = createMockProperty("value");
+    const members = IArray.fromArray<TsMember>([property]);
+    const conflicts = new Set(["Test"]);
+    const result = DeriveNonConflictingName.apply("Test", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("TestValue");
+  });
+});
