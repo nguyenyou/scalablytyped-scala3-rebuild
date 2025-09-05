@@ -622,7 +622,7 @@ describe("TsTreeScope", () => {
 			const deps = new Map();
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
-			const emptyQIdent = TsQIdent.ofStrings(); // Empty identifier
+			const emptyQIdent = createQIdentFromParts(); // Empty identifier
 			const result = root.lookup(emptyQIdent, true);
 			expect(result.isEmpty).toBe(true);
 		});

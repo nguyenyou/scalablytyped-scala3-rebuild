@@ -656,8 +656,9 @@ export function createQIdent(name: string): TsQIdent {
 
 /**
  * Creates a TsQIdent from multiple string parts.
+ * Can handle empty parts array for creating empty qualified identifiers.
  *
- * @param parts - The identifier parts
+ * @param parts - The identifier parts (can be empty)
  * @returns A TsQIdent
  */
 export function createQIdentFromParts(...parts: string[]): TsQIdent {
