@@ -564,4 +564,169 @@ describe("FlattenTrees Tests", () => {
       expect(mergedInterface.members.length).toBe(2);
     });
   });
+
+  describe("FlattenTrees - cross-type merging", () => {
+    test("merge namespace and function with same name", () => {
+      const ns = createMockNamespace("TestName", Comments.empty(), false, IArray.fromArray<TsContainerOrDecl>([createMockClass("InnerClass")]));
+      const func = createMockFunction("TestName", Comments.empty(), false, TsFunSig.simple(IArray.Empty, none));
+      const these = IArray.fromArray<TsNamedDecl>([ns]);
+      const thats = IArray.fromArray<TsNamedDecl>([func]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      // According to Scala implementation: namespace + function → merged namespace with function as namespaced member
+      expect(result.length).toBe(1);
+      const mergedNS = result.apply(0) as TsDeclNamespace;
+      expect(TsDeclNamespace.isNamespace(mergedNS)).toBe(true);
+      expect(mergedNS.name.value).toBe("TestName");
+      expect(mergedNS.members.length).toBe(2); // Original InnerClass + namespaced function
+    });
+
+    test("merge enum and class with same name", () => {
+      const enumDecl = createMockEnum("TestName", Comments.empty(), false, false, IArray.Empty, true);
+      const classDecl = createMockClass("TestName", Comments.empty(), false, false, IArray.Empty, undefined, IArray.Empty, IArray.fromArray<TsMember>([createMockProperty("prop")]));
+      const these = IArray.fromArray<TsNamedDecl>([enumDecl]);
+      const thats = IArray.fromArray<TsNamedDecl>([classDecl]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(2); // Both should be preserved as they're different types
+      const hasEnum = result.exists(m => TsDeclEnum.isEnum(m) && (m as TsDeclEnum).name.value === "TestName");
+      const hasClass = result.exists(m => TsDeclClass.isClass(m) && (m as TsDeclClass).name.value === "TestName");
+      expect(hasEnum).toBe(true);
+      expect(hasClass).toBe(true);
+    });
+
+    test("merge type alias and interface with same name", () => {
+      const typeAlias = createMockTypeAlias("TestName", TsTypeRef.string, Comments.empty(), false, IArray.Empty);
+      const iface = createMockInterface("TestName", Comments.empty(), false, IArray.Empty, IArray.Empty, IArray.fromArray<TsMember>([createMockProperty("prop")]));
+      const these = IArray.fromArray<TsNamedDecl>([typeAlias]);
+      const thats = IArray.fromArray<TsNamedDecl>([iface]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(2); // Both should be preserved as they're different types
+      const hasTypeAlias = result.exists(m => TsDeclTypeAlias.isTypeAlias(m) && (m as TsDeclTypeAlias).name.value === "TestName");
+      const hasInterface = result.exists(m => TsDeclInterface.isInterface(m) && (m as TsDeclInterface).name.value === "TestName");
+      expect(hasTypeAlias).toBe(true);
+      expect(hasInterface).toBe(true);
+    });
+
+    test("merge variable and class with same name", () => {
+      const variable = createMockVar("TestName", Comments.empty(), false, false, TsTypeRef.string);
+      const classDecl = createMockClass("TestName", Comments.empty(), false, false, IArray.Empty, undefined, IArray.Empty, IArray.fromArray<TsMember>([createMockProperty("prop")]));
+      const these = IArray.fromArray<TsNamedDecl>([variable]);
+      const thats = IArray.fromArray<TsNamedDecl>([classDecl]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(2); // Both should be preserved as they're different types
+      const hasVariable = result.exists(m => TsDeclVar.isVar(m) && (m as TsDeclVar).name.value === "TestName");
+      const hasClass = result.exists(m => TsDeclClass.isClass(m) && (m as TsDeclClass).name.value === "TestName");
+      expect(hasVariable).toBe(true);
+      expect(hasClass).toBe(true);
+    });
+
+    test("merge augmented module and namespace", () => {
+      const augModule = createMockAugmentedModule("TestName", Comments.empty(), IArray.fromArray<TsContainerOrDecl>([createMockClass("ModuleClass")]));
+      const ns = createMockNamespace("TestName", Comments.empty(), false, IArray.fromArray<TsContainerOrDecl>([createMockClass("NamespaceClass")]));
+      const these = IArray.fromArray<TsNamedDecl>([augModule]);
+      const thats = IArray.fromArray<TsNamedDecl>([ns]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(2); // Both should be preserved as they're different types
+      const hasAugModule = result.exists(m => TsAugmentedModule.isAugmentedModule(m) && (m as TsAugmentedModule).name.value === "TestName");
+      const hasNamespace = result.exists(m => TsDeclNamespace.isNamespace(m) && (m as TsDeclNamespace).name.value === "TestName");
+      expect(hasAugModule).toBe(true);
+      expect(hasNamespace).toBe(true);
+    });
+
+    test("merge different types with same name - priority order", () => {
+      // Based on Scala implementation: namespace + function → merged namespace, variable + enum → separate
+      const ns = createMockNamespace("TestName");
+      const func = createMockFunction("TestName");
+      const variable = createMockVar("TestName");
+      const enumDecl = createMockEnum("TestName");
+      const these = IArray.fromArray<TsNamedDecl>([ns, func]);
+      const thats = IArray.fromArray<TsNamedDecl>([variable, enumDecl]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(3); // namespace+function merge, variable and enum separate
+      const hasNamespace = result.exists(m => TsDeclNamespace.isNamespace(m));
+      const hasVariable = result.exists(m => TsDeclVar.isVar(m));
+      const hasEnum = result.exists(m => TsDeclEnum.isEnum(m));
+      expect(hasNamespace).toBe(true);
+      expect(hasVariable).toBe(true);
+      expect(hasEnum).toBe(true);
+    });
+
+    test("merge function overloads", () => {
+      const func1 = createMockFunction("testFunc", Comments.empty(), false,
+        TsFunSig.simple(IArray.fromArray([TsFunParam.typed(createSimpleIdent("x"), TsTypeRef.number)]), some(TsTypeRef.string)));
+      const func2 = createMockFunction("testFunc", Comments.empty(), false,
+        TsFunSig.simple(IArray.fromArray([TsFunParam.typed(createSimpleIdent("x"), TsTypeRef.string)]), some(TsTypeRef.number)));
+      const these = IArray.fromArray<TsNamedDecl>([func1]);
+      const thats = IArray.fromArray<TsNamedDecl>([func2]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      // According to Scala: functions with same name are preserved separately (no automatic merging)
+      expect(result.length).toBe(2); // Functions with same name should be preserved separately
+      const functions = result.filter(m => TsDeclFunction.isFunction(m));
+      expect(functions.length).toBe(2);
+    });
+
+    test("merge enum members", () => {
+      // Create enums with proper CodePath to avoid forceHasPath error
+      const enum1 = createMockEnum("TestEnum", Comments.empty(), false, false,
+        IArray.fromArray([TsEnumMember.create(Comments.empty(), createSimpleIdent("A"), none)]), true,
+        JsLocation.zero(), createMockCodePath("test1"));
+      const enum2 = createMockEnum("TestEnum", Comments.empty(), false, false,
+        IArray.fromArray([TsEnumMember.create(Comments.empty(), createSimpleIdent("B"), none)]), true,
+        JsLocation.zero(), createMockCodePath("test2"));
+      const these = IArray.fromArray<TsNamedDecl>([enum1]);
+      const thats = IArray.fromArray<TsNamedDecl>([enum2]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(1); // Enums with same name should merge
+      const mergedEnum = result.apply(0) as TsDeclEnum;
+      expect(TsDeclEnum.isEnum(mergedEnum)).toBe(true);
+      expect(mergedEnum.name.value).toBe("TestEnum");
+      // Note: Based on Scala implementation, enum merging preserves first enum's members only
+      expect(mergedEnum.members.length).toBe(1); // Should have first enum's members only
+    });
+
+    test("merge type alias with different definitions", () => {
+      const alias1 = createMockTypeAlias("TestType", TsTypeRef.string);
+      const alias2 = createMockTypeAlias("TestType", TsTypeRef.number);
+      const these = IArray.fromArray<TsNamedDecl>([alias1]);
+      const thats = IArray.fromArray<TsNamedDecl>([alias2]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(1); // Type aliases with same name should merge (first wins)
+      const mergedAlias = result.apply(0) as TsDeclTypeAlias;
+      expect(TsDeclTypeAlias.isTypeAlias(mergedAlias)).toBe(true);
+      expect(mergedAlias.name.value).toBe("TestType");
+      // First definition should win
+      expect(mergedAlias.alias).toBe(TsTypeRef.string);
+    });
+
+    test("merge variable declarations", () => {
+      const var1 = createMockVar("testVar", Comments.empty(), false, false, TsTypeRef.string);
+      const var2 = createMockVar("testVar", Comments.empty(), false, true, TsTypeRef.string); // readonly
+      const these = IArray.fromArray<TsNamedDecl>([var1]);
+      const thats = IArray.fromArray<TsNamedDecl>([var2]);
+
+      const result = FlattenTrees.newNamedMembers(these, thats);
+
+      expect(result.length).toBe(1); // Variables with same name should merge
+      const mergedVar = result.apply(0) as TsDeclVar;
+      expect(TsDeclVar.isVar(mergedVar)).toBe(true);
+      expect(mergedVar.name.value).toBe("testVar");
+    });
+  });
 });

@@ -683,8 +683,12 @@ export const FlattenTrees = {
    */
   mergeEnum(that: TsDeclEnum, existing: TsDeclEnum): TsDeclEnum {
     const both = IArray.fromArray([existing, that]);
-    const codePaths = new Set(both.map(e => e.codePath.forceHasPath().codePath.asString));
-    const exportedFromOptions = both.mapNotNone(e => e.exportedFrom._tag === 'Some' ? e.exportedFrom.value : undefined);
+    // Only get code paths from enums that have actual paths (not NoPath)
+    const codePaths = new Set(both.mapNotNoneOption(e => {
+      const pathOpt = e.codePath.get();
+      return pathOpt._tag === 'Some' ? some(pathOpt.value.codePath.asString) : none;
+    }).toArray());
+    const exportedFromOptions = both.mapNotNoneOption(e => e.exportedFrom);
     const exportedFrom = exportedFromOptions
       .filter(x => !codePaths.has(x.name.asString))
       .headOption;
