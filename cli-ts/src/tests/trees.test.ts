@@ -1866,7 +1866,7 @@ describe("trees - Phase 6: Type System", () => {
 			it("should create simplified union types", () => {
 				const stringType = TsTypeRef.string;
 				const numberType = TsTypeRef.number;
-				const types = IArray.fromArray([stringType, numberType]);
+				const _types = IArray.fromArray([stringType, numberType]);
 
 				const simplified = TsTypeUnion.simplified(
 					IArray.fromArray<TsType>([stringType, numberType]),
@@ -1878,7 +1878,7 @@ describe("trees - Phase 6: Type System", () => {
 
 			it("should simplify single-type unions to the type itself", () => {
 				const stringType = TsTypeRef.string;
-				const types = IArray.fromArray([stringType]);
+				const _types = IArray.fromArray([stringType]);
 
 				const simplified = TsTypeUnion.simplified(
 					IArray.fromArray<TsType>([stringType]),
@@ -1949,7 +1949,7 @@ describe("trees - Phase 6: Type System", () => {
 			it("should create simplified intersection types", () => {
 				const stringType = TsTypeRef.string;
 				const numberType = TsTypeRef.number;
-				const types = IArray.fromArray([stringType, numberType]);
+				const _types = IArray.fromArray([stringType, numberType]);
 
 				const simplified = TsTypeIntersect.simplified(
 					IArray.fromArray<TsType>([stringType, numberType]),
@@ -1961,7 +1961,7 @@ describe("trees - Phase 6: Type System", () => {
 
 			it("should simplify single-type intersections to the type itself", () => {
 				const stringType = TsTypeRef.string;
-				const types = IArray.fromArray([stringType]);
+				const _types = IArray.fromArray([stringType]);
 
 				const simplified = TsTypeIntersect.simplified(
 					IArray.fromArray<TsType>([stringType]),

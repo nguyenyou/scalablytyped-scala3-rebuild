@@ -7,7 +7,7 @@
 import { describe, expect, test } from "bun:test";
 import { none, type Option, some } from "fp-ts/Option";
 import { Comment } from "@/internal/Comment.js";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
@@ -17,7 +17,6 @@ import {
 	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsIdent,
-	TsIdentLibrarySimple,
 	type TsIdentSimple,
 	TsParsedFile,
 	TsQIdent,

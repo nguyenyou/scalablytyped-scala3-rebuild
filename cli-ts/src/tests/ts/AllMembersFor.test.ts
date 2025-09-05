@@ -42,7 +42,6 @@ import {
 	TsTypeLiteral,
 	TsTypeLookup,
 	TsTypeObject,
-	TsTypePredicate,
 	TsTypeQuery,
 	TsTypeRef,
 	TsTypeRepeated,
@@ -67,7 +66,7 @@ function createTypeRef(
 	return TsTypeRef.create(Comments.empty(), createQIdent(name), tparams);
 }
 
-function createMockClass(
+function _createMockClass(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
 	parent: TsTypeRef | undefined = undefined,
@@ -103,7 +102,7 @@ function createMockInterface(
 	);
 }
 
-function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
+function _createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
 	return TsDeclTypeAlias.create(
 		Comments.empty(),
 		false, // declared

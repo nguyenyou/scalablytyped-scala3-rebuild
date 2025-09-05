@@ -18,8 +18,6 @@ import {
 	TsFunSig,
 	TsIdent,
 	TsIdentApply,
-	TsIdentLibrarySimple,
-	TsIdentModule,
 	type TsIdentSimple,
 	type TsMember,
 	TsMemberCall,

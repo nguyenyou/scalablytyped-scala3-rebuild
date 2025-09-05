@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { none, some } from "fp-ts/Option";
+import { none } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
@@ -21,8 +21,6 @@ import type {
 	TsDeclVar as TsDeclVarType,
 	TsIdentModule,
 	TsIdentSimple,
-	TsNamedDecl,
-	TsNamedValueDecl,
 } from "@/internal/ts/trees.js";
 
 import {

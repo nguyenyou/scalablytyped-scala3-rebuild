@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { none, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../internal/Comment.js";
+import { some } from "fp-ts/Option";
+import { Raw } from "../../internal/Comment.js";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";
 import { CodePath } from "../../internal/ts/CodePath.js";

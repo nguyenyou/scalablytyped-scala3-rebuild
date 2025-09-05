@@ -13,7 +13,6 @@ import {
 	CollectingPhaseListener,
 	Formatters,
 	type GetDeps,
-	IsCircular,
 	isFailure,
 	isIgnore,
 	isOk,
@@ -75,11 +74,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Simple single-phase example from README", () => {
 			// Example from README: Simple Single-Phase Example
 			const upperCasePhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok(value.toUpperCase());
 			};
@@ -106,11 +105,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Multi-phase pipeline example from README", () => {
 			// Example from README: Multi-Phase Pipeline Example
 			const parsePhase: Phase<string, string, ParsedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value });
 			};
@@ -118,9 +117,9 @@ describe("Documentation Examples - TypeScript", () => {
 			const validatePhase: Phase<string, ParsedData, ValidatedData> = (
 				id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				if (value.content.length > 0) {
 					return PhaseRes.Ok({ content: value.content, isValid: true });
@@ -130,11 +129,11 @@ describe("Documentation Examples - TypeScript", () => {
 			};
 
 			const transformPhase: Phase<string, ValidatedData, TransformedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ result: value.content.toUpperCase() });
 			};
@@ -164,11 +163,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Example with dependencies from README", () => {
 			// Example from README: Example with Dependencies
 			const parsePhase: Phase<string, string, ParsedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value });
 			};
@@ -177,8 +176,8 @@ describe("Documentation Examples - TypeScript", () => {
 				id,
 				value,
 				getDeps,
-				isCircular,
-				logger,
+				_isCircular,
+				_logger,
 			) => {
 				// Only request dependencies if this is not a dependency itself
 				if (id === "test-input") {
@@ -229,8 +228,8 @@ describe("Documentation Examples - TypeScript", () => {
 			const riskyPhase: Phase<string, string, ProcessedData> = (
 				id,
 				value,
-				getDeps,
-				isCircular,
+				_getDeps,
+				_isCircular,
 				logger,
 			) => {
 				return PhaseRes.attempt(id, logger, () => {
@@ -268,11 +267,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Validation failure example", () => {
 			// Test validation failure from multi-phase example
 			const parsePhase: Phase<string, string, ParsedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value });
 			};
@@ -280,9 +279,9 @@ describe("Documentation Examples - TypeScript", () => {
 			const validatePhase: Phase<string, ParsedData, ValidatedData> = (
 				id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				if (value.content.length > 0) {
 					return PhaseRes.Ok({ content: value.content, isValid: true });
@@ -321,7 +320,7 @@ describe("Documentation Examples - TypeScript", () => {
 			const circularAwarePhase: Phase<string, string, string> = (
 				id,
 				value,
-				getDeps,
+				_getDeps,
 				isCircular,
 				logger,
 			) => {
@@ -373,11 +372,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Using type guards for safe access from README", () => {
 			// Example from README: Using Type Guards for Safe Access
 			const simplePhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok(value.toUpperCase());
 			};
@@ -443,11 +442,11 @@ describe("Documentation Examples - TypeScript", () => {
 			}
 
 			const simplePhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok(value.toUpperCase());
 			};
@@ -481,11 +480,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Conditional phase execution from README", () => {
 			// Example from README: Conditional Phase Execution
 			const parsePhase: Phase<string, string, ParsedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value });
 			};
@@ -493,9 +492,9 @@ describe("Documentation Examples - TypeScript", () => {
 			const validatePhase: Phase<string, ParsedData, ParsedData> = (
 				id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				if (value.content.includes("invalid")) {
 					return PhaseRes.Failure(new Map([[id, right("Validation failed")]]));
@@ -504,11 +503,11 @@ describe("Documentation Examples - TypeScript", () => {
 			};
 
 			const transformPhase: Phase<string, ParsedData, TransformedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ result: value.content.toUpperCase() });
 			};
@@ -583,11 +582,11 @@ describe("Documentation Examples - TypeScript", () => {
 			}
 
 			const slowPhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				// Simulate some work
 				return PhaseRes.Ok(value.toUpperCase());
@@ -616,9 +615,9 @@ describe("Documentation Examples - TypeScript", () => {
 			const functionalPhase: Phase<string, string, ProcessedData> = (
 				id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return pipe(
 					value,
@@ -668,11 +667,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Unit testing phases example from README", () => {
 			// Example from README: Unit Testing Phases
 			const upperCasePhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok(value.toUpperCase());
 			};
@@ -696,11 +695,11 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Dependency testing example from README", () => {
 			// Example from README: Unit Testing Phases - dependency handling
 			const dependencyPhase: Phase<string, string, string> = (
-				id,
+				_id,
 				value,
 				getDeps,
-				isCircular,
-				logger,
+				_isCircular,
+				_logger,
 			) => {
 				const deps = SortedSet.from(["dep1"]);
 				const depsResult = getDeps(deps);
@@ -731,31 +730,31 @@ describe("Documentation Examples - TypeScript", () => {
 		test("Integration testing example from README", () => {
 			// Example from README: Integration Testing
 			const parsePhase: Phase<string, string, ParsedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value });
 			};
 
 			const validatePhase: Phase<string, ParsedData, ValidatedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ content: value.content, isValid: true });
 			};
 
 			const transformPhase: Phase<string, ValidatedData, TransformedData> = (
-				id,
+				_id,
 				value,
-				getDeps,
-				isCircular,
-				logger,
+				_getDeps,
+				_isCircular,
+				_logger,
 			) => {
 				return PhaseRes.Ok({ result: value.content.toUpperCase() });
 			};

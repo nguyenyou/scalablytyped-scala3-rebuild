@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { none, type Option, some } from "fp-ts/Option";
+import { none, type Option } from "fp-ts/Option";
 import { DevNullLogger, type Logger } from "@/internal/logging";
 import { Comments } from "../internal/Comments.js";
 import { IArray } from "../internal/IArray.js";
 import { CodePath } from "../internal/ts/CodePath.js";
 import { ExportType } from "../internal/ts/ExportType.js";
 import { JsLocation } from "../internal/ts/JsLocation.js";
-import { PackageJson } from "../internal/ts/PackageJson.js";
 import { TsTreeScope } from "../internal/ts/TsTreeScope.js";
 import {
 	TsDeclClass,
@@ -58,13 +57,13 @@ export function createTypeParam(name: string): TsTypeParam {
 		name: createSimpleIdent(name),
 		upperBound: none,
 		default: none,
-		withComments: (cs) => createTypeParam(name),
-		addComment: (c) => createTypeParam(name),
+		withComments: (_cs) => createTypeParam(name),
+		addComment: (_c) => createTypeParam(name),
 		asString: `TsTypeParam(${name})`,
 	};
 }
 
-export function createMockParsedFile(libName: string): TsParsedFile {
+export function createMockParsedFile(_libName: string): TsParsedFile {
 	return TsParsedFile.createMock();
 }
 
@@ -273,7 +272,7 @@ describe("TsTreeScope", () => {
 			const deps = new Map();
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
-			const tparam = createTypeParam("T");
+			const _tparam = createTypeParam("T");
 			const mockClass = createMockClass("TestClass");
 			// In a full implementation, we would set tparams on the class
 

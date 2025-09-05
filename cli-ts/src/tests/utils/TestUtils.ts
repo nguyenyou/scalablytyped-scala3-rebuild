@@ -14,7 +14,7 @@ import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
 	MethodType,
 	TsAugmentedModule,
@@ -49,7 +49,6 @@ import {
 	type TsType,
 	type TsTypeIntersect,
 	TsTypeLiteral,
-	TsTypeObject,
 	type TsTypeParam,
 	type TsTypeQuery,
 	TsTypeRef,
@@ -228,7 +227,7 @@ export function createMockClass(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -268,7 +267,7 @@ export function createMockInterface(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -312,7 +311,7 @@ export function createMockNamespace(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 		withMembers: function (ms: any) {
@@ -360,7 +359,7 @@ export function createMockVariable(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -405,7 +404,7 @@ export function createMockModule(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 		withMembers: function (ms: any) {
@@ -458,7 +457,7 @@ export function createMockFunction(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -493,7 +492,7 @@ export function createMockTypeAlias(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -531,7 +530,7 @@ export function createMockProperty(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -572,7 +571,7 @@ export function createMockMethod(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -603,7 +602,7 @@ export function createMockMemberCall(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -634,7 +633,7 @@ export function createMockMemberCtor(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 	};
@@ -744,8 +743,8 @@ export function createTypeParam(name: string): TsTypeParam {
 		name: createSimpleIdent(name),
 		upperBound: none,
 		default: none,
-		withComments: (cs) => createTypeParam(name),
-		addComment: (c) => createTypeParam(name),
+		withComments: (_cs) => createTypeParam(name),
+		addComment: (_c) => createTypeParam(name),
 		asString: `TsTypeParam(${name})`,
 	};
 }
@@ -773,7 +772,7 @@ export function createParsedFile(
  * @param libName - The library name
  * @returns A mock TsParsedFile
  */
-export function createMockParsedFile(libName: string): TsParsedFile {
+export function createMockParsedFile(_libName: string): TsParsedFile {
 	return TsParsedFile.createMock();
 }
 

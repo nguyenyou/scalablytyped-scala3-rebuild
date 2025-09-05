@@ -5,26 +5,21 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, Option, some } from "fp-ts/Option";
-import { Comment, Raw } from "@/internal/Comment.js";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, some } from "fp-ts/Option";
+import { Raw } from "@/internal/Comment.js";
+import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
-import { LoopDetector, MockTsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { LoopDetector } from "@/internal/ts/TsTreeScope.js";
 import {
 	AllMembersFor,
 	ExpandTypeMappingsAfterTransform,
 	ExpandTypeMappingsTransform,
 	evaluateKeys,
-	Problem,
-	Res,
-	TaggedLiteral,
-	Utils,
 } from "@/internal/ts/transforms/ExpandTypeMappings.js";
 import {
-	TsDecl,
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclTypeAlias,
@@ -61,9 +56,9 @@ function createTypeRef(
 
 function createMockScope(): any {
 	return {
-		withTree: (tree: any) => createMockScope(),
+		withTree: (_tree: any) => createMockScope(),
 		stack: [],
-		lookupInternal: (picker: any, wanted: any, loopDetector: any) => {
+		lookupInternal: (_picker: any, _wanted: any, _loopDetector: any) => {
 			// Mock implementation that returns empty results (simulating type not found)
 			return IArray.Empty;
 		},

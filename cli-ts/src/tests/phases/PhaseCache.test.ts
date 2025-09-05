@@ -94,8 +94,8 @@ describe("PhaseCache", () => {
 			const keyNonCircular: [TestId, boolean] = ["testId", false];
 			const keyCircular: [TestId, boolean] = ["testId", true];
 
-			const result1 = cache.getOrElse(keyNonCircular, compute);
-			const result2 = cache.getOrElse(keyCircular, compute);
+			const _result1 = cache.getOrElse(keyNonCircular, compute);
+			const _result2 = cache.getOrElse(keyCircular, compute);
 
 			expect(computeCount).toBe(2); // Should compute twice for different circular flags
 

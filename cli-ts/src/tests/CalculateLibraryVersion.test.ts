@@ -5,15 +5,12 @@
 import { describe, expect, test } from "bun:test";
 import * as O from "fp-ts/Option";
 import { InFolder } from "../internal/files.js";
-import { IArray } from "../internal/IArray.js";
-import { LibraryVersion } from "../internal/LibraryVersion.js";
 import {
 	CalculateLibraryVersion,
 	type Comments,
 	PackageJsonOnly,
 } from "../internal/ts/CalculateLibraryVersion.js";
 import { PackageJson } from "../internal/ts/PackageJson.js";
-import { TsIdentLibrary } from "../internal/ts/trees.js";
 
 // Mock Comments implementation for testing
 const mockComments: Comments = {

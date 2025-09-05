@@ -12,7 +12,6 @@ import {
 	arrayFormatter,
 	eitherFormatter,
 	errorFormatter,
-	Formatter,
 	fileFormatter,
 	iterableFormatter,
 	mapFormatter,
@@ -50,7 +49,7 @@ describe("Formatter Tests", () => {
 		});
 
 		test("Unit formatter should return empty string", () => {
-			const input = undefined as void;
+			const input = undefined as undefined;
 			const result = unitFormatter.apply(input);
 			expect(result).toBe("");
 		});
@@ -133,7 +132,11 @@ describe("Formatter Tests", () => {
 				numberFormatter,
 				unitFormatter,
 			);
-			const input: [string, number, void] = ["text", 42, undefined as void];
+			const input: [string, number, undefined] = [
+				"text",
+				42,
+				undefined as undefined,
+			];
 			const result = formatter.apply(input);
 			expect(result).toBe("text, 42, ");
 		});

@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { Either, left, right } from "fp-ts/Either";
-import { none, some } from "fp-ts/Option";
+import { right } from "fp-ts/Either";
+import { none } from "fp-ts/Option";
 import { LibTsSource } from "../../internal/importer/LibTsSource";
 import { Phase1ReadTypescript } from "../../internal/importer/Phase1ReadTypescript";
 import { Phase2ToScalaJs } from "../../internal/importer/Phase2ToScalaJs";
@@ -45,7 +45,7 @@ describe("Three-Phase Pipeline Integration", () => {
 					console.log(`[${id.libName.value}] ERROR: ${msg}`),
 				debug: (msg: string) =>
 					console.log(`[${id.libName.value}] DEBUG: ${msg}`),
-				withContext: (key: string, value: string) => getLogger(id),
+				withContext: (_key: string, _value: string) => getLogger(id),
 			}) as Logger<void>;
 
 		// Create phase listener
@@ -142,7 +142,7 @@ describe("Three-Phase Pipeline Integration", () => {
 					console.log(`[${id.libName.value}] ERROR: ${msg}`),
 				debug: (msg: string) =>
 					console.log(`[${id.libName.value}] DEBUG: ${msg}`),
-				withContext: (key: string, value: string) => getLogger(id),
+				withContext: (_key: string, _value: string) => getLogger(id),
 			}) as Logger<void>;
 
 		// Create phase listener

@@ -4,14 +4,7 @@
 
 import { describe, expect, it } from "bun:test";
 import * as O from "fp-ts/Option";
-import { Option } from "fp-ts/Option";
-import {
-	Comment,
-	IsTrivial,
-	type Marker,
-	NameHint,
-	Raw,
-} from "../internal/Comment.js";
+import { IsTrivial, type Marker, NameHint, Raw } from "../internal/Comment.js";
 import {
 	Comments,
 	CommentsDecoder,
@@ -130,7 +123,7 @@ describe("Comments", () => {
 			it("should return None for empty comments", () => {
 				const comments = new Comments([]);
 
-				const result = comments.extract((marker: Marker) => "test");
+				const result = comments.extract((_marker: Marker) => "test");
 
 				expect(O.isNone(result)).toBe(true);
 			});

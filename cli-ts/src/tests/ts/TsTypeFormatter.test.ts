@@ -14,7 +14,6 @@ import { OptionalModifier } from "@/internal/ts/OptionalModifier.ts";
 import { ReadonlyModifier } from "@/internal/ts/ReadonlyModifier.ts";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.ts";
 import {
-	createTsTypeFormatter,
 	TsTypeFormatter,
 	TsTypeFormatterNoComments,
 } from "@/internal/ts/TsTypeFormatter.ts";
@@ -173,7 +172,7 @@ function createMemberCtor(
 	return TsMemberCtor.create(Comments.empty(), level, signature);
 }
 
-function createMemberIndex(
+function _createMemberIndex(
 	indexing: Indexing,
 	valueType?: TsType,
 	isReadOnly: boolean = false,
@@ -188,15 +187,15 @@ function createMemberIndex(
 	);
 }
 
-function createIndexingDict(name: string, tpe: TsType): IndexingDict {
+function _createIndexingDict(name: string, tpe: TsType): IndexingDict {
 	return IndexingDict.create(createSimpleIdent(name), tpe);
 }
 
-function createIndexingSingle(name: string): IndexingSingle {
+function _createIndexingSingle(name: string): IndexingSingle {
 	return IndexingSingle.create(createQIdent(name));
 }
 
-function createMemberTypeMapped(
+function _createMemberTypeMapped(
 	key: string,
 	from: TsType,
 	to: TsType,

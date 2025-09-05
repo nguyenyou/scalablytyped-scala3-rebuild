@@ -3,14 +3,11 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isNone, isSome, none, some } from "fp-ts/Option";
+import { isNone, isSome } from "fp-ts/Option";
 import {
-	type Getter,
 	GetterInstance,
 	MethodType,
-	type Normal,
 	NormalInstance,
-	type Setter,
 	SetterInstance,
 } from "../internal/ts/MethodType.js";
 

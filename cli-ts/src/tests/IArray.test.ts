@@ -135,7 +135,7 @@ describe("IArray Tests", () => {
 		const arr = IArray.apply("1", "2", "3", "4");
 
 		// Test map
-		const mapped = arr.map((s) => parseInt(s));
+		const mapped = arr.map((s) => parseInt(s, 10));
 		expect(mapped.length).toBe(4);
 		expect(mapped.apply(0)).toBe(1);
 		expect(mapped.apply(3)).toBe(4);
@@ -145,7 +145,7 @@ describe("IArray Tests", () => {
 		expect(emptyMapped.isEmpty).toBe(true);
 
 		// Test flatMap
-		const flatMapped = arr.flatMap((s) => IArray.apply(s, s + "x"));
+		const flatMapped = arr.flatMap((s) => IArray.apply(s, `${s}x`));
 		expect(flatMapped.length).toBe(8);
 		expect(flatMapped.apply(0)).toBe("1");
 		expect(flatMapped.apply(1)).toBe("1x");
@@ -153,13 +153,13 @@ describe("IArray Tests", () => {
 		expect(flatMapped.apply(3)).toBe("2x");
 
 		// Test filter
-		const filtered = arr.filter((s) => parseInt(s) % 2 === 0);
+		const filtered = arr.filter((s) => parseInt(s, 10) % 2 === 0);
 		expect(filtered.length).toBe(2);
 		expect(filtered.apply(0)).toBe("2");
 		expect(filtered.apply(1)).toBe("4");
 
 		// Test filterNot
-		const filteredNot = arr.filterNot((s) => parseInt(s) % 2 === 0);
+		const filteredNot = arr.filterNot((s) => parseInt(s, 10) % 2 === 0);
 		expect(filteredNot.length).toBe(2);
 		expect(filteredNot.apply(0)).toBe("1");
 		expect(filteredNot.apply(1)).toBe("3");
@@ -176,7 +176,7 @@ describe("IArray Tests", () => {
 		const collected = arr.collect(
 			partialFunction(
 				(s) => /^\d+$/.test(s),
-				(s) => parseInt(s),
+				(s) => parseInt(s, 10),
 			),
 		);
 		expect(collected.length).toBe(4);
@@ -189,7 +189,7 @@ describe("IArray Tests", () => {
 		const firstDigit = arr.collectFirst(
 			partialFunction(
 				(s) => /^\d+$/.test(s),
-				(s) => parseInt(s),
+				(s) => parseInt(s, 10),
 			),
 		);
 		expect(firstDigit).toBe(1);
@@ -205,7 +205,7 @@ describe("IArray Tests", () => {
 		// Test collect on empty
 		const emptyCollected = IArray.Empty.collect(
 			partialFunction(
-				(x: any) => true,
+				(_x: any) => true,
 				(x: any) => x,
 			),
 		);
@@ -216,7 +216,7 @@ describe("IArray Tests", () => {
 		const numbers = IArray.apply("1", "2", "3", "4");
 
 		// Test foldLeft
-		const sum = numbers.foldLeft(0, (acc, s) => acc + parseInt(s));
+		const sum = numbers.foldLeft(0, (acc, s) => acc + parseInt(s, 10));
 		expect(sum).toBe(10);
 
 		const concat = numbers.foldLeft("", (acc, s) => acc + s);
@@ -241,7 +241,7 @@ describe("IArray Tests", () => {
 		).toThrow();
 
 		// Test count
-		const evenCount = numbers.count((s) => parseInt(s) % 2 === 0);
+		const evenCount = numbers.count((s) => parseInt(s, 10) % 2 === 0);
 		expect(evenCount).toBe(2);
 
 		// Test sum with numeric
@@ -385,7 +385,7 @@ describe("IArray Tests", () => {
 
 		// Test partition
 		const numbers = IArray.apply("1", "2", "3", "4", "5");
-		const [evens, odds] = numbers.partition((s) => parseInt(s) % 2 === 0);
+		const [evens, odds] = numbers.partition((s) => parseInt(s, 10) % 2 === 0);
 		expect(evens.length).toBe(2);
 		expect(evens.apply(0)).toBe("2");
 		expect(evens.apply(1)).toBe("4");

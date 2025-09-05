@@ -3,14 +3,11 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isNone, isSome, none, some } from "fp-ts/Option";
+import { isNone, isSome } from "fp-ts/Option";
 import {
-	type No,
 	NoInstance,
-	type Noop,
 	NoopInstance,
 	ReadonlyModifier,
-	type Yes,
 	YesInstance,
 } from "../internal/ts/ReadonlyModifier.js";
 

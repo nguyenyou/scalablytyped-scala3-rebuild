@@ -3,14 +3,11 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isNone, isSome, none, some } from "fp-ts/Option";
+import { isNone, isSome } from "fp-ts/Option";
 import {
-	type Defaulted,
 	DefaultedInstance,
 	ExportType,
-	type Named,
 	NamedInstance,
-	type Namespaced,
 	NamespacedInstance,
 } from "../internal/ts/ExportType.js";
 

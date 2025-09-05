@@ -28,7 +28,6 @@ import {
 	TsMemberFunction,
 	type TsMemberProperty,
 	TsQIdent,
-	TsTree,
 	type TsType,
 	TsTypeParam,
 	TsTypeRef,
@@ -85,8 +84,8 @@ describe("TypeParamsReferencedInTree Tests", () => {
 			expr: none,
 			isStatic: false,
 			isReadOnly: false,
-			withComments: (cs: Comments) => createMemberProperty(name, tpe),
-			addComment: (c: any) => createMemberProperty(name, tpe),
+			withComments: (_cs: Comments) => createMemberProperty(name, tpe),
+			addComment: (_c: any) => createMemberProperty(name, tpe),
 			asString: `TsMemberProperty(${name})`,
 		};
 	}

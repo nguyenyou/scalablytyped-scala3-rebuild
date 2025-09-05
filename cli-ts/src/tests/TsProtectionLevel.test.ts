@@ -3,13 +3,10 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isNone, isSome, none, some } from "fp-ts/Option";
+import { isNone, isSome } from "fp-ts/Option";
 import {
-	type Default,
 	DefaultInstance,
-	type Private,
 	PrivateInstance,
-	type Protected,
 	ProtectedInstance,
 	TsProtectionLevel,
 } from "../internal/ts/TsProtectionLevel.js";

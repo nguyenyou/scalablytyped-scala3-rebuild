@@ -6,10 +6,7 @@ import { CodePath } from "@/internal/ts/CodePath.js";
 import {
 	type HasJsLocation,
 	JsLocation,
-	JsLocationBoth,
-	JsLocationGlobal,
 	type JsLocationHas,
-	JsLocationModule,
 	JsLocationZero,
 } from "@/internal/ts/JsLocation.js";
 import { ModuleSpec } from "@/internal/ts/ModuleSpec.ts";
@@ -20,9 +17,7 @@ import {
 	TsDeclModule,
 	TsGlobal,
 	TsIdent,
-	TsIdentDefault,
 	TsIdentModule,
-	TsIdentNamespaced,
 	TsQIdent,
 } from "@/internal/ts/trees.js";
 
@@ -897,7 +892,7 @@ describe("JsLocation", () => {
 				jsLocation: testLocation,
 				withJsLocation: (newLocation: JsLocation): HasJsLocation => ({
 					jsLocation: newLocation,
-					withJsLocation: (newLoc: JsLocation) => hasImpl,
+					withJsLocation: (_newLoc: JsLocation) => hasImpl,
 				}),
 			};
 
@@ -914,7 +909,7 @@ describe("JsLocation", () => {
 				jsLocation: testLocation,
 				withJsLocation: (newLocation: JsLocation): JsLocationHas => ({
 					jsLocation: newLocation,
-					withJsLocation: (newLoc: JsLocation) => hasImpl,
+					withJsLocation: (_newLoc: JsLocation) => hasImpl,
 				}),
 			};
 

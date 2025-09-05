@@ -4,14 +4,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { Either, left, right } from "fp-ts/Either";
-import { SortedMap, SortedSet } from "../../internal/collections";
+import { right } from "fp-ts/Either";
+import { SortedSet } from "../../internal/collections";
 import { Logger } from "../../internal/logging";
-import {
-	CollectingPhaseListener,
-	PhaseEvent,
-	PhaseListener,
-} from "../../internal/phases/PhaseListener";
+import { CollectingPhaseListener } from "../../internal/phases/PhaseListener";
 import { PhaseRes } from "../../internal/phases/PhaseRes";
 import {
 	Formatters,
@@ -70,11 +66,11 @@ const createProcessedFile = (
 
 // Phase implementations for testing
 const parsePhase: Phase<FileId, FileId, FileData> = (
-	id: FileId,
+	_id: FileId,
 	value: FileId,
-	getDeps: GetDeps<FileId, FileData>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_getDeps: GetDeps<FileId, FileData>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => {
 	// Simulate parsing a file
 	const content = `parsed content for ${value}`;
@@ -93,9 +89,9 @@ const parsePhase: Phase<FileId, FileId, FileData> = (
 const validatePhase: Phase<FileId, FileData, FileData> = (
 	id: FileId,
 	value: FileData,
-	getDeps: GetDeps<FileId, FileData>,
+	_getDeps: GetDeps<FileId, FileData>,
 	isCircular: IsCircular,
-	logger: Logger<void>,
+	_logger: Logger<void>,
 ) => {
 	// Simulate validation
 	const errors: string[] = [];
@@ -120,11 +116,11 @@ const validatePhase: Phase<FileId, FileData, FileData> = (
 };
 
 const dependencyResolutionPhase: Phase<FileId, FileData, FileData> = (
-	id: FileId,
+	_id: FileId,
 	value: FileData,
 	getDeps: GetDeps<FileId, FileData>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => {
 	if (value.dependencies.size === 0) {
 		return PhaseRes.Ok(value);
@@ -149,9 +145,9 @@ const dependencyResolutionPhase: Phase<FileId, FileData, FileData> = (
 const transformPhase: Phase<FileId, FileData, ProcessedFile> = (
 	id: FileId,
 	value: FileData,
-	getDeps: GetDeps<FileId, ProcessedFile>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_getDeps: GetDeps<FileId, ProcessedFile>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => {
 	if (!value.processed) {
 		return PhaseRes.Failure(new Map([[id, right("File not validated")]]));
@@ -174,11 +170,11 @@ const transformPhase: Phase<FileId, FileData, ProcessedFile> = (
 };
 
 const optimizePhase: Phase<FileId, ProcessedFile, ProcessedFile> = (
-	id: FileId,
+	_id: FileId,
 	value: ProcessedFile,
-	getDeps: GetDeps<FileId, ProcessedFile>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_getDeps: GetDeps<FileId, ProcessedFile>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => {
 	return PhaseRes.Ok({
 		...value,
@@ -305,11 +301,11 @@ describe("Phase Integration Tests", () => {
 
 		test("should handle circular dependencies", () => {
 			const circularParsePhase: Phase<FileId, FileId, FileData> = (
-				id: FileId,
+				_id: FileId,
 				value: FileId,
-				getDeps: GetDeps<FileId, FileData>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<FileId, FileData>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				const content = `parsed content for ${value}`;
 				let deps: FileId[] = [];
@@ -360,9 +356,9 @@ describe("Phase Integration Tests", () => {
 			const conditionalParsePhase: Phase<FileId, FileId, FileData> = (
 				id: FileId,
 				value: FileId,
-				getDeps: GetDeps<FileId, FileData>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<FileId, FileData>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				if (value.includes("error")) {
 					return PhaseRes.Failure(new Map([[id, right("Parse error")]]));
@@ -412,9 +408,9 @@ describe("Phase Integration Tests", () => {
 			const failingValidatePhase: Phase<FileId, FileData, FileData> = (
 				id: FileId,
 				value: FileData,
-				getDeps: GetDeps<FileId, FileData>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<FileId, FileData>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				if (value.path.includes("invalid")) {
 					return PhaseRes.Failure(new Map([[id, right("Validation failed")]]));
@@ -492,14 +488,17 @@ describe("Phase Integration Tests", () => {
 
 		test("should handle deep dependency chains", () => {
 			const deepDependencyPhase: Phase<FileId, FileId, FileData> = (
-				id: FileId,
+				_id: FileId,
 				value: FileId,
-				getDeps: GetDeps<FileId, FileData>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<FileId, FileData>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				const content = `parsed content for ${value}`;
-				const level = parseInt(value.replace("level-", "").replace(".ts", ""));
+				const level = parseInt(
+					value.replace("level-", "").replace(".ts", ""),
+					10,
+				);
 				const deps = level > 0 ? [`level-${level - 1}.ts`] : [];
 
 				return PhaseRes.Ok(createFileData(value, content, deps));

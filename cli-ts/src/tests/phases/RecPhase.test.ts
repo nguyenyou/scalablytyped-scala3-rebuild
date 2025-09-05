@@ -5,14 +5,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { none, some } from "fp-ts/Option";
-import { SortedMap, SortedSet } from "../../internal/collections";
 import { Logger } from "../../internal/logging";
 import { PhaseRes } from "../../internal/phases/PhaseRes";
-import {
-	RecPhase,
-	RecPhaseInitial,
-	RecPhaseNext,
-} from "../../internal/phases/RecPhase";
+import { RecPhase, RecPhaseInitial } from "../../internal/phases/RecPhase";
 import type { GetDeps, IsCircular, Phase } from "../../internal/phases/types";
 
 // Test helper types
@@ -22,28 +17,28 @@ interface TestValue {
 	step: number;
 }
 
-const mockLogger = Logger.DevNull();
+const _mockLogger = Logger.DevNull();
 
 // Helper phase functions
 const identityPhase =
 	<Id, T>(): Phase<Id, T, T> =>
 	(
-		id: Id,
+		_id: Id,
 		value: T,
-		getDeps: GetDeps<Id, T>,
-		isCircular: IsCircular,
-		logger: Logger<void>,
+		_getDeps: GetDeps<Id, T>,
+		_isCircular: IsCircular,
+		_logger: Logger<void>,
 	) =>
 		PhaseRes.Ok(value);
 
 const transformPhase =
 	(transform: (s: string) => string): Phase<TestId, TestValue, TestValue> =>
 	(
-		id: TestId,
+		_id: TestId,
 		value: TestValue,
-		getDeps: GetDeps<TestId, TestValue>,
-		isCircular: IsCircular,
-		logger: Logger<void>,
+		_getDeps: GetDeps<TestId, TestValue>,
+		_isCircular: IsCircular,
+		_logger: Logger<void>,
 	) =>
 		PhaseRes.Ok({ data: transform(value.data), step: value.step + 1 });
 
@@ -84,11 +79,11 @@ describe("RecPhase", () => {
 
 			// First convert TestId to TestValue
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const phase1 = initial.next(toTestValuePhase, "to-testvalue");
@@ -97,7 +92,7 @@ describe("RecPhase", () => {
 				"uppercase",
 			);
 			const phase3 = phase2.next(
-				transformPhase((s) => s + "!"),
+				transformPhase((s) => `${s}!`),
 				"exclamation",
 			);
 
@@ -120,11 +115,11 @@ describe("RecPhase", () => {
 			const initial = RecPhase.apply<TestId>();
 
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const phase1 = initial.next(toTestValuePhase, "to-testvalue");
@@ -144,11 +139,11 @@ describe("RecPhase", () => {
 			const initial = RecPhase.apply<TestId>();
 
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const phase1 = initial.next(toTestValuePhase, "to-testvalue");
@@ -163,11 +158,11 @@ describe("RecPhase", () => {
 		test("should support complex phase pipelines", () => {
 			// First convert to TestValue
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const pipeline = RecPhase.apply<TestId>()
@@ -180,7 +175,7 @@ describe("RecPhase", () => {
 					transformPhase((s) => s.charAt(0).toUpperCase() + s.slice(1)),
 					"capitalize",
 				)
-				.nextOpt(some(transformPhase((s) => s + " World")), "greeting")
+				.nextOpt(some(transformPhase((s) => `${s} World`)), "greeting")
 				.nextOpt(none, "skipped-step")
 				.next(
 					transformPhase((s) => s.replace(" ", "_")),
@@ -198,11 +193,11 @@ describe("RecPhase", () => {
 			expect(initial).toBeInstanceOf(RecPhaseInitial);
 
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const phase1 = initial.next(toTestValuePhase, "to-testvalue");
@@ -227,11 +222,11 @@ describe("RecPhase", () => {
 			const initial = RecPhase.apply<TestId>();
 
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			const phase1 = initial.next(toTestValuePhase, "to-testvalue");
@@ -270,11 +265,11 @@ describe("RecPhase", () => {
 			const initial = RecPhase.apply<TestId>();
 
 			const toTestValuePhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => PhaseRes.Ok({ data: value, step: 0 });
 
 			let current = initial.next(toTestValuePhase, "initial");

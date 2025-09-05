@@ -6,11 +6,9 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { none, Option, some } from "fp-ts/Option";
+import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
-import { OptionalModifier } from "@/internal/ts/OptionalModifier.js";
-import { ReadonlyModifier } from "@/internal/ts/ReadonlyModifier.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import {
 	TsFunParam,

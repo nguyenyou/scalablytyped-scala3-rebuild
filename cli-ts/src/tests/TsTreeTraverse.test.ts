@@ -22,9 +22,6 @@ import {
 	createMockProperty,
 	createMockVariable,
 	createParsedFile,
-	createQIdent,
-	createSimpleIdent,
-	createTypeLiteral,
 	createTypeRef,
 } from "@/tests/utils/TestUtils.js";
 
@@ -210,7 +207,7 @@ describe("TsTreeTraverse Tests", () => {
 	describe("TsTreeTraverse - Complex Hierarchies", () => {
 		test("deeply nested type references", () => {
 			const stringType = createTypeRef("string");
-			const numberType = createTypeRef("number");
+			const _numberType = createTypeRef("number");
 			const memberProp = createMemberProperty("prop", stringType);
 			const memberFunc = createMemberFunction("func");
 			const members = createIArray([
@@ -325,7 +322,7 @@ describe("TsTreeTraverse Tests", () => {
 		test("partial function never matches", () => {
 			const mockClass = createMockClass("TestClass");
 
-			const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
+			const result = TsTreeTraverse.collect(mockClass, (_tree: TsTree) => {
 				// Never return anything
 				return undefined;
 			});
@@ -336,7 +333,7 @@ describe("TsTreeTraverse Tests", () => {
 		test("partial function always matches", () => {
 			const mockClass = createMockClass("TestClass");
 
-			const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
+			const result = TsTreeTraverse.collect(mockClass, (_tree: TsTree) => {
 				return "match";
 			});
 
@@ -546,7 +543,7 @@ describe("TsTreeTraverse Tests", () => {
 				createIArray(members.map((m) => m as TsMember)),
 			);
 
-			const result = TsTreeTraverse.collect(mockClass, (tree: TsTree) => {
+			const result = TsTreeTraverse.collect(mockClass, (_tree: TsTree) => {
 				return "node"; // Match everything
 			});
 
@@ -661,7 +658,7 @@ describe("TsTreeTraverse Tests", () => {
 
 			const result = TsTreeTraverse.collectIArray(
 				emptyTrees,
-				(tree: TsTree) => {
+				(_tree: TsTree) => {
 					return "found";
 				},
 			);

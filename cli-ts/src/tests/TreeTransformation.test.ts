@@ -13,10 +13,6 @@ import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import {
-	AbstractTreeTransformation,
-	TreeTransformation,
-} from "@/internal/ts/TreeTransformation.js";
-import {
 	TreeTransformationScopedChanges,
 	TreeTransformations,
 	TreeTransformationUnit,
@@ -27,9 +23,7 @@ import {
 	type TsDeclInterface,
 	type TsGlobal,
 	TsIdent,
-	TsIdentSimple,
 	type TsParsedFile,
-	TsTree,
 	TsTypeRef,
 } from "@/internal/ts/trees.js";
 
@@ -65,7 +59,7 @@ function createTestClass(name: string): TsDeclClass {
 		withName: function (name: any) {
 			return { ...this, name: TsIdent.simple(name.value) };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 		withMembers: function (newMembers: any) {
@@ -99,7 +93,7 @@ function createTestInterface(name: string): TsDeclInterface {
 		withName: function (name: any) {
 			return { ...this, name: TsIdent.simple(name.value) };
 		},
-		addComment: function (c: any) {
+		addComment: function (_c: any) {
 			return this;
 		},
 		withMembers: function (newMembers: any) {
@@ -176,7 +170,7 @@ describe("TreeTransformation", () => {
 			test("TreeTransformationScopedChanges withTree adds tree to scope", () => {
 				const transformation =
 					new (class extends TreeTransformationScopedChanges {
-						enterTsDeclClass(t: any) {
+						enterTsDeclClass(_t: any) {
 							return (x: TsDeclClass) => x;
 						}
 					})();
@@ -192,7 +186,7 @@ describe("TreeTransformation", () => {
 
 			test("TreeTransformationUnit withTree returns undefined", () => {
 				const transformation = new (class extends TreeTransformationUnit {
-					enterTsDeclClass(t: void) {
+					enterTsDeclClass(_t: undefined) {
 						return (x: TsDeclClass) => x;
 					}
 				})();
@@ -286,7 +280,7 @@ describe("TreeTransformation", () => {
 		test("visitTsDeclClass processes class declaration", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsDeclClass(t: any) {
+					enterTsDeclClass(_t: any) {
 						return (x: TsDeclClass) => ({
 							...x,
 							name: TsIdent.simple("ModifiedClass"),
@@ -304,7 +298,7 @@ describe("TreeTransformation", () => {
 		test("visitTsDeclInterface processes interface declaration", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsDeclInterface(t: any) {
+					enterTsDeclInterface(_t: any) {
 						return (x: TsDeclInterface) => ({
 							...x,
 							name: TsIdent.simple("ModifiedInterface"),
@@ -322,7 +316,7 @@ describe("TreeTransformation", () => {
 		test("visitTsGlobal processes global declaration", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsGlobal(t: any) {
+					enterTsGlobal(_t: any) {
 						return (x: TsGlobal) => ({
 							...x,
 							declared: true,
@@ -352,7 +346,7 @@ describe("TreeTransformation", () => {
 		test("combine method chains transformations", () => {
 			const transformation1 =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsDeclClass(t: any) {
+					enterTsDeclClass(_t: any) {
 						return (x: TsDeclClass) => ({
 							...x,
 							declared: true,
@@ -362,7 +356,7 @@ describe("TreeTransformation", () => {
 
 			const transformation2 =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsDeclClass(t: any) {
+					enterTsDeclClass(_t: any) {
 						return (x: TsDeclClass) => ({
 							...x,
 							isAbstract: true,
@@ -384,7 +378,7 @@ describe("TreeTransformation", () => {
 		test(">> operator is alias for combine", () => {
 			const transformation1 =
 				new (class extends TreeTransformationScopedChanges {
-					enterTsDeclInterface(t: any) {
+					enterTsDeclInterface(_t: any) {
 						return (x: TsDeclInterface) => ({
 							...x,
 							declared: true,
@@ -394,10 +388,10 @@ describe("TreeTransformation", () => {
 
 			const transformation2 =
 				new (class extends TreeTransformationScopedChanges {
-					leaveTsDeclInterface(t: any) {
+					leaveTsDeclInterface(_t: any) {
 						return (x: TsDeclInterface) => ({
 							...x,
-							name: TsIdent.simple("Modified" + x.name.value),
+							name: TsIdent.simple(`Modified${x.name.value}`),
 						});
 					}
 				})();
@@ -455,13 +449,13 @@ describe("TreeTransformation", () => {
 
 		test("compose combines multiple transformations", () => {
 			const trans1 = new (class extends TreeTransformationScopedChanges {
-				enterTsDeclClass(t: any) {
+				enterTsDeclClass(_t: any) {
 					return (x: TsDeclClass) => ({ ...x, declared: true });
 				}
 			})();
 
 			const trans2 = new (class extends TreeTransformationScopedChanges {
-				enterTsDeclClass(t: any) {
+				enterTsDeclClass(_t: any) {
 					return (x: TsDeclClass) => ({ ...x, isAbstract: true });
 				}
 			})();
@@ -522,10 +516,10 @@ describe("TreeTransformation", () => {
 			const typeRef = TsTypeRef.string;
 			const ident = TsIdent.simple("test");
 
-			expect(transformation["isTsDecl"](declClass)).toBe(true);
-			expect(transformation["isTsType"](typeRef)).toBe(true);
-			expect(transformation["isTsDecl"](ident)).toBe(false);
-			expect(transformation["isTsType"](ident)).toBe(false);
+			expect(transformation.isTsDecl(declClass)).toBe(true);
+			expect(transformation.isTsType(typeRef)).toBe(true);
+			expect(transformation.isTsDecl(ident)).toBe(false);
+			expect(transformation.isTsType(ident)).toBe(false);
 		});
 	});
 });

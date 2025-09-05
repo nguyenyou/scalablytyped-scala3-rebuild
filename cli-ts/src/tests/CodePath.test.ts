@@ -7,12 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { isNone, isSome, none, some } from "fp-ts/Option";
 import { Comments } from "../internal/Comments.js";
 import { IArray } from "../internal/IArray.js";
-import {
-	CodePath,
-	CodePathHasPath,
-	CodePathNoPath,
-	HasCodePath,
-} from "../internal/ts/CodePath.js";
+import { CodePath } from "../internal/ts/CodePath.js";
 import { JsLocation } from "../internal/ts/JsLocation.js";
 import {
 	TsDeclClass,
@@ -22,7 +17,6 @@ import {
 	TsIdentApply,
 	TsIdentDestructured,
 	TsIdentGlobal,
-	TsIdentLibraryScoped,
 	TsIdentStd,
 	TsLiteral,
 	TsQIdent,

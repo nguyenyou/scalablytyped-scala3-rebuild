@@ -6,7 +6,6 @@
 
 import { describe, expect, test } from "bun:test";
 import { none, some } from "fp-ts/Option";
-import { Comment } from "@/internal/Comment";
 import { Comments } from "@/internal/Comments";
 import { IArray } from "@/internal/IArray";
 import { CodePath } from "@/internal/ts/CodePath";
@@ -44,7 +43,6 @@ import {
 	type TsNamedDecl,
 	TsParsedFile,
 	TsQIdent,
-	TsTree,
 	type TsType,
 	TsTypeParam,
 	TsTypeRef,
@@ -83,7 +81,7 @@ describe("FlattenTrees Tests", () => {
 	}
 
 	function createMockParsedFile(
-		name: string,
+		_name: string,
 		comments: Comments = Comments.empty(),
 		directives: IArray<Directive> = IArray.Empty,
 		members: IArray<TsContainerOrDecl> = IArray.Empty,
@@ -298,7 +296,7 @@ describe("FlattenTrees Tests", () => {
 		);
 	}
 
-	function createMockMethod(
+	function _createMockMethod(
 		name: string,
 		comments: Comments = Comments.empty(),
 		level: TsProtectionLevel = TsProtectionLevel.default(),
@@ -318,7 +316,7 @@ describe("FlattenTrees Tests", () => {
 		);
 	}
 
-	function createMockCtor(
+	function _createMockCtor(
 		comments: Comments = Comments.empty(),
 		level: TsProtectionLevel = TsProtectionLevel.default(),
 		signature: TsFunSig = TsFunSig.simple(IArray.Empty, none),
@@ -326,7 +324,7 @@ describe("FlattenTrees Tests", () => {
 		return TsMemberCtor.create(comments, level, signature);
 	}
 
-	function createMockTypeParam(name: string): TsTypeParam {
+	function _createMockTypeParam(name: string): TsTypeParam {
 		return TsTypeParam.create(
 			Comments.empty(),
 			createSimpleIdent(name),
@@ -335,7 +333,7 @@ describe("FlattenTrees Tests", () => {
 		);
 	}
 
-	function createMockIndex(
+	function _createMockIndex(
 		indexing: Indexing = IndexingDict.create(
 			createSimpleIdent("key"),
 			TsTypeRef.string,

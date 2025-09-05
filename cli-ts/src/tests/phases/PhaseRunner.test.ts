@@ -4,11 +4,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { Either, left, right } from "fp-ts/Either";
-import { SortedMap, SortedSet } from "@/internal/collections";
+import { right } from "fp-ts/Either";
+import { SortedSet } from "@/internal/collections";
 import { Logger } from "@/internal/logging";
 import {
-	CollectingPhaseListener,
 	Formatters,
 	type GetDeps,
 	type IsCircular,
@@ -68,22 +67,22 @@ class TestListener implements PhaseListener<TestId> {
 }
 
 // Helper phase functions
-const identityPhase: Phase<TestId, TestId, TestId> = (
-	id: TestId,
+const _identityPhase: Phase<TestId, TestId, TestId> = (
+	_id: TestId,
 	value: TestId,
-	getDeps: GetDeps<TestId, TestId>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_getDeps: GetDeps<TestId, TestId>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => PhaseRes.Ok(value);
 
 const transformPhase =
 	(transform: (s: string) => string): Phase<TestId, TestValue, TestValue> =>
 	(
-		id: TestId,
+		_id: TestId,
 		value: TestValue,
-		getDeps: GetDeps<TestId, TestValue>,
-		isCircular: IsCircular,
-		logger: Logger<void>,
+		_getDeps: GetDeps<TestId, TestValue>,
+		_isCircular: IsCircular,
+		_logger: Logger<void>,
 	) =>
 		PhaseRes.Ok({ data: transform(value.data), step: value.step + 1 });
 
@@ -91,19 +90,19 @@ const failingPhase =
 	(errorMsg: string): Phase<TestId, TestValue, TestValue> =>
 	(
 		id: TestId,
-		value: TestValue,
-		getDeps: GetDeps<TestId, TestValue>,
-		isCircular: IsCircular,
-		logger: Logger<void>,
+		_value: TestValue,
+		_getDeps: GetDeps<TestId, TestValue>,
+		_isCircular: IsCircular,
+		_logger: Logger<void>,
 	) =>
 		PhaseRes.Failure(new Map([[id, right(errorMsg)]]));
 
 const ignoringPhase: Phase<TestId, TestValue, TestValue> = (
-	id: TestId,
-	value: TestValue,
-	getDeps: GetDeps<TestId, TestValue>,
-	isCircular: IsCircular,
-	logger: Logger<void>,
+	_id: TestId,
+	_value: TestValue,
+	_getDeps: GetDeps<TestId, TestValue>,
+	_isCircular: IsCircular,
+	_logger: Logger<void>,
 ) => PhaseRes.Ignore();
 
 const dependencyPhase =
@@ -112,8 +111,8 @@ const dependencyPhase =
 		id: TestId,
 		value: TestValue,
 		getDeps: GetDeps<TestId, TestValue>,
-		isCircular: IsCircular,
-		logger: Logger<void>,
+		_isCircular: IsCircular,
+		_logger: Logger<void>,
 	) => {
 		// Only request dependencies for the main ID, not for dependency IDs themselves
 		if (deps.size > 0 && !deps.has(id)) {
@@ -157,11 +156,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
@@ -170,7 +169,7 @@ describe("PhaseRunner", () => {
 					"uppercase",
 				)
 				.next(
-					transformPhase((s) => s + "!"),
+					transformPhase((s) => `${s}!`),
 					"exclamation",
 				);
 
@@ -201,11 +200,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
@@ -236,11 +235,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
@@ -270,11 +269,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
@@ -301,11 +300,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
@@ -339,21 +338,21 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"to-testvalue",
 				)
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestValue,
-						getDeps: GetDeps<TestId, TestValue>,
+						_getDeps: GetDeps<TestId, TestValue>,
 						isCircular: IsCircular,
-						logger: Logger<void>,
+						_logger: Logger<void>,
 					) => {
 						if (isCircular) {
 							return PhaseRes.Ok({
@@ -410,11 +409,11 @@ describe("PhaseRunner", () => {
 			let computeCount = 0;
 
 			const countingPhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				computeCount += 1;
 				return PhaseRes.Ok({
@@ -465,11 +464,11 @@ describe("PhaseRunner", () => {
 			let computeCount = 0;
 
 			const countingPhase: Phase<TestId, TestId, TestValue> = (
-				id: TestId,
+				_id: TestId,
 				value: TestId,
-				getDeps: GetDeps<TestId, TestValue>,
-				isCircular: IsCircular,
-				logger: Logger<void>,
+				_getDeps: GetDeps<TestId, TestValue>,
+				_isCircular: IsCircular,
+				_logger: Logger<void>,
 			) => {
 				computeCount += 1;
 				return PhaseRes.Ok({
@@ -518,11 +517,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"phase1",
 				)
@@ -564,11 +563,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"phase1",
 				)
@@ -603,9 +602,9 @@ describe("PhaseRunner", () => {
 				(
 					id: TestId,
 					value: TestValue,
-					getDeps: GetDeps<TestId, TestValue>,
-					isCircular: IsCircular,
-					logger: Logger<void>,
+					_getDeps: GetDeps<TestId, TestValue>,
+					_isCircular: IsCircular,
+					_logger: Logger<void>,
 				) => {
 					if (shouldSucceed(id)) {
 						return PhaseRes.Ok({
@@ -622,11 +621,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"initialization",
 				)
@@ -663,8 +662,8 @@ describe("PhaseRunner", () => {
 					id: TestId,
 					value: TestValue,
 					getDeps: GetDeps<TestId, TestValue>,
-					isCircular: IsCircular,
-					logger: Logger<void>,
+					_isCircular: IsCircular,
+					_logger: Logger<void>,
 				) => {
 					if (deps.size > 0 && !deps.has(id)) {
 						const depsResult = getDeps(SortedSet.from(deps));
@@ -687,11 +686,11 @@ describe("PhaseRunner", () => {
 			const phase = RecPhase.apply<TestId>()
 				.next(
 					(
-						id: TestId,
+						_id: TestId,
 						value: TestId,
-						getDeps: GetDeps<TestId, TestValue>,
-						isCircular: IsCircular,
-						logger: Logger<void>,
+						_getDeps: GetDeps<TestId, TestValue>,
+						_isCircular: IsCircular,
+						_logger: Logger<void>,
 					) => PhaseRes.Ok({ data: value, step: 0 }),
 					"initialization",
 				)

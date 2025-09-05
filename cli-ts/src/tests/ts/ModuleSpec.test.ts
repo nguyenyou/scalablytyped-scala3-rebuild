@@ -7,16 +7,13 @@ import { describe, expect, test } from "bun:test";
 import { none, some } from "fp-ts/Option";
 import { IArray } from "@/internal/IArray.js";
 import {
-	DefaultedModuleSpec,
 	ModuleSpec,
-	NamespacedModuleSpec,
 	type SpecifiedModuleSpec,
 } from "@/internal/ts/ModuleSpec.js";
 import {
 	TsIdent,
 	TsIdentApply,
 	TsIdentGlobal,
-	TsIdentImport,
 	type TsIdentModule,
 	TsIdentPrototype,
 	type TsIdentSimple,

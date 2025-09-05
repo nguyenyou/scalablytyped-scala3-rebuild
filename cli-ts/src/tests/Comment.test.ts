@@ -21,8 +21,6 @@ import {
 	ManglerLeaveAlone,
 	ManglerWasJsNative,
 	Marker,
-	MinimizationKeep,
-	MinimizationRelated,
 	ModuleAliases,
 	NameHint,
 	NullLit,
@@ -31,11 +29,10 @@ import {
 	UndefinedLit,
 	WasDefaulted,
 	WasLiteral,
-	WasUnion,
 } from "../internal/Comment.js";
 import { IArray } from "../internal/IArray.js";
 import { QualifiedName } from "../internal/scalajs/QualifiedName.js";
-import { TsIdent, TsIdentModule } from "../internal/ts/trees.js";
+import { TsIdent } from "../internal/ts/trees.js";
 
 describe("Comment", () => {
 	describe("Raw comments", () => {

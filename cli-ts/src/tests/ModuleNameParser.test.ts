@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import * as O from "fp-ts/Option";
 import { ModuleNameParser } from "@/internal/ts/ModuleNameParser";
-import { TsIdentModule } from "@/internal/ts/trees";
 
 describe("ModuleNameParser", () => {
 	describe("Happy Path - Basic Functionality", () => {

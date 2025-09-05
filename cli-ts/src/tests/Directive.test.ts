@@ -3,15 +3,13 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isNone, isSome, none, some } from "fp-ts/Option";
+import { isNone, isSome } from "fp-ts/Option";
 import {
 	type AmdModule,
 	Directive,
 	type LibRef,
-	type NoStdLib,
 	NoStdLibInstance,
 	type PathRef,
-	type Ref,
 	type TypesRef,
 } from "../internal/ts/Directive.js";
 

@@ -9,14 +9,12 @@ import {
 	SimplifyParents,
 	SimplifyParentsTransform,
 } from "@/internal/ts/transforms/SimplifyParents.js";
-import { TsIdent, TsQIdent, TsTypeRef } from "@/internal/ts/trees.js";
 import {
 	createIArray,
 	createIntersectionType,
 	createMockClass,
 	createMockInterface,
 	createMockScope,
-	createMockVariable,
 	createQIdent,
 	createTypeQuery,
 	createTypeRef,
@@ -60,7 +58,7 @@ describe("SimplifyParents", () => {
 			const result = SimplifyParentsTransform.enterTsDeclClass(scope)(clazz);
 
 			expect(result.parent).toBeDefined();
-			expect(result.parent!._tag).toBe("Some");
+			expect(result.parent?._tag).toBe("Some");
 			expect(result.implementsInterfaces.length).toBe(0);
 		});
 
@@ -149,7 +147,7 @@ describe("SimplifyParents", () => {
 
 	describe("Complex Type Handling", () => {
 		test("handles intersection types by flattening", () => {
-			const scope = createMockScope();
+			const _scope = createMockScope();
 
 			// Create an intersection type: BaseClass & Mixin1 & Mixin2
 			const intersectionType = createIntersectionType(
@@ -165,7 +163,7 @@ describe("SimplifyParents", () => {
 		});
 
 		test("handles typeof expressions", () => {
-			const scope = createMockScope();
+			const _scope = createMockScope();
 
 			// Create a typeof query: typeof SomeClass
 			const typeQuery = createTypeQuery(createQIdent("SomeClass"));

@@ -18,7 +18,6 @@ import {
 	type TsIdentSimple,
 	type TsMember,
 	type TsMemberProperty,
-	TsParsedFile,
 	TsQIdent,
 	type TsType,
 	TsTypeIntersect,
@@ -162,9 +161,9 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 	// Create a simplified mock scope for testing
 	// This is a minimal implementation that provides the necessary methods for FollowAliases
 	const mockScope: any = {
-		lookupType: (name: any, skipValidation: boolean = false) => {
+		lookupType: (name: any, _skipValidation: boolean = false) => {
 			// Check if this is a primitive type - if so, return empty (primitives are not looked up)
-			if (name && name.parts && name.parts.length === 1) {
+			if (name?.parts && name.parts.length === 1) {
 				const nameStr = name.parts.apply(0).value;
 				const primitiveTypes = [
 					"any",
@@ -196,7 +195,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 
 		lookupTypeIncludeScope: (name: any) => {
 			// Check if this is a primitive type - if so, return empty (primitives are not looked up)
-			if (name && name.parts && name.parts.length === 1) {
+			if (name?.parts && name.parts.length === 1) {
 				const nameStr = name.parts.apply(0).value;
 				const primitiveTypes = [
 					"any",

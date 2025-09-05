@@ -314,8 +314,8 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedTypes;
 			expect(parsed).toBeDefined();
-			expect(parsed!.length).toBe(1);
-			expect(parsed!.apply(0)).toBe("./index.d.ts");
+			expect(parsed?.length).toBe(1);
+			expect(parsed?.apply(0)).toBe("./index.d.ts");
 		});
 
 		test("parsedTypes with array value", () => {
@@ -334,9 +334,9 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedTypes;
 			expect(parsed).toBeDefined();
-			expect(parsed!.length).toBe(2);
-			expect(parsed!.contains("./index.d.ts")).toBe(true);
-			expect(parsed!.contains("./lib/types.d.ts")).toBe(true);
+			expect(parsed?.length).toBe(2);
+			expect(parsed?.contains("./index.d.ts")).toBe(true);
+			expect(parsed?.contains("./lib/types.d.ts")).toBe(true);
 		});
 
 		test("parsedTypes with null value", () => {
@@ -365,8 +365,8 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedTypings;
 			expect(parsed).toBeDefined();
-			expect(parsed!.length).toBe(1);
-			expect(parsed!.apply(0)).toBe("./typings/index.d.ts");
+			expect(parsed?.length).toBe(1);
+			expect(parsed?.apply(0)).toBe("./typings/index.d.ts");
 		});
 
 		test("parsedModules with string value", () => {
@@ -381,8 +381,8 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedModules;
 			expect(parsed).toBeDefined();
-			expect(parsed!.size).toBe(1);
-			expect(parsed!.get("")).toBe("./lib/index.js");
+			expect(parsed?.size).toBe(1);
+			expect(parsed?.get("")).toBe("./lib/index.js");
 		});
 
 		test("parsedModules with object value", () => {
@@ -400,9 +400,9 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedModules;
 			expect(parsed).toBeDefined();
-			expect(parsed!.size).toBe(2);
-			expect(parsed!.get("main")).toBe("./lib/index.js");
-			expect(parsed!.get("browser")).toBe("./lib/browser.js");
+			expect(parsed?.size).toBe(2);
+			expect(parsed?.get("main")).toBe("./lib/index.js");
+			expect(parsed?.get("browser")).toBe("./lib/browser.js");
 		});
 
 		test("parsedExported with complex exports", () => {
@@ -429,9 +429,9 @@ describe("PackageJson", () => {
 
 			const parsed = packageJson.parsedExported;
 			expect(parsed).toBeDefined();
-			expect(parsed!.size).toBe(2);
-			expect(parsed!.get(".")).toBe("./index.d.ts");
-			expect(parsed!.get("./utils")).toBe("./utils/index.d.ts");
+			expect(parsed?.size).toBe(2);
+			expect(parsed?.get(".")).toBe("./index.d.ts");
+			expect(parsed?.get("./utils")).toBe("./utils/index.d.ts");
 		});
 	});
 
@@ -471,7 +471,7 @@ describe("PackageJson", () => {
 				expect(result.devDependencies).toBeUndefined();
 				expect(result.peerDependencies).toBeUndefined();
 				expect(result.files).toBeDefined(); // Empty array is preserved
-				expect(result.files!.isEmpty).toBe(true);
+				expect(result.files?.isEmpty).toBe(true);
 				expect(result.parsedTypes).toBeUndefined(); // Empty array filtered out
 				expect(result.parsedExported).toBeUndefined(); // Empty object filtered out
 			}
@@ -490,7 +490,7 @@ describe("PackageJson", () => {
 			expect(result).not.toBeInstanceOf(Error);
 			if (!(result instanceof Error)) {
 				expect(result.dist).toBeDefined();
-				expect(result.dist!.tarball).toBe(
+				expect(result.dist?.tarball).toBe(
 					"https://registry.npmjs.org/test/-/test-1.0.0.tgz",
 				);
 			}

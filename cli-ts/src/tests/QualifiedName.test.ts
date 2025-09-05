@@ -4,7 +4,6 @@
 
 import { describe, expect, test } from "bun:test";
 import * as O from "fp-ts/Option";
-import { IArray } from "../internal/IArray.js";
 import { Name } from "../internal/scalajs/Name.js";
 import { QualifiedName, StdNames } from "../internal/scalajs/QualifiedName.js";
 

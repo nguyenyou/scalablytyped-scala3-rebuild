@@ -5,9 +5,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, Option, some } from "fp-ts/Option";
-import { Comment, Marker, NameHint, Raw } from "@/internal/Comment.js";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, some } from "fp-ts/Option";
+import { NameHint, Raw } from "@/internal/Comment.js";
+import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
 import { OptionalModifier } from "@/internal/ts/OptionalModifier.js";
@@ -19,7 +19,6 @@ import {
 	TsFunSig,
 	TsIdent,
 	type TsIdentSimple,
-	TsMember,
 	TsMemberCall,
 	TsMemberCtor,
 	TsMemberFunction,

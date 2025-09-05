@@ -104,7 +104,7 @@ const createMockScope = (
 	declarations: Map<string, TsNamedDecl>,
 ): TsTreeScope => {
 	const scope: TsTreeScope = {
-		lookup: (qname: TsQIdent, skipValidation = false): IArray<TsNamedDecl> => {
+		lookup: (qname: TsQIdent, _skipValidation = false): IArray<TsNamedDecl> => {
 			const name = qname.parts.get(0)?.value;
 			const decl = name ? declarations.get(name) : undefined;
 			return decl ? IArray.apply(decl) : IArray.Empty;
@@ -112,7 +112,7 @@ const createMockScope = (
 
 		lookupIncludeScope: (
 			qname: TsQIdent,
-			skipValidation = false,
+			_skipValidation = false,
 		): IArray<[TsNamedDecl, TsTreeScope]> => {
 			const name = qname.parts.get(0)?.value;
 			const decl = name ? declarations.get(name) : undefined;
@@ -136,7 +136,7 @@ const createMockScope = (
 		},
 
 		// Mock implementations for other required methods
-		"/"(current: any): any {
+		"/"(_current: any): any {
 			return scope;
 		},
 		get root(): any {
@@ -188,7 +188,9 @@ const createDeclarationsMap = (
 	...entries: [string, TsNamedDecl][]
 ): Map<string, TsNamedDecl> => {
 	const map = new Map<string, TsNamedDecl>();
-	entries.forEach(([key, value]) => map.set(key, value));
+	entries.forEach(([key, value]) => {
+		map.set(key, value);
+	});
 	return map;
 };
 

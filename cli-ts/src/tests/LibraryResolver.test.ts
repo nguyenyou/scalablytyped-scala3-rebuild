@@ -2,12 +2,12 @@
  * TypeScript port of org.scalablytyped.converter.internal.importer.LibraryResolverTests
  */
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as O from "fp-ts/Option";
-import { filesSync, InFile, InFolder } from "../internal/files.js";
+import { InFile, InFolder } from "../internal/files.js";
 import { IArray } from "../internal/IArray.js";
 import {
 	LibraryResolver,
@@ -18,7 +18,7 @@ import {
 	ResolvedModuleLocal,
 	ResolvedModuleNotLocal,
 } from "../internal/importer/ResolvedModule.js";
-import { TsIdentLibrary, TsIdentModule } from "../internal/ts/trees.js";
+import { TsIdentLibrary } from "../internal/ts/trees.js";
 
 // Helper functions for test setup and cleanup
 function withTempDir<T>(testName: string, test: (tempDir: string) => T): T {
