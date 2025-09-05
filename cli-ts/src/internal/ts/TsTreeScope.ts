@@ -28,6 +28,7 @@ import type {
   TsImportee
 } from './trees.js';
 import { TsIdent } from './trees.js';
+import { HasTParams } from './HasTParams.js';
 import type { HasClassMembers } from './MemberCache.js';
 import { PackageJson } from './PackageJson.js';
 import { Logger } from '../logging/index.js';
@@ -67,31 +68,6 @@ export type ExpandedMod = {
 };
 
 /**
- * Utility for extracting type parameters from trees
- */
-export const HasTParams = {
-  apply: (tree: TsTree): IArray<TsTypeParam> => {
-    const result = HasTParams.unapply(tree);
-    return result !== undefined ? result : IArray.Empty;
-  },
-
-  unapply: (tree: TsTree): IArray<TsTypeParam> | undefined => {
-    switch (tree._tag) {
-      case 'TsDeclClass':
-        return (tree as TsDeclClass).tparams;
-      case 'TsDeclInterface':
-        return (tree as TsDeclInterface).tparams;
-      case 'TsDeclTypeAlias':
-        return (tree as TsDeclTypeAlias).tparams;
-      case 'TsDeclFunction':
-        return (tree as any).signature.tparams; // TsDeclFunction has signature
-      default:
-        return undefined;
-    }
-  }
-};
-
-/**
  * Utility functions for TsQIdent
  */
 export const TsQIdentUtils = {
@@ -124,12 +100,70 @@ export const TsTreeScopeUtils = {
     fragments: IArray<TsIdent>,
     loopDetector: LoopDetector
   ): IArray<[T, TsTreeScope]> => {
-    // Simplified search implementation
-    // In a full implementation, this would:
-    // 1. Search through container.members
-    // 2. Match against the first fragment
-    // 3. Recursively search in matched members for remaining fragments
-    // 4. Apply the picker to filter results
+    if (fragments.isEmpty) {
+      // If no fragments wanted, try to pick from the container itself
+      const picked = picker.pick(container as any);
+      if (isSome(picked)) {
+        return IArray.fromArray([[picked.value, scope['/'](picked.value) as TsTreeScope]]);
+      }
+      return IArray.Empty;
+    }
+
+    if (fragments.length === 1) {
+      // Single fragment - look up by name value
+      const wanted = fragments.apply(0);
+      const wantedValue = wanted.value;
+
+      // Find declarations by matching name value
+      let declarations: IArray<TsNamedDecl> | undefined;
+      for (const [key, decls] of container.membersByName.entries()) {
+        if (key.value === wantedValue) {
+          declarations = decls;
+          break;
+        }
+      }
+
+      if (declarations) {
+        const results: [T, TsTreeScope][] = [];
+        for (const decl of declarations.toArray()) {
+          const picked = picker.pick(decl);
+          if (isSome(picked)) {
+            results.push([picked.value, scope['/'](picked.value) as TsTreeScope]);
+          }
+        }
+        return IArray.fromArray(results);
+      }
+      return IArray.Empty;
+    }
+
+    // Multiple fragments - recursive search
+    const [head, tail] = [fragments.apply(0), fragments.drop(1)];
+    const headValue = head.value;
+
+    // Find declarations by matching name value
+    let declarations: IArray<TsNamedDecl> | undefined;
+    for (const [key, decls] of container.membersByName.entries()) {
+      if (key.value === headValue) {
+        declarations = decls;
+        break;
+      }
+    }
+
+    if (declarations) {
+      const results: [T, TsTreeScope][] = [];
+      for (const decl of declarations.toArray()) {
+        const nestedResults = TsTreeScopeUtils.search(
+          scope['/'](decl) as TsTreeScope,
+          picker,
+          decl as any, // Cast to container for recursive search
+          tail,
+          loopDetector
+        );
+        results.push(...nestedResults.toArray());
+      }
+      return IArray.fromArray(results);
+    }
+
     return IArray.Empty;
   },
 

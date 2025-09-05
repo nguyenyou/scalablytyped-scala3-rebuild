@@ -84,6 +84,23 @@ export interface TreeTransformation<T> {
   enterTsGlobal(t: T): (x: TsGlobal) => TsGlobal;
   enterTsMember(t: T): (x: TsMember) => TsMember;
 
+  // Specific type enter methods
+  enterTsTypeRef(t: T): (x: TsTypeRef) => TsTypeRef;
+  enterTsTypeFunction(t: T): (x: TsTypeFunction) => TsTypeFunction;
+  enterTsTypeIntersect(t: T): (x: TsTypeIntersect) => TsTypeIntersect;
+  enterTsTypeUnion(t: T): (x: TsTypeUnion) => TsTypeUnion;
+  enterTsTypeTuple(t: T): (x: TsTypeTuple) => TsTypeTuple;
+  enterTsTypeObject(t: T): (x: TsTypeObject) => TsTypeObject;
+  enterTsTypeAsserts(t: T): (x: TsTypeAsserts) => TsTypeAsserts;
+  enterTsTypeIs(t: T): (x: TsTypeIs) => TsTypeIs;
+  enterTsTypeKeyOf(t: T): (x: TsTypeKeyOf) => TsTypeKeyOf;
+  enterTsTypeConditional(t: T): (x: TsTypeConditional) => TsTypeConditional;
+  enterTsTypeLookup(t: T): (x: TsTypeLookup) => TsTypeLookup;
+  enterTsTypeThis(t: T): (x: TsTypeThis) => TsTypeThis;
+  enterTsTypeRepeated(t: T): (x: TsTypeRepeated) => TsTypeRepeated;
+  enterTsTypeConstructor(t: T): (x: TsTypeConstructor) => TsTypeConstructor;
+  enterTsTypeLiteral(t: T): (x: TsTypeLiteral) => TsTypeLiteral;
+
   // Leave methods - called when leaving a node
   leaveTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile;
   leaveTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass;
@@ -191,6 +208,67 @@ export abstract class AbstractTreeTransformation<T> implements TreeTransformatio
 
   enterTsMember(t: T): (x: TsMember) => TsMember {
     return (x: TsMember) => x;
+  }
+
+  // Specific type enter methods - default implementations return unchanged
+  enterTsTypeRef(t: T): (x: TsTypeRef) => TsTypeRef {
+    return (x: TsTypeRef) => x;
+  }
+
+  enterTsTypeFunction(t: T): (x: TsTypeFunction) => TsTypeFunction {
+    return (x: TsTypeFunction) => x;
+  }
+
+  enterTsTypeIntersect(t: T): (x: TsTypeIntersect) => TsTypeIntersect {
+    return (x: TsTypeIntersect) => x;
+  }
+
+  enterTsTypeUnion(t: T): (x: TsTypeUnion) => TsTypeUnion {
+    return (x: TsTypeUnion) => x;
+  }
+
+  enterTsTypeTuple(t: T): (x: TsTypeTuple) => TsTypeTuple {
+    return (x: TsTypeTuple) => x;
+  }
+
+  enterTsTypeObject(t: T): (x: TsTypeObject) => TsTypeObject {
+    return (x: TsTypeObject) => x;
+  }
+
+  enterTsTypeAsserts(t: T): (x: TsTypeAsserts) => TsTypeAsserts {
+    return (x: TsTypeAsserts) => x;
+  }
+
+  enterTsTypeIs(t: T): (x: TsTypeIs) => TsTypeIs {
+    return (x: TsTypeIs) => x;
+  }
+
+  enterTsTypeKeyOf(t: T): (x: TsTypeKeyOf) => TsTypeKeyOf {
+    return (x: TsTypeKeyOf) => x;
+  }
+
+  enterTsTypeConditional(t: T): (x: TsTypeConditional) => TsTypeConditional {
+    return (x: TsTypeConditional) => x;
+  }
+
+  enterTsTypeLookup(t: T): (x: TsTypeLookup) => TsTypeLookup {
+    return (x: TsTypeLookup) => x;
+  }
+
+  enterTsTypeThis(t: T): (x: TsTypeThis) => TsTypeThis {
+    return (x: TsTypeThis) => x;
+  }
+
+  enterTsTypeRepeated(t: T): (x: TsTypeRepeated) => TsTypeRepeated {
+    return (x: TsTypeRepeated) => x;
+  }
+
+  enterTsTypeConstructor(t: T): (x: TsTypeConstructor) => TsTypeConstructor {
+    return (x: TsTypeConstructor) => x;
+  }
+
+  enterTsTypeLiteral(t: T): (x: TsTypeLiteral) => TsTypeLiteral {
+    return (x: TsTypeLiteral) => x;
   }
 
   // Default leave methods - return unchanged
@@ -450,8 +528,42 @@ export abstract class AbstractTreeTransformation<T> implements TreeTransformatio
 
   // Recursive processing methods - subclasses can override these
   protected processTypeRecursively(t: T, type: TsType): TsType {
-    // Default implementation - no recursive processing
-    return type;
+    // Dispatch to specific type enter methods based on type tag
+    switch (type._tag) {
+      case 'TsTypeRef':
+        return this.enterTsTypeRef(t)(type as TsTypeRef) as TsType;
+      case 'TsTypeFunction':
+        return this.enterTsTypeFunction(t)(type as TsTypeFunction) as TsType;
+      case 'TsTypeIntersect':
+        return this.enterTsTypeIntersect(t)(type as TsTypeIntersect) as TsType;
+      case 'TsTypeUnion':
+        return this.enterTsTypeUnion(t)(type as TsTypeUnion) as TsType;
+      case 'TsTypeTuple':
+        return this.enterTsTypeTuple(t)(type as TsTypeTuple) as TsType;
+      case 'TsTypeObject':
+        return this.enterTsTypeObject(t)(type as TsTypeObject) as TsType;
+      case 'TsTypeAsserts':
+        return this.enterTsTypeAsserts(t)(type as TsTypeAsserts) as TsType;
+      case 'TsTypeIs':
+        return this.enterTsTypeIs(t)(type as TsTypeIs) as TsType;
+      case 'TsTypeKeyOf':
+        return this.enterTsTypeKeyOf(t)(type as TsTypeKeyOf) as TsType;
+      case 'TsTypeConditional':
+        return this.enterTsTypeConditional(t)(type as TsTypeConditional) as TsType;
+      case 'TsTypeLookup':
+        return this.enterTsTypeLookup(t)(type as TsTypeLookup) as TsType;
+      case 'TsTypeThis':
+        return this.enterTsTypeThis(t)(type as TsTypeThis) as TsType;
+      case 'TsTypeRepeated':
+        return this.enterTsTypeRepeated(t)(type as TsTypeRepeated) as TsType;
+      case 'TsTypeConstructor':
+        return this.enterTsTypeConstructor(t)(type as TsTypeConstructor) as TsType;
+      case 'TsTypeLiteral':
+        return this.enterTsTypeLiteral(t)(type as TsTypeLiteral) as TsType;
+      default:
+        // Default case - return unchanged
+        return type;
+    }
   }
 
   protected processMemberRecursively(t: T, member: TsMember): TsMember {

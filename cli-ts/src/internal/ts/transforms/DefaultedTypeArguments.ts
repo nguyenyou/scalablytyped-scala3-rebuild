@@ -42,14 +42,14 @@ import { Option, some, none, fold, getOrElse } from 'fp-ts/Option';
 export class DefaultedTypeArguments extends TreeTransformationScopedChanges {
   /**
    * Transforms a TypeScript type reference by adding default type arguments when missing.
-   * 
+   *
    * The transformation:
    * 1. Looks up the type declaration in the scope
    * 2. Compares provided type arguments with expected type parameters
    * 3. Adds default values for missing type arguments
    * 4. Handles self-referencing defaults to avoid infinite recursion
    * 5. Instantiates type parameters that reference earlier parameters
-   * 
+   *
    * @param scope The current tree scope for type lookups
    * @returns A function that transforms a TsTypeRef
    */

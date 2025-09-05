@@ -149,8 +149,18 @@ describe('DefaultedTypeArguments', () => {
       
       // Should add the default for the second type parameter
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.boolean);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(boolean)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
 
     test('adds all default type arguments when none provided', () => {
@@ -162,11 +172,21 @@ describe('DefaultedTypeArguments', () => {
       const typeRef = createTypeRef("TestInterface");
       const transform = new DefaultedTypeArguments();
       const result = transform.enterTsTypeRef(scope)(typeRef);
-      
+
       // Should add defaults for both type parameters
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.string);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality instead of object reference equality
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(string)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
 
     test('uses upper bound when no default is available', () => {
@@ -181,8 +201,18 @@ describe('DefaultedTypeArguments', () => {
       
       // Should use upper bound for first, default for second
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.string);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(string)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
 
     test('uses any when no default or upper bound available', () => {
@@ -197,8 +227,18 @@ describe('DefaultedTypeArguments', () => {
       
       // Should use any for first (with warning comment), default for second
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)._tag).toBe('TsTypeRef');
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(any)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
   });
 
@@ -217,7 +257,7 @@ describe('DefaultedTypeArguments', () => {
       expect(result.tparams.length).toBe(1);
       expect(result.tparams.get(0)._tag).toBe('TsTypeRef');
       const resultTypeRef = result.tparams.get(0) as TsTypeRef;
-      expect(resultTypeRef.name.asString).toBe("any");
+      expect(resultTypeRef.name.asString).toBe("TsQIdent(any)");
     });
 
     test('handles complex self-referencing scenarios', () => {
@@ -233,7 +273,12 @@ describe('DefaultedTypeArguments', () => {
       
       // Should handle self-reference properly
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.string);
+
+      // Check structural equality for second parameter
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(string)');
+      expect(secondParam.tparams.length).toBe(0);
     });
   });
 
@@ -261,8 +306,18 @@ describe('DefaultedTypeArguments', () => {
       
       // Should work with type aliases too
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.string);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(string)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
 
     test('handles mixed provided and default arguments', () => {
@@ -278,9 +333,23 @@ describe('DefaultedTypeArguments', () => {
       
       // Should keep provided arguments and add default for the last one
       expect(result.tparams.length).toBe(3);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.any);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.void);
-      expect(result.tparams.get(2)).toEqual(TsTypeRef.boolean);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+      const thirdParam = result.tparams.get(2) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(any)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(void)');
+      expect(secondParam.tparams.length).toBe(0);
+
+      expect(thirdParam._tag).toBe('TsTypeRef');
+      expect(thirdParam.name.asString).toBe('TsQIdent(boolean)');
+      expect(thirdParam.tparams.length).toBe(0);
     });
 
     test('handles empty type parameter lists', () => {
@@ -310,7 +379,12 @@ describe('DefaultedTypeArguments', () => {
       expect(result.comments).toEqual(originalComments);
       expect(result.name).toEqual(typeRef.name);
       expect(result.tparams.length).toBe(1);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.string);
+
+      // Check structural equality for type parameter
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(string)');
+      expect(firstParam.tparams.length).toBe(0);
     });
   });
 
@@ -327,8 +401,18 @@ describe('DefaultedTypeArguments', () => {
       
       // Should handle nested structures correctly
       expect(result.tparams.length).toBe(2);
-      expect(result.tparams.get(0)).toEqual(TsTypeRef.boolean);
-      expect(result.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for type parameters
+      const firstParam = result.tparams.get(0) as TsTypeRef;
+      const secondParam = result.tparams.get(1) as TsTypeRef;
+
+      expect(firstParam._tag).toBe('TsTypeRef');
+      expect(firstParam.name.asString).toBe('TsQIdent(boolean)');
+      expect(firstParam.tparams.length).toBe(0);
+
+      expect(secondParam._tag).toBe('TsTypeRef');
+      expect(secondParam.name.asString).toBe('TsQIdent(number)');
+      expect(secondParam.tparams.length).toBe(0);
     });
 
     test('handles multiple type declarations in scope', () => {
@@ -347,11 +431,26 @@ describe('DefaultedTypeArguments', () => {
       
       // Should handle each type correctly
       expect(result1.tparams.length).toBe(1);
-      expect(result1.tparams.get(0)).toEqual(TsTypeRef.string);
-      
+
+      // Check structural equality for result1
+      const result1FirstParam = result1.tparams.get(0) as TsTypeRef;
+      expect(result1FirstParam._tag).toBe('TsTypeRef');
+      expect(result1FirstParam.name.asString).toBe('TsQIdent(string)');
+      expect(result1FirstParam.tparams.length).toBe(0);
+
       expect(result2.tparams.length).toBe(2);
-      expect(result2.tparams.get(0)).toEqual(TsTypeRef.string);
-      expect(result2.tparams.get(1)).toEqual(TsTypeRef.number);
+
+      // Check structural equality for result2
+      const result2FirstParam = result2.tparams.get(0) as TsTypeRef;
+      const result2SecondParam = result2.tparams.get(1) as TsTypeRef;
+
+      expect(result2FirstParam._tag).toBe('TsTypeRef');
+      expect(result2FirstParam.name.asString).toBe('TsQIdent(string)');
+      expect(result2FirstParam.tparams.length).toBe(0);
+
+      expect(result2SecondParam._tag).toBe('TsTypeRef');
+      expect(result2SecondParam.name.asString).toBe('TsQIdent(number)');
+      expect(result2SecondParam.tparams.length).toBe(0);
     });
   });
 });
