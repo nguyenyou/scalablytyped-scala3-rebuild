@@ -27,7 +27,8 @@
 				"noNonNullAssertion": "off"
 			},
       "complexity": {
-        "noStaticOnlyClass": "off"
+        "noStaticOnlyClass": "off",
+        "noFlatMapIdentity": "off"
       }
 		}
 	},

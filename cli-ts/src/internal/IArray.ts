@@ -46,7 +46,7 @@ export const BooleanOrdering: Ordering<boolean> = {
 export class IArrayBuilder<T> {
 	private buffer: T[] = [];
 
-	constructor(initialCapacity: number = 32) {
+	constructor(public _: number = 32) {
 		// TypeScript arrays grow dynamically, so we just initialize empty
 	}
 

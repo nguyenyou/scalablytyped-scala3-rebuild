@@ -375,7 +375,7 @@ export const Utils = {
 		fromParents: IArray<IArray<TsMember>>,
 	): IArray<TsMember> => {
 		// Flatten parent members
-    const allParentMembers = fromParents.flatMap((members) => members);
+		const allParentMembers = fromParents.flatMap((members) => members);
 
 		// For now, just combine all members (in a full implementation, this would handle overrides)
 		return ownMembers.concat(allParentMembers);
