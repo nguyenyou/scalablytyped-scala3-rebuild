@@ -8,19 +8,9 @@ import * as O from "fp-ts/Option";
 import { filesSync, InFile, InFolder } from "../files.js";
 import { IArray } from "../IArray.js";
 import { ModuleNameParser } from "../ts/ModuleNameParser.js";
-import {
-	TsIdent,
-	TsIdentLibrary,
-	TsIdentLibraryScoped,
-	TsIdentLibrarySimple,
-	type TsIdentModule,
-} from "../ts/trees.js";
+import { TsIdent, TsIdentLibrary, type TsIdentModule } from "../ts/trees.js";
 import { LibTsSource } from "./LibTsSource.js";
-import {
-	ResolvedModule,
-	ResolvedModuleLocal,
-	ResolvedModuleNotLocal,
-} from "./ResolvedModule.js";
+import { ResolvedModule } from "./ResolvedModule.js";
 
 /**
  * Result type for library resolution
@@ -206,7 +196,7 @@ export namespace LibraryResolver {
 				if (fileName === "index.d.ts") {
 					const parentDir = path.basename(dirName);
 					const grandParentDir = path.dirname(dirName);
-					const siblingFile = path.join(grandParentDir, parentDir + ".d.ts");
+					const siblingFile = path.join(grandParentDir, `${parentDir}.d.ts`);
 					return filesSync.exists(siblingFile);
 				}
 				return false;
@@ -253,9 +243,9 @@ export namespace LibraryResolver {
 		const resolved = resolve(
 			within.path,
 			fragment,
-			fragment + ".ts",
-			fragment + ".d.ts",
-			fragment + "/index.d.ts",
+			`${fragment}.ts`,
+			`${fragment}.d.ts`,
+			`${fragment}/index.d.ts`,
 		);
 
 		for (const filePath of resolved.toArray()) {

@@ -4,16 +4,16 @@
 
 import { describe, expect, test } from "bun:test";
 import * as O from "fp-ts/Option";
+import { Comments } from "../internal/Comments.js";
 import { InFolder } from "../internal/files.js";
 import {
 	CalculateLibraryVersion,
 	PackageJsonOnly,
 } from "../internal/ts/CalculateLibraryVersion.js";
 import { PackageJson } from "../internal/ts/PackageJson.js";
-import { Comments } from "../internal/Comments.js";
 
 // Mock Comments implementation for testing
-const mockComments = Comments.empty()
+const mockComments = Comments.empty();
 
 describe("CalculateLibraryVersion", () => {
 	const testFolder = new InFolder("/test/folder");

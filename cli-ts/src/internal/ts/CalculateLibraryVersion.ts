@@ -5,10 +5,10 @@
  */
 
 import { flatMap, fromNullable, none, type Option } from "fp-ts/Option";
+import type { Comments } from "../Comments.js";
 import type { InFolder } from "../files.js";
 import { LibraryVersion } from "../LibraryVersion.js";
 import type { PackageJson } from "./PackageJson.js";
-import type { Comments } from "../Comments.js";
 
 /**
  * Interface for calculating library version information

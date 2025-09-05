@@ -13,7 +13,7 @@
 		"test": "bun test",
 		"test:watch": "bun test --watch",
 		"format": "bunx biome format --write",
-		"lint": "bunx biome check --write src/tests",
+		"lint": "bunx biome check --write src",
 		"clean": "rm -rf dist",
 		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json"
 	},

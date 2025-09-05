@@ -5,33 +5,22 @@
  * by expanding interfaces and type aliases to inline their members and resolve type mappings.
  */
 
-import { Either, left, right } from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
-import { fold, none, type Option, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../Comment.js";
-import { Comments, NoComments } from "../../Comments.js";
+import { none, type Option, some } from "fp-ts/Option";
+import { Raw } from "../../Comment.js";
+import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
-import { CodePath } from "../CodePath.js";
 import {
 	TreeTransformationScopedChanges,
 	TreeTransformationUnit,
 } from "../TreeTransformations.js";
-import { TsProtectionLevel } from "../TsProtectionLevel.js";
 import { LoopDetector, Picker, type TsTreeScope } from "../TsTreeScope.js";
-import { TsTreeTraverse } from "../TsTreeTraverse.js";
 import {
 	type TsDecl,
-	TsDeclClass,
-	TsDeclEnum,
 	TsDeclInterface,
 	type TsDeclTypeAlias,
-	TsEnumMember,
-	TsExpr,
-	TsFunSig,
 	TsIdent,
 	TsLiteral,
 	type TsMember,
-	TsMemberFunction,
 	TsMemberProperty,
 	type TsMemberTypeMapped,
 	TsQIdent,
@@ -39,13 +28,11 @@ import {
 	type TsType,
 	type TsTypeConditional,
 	type TsTypeExtends,
-	TsTypeFunction,
 	type TsTypeIntersect,
 	type TsTypeKeyOf,
 	TsTypeLiteral,
 	type TsTypeLookup,
 	TsTypeObject,
-	TsTypeParam,
 	TsTypeRef,
 	TsTypeUnion,
 } from "../trees.js";
@@ -82,7 +69,7 @@ export const Res = {
 	/**
 	 * Combines multiple Res values using a mapping function
 	 */
-	sequence: <T, U>(results: IArray<Res<T>>): Res<IArray<T>> => {
+	sequence: <T, _U>(results: IArray<Res<T>>): Res<IArray<T>> => {
 		const values: T[] = [];
 		let wasRewritten = false;
 
@@ -311,7 +298,7 @@ export class Replace extends TreeTransformationScopedChanges {
 	constructor(
 		private readonly key: TsType,
 		private readonly name: TsLiteral,
-		private readonly ld: LoopDetector,
+		readonly _ld: LoopDetector,
 	) {
 		super();
 	}
@@ -342,8 +329,8 @@ export class Replace extends TreeTransformationScopedChanges {
 	}
 
 	private findTypeInMembers(
-		scope: TsTreeScope,
-		from: TsType,
+		_scope: TsTreeScope,
+		_from: TsType,
 	): TsType | undefined {
 		// This would implement the member lookup logic from the Scala version
 		// For now, return undefined to indicate not found
@@ -388,7 +375,7 @@ export const Utils = {
 		fromParents: IArray<IArray<TsMember>>,
 	): IArray<TsMember> => {
 		// Flatten parent members
-		const allParentMembers = fromParents.flatMap((members) => members);
+    const allParentMembers = fromParents.flatMap((members) => members);
 
 		// For now, just combine all members (in a full implementation, this would handle overrides)
 		return ownMembers.concat(allParentMembers);
@@ -397,12 +384,12 @@ export const Utils = {
 	/**
 	 * Check if a type points to a concrete type (class or interface)
 	 */
-	pointsToConcreteType: (scope: TsTreeScope, alias: TsType): boolean => {
+	pointsToConcreteType: (_scope: TsTreeScope, alias: TsType): boolean => {
 		if (alias._tag !== "TsTypeRef") {
 			return false;
 		}
 
-		const typeRef = alias as TsTypeRef;
+		const _typeRef = alias as TsTypeRef;
 		// This would use scope.lookupType to check if it points to a class or interface
 		// For now, return false as a conservative default
 		return false;
@@ -478,7 +465,7 @@ export function evaluateKeys(
 			}
 
 			case "TsTypeKeyOf": {
-				const keyOf = resolvedKeys as TsTypeKeyOf;
+				const _keyOf = resolvedKeys as TsTypeKeyOf;
 				// For now, return empty set - will implement AllMembersFor later
 				return Res.Ok(new Set<TaggedLiteral>(), false);
 			}
@@ -526,7 +513,7 @@ export function evaluateKeys(
 /**
  * Helper function to follow type aliases (simplified version)
  */
-function followAliases(scope: TsTreeScope, tpe: TsType): TsType {
+function followAliases(_scope: TsTreeScope, tpe: TsType): TsType {
 	// This would implement the full FollowAliases logic
 	// For now, return the type unchanged
 	return tpe;
@@ -535,7 +522,7 @@ function followAliases(scope: TsTreeScope, tpe: TsType): TsType {
 /**
  * Helper function to check if a qualified identifier is abstract
  */
-function isAbstract(scope: TsTreeScope, name: TsQIdent): boolean {
+function isAbstract(_scope: TsTreeScope, _name: TsQIdent): boolean {
 	// This would check if the type is abstract in the scope
 	// For now, return false as a conservative default
 	return false;
@@ -555,10 +542,10 @@ function isNeverType(tpe: TsType): boolean {
 /**
  * Helper function to look up a type reference
  */
-function lookupType(
-	scope: TsTreeScope,
-	typeRef: TsTypeRef,
-	ld: LoopDetector,
+function _lookupType(
+	_scope: TsTreeScope,
+	_typeRef: TsTypeRef,
+	_ld: LoopDetector,
 ): Option<Res<Set<TaggedLiteral>>> {
 	// This would implement the full type lookup logic
 	// For now, return none to indicate not found
@@ -633,7 +620,7 @@ function handleConditionalType(
  */
 function handleTypeLookup(
 	scope: TsTreeScope,
-	ld: LoopDetector,
+	_ld: LoopDetector,
 	lookup: TsTypeLookup,
 ): Res<Set<TaggedLiteral>> {
 	// This would implement ResolveTypeLookups.expandLookupType logic
@@ -654,7 +641,7 @@ function isEqual(a: TsType, b: TsType): boolean {
 /**
  * Evaluate predicate for conditional types (simplified implementation)
  */
-function evaluatePredicate(x: TsType): Res<boolean> {
+function _evaluatePredicate(x: TsType): Res<boolean> {
 	if (x._tag === "TsTypeExtends") {
 		const extends_ = x as TsTypeExtends;
 		if (
@@ -1006,7 +993,7 @@ export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
 				}
 
 				return x;
-			} catch (error) {
+			} catch (_error) {
 				console.warn(`SOE while expanding ${x.asString}`);
 				return x;
 			}
@@ -1032,7 +1019,7 @@ export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
 		});
 	}
 
-	private refersAbstract(scope: TsTreeScope, x: TsType): boolean {
+	private refersAbstract(_scope: TsTreeScope, _x: TsType): boolean {
 		// This would implement TsTreeTraverse.collect to find abstract references
 		return false; // Simplified for now
 	}
@@ -1050,7 +1037,7 @@ export class ExpandTypeMappingsAfter extends TreeTransformationScopedChanges {
  * Equivalent to the Scala Unqualify object.
  */
 export class Unqualify extends TreeTransformationUnit {
-	enterTsQIdent(context: void): (x: TsQIdent) => TsQIdent {
+	enterTsQIdent(_context: undefined): (x: TsQIdent) => TsQIdent {
 		return (x: TsQIdent) => {
 			// Keep only the last part of the qualified identifier
 			const lastPart = x.parts.get(x.parts.length - 1);

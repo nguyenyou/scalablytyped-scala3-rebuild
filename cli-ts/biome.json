@@ -20,7 +20,8 @@
 				"noExplicitAny": "off",
 				"noShadowRestrictedNames": "off",
 				"noApproximativeNumericConstant": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "useAdjacentOverloadSignatures": "off"
 			},
 			"style": {
 				"noNonNullAssertion": "off"
