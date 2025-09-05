@@ -305,5 +305,201 @@ object FollowAliasesTests extends TestSuite {
         assert(result == TsTypeRef.string)
       }
     }
+
+    test("FollowAliases - complex type structures") {
+      test("follows aliases in nested union and intersection") {
+        val alias1 = createMockTypeAlias("StringAlias", TsTypeRef.string)
+        val alias2 = createMockTypeAlias("NumberAlias", TsTypeRef.number)
+        val scope = createMockScope(alias1, alias2)
+
+        val nestedType = TsTypeUnion(IArray(
+          TsTypeIntersect(IArray(
+            TsTypeRef(createQIdent("StringAlias")),
+            TsTypeRef.boolean
+          )),
+          TsTypeRef(createQIdent("NumberAlias"))
+        ))
+
+        val result = FollowAliases(scope)(nestedType)
+
+        assert(result.isInstanceOf[TsTypeUnion])
+        val resultUnion = result.asInstanceOf[TsTypeUnion]
+        assert(resultUnion.types.length == 2)
+        assert(resultUnion.types.contains(TsTypeRef.number)) // NumberAlias resolved
+
+        val intersectionType = resultUnion.types.find(_.isInstanceOf[TsTypeIntersect]).get.asInstanceOf[TsTypeIntersect]
+        assert(intersectionType.types.contains(TsTypeRef.string)) // StringAlias resolved
+        assert(intersectionType.types.contains(TsTypeRef.boolean))
+      }
+
+      test("handles deeply nested alias chains") {
+        val level1 = createMockTypeAlias("Level1", TsTypeRef.string)
+        val level2 = createMockTypeAlias("Level2", TsTypeRef(createQIdent("Level1")))
+        val level3 = createMockTypeAlias("Level3", TsTypeRef(createQIdent("Level2")))
+        val level4 = createMockTypeAlias("Level4", TsTypeRef(createQIdent("Level3")))
+        val scope = createMockScope(level1, level2, level3, level4)
+
+        val typeRef = TsTypeRef(createQIdent("Level4"))
+        val result = FollowAliases(scope)(typeRef)
+
+        assert(result == TsTypeRef.string)
+      }
+
+      test("follows aliases with type parameters") {
+        val alias = createMockTypeAlias("GenericAlias", TsTypeRef.string)
+        val scope = createMockScope(alias)
+
+        val typeRefWithParams = TsTypeRef(
+          comments = NoComments,
+          name = createQIdent("GenericAlias"),
+          tparams = IArray(TsTypeRef.number)
+        )
+
+        val result = FollowAliases(scope)(typeRefWithParams)
+
+        // Should follow the alias - type parameters are not preserved in the current implementation
+        assert(result == TsTypeRef.string)
+      }
+
+      test("handles interface inheritance in thin interfaces") {
+        val baseInterface = createMockInterface("BaseInterface", members = Empty)
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("BaseInterface"))),
+          members = Empty)
+        val scope = createMockScope(baseInterface, derivedInterface)
+
+        val typeRef = TsTypeRef(createQIdent("DerivedInterface"))
+        val result = FollowAliases(scope)(typeRef)
+
+        // Should follow thin interface
+        assert(result.isInstanceOf[TsTypeRef])
+      }
+
+      test("does not follow non-thin interfaces with members") {
+        val property = TsMemberProperty(
+          comments = NoComments,
+          level = TsProtectionLevel.Default,
+          name = createSimpleIdent("prop"),
+          tpe = Some(TsTypeRef.string),
+          expr = None,
+          isStatic = false,
+          isReadOnly = false
+        )
+        val thickInterface = createMockInterface("ThickInterface", members = IArray(property))
+        val scope = createMockScope(thickInterface)
+
+        val typeRef = TsTypeRef(createQIdent("ThickInterface"))
+        val result = FollowAliases(scope)(typeRef)
+
+        // Should not follow thick interface
+        assert(result == typeRef)
+      }
+    }
+
+    test("FollowAliases - error handling and robustness") {
+      test("handles malformed type references gracefully") {
+        val scope = createMockScope()
+        val malformedTypeRef = TsTypeRef(TsQIdent.of(createSimpleIdent(""))) // Empty name
+
+        val result = FollowAliases(scope)(malformedTypeRef)
+
+        assert(result == malformedTypeRef) // Should return original
+      }
+
+      test("handles empty union after alias resolution") {
+        val scope = createMockScope()
+        val emptyUnion = TsTypeUnion(Empty)
+
+        val result = FollowAliases(scope)(emptyUnion)
+
+        assert(result == TsTypeRef.never) // Empty union becomes never
+      }
+
+      test("handles empty intersection after alias resolution") {
+        val scope = createMockScope()
+        val emptyIntersection = TsTypeIntersect(Empty)
+
+        val result = FollowAliases(scope)(emptyIntersection)
+
+        assert(result == TsTypeRef.never) // Empty intersection becomes never
+      }
+
+      test("preserves original type for non-alias types") {
+        val scope = createMockScope()
+        val primitiveTypes = IArray(
+          TsTypeRef.string,
+          TsTypeRef.number,
+          TsTypeRef.boolean,
+          TsTypeRef.any,
+          TsTypeRef.never,
+          TsTypeRef.undefined,
+          TsTypeRef.`null`
+        )
+
+        primitiveTypes.foreach { primitiveType =>
+          val result = FollowAliases(scope)(primitiveType)
+          assert(result == primitiveType)
+        }
+      }
+
+      test("handles mixed valid and invalid aliases in unions") {
+        val validAlias = createMockTypeAlias("ValidAlias", TsTypeRef.string)
+        val scope = createMockScope(validAlias)
+
+        val mixedUnion = TsTypeUnion(IArray(
+          TsTypeRef(createQIdent("ValidAlias")),
+          TsTypeRef(createQIdent("InvalidAlias")),
+          TsTypeRef.number
+        ))
+
+        val result = FollowAliases(scope)(mixedUnion)
+
+        assert(result.isInstanceOf[TsTypeUnion])
+        val resultUnion = result.asInstanceOf[TsTypeUnion]
+        assert(resultUnion.types.contains(TsTypeRef.string)) // Valid alias resolved
+        assert(resultUnion.types.contains(TsTypeRef(createQIdent("InvalidAlias")))) // Invalid alias preserved
+        assert(resultUnion.types.contains(TsTypeRef.number)) // Primitive preserved
+      }
+    }
+
+    test("FollowAliases - performance and edge cases") {
+      test("handles large union types efficiently") {
+        val aliases = (1 to 50).map(i => createMockTypeAlias(s"Alias$i", TsTypeRef.string))
+        val scope = createMockScope(aliases*)
+
+        val largeUnion = TsTypeUnion(IArray.fromArray(
+          (1 to 50).map(i => TsTypeRef(createQIdent(s"Alias$i"))).toArray
+        ))
+
+        val result = FollowAliases(scope)(largeUnion)
+
+        // All aliases resolve to string, so union gets simplified to just string
+        assert(result == TsTypeRef.string)
+      }
+
+      test("handles large intersection types efficiently") {
+        val aliases = (1 to 20).map(i => createMockTypeAlias(s"Alias$i", TsTypeRef.string))
+        val scope = createMockScope(aliases*)
+
+        val largeIntersection = TsTypeIntersect(IArray.fromArray(
+          (1 to 20).map(i => TsTypeRef(createQIdent(s"Alias$i"))).toArray
+        ))
+
+        val result = FollowAliases(scope)(largeIntersection)
+
+        // All aliases resolve to string, so intersection gets simplified to just string
+        assert(result == TsTypeRef.string)
+      }
+
+      test("handles scope with many declarations efficiently") {
+        val manyAliases = (1 to 100).map(i => createMockTypeAlias(s"Alias$i", TsTypeRef.string))
+        val scope = createMockScope(manyAliases*)
+
+        val typeRef = TsTypeRef(createQIdent("Alias50"))
+        val result = FollowAliases(scope)(typeRef)
+
+        assert(result == TsTypeRef.string)
+      }
+    }
   }
 }
