@@ -5,8 +5,23 @@
  */
 
 import { AbstractTreeTransformation } from './TreeTransformation.js';
-import { TsTree } from './trees.js';
+import {
+  TsTree,
+  TsParsedFile,
+  TsGlobal,
+  TsDeclNamespace,
+  TsDeclModule,
+  TsAugmentedModule,
+  TsDeclClass,
+  TsDeclInterface,
+  TsTypeObject,
+  TsContainer,
+  TsContainerOrDecl,
+  HasClassMembers,
+  TsMember
+} from './trees.js';
 import { TsTreeScope } from './TsTreeScope.js';
+import { IArray } from '../IArray.js';
 
 /**
  * Tree transformation that maintains scoped changes.
@@ -37,6 +52,84 @@ export abstract class TreeTransformationUnit extends AbstractTreeTransformation<
    */
   withTree(context: void, tree: TsTree): void {
     return undefined;
+  }
+}
+
+/**
+ * Abstract class for transformations that modify container members.
+ * Equivalent to the Scala TransformMembers trait.
+ */
+export abstract class TransformMembers extends TreeTransformationScopedChanges {
+  /**
+   * Override this method to define how members should be transformed.
+   */
+  abstract newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl>;
+
+  override enterTsParsedFile(scope: TsTreeScope): (x: TsParsedFile) => TsParsedFile {
+    return (x: TsParsedFile) => ({
+      ...x,
+      members: this.newMembers(scope, x)
+    });
+  }
+
+  override enterTsGlobal(scope: TsTreeScope): (x: TsGlobal) => TsGlobal {
+    return (x: TsGlobal) => ({
+      ...x,
+      members: this.newMembers(scope, x)
+    });
+  }
+
+  override enterTsDeclNamespace(scope: TsTreeScope): (x: TsDeclNamespace) => TsDeclNamespace {
+    return (x: TsDeclNamespace) => ({
+      ...x,
+      members: this.newMembers(scope, x)
+    });
+  }
+
+  override enterTsDeclModule(scope: TsTreeScope): (x: TsDeclModule) => TsDeclModule {
+    return (x: TsDeclModule) => ({
+      ...x,
+      members: this.newMembers(scope, x)
+    });
+  }
+
+  enterTsAugmentedModule(scope: TsTreeScope): (x: TsAugmentedModule) => TsAugmentedModule {
+    return (x: TsAugmentedModule) => ({
+      ...x,
+      members: this.newMembers(scope, x)
+    });
+  }
+}
+
+/**
+ * Abstract class for transformations that modify class members.
+ * Equivalent to the Scala TransformClassMembers trait.
+ */
+export abstract class TransformClassMembers extends TreeTransformationScopedChanges {
+  /**
+   * Override this method to define how class members should be transformed.
+   */
+  abstract newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember>;
+
+  override enterTsDeclClass(scope: TsTreeScope): (x: TsDeclClass) => TsDeclClass {
+    return (x: TsDeclClass) => ({
+      ...x,
+      members: this.newClassMembers(scope, x)
+    });
+  }
+
+  override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+    return (x: TsDeclInterface) => ({
+      ...x,
+      members: this.newClassMembers(scope, x)
+    });
+  }
+
+  override enterTsTypeObject(scope: TsTreeScope): (x: TsTypeObject) => TsTypeObject {
+    return (x: TsTypeObject) => ({
+      ...x,
+      members: this.newClassMembers(scope, x)
+    });
   }
 }
 

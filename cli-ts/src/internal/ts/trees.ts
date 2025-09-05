@@ -5976,3 +5976,10 @@ export const TsTree = {
            tree._tag === 'TsDeclNamespace';
   }
 };
+
+// Re-export HasClassMembers for convenience
+export { HasClassMembers } from './MemberCache.js';
+
+// Re-export other commonly used types
+export { MethodType } from './MethodType.js';
+export { TsProtectionLevel } from './TsProtectionLevel.js';
