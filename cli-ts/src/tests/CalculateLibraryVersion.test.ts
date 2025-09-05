@@ -13,11 +13,7 @@ import { PackageJson } from "../internal/ts/PackageJson.js";
 import { Comments } from "../internal/Comments.js";
 
 // Mock Comments implementation for testing
-const mockComments: Comments = {
-	cs: [],
-	isEmpty: true,
-	nonEmpty: false,
-};
+const mockComments = Comments.empty()
 
 describe("CalculateLibraryVersion", () => {
 	const testFolder = new InFolder("/test/folder");
