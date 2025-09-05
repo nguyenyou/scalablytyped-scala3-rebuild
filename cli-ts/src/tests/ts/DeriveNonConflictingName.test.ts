@@ -346,3 +346,78 @@ describe('DeriveNonConflictingName - Fallback Mechanism', () => {
     expect(result).toBe("5");
   });
 });
+
+describe('DeriveNonConflictingName - Name Generation Algorithm', () => {
+  test('short version preferred over long version', () => {
+    const property = createMockProperty("test", some(TsTypeRef.string));
+    const members = IArray.fromArray<TsMember>([property]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    // Should prefer "Test" over "TestString"
+    expect(result).toBe("Test");
+  });
+
+  test('long version used when short conflicts', () => {
+    const property = createMockProperty("test", some(TsTypeRef.string));
+    const members = IArray.fromArray<TsMember>([property]);
+    const conflicts = new Set(["Test"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("TestString");
+  });
+
+  test('different amounts of details tried', () => {
+    const prop1 = createMockProperty("alpha");
+    const prop2 = createMockProperty("beta");
+    const members = IArray.fromArray<TsMember>([prop1, prop2]);
+    const conflicts = new Set(["Alpha", "AlphaBeta", "Beta", "BetaAlpha"]);
+    const result = DeriveNonConflictingName.apply("", members)(conflictingTryCreate(conflicts));
+    // Should try different combinations and amounts
+    expect((result as string).length).toBeGreaterThan(0);
+    expect(conflicts.has(result as string)).toBe(false);
+  });
+
+  test('prefix combined with member details', () => {
+    const property = createMockProperty("value");
+    const members = IArray.fromArray<TsMember>([property]);
+    const conflicts = new Set(["Test", "Value"]);
+    const result = DeriveNonConflictingName.apply("Test", members)(conflictingTryCreate(conflicts));
+    expect(result).toBe("TestValue");
+  });
+});
+
+describe('DeriveNonConflictingName - Integration and Real-world Scenarios', () => {
+  test('complex object with multiple member types', () => {
+    const property = createMockProperty("name");
+    const func = createMockFunction("getValue");
+    const ctor = createMockCtor(some(TsTypeRef.string));
+    const call = createMockCall(IArray.apply(createParam("id")));
+    const members = IArray.fromArray<TsMember>([property, func, ctor, call]);
+
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+    // Should prioritize constructor, then call, then sorted members
+    expect(result).toBe("Call");
+  });
+
+  test('realistic naming scenario with conflicts', () => {
+    const properties = IArray.fromArray<TsMember>([
+      createMockProperty("id"),
+      createMockProperty("name"),
+      createMockProperty("value")
+    ]);
+    const conflicts = new Set(["Id", "Name", "Value", "IdName", "IdNameValue"]);
+    const result = DeriveNonConflictingName.apply("", properties)(conflictingTryCreate(conflicts));
+
+    expect((result as string).length).toBeGreaterThan(0);
+    expect(conflicts.has(result as string)).toBe(false);
+    // Should find some combination that works
+  });
+
+  test('empty names and edge cases combined', () => {
+    const emptyProp = createMockProperty("");
+    const normalProp = createMockProperty("test");
+    const members = IArray.fromArray<TsMember>([emptyProp, normalProp]);
+    const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
+
+    // Should handle empty names gracefully - empty string is a valid result
+    expect(result).toBe("");
+  });
+});
