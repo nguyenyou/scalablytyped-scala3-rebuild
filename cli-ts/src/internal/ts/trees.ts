@@ -3810,6 +3810,13 @@ export const TsTypeIntersect = {
       return true;
     }
 
+    // For TsTypeObject, use reference equality only (like Scala's distinct)
+    // Different TsTypeObject instances should never be considered logically equal
+    // even if they have similar structure, as they represent different object types
+    if (type1._tag === 'TsTypeObject' && type2._tag === 'TsTypeObject') {
+      return false; // Always consider different instances as different
+    }
+
     // For other types, fall back to string comparison
     return type1.asString === type2.asString;
   },
