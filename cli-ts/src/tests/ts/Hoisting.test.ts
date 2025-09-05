@@ -28,7 +28,7 @@ import {
   TsFunSig,
   TsIdentLibrarySimple,
   TsIdentModule,
-  TsIdentApply
+  TsIdentApply,
 } from '@/internal/ts/trees.js';
 
 // Helper functions for creating test data
@@ -242,5 +242,78 @@ describe('Hoisting.fromType', () => {
       const result = Hoisting.fromType(scope, ownerCp, ownerLoc, ld, tpe);
       expect(result.isEmpty).toBe(true);
     });
+  });
+});
+
+describe('Hoisting.fromRef', () => {
+  it('returns empty for non-existent type reference', () => {
+    const scope = createMockScope();
+    const ownerCp = createCodePath();
+    const ownerLoc = createJsLocation();
+    const ld = createLoopDetector();
+    const typeRef = createTypeRef('NonExistentType');
+
+    const result = Hoisting.fromRef(scope, ownerCp, ownerLoc, ld, typeRef);
+
+    // Since we don't have a proper scope setup, this should return empty
+    expect(result.isEmpty).toBe(true);
+  });
+});
+
+describe('Hoisting - Integration Tests', () => {
+  it('fromType with TsTypeObject containing mixed member types', () => {
+    const scope = createMockScope();
+    const ownerCp = createCodePath();
+    const ownerLoc = createJsLocation();
+    const ld = createLoopDetector();
+
+    const memberCall = createMockMemberCall();
+    const memberFunction = createMockMemberFunction('testMethod');
+    const memberProperty = createMockMemberProperty('testProperty');
+    const getterFunction = createMockMemberFunction('getter');
+    const getterWithType = { ...getterFunction, methodType: MethodType.getter() };
+
+    const members = IArray.fromArray([memberCall, memberFunction, memberProperty, getterWithType as any]);
+    const typeObject = TsTypeObject.create(Comments.empty(), members);
+
+    const result = Hoisting.fromType(scope, ownerCp, ownerLoc, ld, typeObject);
+
+    // Should convert only the supported members (call, function, property)
+    // Getter should be filtered out
+    expect(result.length).toBe(3);
+    expect(result.filter(decl => decl._tag === 'TsDeclFunction').length).toBe(2); // call + function
+    expect(result.filter(decl => decl._tag === 'TsDeclVar').length).toBe(1); // property
+  });
+
+  it('handles empty TsTypeObject', () => {
+    const scope = createMockScope();
+    const ownerCp = createCodePath();
+    const ownerLoc = createJsLocation();
+    const ld = createLoopDetector();
+
+    const emptyTypeObject = TsTypeObject.create(Comments.empty(), IArray.Empty);
+
+    const result = Hoisting.fromType(scope, ownerCp, ownerLoc, ld, emptyTypeObject);
+
+    expect(result.isEmpty).toBe(true);
+  });
+
+  it('handles readonly property correctly', () => {
+    const ownerCp = createCodePath();
+    const ownerLoc = createJsLocation();
+    const readonlyProperty = createMockMemberProperty('readonlyProp');
+    const readonlyWithFlag = { ...readonlyProperty, isReadOnly: true };
+
+    const result = Hoisting.memberToDecl(ownerCp, ownerLoc)(readonlyWithFlag as any);
+
+    expect(result._tag).toBe('Some');
+    if (result._tag === 'Some') {
+      const decl = result.value;
+      expect(decl._tag).toBe('TsDeclVar');
+      if (decl._tag === 'TsDeclVar') {
+        const varDecl = decl as any;
+        expect(varDecl.readOnly).toBe(true);
+      }
+    }
   });
 });
