@@ -18,7 +18,8 @@
 			"recommended": true,
       "suspicious": {
         "noExplicitAny": "off",
-        "noShadowRestrictedNames": "off"
+        "noShadowRestrictedNames": "off",
+        "noApproximativeNumericConstant": "off"
       },
       "style": {
         "noNonNullAssertion": "off"
