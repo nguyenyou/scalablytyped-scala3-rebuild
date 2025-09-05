@@ -3743,8 +3743,8 @@ export const TsTypeIntersect = {
   },
 
   /**
-   * Removes duplicate types using reference equality first, then deep comparison
-   * This replaces the problematic asString-based deduplication
+   * Removes duplicate types using reference equality first, then logical equality
+   * This matches the Scala implementation's distinct behavior
    */
   distinctTypes: (types: IArray<TsType>): IArray<TsType> => {
     if (types.length <= 1) {
@@ -3764,6 +3764,10 @@ export const TsTypeIntersect = {
           // Reference equality - definitely a duplicate
           isDuplicate = true;
           break;
+        } else if (TsTypeIntersect.areLogicallyEqual(result[j], current)) {
+          // Logical equality - same type but different instances
+          isDuplicate = true;
+          break;
         }
       }
 
@@ -3773,6 +3777,41 @@ export const TsTypeIntersect = {
     }
 
     return IArray.fromArray(result);
+  },
+
+  /**
+   * Checks if two types are logically equal (same type, different instances)
+   */
+  areLogicallyEqual: (type1: TsType, type2: TsType): boolean => {
+    if (type1._tag !== type2._tag) {
+      return false;
+    }
+
+    if (type1._tag === 'TsTypeRef' && type2._tag === 'TsTypeRef') {
+      const ref1 = type1 as TsTypeRef;
+      const ref2 = type2 as TsTypeRef;
+
+      // Compare qualified names
+      if (ref1.name.asString !== ref2.name.asString) {
+        return false;
+      }
+
+      // Compare type parameters
+      if (ref1.tparams.length !== ref2.tparams.length) {
+        return false;
+      }
+
+      for (let i = 0; i < ref1.tparams.length; i++) {
+        if (!TsTypeIntersect.areLogicallyEqual(ref1.tparams.apply(i), ref2.tparams.apply(i))) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    // For other types, fall back to string comparison
+    return type1.asString === type2.asString;
   },
 
   /**

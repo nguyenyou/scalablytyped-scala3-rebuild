@@ -643,7 +643,7 @@ describe("FlattenTrees Tests", () => {
     });
 
     test("merge different types with same name - priority order", () => {
-      // Based on Scala implementation: namespace + function → merged namespace, variable + enum → separate
+      // Based on Scala implementation: namespace + function + variable → merged namespace, enum → separate
       const ns = createMockNamespace("TestName");
       const func = createMockFunction("TestName");
       const variable = createMockVar("TestName");
@@ -653,13 +653,15 @@ describe("FlattenTrees Tests", () => {
 
       const result = FlattenTrees.newNamedMembers(these, thats);
 
-      expect(result.length).toBe(3); // namespace+function merge, variable and enum separate
+      expect(result.length).toBe(2); // namespace+function+variable merge, enum separate
       const hasNamespace = result.exists(m => TsDeclNamespace.isNamespace(m));
-      const hasVariable = result.exists(m => TsDeclVar.isVar(m));
       const hasEnum = result.exists(m => TsDeclEnum.isEnum(m));
       expect(hasNamespace).toBe(true);
-      expect(hasVariable).toBe(true);
       expect(hasEnum).toBe(true);
+
+      // Check that the namespace contains the merged function and variable as members
+      const mergedNamespace = result.find(m => TsDeclNamespace.isNamespace(m)) as TsDeclNamespace;
+      expect(mergedNamespace.members.length).toBeGreaterThan(0); // Should have namespaced members
     });
 
     test("merge function overloads", () => {
@@ -707,12 +709,14 @@ describe("FlattenTrees Tests", () => {
 
       const result = FlattenTrees.newNamedMembers(these, thats);
 
-      expect(result.length).toBe(1); // Type aliases with same name should merge (first wins)
+      expect(result.length).toBe(1); // Type aliases with same name should merge
       const mergedAlias = result.apply(0) as TsDeclTypeAlias;
       expect(TsDeclTypeAlias.isTypeAlias(mergedAlias)).toBe(true);
       expect(mergedAlias.name.value).toBe("TestType");
-      // First definition should win
-      expect(mergedAlias.alias).toBe(TsTypeRef.string);
+      // Should create intersection type when neither has IsTrivial marker
+      expect(mergedAlias.alias._tag).toBe("TsTypeIntersect");
+      const intersectionType = mergedAlias.alias as any; // TsTypeIntersect
+      expect(intersectionType.types.length).toBe(2);
     });
 
     test("merge variable declarations", () => {

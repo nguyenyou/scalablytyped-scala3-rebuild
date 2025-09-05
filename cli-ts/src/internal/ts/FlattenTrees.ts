@@ -9,7 +9,7 @@ import { Option, some, none } from 'fp-ts/Option';
 import { pipe } from 'fp-ts/function';
 import { IArray, IArrayBuilder, partialFunction, PartialFunction } from '../IArray.js';
 import { Comments } from '../Comments.js';
-import { Comment } from '../Comment.js';
+import { Comment, IsTrivial } from '../Comment.js';
 import { Directive } from './Directive.js';
 import { CodePath } from './CodePath.js';
 import { JsLocation } from './JsLocation.js';
@@ -483,9 +483,11 @@ export const FlattenTrees = {
               // TypeScript doesn't do this, but we do. The reason is that sometimes a file is included twice
               // and it's hard to avoid (see augmented-modules test, for instance). This ensures that we handle it
               const candidates = IArray.fromArray([existingTypeAlias, thatTypeAlias]);
-              const nonTrivial = candidates.find(ta => !ta.comments.has('IsTrivial'));
-              if (nonTrivial) {
-                return nonTrivial;
+              const nonTrivialCandidates = candidates.filter(ta => !ta.comments.has(IsTrivial));
+
+              // If exactly one is non-trivial, use it; otherwise create intersection
+              if (nonTrivialCandidates.length === 1) {
+                return nonTrivialCandidates.apply(0);
               } else {
                 return TsDeclTypeAlias.create(
                   FlattenTrees.mergeComments(existingTypeAlias.comments, thatTypeAlias.comments),
