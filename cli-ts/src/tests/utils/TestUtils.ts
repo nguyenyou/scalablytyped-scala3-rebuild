@@ -350,7 +350,7 @@ export function createMockModule(name: string, members: IArray<any> = IArray.Emp
  * Creates a mock TsDeclFunction with all required properties.
  *
  * @param name - The function name
- * @param returnType - Optional return type (defaults to void)
+ * @param returnType - Optional return type (defaults to any)
  * @param comments - Optional comments
  * @returns A mock TsDeclFunction
  */
@@ -363,7 +363,7 @@ export function createMockFunction(
     Comments.empty(),
     IArray.Empty, // tparams
     IArray.Empty, // params
-    some(returnType || TsTypeRef.void)
+    some(returnType || TsTypeRef.any)
   );
 
   return {
@@ -415,7 +415,7 @@ export function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlia
  * Creates a mock TsMemberProperty with all required properties.
  * 
  * @param name - The property name
- * @param tpe - Optional property type
+ * @param tpe - Optional property type (defaults to string)
  * @param isStatic - Whether the property is static (defaults to false)
  * @param isReadOnly - Whether the property is readonly (defaults to false)
  * @returns A mock TsMemberProperty
@@ -428,11 +428,11 @@ export function createMockProperty(
 ): TsMemberProperty {
   return {
     _tag: 'TsMemberProperty',
-    asString: `${name}: ${tpe?.asString || 'any'}`,
+    asString: `${name}: ${tpe?.asString || 'string'}`,
     comments: Comments.empty(),
     level: TsProtectionLevel.default(),
     name: TsIdent.simple(name),
-    tpe: tpe ? some(tpe) : none,
+    tpe: tpe ? some(tpe) : some(TsTypeRef.string),
     expr: none,
     isStatic,
     isReadOnly,
@@ -445,7 +445,7 @@ export function createMockProperty(
  * Creates a mock TsMemberFunction with all required properties.
  *
  * @param name - The method name
- * @param returnType - Optional return type (defaults to void)
+ * @param returnType - Optional return type (defaults to any)
  * @param isStatic - Whether the method is static (defaults to false)
  * @param comments - Optional comments
  * @returns A mock TsMemberFunction
@@ -460,12 +460,12 @@ export function createMockMethod(
     Comments.empty(),
     IArray.Empty, // tparams
     IArray.Empty, // params
-    some(returnType || TsTypeRef.void)
+    some(returnType || TsTypeRef.any)
   );
 
   return {
     _tag: 'TsMemberFunction',
-    asString: `${name}(): ${returnType?.asString || 'void'}`,
+    asString: `${name}(): ${returnType?.asString || 'any'}`,
     comments,
     level: TsProtectionLevel.default(),
     name: TsIdent.simple(name),
