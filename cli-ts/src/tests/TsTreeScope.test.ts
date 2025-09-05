@@ -1,153 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { none, type Option } from "fp-ts/Option";
-import { DevNullLogger, type Logger } from "@/internal/logging";
-import { Comments } from "../internal/Comments.js";
-import { IArray } from "../internal/IArray.js";
-import { CodePath } from "../internal/ts/CodePath.js";
-import { ExportType } from "../internal/ts/ExportType.js";
-import { JsLocation } from "../internal/ts/JsLocation.js";
 import { TsTreeScope } from "../internal/ts/TsTreeScope.js";
 import {
-	TsDeclClass,
-	TsDeclInterface,
-	TsDeclModule,
-	TsDeclNamespace,
-	TsDeclVar,
-	type TsExport,
-	type TsExporteeNames,
-	TsIdent,
-	type TsIdentLibraryScoped,
-	type TsIdentLibrarySimple,
-	TsIdentModule,
-	type TsIdentSimple,
-	TsParsedFile,
-	TsQIdent,
-	type TsTypeParam,
-	TsTypeRef,
-} from "../internal/ts/trees.js";
+	createBasicTsLib,
+	createIArray,
+	createMockClass,
+	createMockExportDecl,
+	createMockInterface,
+	createMockLogger,
+	createMockModule,
+	createMockNamespace,
+	createMockParsedFile,
+	createMockVariable,
+	createQIdent,
+	createQIdentFromParts,
+	createScopedLibrary,
+	createSimpleIdent,
+	createSimpleLibrary,
+	createTypeParam,
+} from "./utils/TestUtils.js";
+import {TsQIdent} from "@/internal/ts/trees.ts";
 
-// Test helper utilities
-export function createMockLogger(): Logger<void> {
-	return new DevNullLogger();
-}
 
-export function createSimpleLibrary(name: string): TsIdentLibrarySimple {
-	return TsIdent.librarySimple(name);
-}
-
-export function createScopedLibrary(
-	scope: string,
-	name: string,
-): TsIdentLibraryScoped {
-	return TsIdent.libraryScoped(scope, name);
-}
-
-export function createSimpleIdent(name: string): TsIdentSimple {
-	return TsIdent.simple(name);
-}
-
-export function createQIdent(...parts: string[]): TsQIdent {
-	return TsQIdent.ofStrings(...parts);
-}
-
-export function createTypeParam(name: string): TsTypeParam {
-	return {
-		_tag: "TsTypeParam",
-		comments: Comments.empty(),
-		name: createSimpleIdent(name),
-		upperBound: none,
-		default: none,
-		withComments: (_cs) => createTypeParam(name),
-		addComment: (_c) => createTypeParam(name),
-		asString: `TsTypeParam(${name})`,
-	};
-}
-
-export function createMockParsedFile(_libName: string): TsParsedFile {
-	return TsParsedFile.createMock();
-}
-
-export function createMockNamespace(name: string): TsDeclNamespace {
-	return TsDeclNamespace.create(
-		Comments.empty(),
-		false,
-		createSimpleIdent(name),
-		IArray.Empty,
-		CodePath.noPath(),
-		JsLocation.zero(),
-	);
-}
-
-export function createMockClass(name: string): TsDeclClass {
-	return TsDeclClass.create(
-		Comments.empty(),
-		false,
-		false,
-		createSimpleIdent(name),
-		IArray.Empty,
-		none,
-		IArray.Empty,
-		IArray.Empty,
-		JsLocation.zero(),
-		CodePath.noPath(),
-	);
-}
-
-export function createMockInterface(name: string): TsDeclInterface {
-	return TsDeclInterface.create(
-		Comments.empty(),
-		false,
-		createSimpleIdent(name),
-		IArray.Empty,
-		IArray.Empty,
-		IArray.Empty,
-		CodePath.noPath(),
-	);
-}
-
-export function createMockModule(name: string): TsDeclModule {
-	return TsDeclModule.create(
-		Comments.empty(),
-		false,
-		TsIdentModule.simple(name),
-		IArray.Empty,
-		CodePath.noPath(),
-		JsLocation.zero(),
-	);
-}
-
-export function createMockVar(name: string): TsDeclVar {
-	return TsDeclVar.simple(createSimpleIdent(name), TsTypeRef.any);
-}
-
-export function createMockExportDecl(name: string): TsExport {
-	const exportee: TsExporteeNames = {
-		_tag: "TsExporteeNames",
-		idents: IArray.fromArray([
-			[createQIdent(name), none as Option<TsIdentSimple>],
-		]),
-		fromOpt: none,
-		asString: `TsExporteeNames(${name})`,
-	};
-
-	return {
-		_tag: "TsExport",
-		comments: Comments.empty(),
-		typeOnly: false,
-		tpe: ExportType.named(),
-		exported: exportee,
-		asString: `TsExport(${name})`,
-	};
-}
-
-export function createBasicTsLib(
-	name: TsIdentLibrarySimple | TsIdentLibraryScoped,
-): TsTreeScope.TsLib {
-	return {
-		libName: name,
-		packageJsonOpt: undefined,
-	};
-}
 
 describe("TsTreeScope", () => {
 	describe("Construction and Basic Properties", () => {
@@ -348,7 +221,7 @@ describe("TsTreeScope", () => {
 			const deps = new Map();
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
-			const qident = createQIdent("Namespace", "Type");
+			const qident = createQIdentFromParts("Namespace", "Type");
 			expect(root.isAbstract(qident)).toBe(false); // Multi-part identifiers are not abstract
 		});
 	});
@@ -388,7 +261,7 @@ describe("TsTreeScope", () => {
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
 			const mockClass = createMockClass("TestClass");
-			const mockVar = createMockVar("testVar");
+			const mockVar = createMockVariable("testVar");
 			const scoped = root["/"](mockClass)["/"](mockVar);
 
 			const hasMembers = scoped.surroundingHasMembers();
@@ -679,7 +552,7 @@ describe("TsTreeScope", () => {
 			const deps = new Map();
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
-			const qident = createQIdent(
+			const qident = createQIdentFromParts(
 				"Very",
 				"Long",
 				"Qualified",

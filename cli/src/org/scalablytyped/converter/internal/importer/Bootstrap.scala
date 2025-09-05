@@ -80,7 +80,9 @@ object Bootstrap {
                 try {
                   os.list(path)
                     .collect { case dir if os.isDir(dir) => dir }
-                    .map(nestedPath => FromFolder(InFolder(nestedPath), TsIdentLibrary(s"${path.last}/${nestedPath.last}")))
+                    .map(nestedPath =>
+                      FromFolder(InFolder(nestedPath), TsIdentLibrary(s"${path.last}/${nestedPath.last}"))
+                    )
                 } catch {
                   case _: Exception => Nil
                 }

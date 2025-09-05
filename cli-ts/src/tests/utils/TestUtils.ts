@@ -6,7 +6,7 @@
  * and reducing code duplication.
  */
 
-import { none, some } from "fp-ts/Option";
+import { none, some, type Option } from "fp-ts/Option";
 import { Raw } from "@/internal/Comment.js";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
@@ -27,6 +27,7 @@ import {
 	type TsDeclTypeAlias,
 	type TsDeclVar,
 	TsExport,
+	type TsExporteeNames,
 	TsExporteeTree,
 	TsFunSig,
 	TsIdent,
@@ -654,6 +655,16 @@ export function createQIdent(name: string): TsQIdent {
 }
 
 /**
+ * Creates a TsQIdent from multiple string parts.
+ *
+ * @param parts - The identifier parts
+ * @returns A TsQIdent
+ */
+export function createQIdentFromParts(...parts: string[]): TsQIdent {
+	return TsQIdent.ofStrings(...parts);
+}
+
+/**
  * Creates a simple TsIdent from a string name.
  *
  * @param name - The identifier name
@@ -840,6 +851,32 @@ export function createMockExport(name: string): TsExport {
 		ExportType.named(),
 		exportee,
 	);
+}
+
+/**
+ * Creates a mock export declaration with TsExporteeNames.
+ *
+ * @param name - The export name
+ * @returns A mock TsExport
+ */
+export function createMockExportDecl(name: string): TsExport {
+	const exportee: TsExporteeNames = {
+		_tag: "TsExporteeNames",
+		idents: createIArray([
+			[createQIdent(name), none as Option<TsIdentSimple>],
+		]),
+		fromOpt: none,
+		asString: `TsExporteeNames(${name})`,
+	};
+
+	return {
+		_tag: "TsExport",
+		comments: Comments.empty(),
+		typeOnly: false,
+		tpe: ExportType.named(),
+		exported: exportee,
+		asString: `TsExport(${name})`,
+	};
 }
 
 /**
