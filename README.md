@@ -17,9 +17,5 @@ All
 Or specific
 
 ```sh
-./mill cli.test "org.scalablytyped.converter.internal.ts.LoopDetectorTests"
-```
-
-```sh
-./mill cli.test.testOnly org.scalablytyped.converter.internal.ts.HasTParamsTests
+./mill cli.test.testOnly FlattenTreesTests
 ```
