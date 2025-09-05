@@ -181,9 +181,11 @@ export const FlattenTrees = {
    * Equivalent to Scala's newNamedMembers method
    */
   newNamedMembers(these: IArray<TsNamedDecl>, thats: IArray<TsNamedDecl>): IArray<TsNamedDecl> {
-    const rets = IArrayBuilder.fromIArray<TsNamedDecl>(these, these.length + thats.length);
+    const rets = IArrayBuilder.empty<TsNamedDecl>();
 
-    thats.forEach(that => {
+    // Process all elements (both these and thats) through the same merging logic
+    const allElements = these.concat(thats);
+    allElements.forEach(that => {
       if (TsDeclNamespace.isNamespace(that)) {
         const thatNamespace = that as TsDeclNamespace;
         rets.addOrUpdateMatching(
