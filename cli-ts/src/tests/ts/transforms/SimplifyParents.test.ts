@@ -5,142 +5,21 @@
 
 import { describe, test, expect } from 'bun:test';
 import { SimplifyParents, SimplifyParentsTransform } from '@/internal/ts/transforms/SimplifyParents.js';
-import { TsTreeScope } from '@/internal/ts/TsTreeScope.js';
-import { 
-  TsDeclClass,
-  TsDeclInterface,
-  TsDeclVar,
-  TsTypeRef,
-  TsTypeIntersect,
-  TsTypeQuery,
-  TsIdent,
-  TsQIdent,
-  TsIdentSimple,
-} from '@/internal/ts/trees.js';
+import { TsTypeRef, TsQIdent, TsIdent } from '@/internal/ts/trees.js';
 import { IArray } from '@/internal/IArray.js';
-import { Comments } from '@/internal/Comments.js';
-import { JsLocation } from '@/internal/ts/JsLocation.js';
-import { CodePath } from '@/internal/ts/CodePath.js';
-import { Logger } from '@/internal/logging/index.js';
-import { some, none } from 'fp-ts/Option';
+import {
+  createMockScope,
+  createMockClass,
+  createMockInterface,
+  createMockVariable,
+  createTypeRef,
+  createIntersectionType,
+  createTypeQuery,
+  createQIdent,
+  createIArray
+} from '@/tests/utils/TestUtils.js';
 
-// Helper function to create an empty TsTreeScope for testing
-function createMockScope(...declarations: any[]): TsTreeScope {
-  const root = TsTreeScope.create(
-    TsIdent.librarySimple("test-lib"),
-    false,
-    new Map(),
-    Logger.DevNull()
-  );
 
-  // If no declarations provided, return the root scope
-  if (declarations.length === 0) {
-    return root;
-  }
-
-  // For now, return the root scope - in a real implementation,
-  // we would need to properly populate the scope with declarations
-  return root;
-}
-
-// Helper function to create a mock TsTypeRef
-function createTypeRef(name: string): TsTypeRef {
-  const qname = TsQIdent.of(TsIdent.simple(name));
-  return {
-    _tag: 'TsTypeRef',
-    asString: `TsTypeRef(${name})`,
-    comments: Comments.empty(),
-    name: qname,
-    tparams: IArray.Empty,
-    withComments: (cs: Comments) => createTypeRef(name),
-    addComment: (c: any) => createTypeRef(name)
-  };
-}
-
-// Helper function to create a mock TsDeclClass
-function createMockClass(name: string, parent?: TsTypeRef, implementsInterfaces?: IArray<TsTypeRef>): TsDeclClass {
-  return {
-    _tag: 'TsDeclClass',
-    asString: `class ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    isAbstract: false,
-    name: TsIdent.simple(name),
-    tparams: IArray.Empty,
-    parent: parent ? some(parent) : none,
-    implementsInterfaces: implementsInterfaces || IArray.Empty,
-    members: IArray.Empty,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
-}
-
-// Helper function to create a mock TsDeclInterface
-function createMockInterface(name: string, inheritance?: IArray<TsTypeRef>): TsDeclInterface {
-  return {
-    _tag: 'TsDeclInterface',
-    asString: `interface ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    name: TsIdent.simple(name),
-    tparams: IArray.Empty,
-    inheritance: inheritance || IArray.Empty,
-    members: IArray.Empty,
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    membersByName: new Map(),
-    unnamed: IArray.Empty,
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
-}
-
-// Helper function to create a mock TsDeclVar
-function createMockVariable(name: string, tpe?: TsTypeRef): TsDeclVar {
-  return {
-    _tag: 'TsDeclVar',
-    asString: `var ${name}`,
-    comments: Comments.empty(),
-    declared: false,
-    readOnly: false,
-    name: TsIdent.simple(name),
-    tpe: tpe ? some(tpe) : none,
-    expr: none,
-    jsLocation: JsLocation.zero(),
-    codePath: CodePath.noPath(),
-    withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
-    withJsLocation: function(loc: any) { return { ...this, jsLocation: loc }; },
-    withName: function(n: any) { return { ...this, name: n }; },
-    withComments: function(cs: any) { return { ...this, comments: cs }; },
-    addComment: function(c: any) { return this; }
-  };
-}
-
-// Helper function to create a TsTypeIntersect
-function createIntersectionType(...types: TsTypeRef[]): TsTypeIntersect {
-  return {
-    _tag: 'TsTypeIntersect',
-    asString: types.map(t => t.asString).join(' & '),
-    types: IArray.fromArray(types as any[]) // Cast to TsType[] since TsTypeRef extends TsType
-  };
-}
-
-// Helper function to create a TsTypeQuery
-function createTypeQuery(expr: TsQIdent): TsTypeQuery {
-  return {
-    _tag: 'TsTypeQuery',
-    asString: `typeof ${expr.asString}`,
-    expr: expr
-  };
-}
 
 describe('SimplifyParents', () => {
   describe('Basic Functionality', () => {
@@ -186,7 +65,7 @@ describe('SimplifyParents', () => {
     test('redistributes parent and implements', () => {
       const scope = createMockScope();
       const parentRef = createTypeRef("BaseClass");
-      const implementsInterfaces = IArray.fromArray([
+      const implementsInterfaces = createIArray([
         createTypeRef("Interface1"),
         createTypeRef("Interface2")
       ]);
@@ -201,7 +80,7 @@ describe('SimplifyParents', () => {
 
     test('handles class with no parent', () => {
       const scope = createMockScope();
-      const implementsInterfaces = IArray.fromArray([createTypeRef("Interface1")]);
+      const implementsInterfaces = createIArray([createTypeRef("Interface1")]);
       const clazz = createMockClass("TestClass", undefined, implementsInterfaces);
       
       const result = SimplifyParentsTransform.enterTsDeclClass(scope)(clazz);
@@ -225,11 +104,11 @@ describe('SimplifyParents', () => {
   describe('Interface Inheritance Simplification', () => {
     test('preserves simple interface inheritance', () => {
       const scope = createMockScope();
-      const inheritance = IArray.fromArray([
+      const inheritance = createIArray([
         createTypeRef("BaseInterface1"),
         createTypeRef("BaseInterface2")
       ]);
-      const interface_ = createMockInterface("TestInterface", inheritance);
+      const interface_ = createMockInterface("TestInterface", IArray.Empty, inheritance);
       
       const result = SimplifyParentsTransform.enterTsDeclInterface(scope)(interface_);
       
@@ -269,7 +148,7 @@ describe('SimplifyParents', () => {
       const scope = createMockScope();
       
       // Create a typeof query: typeof SomeClass
-      const typeQuery = createTypeQuery(TsQIdent.of(TsIdent.simple("SomeClass")));
+      const typeQuery = createTypeQuery(createQIdent("SomeClass"));
       
       expect(typeQuery._tag).toBe('TsTypeQuery');
       expect(typeQuery.expr.asString).toContain("SomeClass");
@@ -305,8 +184,8 @@ describe('SimplifyParents', () => {
 
     test('preserves other interface properties', () => {
       const scope = createMockScope();
-      const inheritance = IArray.fromArray([createTypeRef("BaseInterface")]);
-      const interface_ = createMockInterface("TestInterface", inheritance);
+      const inheritance = createIArray([createTypeRef("BaseInterface")]);
+      const interface_ = createMockInterface("TestInterface", IArray.Empty, inheritance);
       
       const result = SimplifyParentsTransform.enterTsDeclInterface(scope)(interface_);
       
