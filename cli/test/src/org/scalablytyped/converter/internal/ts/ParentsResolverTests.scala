@@ -347,5 +347,146 @@ object ParentsResolverTests extends TestSuite {
         assert(unresolvedRef.name == createQIdent("UnknownType"))
       }
     }
+
+    test("ParentsResolver - circular inheritance detection") {
+      test("handles direct circular inheritance") {
+        // Create A -> A circular reference
+        val circularInterface = createMockInterface("CircularInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("CircularInterface"))))
+        val scope = createMockScope(circularInterface)
+
+        val result = ParentsResolver(scope, circularInterface)
+
+        // ParentsResolver includes circular parents but prevents infinite recursion
+        assert(result.value == circularInterface)
+        assert(result.parents.length == 1)
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "CircularInterface")
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles indirect circular inheritance") {
+        // Create A -> B -> A circular reference
+        val interfaceA = createMockInterface("InterfaceA",
+          inheritance = IArray(TsTypeRef(createQIdent("InterfaceB"))))
+        val interfaceB = createMockInterface("InterfaceB",
+          inheritance = IArray(TsTypeRef(createQIdent("InterfaceA"))))
+        val scope = createMockScope(interfaceA, interfaceB)
+
+        val result = ParentsResolver(scope, interfaceA)
+
+        // ParentsResolver includes circular parents but prevents infinite recursion
+        assert(result.value == interfaceA)
+        assert(result.parents.length == 2)
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        assert(parentNames.contains("InterfaceA"))
+        assert(parentNames.contains("InterfaceB"))
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles complex circular inheritance chain") {
+        // Create A -> B -> C -> A circular reference
+        val interfaceA = createMockInterface("InterfaceA",
+          inheritance = IArray(TsTypeRef(createQIdent("InterfaceB"))))
+        val interfaceB = createMockInterface("InterfaceB",
+          inheritance = IArray(TsTypeRef(createQIdent("InterfaceC"))))
+        val interfaceC = createMockInterface("InterfaceC",
+          inheritance = IArray(TsTypeRef(createQIdent("InterfaceA"))))
+        val scope = createMockScope(interfaceA, interfaceB, interfaceC)
+
+        val result = ParentsResolver(scope, interfaceA)
+
+        // ParentsResolver includes circular parents but prevents infinite recursion
+        assert(result.value == interfaceA)
+        assert(result.parents.length == 3)
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        assert(parentNames.contains("InterfaceA"))
+        assert(parentNames.contains("InterfaceB"))
+        assert(parentNames.contains("InterfaceC"))
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("handles circular inheritance through type alias") {
+        // Create A -> Alias -> A circular reference
+        val interfaceA = createMockInterface("InterfaceA",
+          inheritance = IArray(TsTypeRef(createQIdent("AliasToA"))))
+        val typeAlias = createMockTypeAlias("AliasToA", TsTypeRef(createQIdent("InterfaceA")))
+        val scope = createMockScope(interfaceA, typeAlias)
+
+        val result = ParentsResolver(scope, interfaceA)
+
+        // ParentsResolver includes circular parents through alias
+        assert(result.value == interfaceA)
+        assert(result.parents.length == 1)
+        assert(result.parents.head.asInstanceOf[TsNamedDecl].name.value == "InterfaceA")
+        assert(result.unresolved.isEmpty)
+      }
+    }
+
+    test("ParentsResolver - nested inheritance") {
+      test("resolves deep inheritance chain") {
+        val baseInterface = createMockInterface("BaseInterface")
+        val level1Interface = createMockInterface("Level1Interface",
+          inheritance = IArray(TsTypeRef(createQIdent("BaseInterface"))))
+        val level2Interface = createMockInterface("Level2Interface",
+          inheritance = IArray(TsTypeRef(createQIdent("Level1Interface"))))
+        val level3Interface = createMockInterface("Level3Interface",
+          inheritance = IArray(TsTypeRef(createQIdent("Level2Interface"))))
+        val scope = createMockScope(baseInterface, level1Interface, level2Interface, level3Interface)
+
+        val result = ParentsResolver(scope, level3Interface)
+
+        assert(result.value == level3Interface)
+        assert(result.parents.length == 3) // Should include all ancestors
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        assert(parentNames.contains("BaseInterface"))
+        assert(parentNames.contains("Level1Interface"))
+        assert(parentNames.contains("Level2Interface"))
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("resolves diamond inheritance pattern") {
+        val baseInterface = createMockInterface("BaseInterface")
+        val leftInterface = createMockInterface("LeftInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("BaseInterface"))))
+        val rightInterface = createMockInterface("RightInterface",
+          inheritance = IArray(TsTypeRef(createQIdent("BaseInterface"))))
+        val derivedInterface = createMockInterface("DerivedInterface",
+          inheritance = IArray(
+            TsTypeRef(createQIdent("LeftInterface")),
+            TsTypeRef(createQIdent("RightInterface"))
+          ))
+        val scope = createMockScope(baseInterface, leftInterface, rightInterface, derivedInterface)
+
+        val result = ParentsResolver(scope, derivedInterface)
+
+        assert(result.value == derivedInterface)
+        assert(result.parents.length == 3) // Should include all unique ancestors
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        assert(parentNames.contains("BaseInterface"))
+        assert(parentNames.contains("LeftInterface"))
+        assert(parentNames.contains("RightInterface"))
+        assert(result.unresolved.isEmpty)
+      }
+
+      test("resolves mixed class and interface inheritance") {
+        val baseClass = createMockClass("BaseClass")
+        val baseInterface = createMockInterface("BaseInterface")
+        val middleClass = createMockClass("MiddleClass", parent = Some(TsTypeRef(createQIdent("BaseClass"))))
+        val derivedClass = createMockClass("DerivedClass",
+          parent = Some(TsTypeRef(createQIdent("MiddleClass"))),
+          implements = IArray(TsTypeRef(createQIdent("BaseInterface"))))
+        val scope = createMockScope(baseClass, baseInterface, middleClass, derivedClass)
+
+        val result = ParentsResolver(scope, derivedClass)
+
+        assert(result.value == derivedClass)
+        assert(result.parents.length == 3) // Should include all ancestors
+        val parentNames = result.parents.map(_.asInstanceOf[TsNamedDecl].name.value).toSet
+        assert(parentNames.contains("BaseClass"))
+        assert(parentNames.contains("BaseInterface"))
+        assert(parentNames.contains("MiddleClass"))
+        assert(result.unresolved.isEmpty)
+      }
+    }
   }
 }
