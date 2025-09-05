@@ -18,6 +18,8 @@ import {
   TsTypeIntersect,
   TsTypeQuery,
   TsTypeObject,
+  TsTypeLiteral,
+  TsLiteral,
   TsMemberProperty,
   TsMemberFunction,
   TsMemberCall,
@@ -41,6 +43,7 @@ import {
   TsAugmentedModule,
   TsParsedFile,
   TsType,
+  TsContainerOrDecl
 } from '@/internal/ts/trees.js';
 import { ExportType } from '@/internal/ts/ExportType.js';
 import {LoopDetector, TsTreeScope} from '@/internal/ts/TsTreeScope.js';
@@ -127,7 +130,7 @@ export function createIntersectionType(...types: TsTypeRef[]): TsTypeIntersect {
 
 /**
  * Creates a TsTypeQuery representing a typeof expression.
- * 
+ *
  * @param expr - The expression to query the type of
  * @returns A TsTypeQuery object
  */
@@ -139,27 +142,54 @@ export function createTypeQuery(expr: TsQIdent): TsTypeQuery {
   };
 }
 
+/**
+ * Creates a TsTypeLiteral representing a literal type.
+ *
+ * @param value - The literal value
+ * @returns A TsTypeLiteral object
+ */
+export function createTypeLiteral(value: string): TsTypeLiteral {
+  return TsTypeLiteral.create(TsLiteral.str(value));
+}
+
 // ============================================================================
 // Declaration Creation Utilities
 // ============================================================================
 
 /**
  * Creates a mock TsDeclClass with all required properties.
- * 
+ *
  * @param name - The class name
- * @param parent - Optional parent class type reference
- * @param implementsInterfaces - Optional interfaces to implement
- * @param members - Optional class members
+ * @param membersOrParent - Either members (IArray<any>) or parent class (TsTypeRef)
+ * @param implementsInterfaces - Optional interfaces to implement (when parent is provided)
+ * @param members - Optional class members (when parent is provided)
  * @param isAbstract - Whether the class is abstract (defaults to false)
  * @returns A mock TsDeclClass
  */
 export function createMockClass(
-  name: string, 
-  parent?: TsTypeRef, 
+  name: string,
+  membersOrParent?: IArray<any> | TsTypeRef,
   implementsInterfaces?: IArray<TsTypeRef>,
-  members: IArray<any> = IArray.Empty,
+  members?: IArray<any>,
   isAbstract: boolean = false
 ): TsDeclClass {
+  // Determine if the second parameter is members or parent
+  let parent: TsTypeRef | undefined;
+  let actualMembers: IArray<any>;
+  let actualImplementsInterfaces: IArray<TsTypeRef>;
+
+  if (membersOrParent && '_tag' in membersOrParent && membersOrParent._tag === 'TsTypeRef') {
+    // Second parameter is parent
+    parent = membersOrParent as TsTypeRef;
+    actualMembers = members || IArray.Empty;
+    actualImplementsInterfaces = implementsInterfaces || IArray.Empty;
+  } else {
+    // Second parameter is members (or undefined)
+    parent = undefined;
+    actualMembers = (membersOrParent as IArray<any>) || IArray.Empty;
+    actualImplementsInterfaces = IArray.Empty;
+  }
+
   return {
     _tag: 'TsDeclClass',
     asString: `class ${name}`,
@@ -169,8 +199,8 @@ export function createMockClass(
     name: TsIdent.simple(name),
     tparams: IArray.Empty,
     parent: parent ? some(parent) : none,
-    implementsInterfaces: implementsInterfaces || IArray.Empty,
-    members,
+    implementsInterfaces: actualImplementsInterfaces,
+    members: actualMembers,
     jsLocation: JsLocation.zero(),
     codePath: CodePath.noPath(),
     withCodePath: function(cp: CodePath) { return { ...this, codePath: cp }; },
@@ -607,6 +637,21 @@ export function createTypeParam(name: string): TsTypeParam {
 
 /**
  * Creates a mock parsed file.
+ *
+ * @param members - The members to include in the parsed file
+ * @returns A mock TsParsedFile
+ */
+export function createParsedFile(members: IArray<TsContainerOrDecl>): TsParsedFile {
+  return TsParsedFile.create(
+    Comments.empty(),
+    IArray.Empty, // directives
+    members,
+    CodePath.noPath()
+  );
+}
+
+/**
+ * Creates a mock parsed file with library name.
  *
  * @param libName - The library name
  * @returns A mock TsParsedFile
