@@ -8,13 +8,15 @@
 
 import { none, type Option, some } from "fp-ts/Option";
 import { Raw } from "@/internal/Comment.js";
-import { Comments } from "@/internal/Comments.js";
+import { Comments, NoComments } from "@/internal/Comments.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
+import { Directive } from "@/internal/ts/Directive.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import type { TsLib } from "@/internal/ts/TsTreeScope.js";
 import {
 	MethodType,
 	TsAugmentedModule,
@@ -63,7 +65,8 @@ import {
 // ============================================================================
 
 /**
- * Creates an empty TsTreeScope for testing purposes.
+ * Creates a mock TsTreeScope for testing that can handle lookups.
+ * This creates a scope with a mock parsed file containing the provided declarations.
  *
  * @param libraryName - Optional library name (defaults to "test-lib")
  * @param declarations - Optional declarations to populate the scope with
@@ -73,21 +76,30 @@ export function createMockScope(
 	libraryName: string = "test-lib",
 	...declarations: any[]
 ): TsTreeScope {
+	const libIdent = TsIdent.librarySimple(libraryName);
+
+	// Create a mock parsed file with the declarations
+	const parsedFile = TsParsedFile.create(
+		NoComments.instance,
+		IArray.Empty, // directives
+		IArray.fromArray(declarations),
+		CodePath.noPath(),
+	);
+
+	// Create a dependency map with our mock file
+	const deps = new Map<TsLib, TsParsedFile>();
+	const lib: TsLib = { libName: libIdent };
+	deps.set(lib, parsedFile);
+
 	const root = TsTreeScope.create(
-		TsIdent.librarySimple(libraryName),
-		false,
-		new Map(),
+		libIdent,
+		false, // pedantic
+		deps,
 		Logger.DevNull(),
 	);
 
-	// If no declarations provided, return the root scope
-	if (declarations.length === 0) {
-		return root;
-	}
-
-	// For now, return the root scope - in a real implementation,
-	// we would need to properly populate the scope with declarations
-	return root;
+	// Return a scoped version that includes our parsed file
+	return root["/"](parsedFile);
 }
 
 /**
