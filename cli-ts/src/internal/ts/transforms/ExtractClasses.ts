@@ -302,7 +302,7 @@ export class AnalyzedCtors {
 	}
 
 	/**
-	 * Check if a type reference is a simple type (class or interface without type parameters).
+	 * Check if a type reference is a simple type (class or interface).
 	 *
 	 * This method avoids generating a class extending from a type parameter.
 	 */
@@ -322,12 +322,8 @@ export class AnalyzedCtors {
 
 		switch (decl._tag) {
 			case "TsDeclClass":
-			case "TsDeclInterface": {
-				// Check if the declaration has type parameters
-				// A type is only "simple" if it has no type parameters
-				const tparams = (decl as any).tparams as IArray<any>;
-				return tparams.length === 0;
-			}
+			case "TsDeclInterface":
+				return true;
 
 			case "TsDeclTypeAlias": {
 				const alias = decl as any; // TsDeclTypeAlias

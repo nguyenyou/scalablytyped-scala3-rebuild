@@ -352,9 +352,53 @@ object AnalyzedCtorsTests extends TestSuite {
         // Should handle the loop gracefully and return empty
         assert(result.isEmpty)
       }
+
+      test("returns empty for interface not in scope") {
+        val scope        = createMockScope()
+        val loopDetector = LoopDetector.initial
+        val typeRef      = createTypeRef("NonExistentInterface")
+
+        val result = AnalyzedCtors.findCtors(scope, loopDetector)(typeRef)
+
+        // Should return empty when interface is not in scope
+        assert(result.isEmpty)
+      }
     }
 
     test("AnalyzedCtors.isSimpleType method") {
+      test("returns false for primitive types") {
+        val scope = createMockScope()
+        val primitiveTypes = List(
+          TsTypeRef.string,
+          TsTypeRef.number,
+          TsTypeRef.boolean,
+          TsTypeRef.any
+        )
+
+        primitiveTypes.foreach { tpe =>
+          val result = AnalyzedCtors.isSimpleType(tpe, scope)
+          assert(!result)
+        }
+      }
+
+      test("returns false for non-existent types") {
+        val scope          = createMockScope()
+        val unknownTypeRef = createTypeRef("NonExistentType")
+
+        val result = AnalyzedCtors.isSimpleType(unknownTypeRef, scope)
+
+        assert(!result)
+      }
+
+      test("returns false for types with type parameters") {
+        val scope   = createMockScope()
+        val typeRef = createTypeRef("GenericType", IArray(TsTypeRef.string))
+
+        val result = AnalyzedCtors.isSimpleType(typeRef, scope)
+
+        assert(!result)
+      }
+
       test("returns true for class types") {
         val clazz   = createMockClass("TestClass")
         val scope   = createMockScope(clazz)
@@ -438,6 +482,7 @@ object AnalyzedCtorsTests extends TestSuite {
 
         assert(result)
       }
+
     }
 
     test("AnalyzedCtors edge cases and error handling") {
