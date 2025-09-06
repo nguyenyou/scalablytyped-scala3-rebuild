@@ -17,7 +17,8 @@
     "lint:fix": "bunx biome check --write --unsafe src",
 		"clean": "rm -rf dist",
 		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json",
-    "tc": "bun typecheck"
+    "tc": "bun typecheck",
+    "check": "bun typecheck && bun test"
 	},
 	"dependencies": {
 		"@types/tabulator-tables": "6.2.10",
