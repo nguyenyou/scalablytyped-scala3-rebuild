@@ -7,7 +7,7 @@
  */
 
 import { none, type Option, some } from "fp-ts/Option";
-import { Raw } from "@/internal/Comment.js";
+import { Raw, type Comment } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
@@ -55,12 +55,16 @@ import {
 	TsProtectionLevel,
 	TsQIdent,
 	type TsType,
+	type TsTypeConstructor,
+	type TsTypeFunction,
 	type TsTypeIntersect,
 	type TsTypeKeyOf,
 	TsTypeLiteral,
+	type TsTypeLookup,
 	type TsTypeParam,
 	type TsTypeQuery,
 	TsTypeRef,
+	type TsTypeThis,
 } from "@/internal/ts/trees.js";
 
 // ============================================================================
@@ -238,6 +242,174 @@ export function createKeyOfType(key: TsType): TsTypeKeyOf {
 		_tag: "TsTypeKeyOf",
 		key,
 		asString: `keyof ${key.asString}`,
+	};
+}
+
+/**
+ * Creates a TsTypeThis representing the 'this' type.
+ *
+ * @returns A TsTypeThis object
+ */
+export function createTypeThis(): TsTypeThis {
+	return {
+		_tag: "TsTypeThis",
+		asString: "this",
+	};
+}
+
+/**
+ * Creates a TsTypeFunction representing a function type.
+ *
+ * @param returnType - Optional return type (defaults to void)
+ * @returns A TsTypeFunction object
+ */
+export function createTypeFunction(returnType?: TsType): TsTypeFunction {
+	const ret = returnType || createTypeRef("void");
+	const resultOpt = some(ret);
+	const signature: TsFunSig = {
+		_tag: "TsFunSig",
+		comments: Comments.empty(),
+		params: IArray.Empty,
+		tparams: IArray.Empty,
+		resultType: resultOpt,
+		asString: `() => ${ret.asString}`,
+		withComments: (cs: Comments) => ({
+			...signature,
+			comments: cs,
+		}),
+		addComment: (c: Comment) => ({
+			...signature,
+			comments: signature.comments.add(c),
+		}),
+	};
+	return {
+		_tag: "TsTypeFunction",
+		asString: `() => ${ret.asString}`,
+		signature,
+	};
+}
+
+/**
+ * Creates a TsTypeConstructor representing a constructor type.
+ *
+ * @param returnType - Optional return type (defaults to any)
+ * @returns A TsTypeConstructor object
+ */
+export function createTypeConstructor(returnType?: TsType): TsTypeConstructor {
+	const ret = returnType || createTypeRef("any");
+	const functionSignature = createTypeFunction(ret);
+	return {
+		_tag: "TsTypeConstructor",
+		asString: `new () => ${ret.asString}`,
+		isAbstract: false,
+		signature: functionSignature,
+	};
+}
+
+/**
+ * Creates a TsTypeLookup representing an indexed access type.
+ *
+ * @param from - The type being indexed
+ * @param key - The key/index type
+ * @returns A TsTypeLookup object
+ */
+export function createTypeLookup(from: TsType, key: TsType): TsTypeLookup {
+	return {
+		_tag: "TsTypeLookup",
+		asString: `${from.asString}[${key.asString}]`,
+		from: from,
+		key: key,
+	};
+}
+
+/**
+ * Creates a TsMemberCtor representing a constructor member.
+ *
+ * @returns A TsMemberCtor object
+ */
+export function createMemberCtor(): TsMemberCtor {
+	const resultOpt = some(createTypeRef("void"));
+	const signature: TsFunSig = {
+		_tag: "TsFunSig",
+		comments: Comments.empty(),
+		params: IArray.Empty,
+		tparams: IArray.Empty,
+		resultType: resultOpt,
+		asString: "constructor()",
+		withComments: (cs: Comments) => ({
+			...signature,
+			comments: cs,
+		}),
+		addComment: (c: Comment) => ({
+			...signature,
+			comments: signature.comments.add(c),
+		}),
+	};
+	return {
+		_tag: "TsMemberCtor",
+		comments: Comments.empty(),
+		level: TsProtectionLevel.default(),
+		signature,
+		asString: "constructor()",
+		withComments: (cs: Comments) => ({
+			_tag: "TsMemberCtor",
+			comments: cs,
+			level: TsProtectionLevel.default(),
+			signature,
+			asString: "constructor()",
+		} as TsMemberCtor),
+		addComment: (c: Comment) => ({
+			_tag: "TsMemberCtor",
+			comments: Comments.empty().add(c),
+			level: TsProtectionLevel.default(),
+			signature,
+			asString: "constructor()",
+		} as TsMemberCtor),
+	};
+}
+
+/**
+ * Creates a TsMemberFunction representing a method member.
+ *
+ * @param name - The method name
+ * @param functionType - Optional function type (defaults to void function)
+ * @returns A TsMemberFunction object
+ */
+export function createMemberFunction(name: string, functionType?: TsTypeFunction): TsMemberFunction {
+	const funcType = functionType || createTypeFunction();
+	const nameIdent = createSimpleIdent(name);
+	return {
+		_tag: "TsMemberFunction",
+		comments: Comments.empty(),
+		level: TsProtectionLevel.default(),
+		name: nameIdent,
+		methodType: MethodType.normal(),
+		signature: funcType.signature,
+		isStatic: false,
+		isReadOnly: false,
+		asString: `${name}${funcType.signature.asString}`,
+		withComments: (cs: Comments) => ({
+			_tag: "TsMemberFunction",
+			comments: cs,
+			level: TsProtectionLevel.default(),
+			name: nameIdent,
+			methodType: MethodType.normal(),
+			signature: funcType.signature,
+			isStatic: false,
+			isReadOnly: false,
+			asString: `${name}${funcType.signature.asString}`,
+		} as TsMemberFunction),
+		addComment: (c: Comment) => ({
+			_tag: "TsMemberFunction",
+			comments: Comments.empty().add(c),
+			level: TsProtectionLevel.default(),
+			name: nameIdent,
+			methodType: MethodType.normal(),
+			signature: funcType.signature,
+			isStatic: false,
+			isReadOnly: false,
+			asString: `${name}${funcType.signature.asString}`,
+		} as TsMemberFunction),
 	};
 }
 
