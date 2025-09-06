@@ -69,12 +69,8 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 				return x;
 			}
 
-			// Debug logging
-			const hasNoReturn = this.hasNoReturnType(x.signature);
-			const hasOwner = ownerOpt._tag === "Some";
-
 			// Only process functions with no return type
-			if (hasNoReturn && hasOwner) {
+			if (this.hasNoReturnType(x.signature) && ownerOpt._tag === "Some") {
 				const owner = ownerOpt.value;
 				const rewrittenOpt = this.findParentImplementation(scope, owner, x);
 
