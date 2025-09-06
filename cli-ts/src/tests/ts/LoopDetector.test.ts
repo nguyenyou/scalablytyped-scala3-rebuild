@@ -691,10 +691,12 @@ describe("LoopDetector", () => {
 		it("handles large stack without performance degradation", () => {
 			const scope = createMockScope();
 			let detector = LoopDetector.initial;
+			const identArrays: IArray<TsIdent>[] = [];
 
-			// Build a large stack
+			// Build a large stack, keeping references to the arrays for proper loop detection
 			for (let i = 1; i <= 1000; i++) {
 				const idents = IArray.fromArray([createSimpleIdent(`Type${i}`)]) as IArray<TsIdent>;
+				identArrays.push(idents);
 				const result = detector.including(idents, scope);
 				expect(isRight(result)).toBe(true);
 				if (isRight(result)) {
@@ -704,13 +706,16 @@ describe("LoopDetector", () => {
 
 			expect((detector as any).stack.length).toBe(1000);
 
-			// Test loop detection still works efficiently
-			// Use the exact same idents array that was used before
-			const duplicateIdents = IArray.fromArray([createSimpleIdent("Type500")]) as IArray<TsIdent>;
+			// Test loop detection still works efficiently with large stack
+			// Use the exact same idents array that was used for "Type500" (index 499)
+			const duplicateIdents = identArrays[499]; // This is the same array used for "Type500"
 			const loopResult = detector.including(duplicateIdents, scope);
-			// Note: The loop detection might not work as expected due to object identity
-			// This test verifies the stack size and that the operation completes efficiently
-			expect(isRight(loopResult) || isLeft(loopResult)).toBe(true); // Either result is acceptable for performance test
+
+			// Should detect loop because we're using the same array instance that's already in the stack
+			expect(isLeft(loopResult)).toBe(true);
+
+			// Verify that the performance is still good - the operation should complete quickly
+			// even with a large stack (this is implicitly tested by the test not timing out)
 		});
 
 		it("memory efficiency with repeated operations", () => {
