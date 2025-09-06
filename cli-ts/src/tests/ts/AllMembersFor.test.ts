@@ -12,6 +12,17 @@ import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import { LoopDetector, MockTsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import {
+	createMockClass,
+	createMockInterface,
+	createMockMethod,
+	createMockProperty,
+	createMockScope,
+	createMockTypeAlias,
+	createQIdent,
+	createSimpleIdent,
+	createTypeRef,
+} from "../utils/TestUtils.js";
 
 // Import tree types and constructors
 import type {
@@ -26,13 +37,11 @@ import {
 	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsFunSig,
-	TsIdent as TsIdentConstructor,
 	TsLiteral,
 	TsMemberCall,
 	TsMemberCtor,
 	TsMemberFunction,
 	TsMemberProperty,
-	TsQIdent as TsQIdentConstructor,
 	TsTypeAsserts,
 	TsTypeConstructor as TsTypeConstructorConstructor,
 	TsTypeFunction,
@@ -51,101 +60,6 @@ import {
 } from "../../internal/ts/trees.js";
 
 // Helper functions for creating test data
-function createSimpleIdent(name: string): TsIdentSimple {
-	return TsIdentConstructor.simple(name);
-}
-
-function createQIdent(name: string): TsQIdent {
-	return TsQIdentConstructor.of(createSimpleIdent(name));
-}
-
-function createTypeRef(
-	name: string,
-	tparams: IArray<TsType> = IArray.Empty,
-): TsTypeRef {
-	return TsTypeRef.create(Comments.empty(), createQIdent(name), tparams);
-}
-
-function _createMockClass(
-	name: string,
-	members: IArray<TsMember> = IArray.Empty,
-	parent: TsTypeRef | undefined = undefined,
-	implementsInterfaces: IArray<TsTypeRef> = IArray.Empty,
-): TsDeclClass {
-	return TsDeclClass.create(
-		Comments.empty(),
-		false, // declared
-		false, // isAbstract
-		createSimpleIdent(name),
-		IArray.Empty, // tparams
-		parent ? some(parent) : none,
-		implementsInterfaces,
-		members,
-		JsLocation.zero(),
-		CodePath.noPath(),
-	);
-}
-
-function createMockInterface(
-	name: string,
-	members: IArray<TsMember> = IArray.Empty,
-	inheritance: IArray<TsTypeRef> = IArray.Empty,
-): TsDeclInterface {
-	return TsDeclInterface.create(
-		Comments.empty(),
-		false, // declared
-		createSimpleIdent(name),
-		IArray.Empty, // tparams
-		inheritance,
-		members,
-		CodePath.noPath(),
-	);
-}
-
-function _createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
-	return TsDeclTypeAlias.create(
-		Comments.empty(),
-		false, // declared
-		createSimpleIdent(name),
-		IArray.Empty, // tparams
-		alias,
-		CodePath.noPath(),
-	);
-}
-
-function createMockProperty(name: string): TsMemberProperty {
-	return TsMemberProperty.create(
-		Comments.empty(),
-		TsProtectionLevel.default(),
-		createSimpleIdent(name),
-		some(TsTypeRef.string),
-		none, // expr
-		false, // isStatic
-		false, // isReadOnly
-	);
-}
-
-function createMockMethod(name: string): TsMemberFunction {
-	return TsMemberFunction.create(
-		Comments.empty(),
-		TsProtectionLevel.default(),
-		createSimpleIdent(name),
-		MethodType.normal(),
-		TsFunSig.create(
-			Comments.empty(),
-			IArray.Empty, // tparams
-			IArray.Empty, // params
-			some(TsTypeRef.void),
-		),
-		false, // isStatic
-		false, // isReadOnly
-	);
-}
-
-function createMockScope(): MockTsTreeScope {
-	return MockTsTreeScope.create() as MockTsTreeScope;
-}
-
 function createLoopDetector(): LoopDetector {
 	return LoopDetector.initial;
 }
