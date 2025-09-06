@@ -261,21 +261,20 @@ export class ExpandTypeParams extends TransformMembers {
 			/**
 			 * Check if the type parameter is used in function parameters
 			 */
-			const isParam = sig.params.exists(p =>
-				pipe(
-					p.tpe,
-					(tpeOpt) => isSome(tpeOpt) && tpeOpt.value._tag === "TsTypeRef",
-					(isTypeRef) => {
-						if (!isTypeRef || !isSome(p.tpe)) return false;
-						const typeRef = p.tpe.value as TsTypeRef;
-						return (
-							typeRef.name._tag === "TsQIdent" &&
-							typeRef.name.parts.length === 1 &&
-							typeRef.name.parts.apply(0).value === tp.name.value
-						);
+			const isParam = sig.params.exists(p => {
+				if (isSome(p.tpe)) {
+					const paramType = p.tpe.value;
+					if (paramType._tag === "TsTypeRef") {
+						const typeRef = paramType as TsTypeRef;
+						if (typeRef.name.parts.length === 1 && typeRef.name.parts.apply(0).value === tp.name.value) {
+							return true;
+						}
 					}
-				)
-			);
+				}
+				return false;
+			});
+
+
 
 			return pipe(
 				tp.upperBound,
