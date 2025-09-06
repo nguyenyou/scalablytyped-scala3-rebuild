@@ -4,6 +4,7 @@ import { Comments } from "../../internal/Comments.ts";
 import { IArray } from "../../internal/IArray.ts";
 import { LoopDetector, TsTreeScope } from "../../internal/ts/TsTreeScope.ts";
 import {
+	TsIdent,
 	TsQIdent,
 	TsTypeRef,
 } from "../../internal/ts/trees.ts";
@@ -34,7 +35,7 @@ describe("LoopDetector", () => {
 
 		it("private constructor creates detector with given stack", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("test")]);
+			const idents = IArray.fromArray([createSimpleIdent("test")]) as IArray<TsIdent>;
 
 			// We can't directly test the private constructor, but we can test the result
 			// of including which creates a new detector with the entry in the stack
@@ -52,7 +53,7 @@ describe("LoopDetector", () => {
 		it("returns Right with new detector when no loop detected", () => {
 			const detector = LoopDetector.initial;
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 
 			const result = detector.including(idents, scope);
 
@@ -65,7 +66,7 @@ describe("LoopDetector", () => {
 
 		it("returns Left when loop detected with same idents and scope", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents, scope);
 			expect(isRight(detector1Result)).toBe(true);
@@ -80,7 +81,7 @@ describe("LoopDetector", () => {
 		it("allows same idents with different scope", () => {
 			const scope1 = createMockScope();
 			const scope2 = createMockScope2();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents, scope1);
 			expect(isRight(detector1Result)).toBe(true);
@@ -98,8 +99,8 @@ describe("LoopDetector", () => {
 
 		it("allows different idents with same scope", () => {
 			const scope = createMockScope();
-			const idents1 = IArray.fromArray([createSimpleIdent("TestType1")]);
-			const idents2 = IArray.fromArray([createSimpleIdent("TestType2")]);
+			const idents1 = IArray.fromArray([createSimpleIdent("TestType1")]) as IArray<TsIdent>;
+			const idents2 = IArray.fromArray([createSimpleIdent("TestType2")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents1, scope);
 			expect(isRight(detector1Result)).toBe(true);
@@ -118,7 +119,7 @@ describe("LoopDetector", () => {
 		it("handles empty idents array", () => {
 			const detector = LoopDetector.initial;
 			const scope = createMockScope();
-			const emptyIdents = IArray.Empty;
+			const emptyIdents = IArray.Empty as IArray<TsIdent>;
 
 			const result = detector.including(emptyIdents, scope);
 
@@ -136,7 +137,7 @@ describe("LoopDetector", () => {
 				createSimpleIdent("Module"),
 				createSimpleIdent("SubModule"),
 				createSimpleIdent("Type"),
-			]);
+			]) as IArray<TsIdent>;
 
 			const result = detector.including(idents, scope);
 
@@ -249,7 +250,7 @@ describe("LoopDetector", () => {
 	describe("Mixed Entry Types", () => {
 		it("allows mixing idents and typeRef entries", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("Module")]);
+			const idents = IArray.fromArray([createSimpleIdent("Module")]) as IArray<TsIdent>;
 			const typeRef = createTypeRef("TestType");
 
 			const detector1Result = LoopDetector.initial.including(idents, scope);
@@ -268,7 +269,7 @@ describe("LoopDetector", () => {
 
 		it("detects loop between different entry types with same content", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 			const typeRef = createTypeRef("TestType");
 
 			// These should be considered different entries even though they reference the same name
@@ -288,9 +289,9 @@ describe("LoopDetector", () => {
 
 		it("maintains proper stack order with mixed entries", () => {
 			const scope = createMockScope();
-			const idents1 = IArray.fromArray([createSimpleIdent("Module1")]);
+			const idents1 = IArray.fromArray([createSimpleIdent("Module1")]) as IArray<TsIdent>;
 			const typeRef1 = createTypeRef("Type1");
-			const idents2 = IArray.fromArray([createSimpleIdent("Module2")]);
+			const idents2 = IArray.fromArray([createSimpleIdent("Module2")]) as IArray<TsIdent>;
 			const typeRef2 = createTypeRef("Type2");
 
 			const detector1Result = LoopDetector.initial.including(idents1, scope);
@@ -323,9 +324,9 @@ describe("LoopDetector", () => {
 	describe("Stack Management", () => {
 		it("stack grows with each inclusion", () => {
 			const scope = createMockScope();
-			const idents1 = IArray.fromArray([createSimpleIdent("Type1")]);
-			const idents2 = IArray.fromArray([createSimpleIdent("Type2")]);
-			const idents3 = IArray.fromArray([createSimpleIdent("Type3")]);
+			const idents1 = IArray.fromArray([createSimpleIdent("Type1")]) as IArray<TsIdent>;
+			const idents2 = IArray.fromArray([createSimpleIdent("Type2")]) as IArray<TsIdent>;
+			const idents3 = IArray.fromArray([createSimpleIdent("Type3")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents1, scope);
 			expect(isRight(detector1Result)).toBe(true);
@@ -353,7 +354,7 @@ describe("LoopDetector", () => {
 
 		it("stack maintains immutability", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 
 			const originalDetector = LoopDetector.initial;
 			const newDetectorResult = originalDetector.including(idents, scope);
@@ -370,9 +371,9 @@ describe("LoopDetector", () => {
 
 		it("stack contains entries in reverse chronological order", () => {
 			const scope = createMockScope();
-			const idents1 = IArray.fromArray([createSimpleIdent("First")]);
-			const idents2 = IArray.fromArray([createSimpleIdent("Second")]);
-			const idents3 = IArray.fromArray([createSimpleIdent("Third")]);
+			const idents1 = IArray.fromArray([createSimpleIdent("First")]) as IArray<TsIdent>;
+			const idents2 = IArray.fromArray([createSimpleIdent("Second")]) as IArray<TsIdent>;
+			const idents3 = IArray.fromArray([createSimpleIdent("Third")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents1, scope);
 			expect(isRight(detector1Result)).toBe(true);
@@ -445,7 +446,7 @@ describe("LoopDetector", () => {
 
 		it("detects loop with mixed entry types", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 			const typeRef = createTypeRef("TestType");
 
 			// Even though they reference the same name, they are different entry types
@@ -486,7 +487,7 @@ describe("LoopDetector", () => {
 			const scope = createMockScope();
 			const longIdents = IArray.fromArray(
 				Array.from({ length: 100 }, (_, i) => createSimpleIdent(`Part${i + 1}`))
-			);
+			) as IArray<TsIdent>;
 
 			const result = detector.including(longIdents, scope);
 
@@ -506,7 +507,7 @@ describe("LoopDetector", () => {
 				createSimpleIdent("123numeric"),
 				createSimpleIdent("with-dash"),
 				createSimpleIdent("with.dot"),
-			]);
+			]) as IArray<TsIdent>;
 
 			const result = detector.including(specialIdents, scope);
 
@@ -525,7 +526,7 @@ describe("LoopDetector", () => {
 				createSimpleIdent("тест"),
 				createSimpleIdent("🚀"),
 				createSimpleIdent("café"),
-			]);
+			]) as IArray<TsIdent>;
 
 			const result = detector.including(unicodeIdents, scope);
 
@@ -558,7 +559,7 @@ describe("LoopDetector", () => {
 		it("handles same content with different scopes in sequence", () => {
 			const scope1 = createMockScope();
 			const scope2 = createMockScope2();
-			const idents = IArray.fromArray([createSimpleIdent("SharedType")]);
+			const idents = IArray.fromArray([createSimpleIdent("SharedType")]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(idents, scope1);
 			expect(isRight(detector1Result)).toBe(true);
@@ -584,7 +585,7 @@ describe("LoopDetector", () => {
 
 			// Build a large stack
 			for (let i = 1; i <= 1000; i++) {
-				const idents = IArray.fromArray([createSimpleIdent(`Type${i}`)]);
+				const idents = IArray.fromArray([createSimpleIdent(`Type${i}`)]) as IArray<TsIdent>;
 				const result = detector.including(idents, scope);
 				expect(isRight(result)).toBe(true);
 				if (isRight(result)) {
@@ -596,7 +597,7 @@ describe("LoopDetector", () => {
 
 			// Test loop detection still works efficiently
 			// Use the exact same idents array that was used before
-			const duplicateIdents = IArray.fromArray([createSimpleIdent("Type500")]);
+			const duplicateIdents = IArray.fromArray([createSimpleIdent("Type500")]) as IArray<TsIdent>;
 			const loopResult = detector.including(duplicateIdents, scope);
 			// Note: The loop detection might not work as expected due to object identity
 			// This test verifies the stack size and that the operation completes efficiently
@@ -605,7 +606,7 @@ describe("LoopDetector", () => {
 
 		it("memory efficiency with repeated operations", () => {
 			const scope = createMockScope();
-			const idents = IArray.fromArray([createSimpleIdent("TestType")]);
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
 
 			// Perform many operations to test memory usage
 			for (let i = 0; i < 100; i++) {
@@ -675,7 +676,7 @@ describe("LoopDetector", () => {
 				createSimpleIdent("B"),
 				createSimpleIdent("C"),
 				createSimpleIdent("Type"),
-			]);
+			]) as IArray<TsIdent>;
 
 			const detector1Result = LoopDetector.initial.including(moduleIdents, scope);
 			expect(isRight(detector1Result)).toBe(true);
@@ -689,7 +690,7 @@ describe("LoopDetector", () => {
 					createSimpleIdent("B"),
 					createSimpleIdent("D"),
 					createSimpleIdent("Type"),
-				]);
+				]) as IArray<TsIdent>;
 
 				const result = detector1.including(differentModuleIdents, scope);
 				expect(isRight(result)).toBe(true);
