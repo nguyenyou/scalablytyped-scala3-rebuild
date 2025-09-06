@@ -40,7 +40,10 @@ describe("UnionTypesFromKeyOf", () => {
 			const prop1 = createMockProperty("name");
 			const prop2 = createMockProperty("age");
 			const prop3 = createMockProperty("email");
-			const personInterface = createMockInterface("Person", createIArray([prop1, prop2, prop3]));
+			const personInterface = createMockInterface(
+				"Person",
+				createIArray([prop1, prop2, prop3]),
+			);
 			const scope = createMockScope("test-lib", personInterface);
 
 			const keyOfType = createKeyOfType(createTypeRef("Person"));
@@ -51,7 +54,10 @@ describe("UnionTypesFromKeyOf", () => {
 			expect(union.types.length).toBe(3);
 
 			// Check that all types are string literals
-			const literals = union.types.toArray().map((t: any) => t.literal?.value).filter(Boolean);
+			const literals = union.types
+				.toArray()
+				.map((t: any) => t.literal?.value)
+				.filter(Boolean);
 			expect(literals).toContain("name");
 			expect(literals).toContain("age");
 			expect(literals).toContain("email");
@@ -59,7 +65,10 @@ describe("UnionTypesFromKeyOf", () => {
 
 		test("handles interface with single property", () => {
 			const prop = createMockProperty("singleProp");
-			const singlePropInterface = createMockInterface("SingleProp", createIArray([prop]));
+			const singlePropInterface = createMockInterface(
+				"SingleProp",
+				createIArray([prop]),
+			);
 			const scope = createMockScope("test-lib", singlePropInterface);
 
 			const keyOfType = createKeyOfType(createTypeRef("SingleProp"));
@@ -72,7 +81,10 @@ describe("UnionTypesFromKeyOf", () => {
 		});
 
 		test("handles interface with no properties", () => {
-			const emptyInterface = createMockInterface("EmptyInterface", IArray.Empty);
+			const emptyInterface = createMockInterface(
+				"EmptyInterface",
+				IArray.Empty,
+			);
 			const scope = createMockScope("test-lib", emptyInterface);
 
 			const keyOfType = createKeyOfType(createTypeRef("EmptyInterface"));
@@ -90,7 +102,10 @@ describe("UnionTypesFromKeyOf", () => {
 
 			// Note: In a real scenario, we might have methods and other members too,
 			// but our transform only extracts properties
-			const mixedInterface = createMockInterface("MixedInterface", createIArray([prop1, prop2, prop3]));
+			const mixedInterface = createMockInterface(
+				"MixedInterface",
+				createIArray([prop1, prop2, prop3]),
+			);
 			const scope = createMockScope("test-lib", mixedInterface);
 
 			const keyOfType = createKeyOfType(createTypeRef("MixedInterface"));
@@ -100,8 +115,15 @@ describe("UnionTypesFromKeyOf", () => {
 			const union = result as any; // TsTypeUnion
 			expect(union.types.length).toBe(3);
 
-			const literals = union.types.toArray().map((t: any) => t.literal?.value).filter(Boolean);
-			expect(literals.sort()).toEqual(["normalProp", "optionalProp", "readonlyProp"]);
+			const literals = union.types
+				.toArray()
+				.map((t: any) => t.literal?.value)
+				.filter(Boolean);
+			expect(literals.sort()).toEqual([
+				"normalProp",
+				"optionalProp",
+				"readonlyProp",
+			]);
 		});
 	});
 
@@ -119,11 +141,17 @@ describe("UnionTypesFromKeyOf", () => {
 
 		test("preserves keyof for type references with type parameters", () => {
 			const prop = createMockProperty("value");
-			const genericInterface = createMockInterface("GenericInterface", createIArray([prop]));
+			const genericInterface = createMockInterface(
+				"GenericInterface",
+				createIArray([prop]),
+			);
 			const scope = createMockScope("test-lib", genericInterface);
 
 			// Create a type reference with type parameters
-			const genericTypeRef = createTypeRef("GenericInterface", createIArray([createTypeRef("string")]));
+			const genericTypeRef = createTypeRef(
+				"GenericInterface",
+				createIArray([createTypeRef("string")]),
+			);
 			const keyOfType = createKeyOfType(genericTypeRef);
 			const result = UnionTypesFromKeyOfTransform.enterTsType(scope)(keyOfType);
 
@@ -137,7 +165,8 @@ describe("UnionTypesFromKeyOf", () => {
 		test("handles non-keyof types unchanged", () => {
 			const scope = createMockScope();
 			const regularType = createTypeRef("RegularType");
-			const result = UnionTypesFromKeyOfTransform.enterTsType(scope)(regularType);
+			const result =
+				UnionTypesFromKeyOfTransform.enterTsType(scope)(regularType);
 
 			// Should return the same type unchanged
 			expect(result).toBe(regularType);
@@ -146,7 +175,11 @@ describe("UnionTypesFromKeyOf", () => {
 		test("handles keyof with non-type-ref key", () => {
 			const scope = createMockScope();
 			// Create a keyof with a literal type as the key (unusual but possible)
-			const literalType = { _tag: "TsTypeLiteral", literal: { value: "test" }, asString: '"test"' } as any;
+			const literalType = {
+				_tag: "TsTypeLiteral",
+				literal: { value: "test" },
+				asString: '"test"',
+			} as any;
 			const keyOfType = createKeyOfType(literalType);
 			const result = UnionTypesFromKeyOfTransform.enterTsType(scope)(keyOfType);
 
@@ -163,7 +196,10 @@ describe("UnionTypesFromKeyOf", () => {
 			const tagNameProp = createMockProperty("tagName");
 			const childrenProp = createMockProperty("children");
 
-			const domElement = createMockInterface("Element", createIArray([idProp, classNameProp, tagNameProp, childrenProp]));
+			const domElement = createMockInterface(
+				"Element",
+				createIArray([idProp, classNameProp, tagNameProp, childrenProp]),
+			);
 			const scope = createMockScope("test-lib", domElement);
 
 			const keyOfType = createKeyOfType(createTypeRef("Element"));
@@ -173,8 +209,16 @@ describe("UnionTypesFromKeyOf", () => {
 			const union = result as any; // TsTypeUnion
 			expect(union.types.length).toBe(4);
 
-			const literals = union.types.toArray().map((t: any) => t.literal?.value).filter(Boolean);
-			expect(literals.sort()).toEqual(["children", "className", "id", "tagName"]);
+			const literals = union.types
+				.toArray()
+				.map((t: any) => t.literal?.value)
+				.filter(Boolean);
+			expect(literals.sort()).toEqual([
+				"children",
+				"className",
+				"id",
+				"tagName",
+			]);
 		});
 
 		test("handles API response interface", () => {
@@ -183,7 +227,10 @@ describe("UnionTypesFromKeyOf", () => {
 			const messageProp = createMockProperty("message");
 			const timestampProp = createMockProperty("timestamp");
 
-			const apiResponse = createMockInterface("ApiResponse", createIArray([dataProp, statusProp, messageProp, timestampProp]));
+			const apiResponse = createMockInterface(
+				"ApiResponse",
+				createIArray([dataProp, statusProp, messageProp, timestampProp]),
+			);
 			const scope = createMockScope("test-lib", apiResponse);
 
 			const keyOfType = createKeyOfType(createTypeRef("ApiResponse"));
@@ -193,8 +240,16 @@ describe("UnionTypesFromKeyOf", () => {
 			const union = result as any; // TsTypeUnion
 			expect(union.types.length).toBe(4);
 
-			const literals = union.types.toArray().map((t: any) => t.literal?.value).filter(Boolean);
-			expect(literals.sort()).toEqual(["data", "message", "status", "timestamp"]);
+			const literals = union.types
+				.toArray()
+				.map((t: any) => t.literal?.value)
+				.filter(Boolean);
+			expect(literals.sort()).toEqual([
+				"data",
+				"message",
+				"status",
+				"timestamp",
+			]);
 		});
 	});
 
@@ -202,7 +257,10 @@ describe("UnionTypesFromKeyOf", () => {
 		test("works with transform instance", () => {
 			const prop1 = createMockProperty("name");
 			const prop2 = createMockProperty("value");
-			const testInterface = createMockInterface("TestInterface", createIArray([prop1, prop2]));
+			const testInterface = createMockInterface(
+				"TestInterface",
+				createIArray([prop1, prop2]),
+			);
 			const scope = createMockScope("test-lib", testInterface);
 
 			const keyOfType = createKeyOfType(createTypeRef("TestInterface"));
@@ -213,7 +271,9 @@ describe("UnionTypesFromKeyOf", () => {
 
 			// Verify the union is properly formed for other transforms
 			expect(union.types.length).toBe(2);
-			expect(union.types.toArray().every((t: any) => t._tag === "TsTypeLiteral")).toBe(true);
+			expect(
+				union.types.toArray().every((t: any) => t._tag === "TsTypeLiteral"),
+			).toBe(true);
 		});
 	});
 });

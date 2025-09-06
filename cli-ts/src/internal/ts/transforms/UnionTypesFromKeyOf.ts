@@ -12,15 +12,16 @@ import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
 	TsDeclInterface,
 	TsIdent,
-	TsLiteral,
 	TsMemberProperty,
 	TsType,
 	TsTypeKeyOf,
-	TsTypeLiteral,
 	TsTypeRef,
-	TsTypeUnion,
 } from "../trees.js";
-import { TsLiteral as TsLiteralConstructor, TsTypeLiteral as TsTypeLiteralConstructor, TsTypeUnion as TsTypeUnionConstructor } from "../trees.js";
+import {
+	TsLiteral as TsLiteralConstructor,
+	TsTypeLiteral as TsTypeLiteralConstructor,
+	TsTypeUnion as TsTypeUnionConstructor,
+} from "../trees.js";
 
 /**
  * UnionTypesFromKeyOf transformation that converts keyof types to union types.
@@ -50,14 +51,14 @@ export class UnionTypesFromKeyOf extends TreeTransformationScopedChanges {
 			}
 
 			const keyOfType = x as TsTypeKeyOf;
-			
+
 			// Check if the key is a simple type reference (no type parameters)
 			if (keyOfType.key._tag !== "TsTypeRef") {
 				return x;
 			}
 
 			const typeRef = keyOfType.key as TsTypeRef;
-			
+
 			// Only handle simple type references without type parameters
 			if (typeRef.tparams.length > 0) {
 				return x;
@@ -70,10 +71,12 @@ export class UnionTypesFromKeyOf extends TreeTransformationScopedChanges {
 
 			// Look up the type in the scope
 			const lookupResults = scope.lookup(typeRef.name);
-			
+
 			if (lookupResults.length === 0) {
 				// Log that we couldn't expand the keyof
-				scope.logger.info(`Could not expand keyof ${typeRef.name.asString}: not found`);
+				scope.logger.info(
+					`Could not expand keyof ${typeRef.name.asString}: not found`,
+				);
 				return x;
 			}
 
@@ -82,7 +85,9 @@ export class UnionTypesFromKeyOf extends TreeTransformationScopedChanges {
 			// Check if the result is an interface
 			if (firstResult._tag !== "TsDeclInterface") {
 				// Log that we couldn't expand the keyof
-				scope.logger.info(`Could not expand keyof ${typeRef.name.asString}: ${firstResult._tag}`);
+				scope.logger.info(
+					`Could not expand keyof ${typeRef.name.asString}: ${firstResult._tag}`,
+				);
 				return x;
 			}
 

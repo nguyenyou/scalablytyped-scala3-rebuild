@@ -9,28 +9,30 @@
 import { none, type Option, some } from "fp-ts/Option";
 import { Raw } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
-import { Directive } from "@/internal/ts/Directive.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import type { TsLib } from "@/internal/ts/TsTreeScope.js";
+import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
 	MethodType,
 	TsAugmentedModule,
 	type TsContainerOrDecl,
 	type TsDeclClass,
+	TsDeclEnum,
 	type TsDeclFunction,
 	type TsDeclInterface,
 	type TsDeclModule,
 	type TsDeclNamespace,
 	type TsDeclTypeAlias,
 	type TsDeclVar,
+	TsEnumMember,
 	TsExport,
 	type TsExporteeNames,
 	TsExporteeTree,
+	TsExprLiteral,
 	TsFunParam,
 	TsFunSig,
 	TsGlobal,
@@ -58,9 +60,6 @@ import {
 	type TsTypeParam,
 	type TsTypeQuery,
 	TsTypeRef,
-	TsDeclEnum,
-	TsEnumMember,
-	TsExprLiteral,
 } from "@/internal/ts/trees.js";
 
 // ============================================================================
