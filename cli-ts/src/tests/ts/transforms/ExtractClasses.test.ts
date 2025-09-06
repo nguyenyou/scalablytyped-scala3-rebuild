@@ -7,43 +7,20 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some } from "fp-ts/Option";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { some } from "fp-ts/Option";
 import { IArray } from "@/internal/IArray.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { MethodType } from "@/internal/ts/MethodType.js";
-import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
-import { ExtractClasses, AnalyzedCtors, FindAvailableName } from "@/internal/ts/transforms/ExtractClasses.js";
 import {
-	TsDeclClass,
-	TsDeclNamespace,
-	TsDeclVar,
-	TsExpr,
-	TsFunParam,
-	TsFunSig,
-	TsIdent,
-	TsLiteral,
-	TsMemberCtor,
-	TsMemberFunction,
-	TsMemberProperty,
-	TsParsedFile,
-	TsTypeConstructor,
-	TsTypeFunction,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeRef,
-	TsTypeParam,
-} from "@/internal/ts/trees.js";
+	AnalyzedCtors,
+	ExtractClasses,
+	FindAvailableName,
+} from "@/internal/ts/transforms/ExtractClasses.js";
+import { TsIdent, TsTypeRef } from "@/internal/ts/trees.js";
 import {
-	createFunParam,
+	createLiteralExpr,
 	createMockClass,
 	createMockFunSig,
 	createMockInterface,
-	createMockMemberCtor,
-	createMockNamespace,
 	createMockParsedFile,
-	createMockProperty,
 	createMockScope,
 	createMockVariable,
 	createSimpleIdent,
@@ -51,7 +28,6 @@ import {
 	createTypeFunction,
 	createTypeParam,
 	createTypeRef,
-	createLiteralExpr,
 } from "../../utils/TestUtils.js";
 
 describe("ExtractClasses", () => {
@@ -73,7 +49,10 @@ describe("ExtractClasses", () => {
 			// Create a parsed file with the interface as a member
 			const parsedFile = createMockParsedFile("test");
 			// Manually add the interface to the members map
-			parsedFile.membersByName.set(TsIdent.simple("TestInterface"), IArray.apply(interface1 as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestInterface"),
+				IArray.apply(interface1 as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -93,14 +72,19 @@ describe("ExtractClasses", () => {
 
 	describe("Variable to Class Extraction", () => {
 		test("extracts class from variable with constructor type", () => {
-			const ctorSig = createMockFunSig(createTypeRef("TestClass"));
-			const ctorType = createTypeConstructor(createTypeFunction(createTypeRef("TestClass")));
+			const _ctorSig = createMockFunSig(createTypeRef("TestClass"));
+			const _ctorType = createTypeConstructor(
+				createTypeFunction(createTypeRef("TestClass")),
+			);
 			const variable = createMockVariable("TestClass", TsTypeRef.any); // Use any for now
 			const targetClass = createMockClass("TestClass");
 			const scope = createMockScope("test-lib", targetClass);
 
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// For now, just verify it doesn't crash and returns valid results
@@ -115,7 +99,10 @@ describe("ExtractClasses", () => {
 			const scope = createMockScope();
 
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(variable as any, existingClass as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any, existingClass as any),
+			);
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should not extract when class already exists
@@ -129,7 +116,10 @@ describe("ExtractClasses", () => {
 			const scope = createMockScope();
 
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(variable as any),
+			);
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should leave unchanged
@@ -144,7 +134,10 @@ describe("ExtractClasses", () => {
 			const scope = createMockScope();
 
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(variable as any),
+			);
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should leave unchanged when variable has expression
@@ -204,7 +197,10 @@ describe("ExtractClasses", () => {
 			const parsedFile = createMockParsedFile("test");
 			const existingClass = createMockClass("TestClass");
 			const testClassIdent = TsIdent.simple("TestClass");
-			parsedFile.membersByName.set(testClassIdent, IArray.apply(existingClass as any));
+			parsedFile.membersByName.set(
+				testClassIdent,
+				IArray.apply(existingClass as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(testClassIdent);
@@ -222,7 +218,10 @@ describe("ExtractClasses", () => {
 			const parsedFile = createMockParsedFile("test");
 			const existingInterface = createMockInterface("TestInterface");
 			const testInterfaceIdent = TsIdent.simple("TestInterface");
-			parsedFile.membersByName.set(testInterfaceIdent, IArray.apply(existingInterface as any));
+			parsedFile.membersByName.set(
+				testInterfaceIdent,
+				IArray.apply(existingInterface as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(testInterfaceIdent);
@@ -239,7 +238,10 @@ describe("ExtractClasses", () => {
 			const scope = createMockScope();
 			const parsedFile = createMockParsedFile("test");
 			const existingVar = createMockVariable("TestVar", TsTypeRef.string);
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(existingVar as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(existingVar as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(createSimpleIdent("TestVar"));
@@ -256,7 +258,10 @@ describe("ExtractClasses", () => {
 			const scope = createMockScope();
 			const parsedFile = createMockParsedFile("test");
 			const existingClass = createMockClass("namespaced");
-			parsedFile.membersByName.set(TsIdent.namespaced(), IArray.apply(existingClass as any));
+			parsedFile.membersByName.set(
+				TsIdent.namespaced(),
+				IArray.apply(existingClass as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(TsIdent.namespaced());

@@ -18,40 +18,20 @@
  * ```
  */
 
-import { getOrElse } from "fp-ts/Option";
-import { none, type Option, some } from "fp-ts/Option";
-import { Comment } from "../../Comment.js";
-import { Comments, NoComments } from "../../Comments.js";
+import { getOrElse, none, type Option, some } from "fp-ts/Option";
 import { IArray } from "../../IArray.js";
-import { AllMembersFor } from "../AllMembersFor.js";
-import { CodePath } from "../CodePath.js";
-import { FollowAliases } from "../FollowAliases.js";
-import { JsLocation } from "../JsLocation.js";
-import { MethodType } from "../MethodType.js";
-import { TsProtectionLevel } from "../TsProtectionLevel.js";
-import { TreeTransformationScopedChanges, TransformLeaveMembers } from "../TreeTransformations.js";
-import { type LoopDetector, TsTreeScope } from "../TsTreeScope.js";
-import { FillInTParams } from "../FillInTParams.js";
+import { TransformLeaveMembers } from "../TreeTransformations.js";
+import type { TsTreeScope } from "../TsTreeScope.js";
 import {
 	type TsContainer,
 	type TsContainerOrDecl,
-	TsDeclClass,
-	TsDeclNamespace,
-	type TsDeclVar,
-	TsFunSig,
+	type TsFunSig,
 	TsIdent,
 	type TsIdentSimple,
-	type TsMember,
-	TsMemberFunction,
-	type TsMemberProperty,
 	type TsNamedDecl,
-	TsQIdent,
 	type TsType,
-	type TsTypeConstructor,
-	type TsTypeFunction,
-	TsTypeRef,
 	type TsTypeParam,
-	type HasClassMembers,
+	type TsTypeRef,
 } from "../trees.js";
 
 /**
@@ -77,7 +57,7 @@ export class ExtractClasses extends TransformLeaveMembers {
 			Array.from(x.membersByName.entries()).flatMap(([_, sameName]) => {
 				const extracted = this.extractClasses(scope, sameName, findName);
 				return getOrElse(() => sameName)(extracted).toArray();
-			})
+			}),
 		);
 
 		return x.unnamed.concat(rewrittenNameds);
@@ -87,41 +67,13 @@ export class ExtractClasses extends TransformLeaveMembers {
 	 * Extract classes from a group of declarations with the same name.
 	 */
 	private extractClasses(
-		scope: TsTreeScope,
-		sameName: IArray<TsNamedDecl>,
-		findName: FindAvailableName
+		_scope: TsTreeScope,
+		_sameName: IArray<TsNamedDecl>,
+		_findName: FindAvailableName,
 	): Option<IArray<TsNamedDecl>> {
 		// TODO: Implement the core extraction logic
 		// This will be implemented incrementally in the next steps
 		return none;
-	}
-
-	/**
-	 * Generate appropriate comments for inferred classes.
-	 */
-	private commentFor(wasBackup: boolean): Comments {
-		const baseMsg = "This class was inferred from a value with a constructor";
-		const msg = wasBackup
-			? `/* ${baseMsg}, it was renamed because a distinct type already exists with the same name. */\n`
-			: `/* ${baseMsg}. In rare cases (like HTMLElement in the DOM) it might not work as you expect. */\n`;
-
-		return Comments.apply([Comment.create(msg)]);
-	}
-
-	/**
-	 * Extract a class from a member property with constructor type.
-	 */
-	private extractClassFromMember(
-		scope: TsTreeScope,
-		findName: FindAvailableName,
-		ownerLoc: JsLocation,
-		ownerCp: CodePath
-	): (member: TsMember) => Option<TsDeclClass> {
-		return (member: TsMember) => {
-			// TODO: Implement member-based class extraction
-			// This will be implemented incrementally in the next steps
-			return none;
-		};
 	}
 }
 
@@ -132,7 +84,7 @@ export class AnalyzedCtors {
 	constructor(
 		public readonly longestTParams: IArray<TsTypeParam>,
 		public readonly resultType: TsTypeRef,
-		public readonly ctors: IArray<TsFunSig>
+		public readonly ctors: IArray<TsFunSig>,
 	) {}
 
 	/**
@@ -142,34 +94,36 @@ export class AnalyzedCtors {
 	 * The full implementation requires complex type analysis that will be
 	 * implemented incrementally.
 	 */
-	static from(scope: TsTreeScope, tpe: TsType): Option<AnalyzedCtors> {
+	static from(_scope: TsTreeScope, _tpe: TsType): Option<AnalyzedCtors> {
 		// For now, return None to avoid type errors
 		// This will be implemented properly in subsequent iterations
 		return none;
 	}
-
 }
 
 /**
  * Helper for finding available names that don't conflict with existing declarations.
  */
 export class FindAvailableName {
-	private constructor(private readonly index: Map<TsIdent, IArray<TsNamedDecl>>) {}
+	private constructor(
+		private readonly index: Map<TsIdent, IArray<TsNamedDecl>>,
+	) {}
 
 	/**
 	 * Create a FindAvailableName instance for the given container and scope.
 	 */
 	static apply(x: TsContainer, scope: TsTreeScope): FindAvailableName {
 		// Check if we're in a namespaced context and need to combine indices
-		const idx = scope.stack.length >= 2 &&
+		const idx =
+			scope.stack.length >= 2 &&
 			scope.stack[0]?._tag === "TsDeclNamespace" &&
 			(scope.stack[0] as any).name.equals(TsIdent.namespaced()) &&
 			scope.stack[1]?._tag === "TsContainer"
-			? this.combineIndices([
-				(scope.stack[0] as any).membersByName,
-				(scope.stack[1] as any).membersByName
-			])
-			: x.membersByName;
+				? FindAvailableName.combineIndices([
+						(scope.stack[0] as any).membersByName,
+						(scope.stack[1] as any).membersByName,
+					])
+				: x.membersByName;
 
 		return new FindAvailableName(idx);
 	}
@@ -177,7 +131,9 @@ export class FindAvailableName {
 	/**
 	 * Combine multiple member indices into one.
 	 */
-	private static combineIndices(indices: Map<TsIdent, IArray<TsNamedDecl>>[]): Map<TsIdent, IArray<TsNamedDecl>> {
+	private static combineIndices(
+		indices: Map<TsIdent, IArray<TsNamedDecl>>[],
+	): Map<TsIdent, IArray<TsNamedDecl>> {
 		const combined = new Map<TsIdent, IArray<TsNamedDecl>>();
 
 		for (const index of indices) {
@@ -199,9 +155,10 @@ export class FindAvailableName {
 	 * Returns the name and whether a backup name was used.
 	 */
 	apply(potentialName: TsIdentSimple): Option<[TsIdentSimple, boolean]> {
-		const backupName = potentialName.value === TsIdent.namespaced().value
-			? TsIdent.simple("namespacedCls") // Create backup name for namespaced
-			: TsIdent.simple(potentialName.value + "Cls");
+		const backupName =
+			potentialName.value === TsIdent.namespaced().value
+				? TsIdent.simple("namespacedCls") // Create backup name for namespaced
+				: TsIdent.simple(`${potentialName.value}Cls`);
 
 		const primaryResult = this.availableTypeName(potentialName, false);
 		if (primaryResult._tag === "Some") {
@@ -213,7 +170,10 @@ export class FindAvailableName {
 	/**
 	 * Check if a potential name is available for use as a type name.
 	 */
-	private availableTypeName(potentialName: TsIdentSimple, wasBackup: boolean): Option<[TsIdentSimple, boolean]> {
+	private availableTypeName(
+		potentialName: TsIdentSimple,
+		wasBackup: boolean,
+	): Option<[TsIdentSimple, boolean]> {
 		const existings = this.index.get(potentialName);
 
 		if (!existings) {
@@ -221,7 +181,7 @@ export class FindAvailableName {
 		}
 
 		// Check for collision with type declarations
-		const isCollision = existings.toArray().some(existing => {
+		const isCollision = existings.toArray().some((existing) => {
 			switch (existing._tag) {
 				case "TsDeclInterface":
 				case "TsDeclClass":

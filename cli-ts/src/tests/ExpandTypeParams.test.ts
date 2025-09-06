@@ -5,21 +5,20 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { isSome, none, some } from "fp-ts/Option";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, some } from "fp-ts/Option";
+import { type Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
+import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
 import { ExpandTypeParams } from "@/internal/ts/transforms/ExpandTypeParams.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
 import {
-	type TsDecl,
 	type TsDeclFunction,
 	type TsDeclInterface,
+	type TsFunParam,
+	type TsFunSig,
 	TsIdent,
 	type TsIdentSimple,
-	TsLiteral,
 	type TsMember,
 	type TsMemberCall,
 	type TsMemberFunction,
@@ -29,15 +28,15 @@ import {
 	TsQIdent,
 	type TsType,
 	type TsTypeKeyOf,
-	TsTypeLiteral,
 	type TsTypeLookup,
+	type TsTypeParam,
 	TsTypeRef,
 	type TsTypeUnion,
-	type TsFunParam,
-	type TsFunSig,
-	type TsTypeParam,
 } from "@/internal/ts/trees.js";
-import { createMockScope, createCommentsWithRaw } from "@/tests/utils/TestUtils.js";
+import {
+	createCommentsWithRaw,
+	createMockScope,
+} from "@/tests/utils/TestUtils.js";
 
 describe("ExpandTypeParams", () => {
 	// Helper methods for creating test data
@@ -49,14 +48,17 @@ describe("ExpandTypeParams", () => {
 		return TsQIdent.of(createSimpleIdent(name));
 	}
 
-	function createTypeRef(name: string, tparams: IArray<TsType> = IArray.Empty): TsTypeRef {
+	function createTypeRef(
+		name: string,
+		tparams: IArray<TsType> = IArray.Empty,
+	): TsTypeRef {
 		return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 	}
 
 	function createTypeParam(
 		name: string,
 		upperBound?: TsType,
-		defaultType?: TsType
+		defaultType?: TsType,
 	): TsTypeParam {
 		return {
 			_tag: "TsTypeParam",
@@ -65,8 +67,12 @@ describe("ExpandTypeParams", () => {
 			upperBound: upperBound ? some(upperBound) : none,
 			default: defaultType ? some(defaultType) : none,
 			asString: name,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
 		};
 	}
 
@@ -77,16 +83,22 @@ describe("ExpandTypeParams", () => {
 			name: createSimpleIdent(name),
 			tpe: tpe ? some(tpe) : some(TsTypeRef.string),
 			asString: `${name}: ${tpe?.asString || "string"}`,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
-			equals: function(other: TsFunParam) { return this.name.value === other.name.value; },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
+			equals: function (other: TsFunParam) {
+				return this.name.value === other.name.value;
+			},
 		};
 	}
 
 	function createFunSig(
 		tparams: IArray<TsTypeParam> = IArray.Empty,
 		params: IArray<TsFunParam> = IArray.Empty,
-		resultType?: TsType
+		resultType?: TsType,
 	): TsFunSig {
 		return {
 			_tag: "TsFunSig",
@@ -95,8 +107,12 @@ describe("ExpandTypeParams", () => {
 			params,
 			resultType: resultType ? some(resultType) : some(TsTypeRef.void),
 			asString: "function signature",
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
 		};
 	}
 
@@ -107,12 +123,19 @@ describe("ExpandTypeParams", () => {
 			level: TsProtectionLevel.default(),
 			signature,
 			asString: "call signature",
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
 		};
 	}
 
-	function createMockFunction(name: string, signature: TsFunSig): TsMemberFunction {
+	function createMockFunction(
+		name: string,
+		signature: TsFunSig,
+	): TsMemberFunction {
 		return {
 			_tag: "TsMemberFunction",
 			comments: NoComments.instance,
@@ -123,12 +146,19 @@ describe("ExpandTypeParams", () => {
 			isStatic: false,
 			isReadOnly: false,
 			asString: `function ${name}`,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
 		};
 	}
 
-	function createMockDeclFunction(name: string, signature: TsFunSig): TsDeclFunction {
+	function createMockDeclFunction(
+		name: string,
+		signature: TsFunSig,
+	): TsDeclFunction {
 		return {
 			_tag: "TsDeclFunction",
 			comments: NoComments.instance,
@@ -138,11 +168,21 @@ describe("ExpandTypeParams", () => {
 			jsLocation: JsLocation.zero(),
 			codePath: CodePath.noPath(),
 			asString: `declare function ${name}`,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
-			withCodePath: function(codePath: any) { return { ...this, codePath }; },
-			withJsLocation: function(jsLocation: any) { return { ...this, jsLocation }; },
-			withName: function(name: TsIdentSimple) { return { ...this, name }; },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
+			withCodePath: function (codePath: any) {
+				return { ...this, codePath };
+			},
+			withJsLocation: function (jsLocation: any) {
+				return { ...this, jsLocation };
+			},
+			withName: function (name: TsIdentSimple) {
+				return { ...this, name };
+			},
 		};
 	}
 
@@ -157,12 +197,19 @@ describe("ExpandTypeParams", () => {
 			isStatic: false,
 			isReadOnly: false,
 			asString: `${name}: ${tpe?.asString || "string"}`,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
 		};
 	}
 
-	function createMockInterface(name: string, members: IArray<TsMember> = IArray.Empty): TsDeclInterface {
+	function createMockInterface(
+		name: string,
+		members: IArray<TsMember> = IArray.Empty,
+	): TsDeclInterface {
 		return {
 			_tag: "TsDeclInterface",
 			comments: NoComments.instance,
@@ -175,10 +222,18 @@ describe("ExpandTypeParams", () => {
 			unnamed: IArray.Empty,
 			codePath: CodePath.noPath(),
 			asString: `interface ${name}`,
-			withComments: function(comments: Comments) { return { ...this, comments }; },
-			addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
-			withCodePath: function(codePath: any) { return { ...this, codePath }; },
-			withName: function(name: TsIdentSimple) { return { ...this, name }; },
+			withComments: function (comments: Comments) {
+				return { ...this, comments };
+			},
+			addComment: function (comment: any) {
+				return this.withComments(this.comments.add(comment));
+			},
+			withCodePath: function (codePath: any) {
+				return { ...this, codePath };
+			},
+			withName: function (name: TsIdentSimple) {
+				return { ...this, name };
+			},
 		};
 	}
 
@@ -193,13 +248,21 @@ describe("ExpandTypeParams", () => {
 		it("has newClassMembers method", () => {
 			const scope = createMockScope();
 			const interface_ = createMockInterface("test");
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 			expect(result).toBeDefined();
 		});
 
 		it("has newMembers method", () => {
 			const scope = createMockScope();
-			const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, IArray.Empty, CodePath.noPath());
+			const parsedFile = TsParsedFile.create(
+				NoComments.instance,
+				IArray.Empty,
+				IArray.Empty,
+				CodePath.noPath(),
+			);
 			const result = ExpandTypeParams.instance.newMembers(scope, parsedFile);
 			expect(result).toBeDefined();
 		});
@@ -208,9 +271,15 @@ describe("ExpandTypeParams", () => {
 			const scope = createMockScope();
 			const sig = createFunSig();
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			expect(result.length).toBe(1);
 			expect(result).toBe(interface_.members); // Check that the same array is returned
@@ -222,7 +291,10 @@ describe("ExpandTypeParams", () => {
 		it("expands keyof type parameters", () => {
 			const propA = createMockProperty("a", TsTypeRef.number);
 			const propB = createMockProperty("b", TsTypeRef.string);
-			const targetInterface = createMockInterface("Target", IArray.fromArray([propA as TsMember, propB as TsMember]));
+			const targetInterface = createMockInterface(
+				"Target",
+				IArray.fromArray([propA as TsMember, propB as TsMember]),
+			);
 			const scope = createMockScope("test-lib", targetInterface);
 
 			const keyOfBound: TsTypeKeyOf = {
@@ -239,25 +311,40 @@ describe("ExpandTypeParams", () => {
 				asString: "Target[K]",
 			};
 			const param2 = createFunParam("value", lookupType);
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param1, param2]), TsTypeRef.void);
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param1, param2]),
+				TsTypeRef.void,
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should expand into multiple methods for each property
 			expect(result.length).toBeGreaterThan(1);
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 
-			const methods = result.map(m => m as TsMemberFunction);
-			expect(methods.forall(m => (m.name as TsIdentSimple).value === "testMethod")).toBe(true);
-			expect(methods.forall(m => m.signature.tparams.isEmpty)).toBe(true); // Type parameters should be removed
+			const methods = result.map((m) => m as TsMemberFunction);
+			expect(
+				methods.forall((m) => (m.name as TsIdentSimple).value === "testMethod"),
+			).toBe(true);
+			expect(methods.forall((m) => m.signature.tparams.isEmpty)).toBe(true); // Type parameters should be removed
 		});
 
 		it("handles keyof with type lookup", () => {
 			const propName = createMockProperty("name", TsTypeRef.string);
 			const propAge = createMockProperty("age", TsTypeRef.number);
-			const targetInterface = createMockInterface("Person", IArray.fromArray([propName as TsMember, propAge as TsMember]));
+			const targetInterface = createMockInterface(
+				"Person",
+				IArray.fromArray([propName as TsMember, propAge as TsMember]),
+			);
 			const scope = createMockScope("test-lib", targetInterface);
 
 			const keyOfBound: TsTypeKeyOf = {
@@ -274,49 +361,79 @@ describe("ExpandTypeParams", () => {
 				asString: "Person[K]",
 			};
 			const param2 = createFunParam("value", lookupType);
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param1, param2]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param1, param2]),
+			);
 			const call = createMockCall(sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([call as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([call as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			expect(result.length).toBe(2); // One for each property
-			expect(result.forall(m => m._tag === "TsMemberCall")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberCall")).toBe(true);
 		});
 	});
 
 	describe("Union Type Expansion", () => {
 		it("expands union type parameters", () => {
-			const interface1 = createMockInterface("TypeA");
-			const interface2 = createMockInterface("TypeB");
+			const _interface1 = createMockInterface("TypeA");
+			const _interface2 = createMockInterface("TypeB");
 			const scope = createMockScope();
 
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([createTypeRef("TypeA") as TsType, createTypeRef("TypeB") as TsType]),
+				types: IArray.fromArray([
+					createTypeRef("TypeA") as TsType,
+					createTypeRef("TypeB") as TsType,
+				]),
 				asString: "TypeA | TypeB",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should expand into multiple methods for each union member
 			expect(result.length).toBeGreaterThan(1);
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 
-			const methods = result.map(m => m as TsMemberFunction);
-			expect(methods.forall(m => (m.name as TsIdentSimple).value === "testMethod")).toBe(true);
+			const methods = result.map((m) => m as TsMemberFunction);
+			expect(
+				methods.forall((m) => (m.name as TsIdentSimple).value === "testMethod"),
+			).toBe(true);
 		});
 
 		it("handles mixed keyof and union bounds", () => {
 			const propA = createMockProperty("a");
-			const targetInterface = createMockInterface("Target", IArray.fromArray([propA as TsMember]));
+			const targetInterface = createMockInterface(
+				"Target",
+				IArray.fromArray([propA as TsMember]),
+			);
 			const otherInterface = createMockInterface("Other");
-			const scope = createMockScope("test-lib", targetInterface, otherInterface);
+			const scope = createMockScope(
+				"test-lib",
+				targetInterface,
+				otherInterface,
+			);
 
 			const keyOfType: TsTypeKeyOf = {
 				_tag: "TsTypeKeyOf",
@@ -325,46 +442,73 @@ describe("ExpandTypeParams", () => {
 			};
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([keyOfType as TsType, createTypeRef("Other") as TsType]),
+				types: IArray.fromArray([
+					keyOfType as TsType,
+					createTypeRef("Other") as TsType,
+				]),
 				asString: "keyof Target | Other",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			expect(result.length).toBeGreaterThan(1);
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 		});
 	});
 
 	describe("Function Declaration Expansion", () => {
 		it("expands function declarations with type parameters", () => {
-			const interface1 = createMockInterface("TypeA");
-			const interface2 = createMockInterface("TypeB");
+			const _interface1 = createMockInterface("TypeA");
+			const _interface2 = createMockInterface("TypeB");
 			const scope = createMockScope();
 
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([createTypeRef("TypeA") as TsType, createTypeRef("TypeB") as TsType]),
+				types: IArray.fromArray([
+					createTypeRef("TypeA") as TsType,
+					createTypeRef("TypeB") as TsType,
+				]),
 				asString: "TypeA | TypeB",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const funcDecl = createMockDeclFunction("testFunction", sig);
 
-			const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, IArray.fromArray([funcDecl as any]), CodePath.noPath());
+			const parsedFile = TsParsedFile.create(
+				NoComments.instance,
+				IArray.Empty,
+				IArray.fromArray([funcDecl as any]),
+				CodePath.noPath(),
+			);
 			const result = ExpandTypeParams.instance.newMembers(scope, parsedFile);
 
 			expect(result.length).toBeGreaterThan(1);
-			expect(result.forall(m => m._tag === "TsDeclFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsDeclFunction")).toBe(true);
 
-			const functions = result.map(m => m as TsDeclFunction);
-			expect(functions.forall(f => (f.name as TsIdentSimple).value === "testFunction")).toBe(true);
+			const functions = result.map((m) => m as TsDeclFunction);
+			expect(
+				functions.forall(
+					(f) => (f.name as TsIdentSimple).value === "testFunction",
+				),
+			).toBe(true);
 		});
 
 		it("leaves non-expandable function declarations unchanged", () => {
@@ -372,7 +516,12 @@ describe("ExpandTypeParams", () => {
 			const sig = createFunSig();
 			const funcDecl = createMockDeclFunction("simpleFunction", sig);
 
-			const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, IArray.fromArray([funcDecl as any]), CodePath.noPath());
+			const parsedFile = TsParsedFile.create(
+				NoComments.instance,
+				IArray.Empty,
+				IArray.fromArray([funcDecl as any]),
+				CodePath.noPath(),
+			);
 			const result = ExpandTypeParams.instance.newMembers(scope, parsedFile);
 
 			expect(result.length).toBe(1);
@@ -385,11 +534,20 @@ describe("ExpandTypeParams", () => {
 			const scope = createMockScope();
 			const typeParam = createTypeParam("T"); // No upper bound
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should not expand since no upper bound
 			expect(result.length).toBe(1);
@@ -400,16 +558,28 @@ describe("ExpandTypeParams", () => {
 			const scope = createMockScope();
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([TsTypeRef.string as TsType, TsTypeRef.number as TsType]),
+				types: IArray.fromArray([
+					TsTypeRef.string as TsType,
+					TsTypeRef.number as TsType,
+				]),
 				asString: "string | number",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", TsTypeRef.string); // Not using T
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should not expand since T is not used in parameters
 			expect(result.length).toBe(1);
@@ -421,27 +591,41 @@ describe("ExpandTypeParams", () => {
 			const selfRef = createTypeRef("T");
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([selfRef as TsType, TsTypeRef.string as TsType]),
+				types: IArray.fromArray([
+					selfRef as TsType,
+					TsTypeRef.string as TsType,
+				]),
 				asString: "T | string",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should handle circular references gracefully
 			expect(result.length).toBeGreaterThan(0);
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 		});
 
 		it("handles expansion limit", () => {
 			const scope = createMockScope();
 
 			// Create a large union type that would exceed the 200 expansion limit
-			const manyTypes = Array.from({ length: 250 }, (_, i) => createTypeRef(`Type${i + 1}`));
+			const manyTypes = Array.from({ length: 250 }, (_, i) =>
+				createTypeRef(`Type${i + 1}`),
+			);
 			const largeBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
 				types: IArray.fromArray(manyTypes as TsType[]),
@@ -449,11 +633,20 @@ describe("ExpandTypeParams", () => {
 			};
 			const typeParam = createTypeParam("T", largeBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const method = createMockFunction("testMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should not expand due to limit
 			expect(result.length).toBe(1);
@@ -464,12 +657,18 @@ describe("ExpandTypeParams", () => {
 			const scope = createMockScope();
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([TsTypeRef.string as TsType, TsTypeRef.number as TsType]),
+				types: IArray.fromArray([
+					TsTypeRef.string as TsType,
+					TsTypeRef.number as TsType,
+				]),
 				asString: "string | number",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 			const getter: TsMemberFunction = {
 				_tag: "TsMemberFunction",
 				comments: NoComments.instance,
@@ -480,12 +679,22 @@ describe("ExpandTypeParams", () => {
 				isStatic: false,
 				isReadOnly: false,
 				asString: "get getter",
-				withComments: function(comments: Comments) { return { ...this, comments }; },
-				addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+				withComments: function (comments: Comments) {
+					return { ...this, comments };
+				},
+				addComment: function (comment: any) {
+					return this.withComments(this.comments.add(comment));
+				},
 			};
-			const interface_ = createMockInterface("test", IArray.fromArray([getter as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([getter as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			// Should not expand non-normal methods
 			expect(result.length).toBe(1);
@@ -498,7 +707,14 @@ describe("ExpandTypeParams", () => {
 			const propX = createMockProperty("x", TsTypeRef.number);
 			const propY = createMockProperty("y", TsTypeRef.string);
 			const propZ = createMockProperty("z", TsTypeRef.boolean);
-			const targetInterface = createMockInterface("ComplexTarget", IArray.fromArray([propX as TsMember, propY as TsMember, propZ as TsMember]));
+			const targetInterface = createMockInterface(
+				"ComplexTarget",
+				IArray.fromArray([
+					propX as TsMember,
+					propY as TsMember,
+					propZ as TsMember,
+				]),
+			);
 			const scope = createMockScope("test-lib", targetInterface);
 
 			const keyOfBound: TsTypeKeyOf = {
@@ -515,30 +731,49 @@ describe("ExpandTypeParams", () => {
 				asString: "ComplexTarget[K]",
 			};
 			const param2 = createFunParam("value", lookupType);
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param1, param2]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param1, param2]),
+			);
 			const method = createMockFunction("complexMethod", sig);
-			const interface_ = createMockInterface("test", IArray.fromArray([method as TsMember]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray([method as TsMember]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			expect(result.length).toBe(3); // One for each property
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 
-			const methods = result.map(m => m as TsMemberFunction);
-			expect(methods.forall(m => (m.name as TsIdentSimple).value === "complexMethod")).toBe(true);
-			expect(methods.forall(m => m.signature.tparams.isEmpty)).toBe(true);
+			const methods = result.map((m) => m as TsMemberFunction);
+			expect(
+				methods.forall(
+					(m) => (m.name as TsIdentSimple).value === "complexMethod",
+				),
+			).toBe(true);
+			expect(methods.forall((m) => m.signature.tparams.isEmpty)).toBe(true);
 		});
 
 		it("preserves comments and other properties", () => {
 			const scope = createMockScope();
 			const unionBound: TsTypeUnion = {
 				_tag: "TsTypeUnion",
-				types: IArray.fromArray([TsTypeRef.string as TsType, TsTypeRef.number as TsType]),
+				types: IArray.fromArray([
+					TsTypeRef.string as TsType,
+					TsTypeRef.number as TsType,
+				]),
 				asString: "string | number",
 			};
 			const typeParam = createTypeParam("T", unionBound);
 			const param = createFunParam("value", createTypeRef("T"));
-			const sig = createFunSig(IArray.fromArray([typeParam]), IArray.fromArray([param]));
+			const sig = createFunSig(
+				IArray.fromArray([typeParam]),
+				IArray.fromArray([param]),
+			);
 
 			const originalComments = createCommentsWithRaw("test comment");
 			const method: TsMemberFunction = {
@@ -551,22 +786,32 @@ describe("ExpandTypeParams", () => {
 				isStatic: true,
 				isReadOnly: true,
 				asString: "function testMethod",
-				withComments: function(comments: Comments) { return { ...this, comments }; },
-				addComment: function(comment: any) { return this.withComments(this.comments.add(comment)); },
+				withComments: function (comments: Comments) {
+					return { ...this, comments };
+				},
+				addComment: function (comment: any) {
+					return this.withComments(this.comments.add(comment));
+				},
 			};
-			const interface_ = createMockInterface("test", IArray.fromArray<TsMember>([method]));
+			const interface_ = createMockInterface(
+				"test",
+				IArray.fromArray<TsMember>([method]),
+			);
 
-			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
+			const result = ExpandTypeParams.instance.newClassMembers(
+				scope,
+				interface_,
+			);
 
 			expect(result.length).toBeGreaterThan(1);
-			expect(result.forall(m => m._tag === "TsMemberFunction")).toBe(true);
+			expect(result.forall((m) => m._tag === "TsMemberFunction")).toBe(true);
 
-			const methods = result.map(m => m as TsMemberFunction);
+			const methods = result.map((m) => m as TsMemberFunction);
 			// First method should preserve original comments, others should have reduced comments
 			expect(methods.apply(0).comments.cs.length).toBeGreaterThan(0);
-			expect(methods.forall(m => m.level._tag === "Private")).toBe(true);
-			expect(methods.forall(m => m.isStatic === true)).toBe(true);
-			expect(methods.forall(m => m.isReadOnly === true)).toBe(true);
+			expect(methods.forall((m) => m.level._tag === "Private")).toBe(true);
+			expect(methods.forall((m) => m.isStatic === true)).toBe(true);
+			expect(methods.forall((m) => m.isReadOnly === true)).toBe(true);
 		});
 	});
 });

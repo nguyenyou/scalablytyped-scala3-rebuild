@@ -16,27 +16,26 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some } from "fp-ts/Option";
 import { IArray } from "@/internal/IArray.js";
-import { ExtractClasses, FindAvailableName } from "@/internal/ts/transforms/ExtractClasses.js";
 import {
-	TsIdent,
-	TsTypeRef,
-} from "@/internal/ts/trees.js";
+	ExtractClasses,
+	FindAvailableName,
+} from "@/internal/ts/transforms/ExtractClasses.js";
+import { TsIdent, TsTypeRef } from "@/internal/ts/trees.js";
 import {
-	createMockScope,
-	createMockParsedFile,
 	createMockClass,
 	createMockInterface,
-	createMockVariable,
 	createMockNamespace,
+	createMockParsedFile,
+	createMockScope,
 	createMockTypeAlias,
+	createMockVariable,
 	createTypeRef,
 } from "../../utils/TestUtils.js";
 
 describe("FindAvailableName", () => {
 	// Helper function to create a simple identifier
-	const createIdent = (name: string) => TsIdent.simple(name);
+	const _createIdent = (name: string) => TsIdent.simple(name);
 
 	describe("Basic Functionality", () => {
 		test("ExtractClasses uses FindAvailableName internally", () => {
@@ -54,7 +53,10 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const variable = createMockVariable("TestVar", TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -70,14 +72,21 @@ describe("FindAvailableName", () => {
 			const existingInterface = createMockInterface("TestClass");
 			const variable = createMockVariable("TestClass", TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(existingInterface as any, variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(existingInterface as any, variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle the conflict gracefully - both should be present
 			expect(result.length).toBe(2);
-			expect(result.toArray().some(item => item._tag === "TsDeclInterface")).toBe(true);
-			expect(result.toArray().some(item => item._tag === "TsDeclVar")).toBe(true);
+			expect(
+				result.toArray().some((item) => item._tag === "TsDeclInterface"),
+			).toBe(true);
+			expect(result.toArray().some((item) => item._tag === "TsDeclVar")).toBe(
+				true,
+			);
 		});
 
 		test("handles name conflicts with existing class", () => {
@@ -85,29 +94,46 @@ describe("FindAvailableName", () => {
 			const existingClass = createMockClass("TestClass");
 			const variable = createMockVariable("TestClass", TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(existingClass as any, variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(existingClass as any, variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle the conflict gracefully - both should be present
 			expect(result.length).toBe(2);
-			expect(result.toArray().some(item => item._tag === "TsDeclClass")).toBe(true);
-			expect(result.toArray().some(item => item._tag === "TsDeclVar")).toBe(true);
+			expect(result.toArray().some((item) => item._tag === "TsDeclClass")).toBe(
+				true,
+			);
+			expect(result.toArray().some((item) => item._tag === "TsDeclVar")).toBe(
+				true,
+			);
 		});
 
 		test("handles name conflicts with existing type alias", () => {
 			const scope = createMockScope();
-			const existingTypeAlias = createMockTypeAlias("TestClass", TsTypeRef.string);
+			const existingTypeAlias = createMockTypeAlias(
+				"TestClass",
+				TsTypeRef.string,
+			);
 			const variable = createMockVariable("TestClass", TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(existingTypeAlias as any, variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(existingTypeAlias as any, variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle the conflict gracefully - both should be present
 			expect(result.length).toBe(2);
-			expect(result.toArray().some(item => item._tag === "TsDeclTypeAlias")).toBe(true);
-			expect(result.toArray().some(item => item._tag === "TsDeclVar")).toBe(true);
+			expect(
+				result.toArray().some((item) => item._tag === "TsDeclTypeAlias"),
+			).toBe(true);
+			expect(result.toArray().some((item) => item._tag === "TsDeclVar")).toBe(
+				true,
+			);
 		});
 	});
 
@@ -116,7 +142,10 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const namespacedVar = createMockVariable("^", TsTypeRef.string); // TsIdent.namespaced
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.namespaced(), IArray.apply(namespacedVar as any));
+			parsedFile.membersByName.set(
+				TsIdent.namespaced(),
+				IArray.apply(namespacedVar as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -131,14 +160,21 @@ describe("FindAvailableName", () => {
 			// Create a variable that would conflict and potentially trigger backup name logic
 			const variable = createMockVariable("TestName", TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestName"), IArray.apply(existingInterface as any, variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestName"),
+				IArray.apply(existingInterface as any, variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle the conflict and both should be present
 			expect(result.length).toBe(2);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclInterface")).toBe(true);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclVar")).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclInterface"),
+			).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclVar"),
+			).toBe(true);
 		});
 	});
 
@@ -148,13 +184,18 @@ describe("FindAvailableName", () => {
 			const variable1 = createMockVariable("TestVar", TsTypeRef.string);
 			const variable2 = createMockVariable("TestVar", TsTypeRef.number);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(variable1 as any, variable2 as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(variable1 as any, variable2 as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Variables with same name should be allowed (no type collision)
 			expect(result.length).toBe(2);
-			expect(result.toArray().every((item: any) => item._tag === "TsDeclVar")).toBe(true);
+			expect(
+				result.toArray().every((item: any) => item._tag === "TsDeclVar"),
+			).toBe(true);
 		});
 
 		test("handles mixed declaration types", () => {
@@ -162,14 +203,21 @@ describe("FindAvailableName", () => {
 			const variable = createMockVariable("MixedName", TsTypeRef.string);
 			const namespace = createMockNamespace("MixedName");
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("MixedName"), IArray.apply(variable as any, namespace as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("MixedName"),
+				IArray.apply(variable as any, namespace as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle mixed types appropriately
 			expect(result.length).toBe(2);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclVar")).toBe(true);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclNamespace")).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclVar"),
+			).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclNamespace"),
+			).toBe(true);
 		});
 	});
 
@@ -200,13 +248,18 @@ describe("FindAvailableName", () => {
 			const interface2 = createMockInterface("ConflictName");
 			const interface3 = createMockInterface("ConflictName");
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("ConflictName"), IArray.apply(interface1 as any, interface2 as any, interface3 as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("ConflictName"),
+				IArray.apply(interface1 as any, interface2 as any, interface3 as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle multiple declarations with same name
 			expect(result.length).toBe(3);
-			expect(result.toArray().every((item: any) => item._tag === "TsDeclInterface")).toBe(true);
+			expect(
+				result.toArray().every((item: any) => item._tag === "TsDeclInterface"),
+			).toBe(true);
 		});
 	});
 
@@ -215,9 +268,15 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const namespacedDecl = createMockNamespace("^"); // TsIdent.namespaced
 			const innerVar = createMockVariable("TestVar", TsTypeRef.string);
-			const namespacedWithMembers = { ...namespacedDecl, members: IArray.apply(innerVar as any) };
+			const namespacedWithMembers = {
+				...namespacedDecl,
+				members: IArray.apply(innerVar as any),
+			};
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.namespaced(), IArray.apply(namespacedWithMembers as any));
+			parsedFile.membersByName.set(
+				TsIdent.namespaced(),
+				IArray.apply(namespacedWithMembers as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -230,17 +289,30 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const outerInterface = createMockInterface("ConflictName");
 			const innerInterface = createMockInterface("ConflictName");
-			const namespace = createMockNamespace("Container", IArray.apply(innerInterface as any));
+			const namespace = createMockNamespace(
+				"Container",
+				IArray.apply(innerInterface as any),
+			);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("ConflictName"), IArray.apply(outerInterface as any));
-			parsedFile.membersByName.set(TsIdent.simple("Container"), IArray.apply(namespace as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("ConflictName"),
+				IArray.apply(outerInterface as any),
+			);
+			parsedFile.membersByName.set(
+				TsIdent.simple("Container"),
+				IArray.apply(namespace as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle nested conflicts appropriately
 			expect(result.length).toBe(2);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclInterface")).toBe(true);
-			expect(result.toArray().some((item: any) => item._tag === "TsDeclNamespace")).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclInterface"),
+			).toBe(true);
+			expect(
+				result.toArray().some((item: any) => item._tag === "TsDeclNamespace"),
+			).toBe(true);
 		});
 	});
 
@@ -250,13 +322,18 @@ describe("FindAvailableName", () => {
 			const ctorTypeRef = createTypeRef("TestClassConstructor");
 			const variable = createMockVariable("TestClass", ctorTypeRef);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestClass"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle constructor types (may extract classes)
 			expect(result.length).toBeGreaterThanOrEqual(1);
-			expect(result.toArray().every((item: any) => item._tag !== undefined)).toBe(true);
+			expect(
+				result.toArray().every((item: any) => item._tag !== undefined),
+			).toBe(true);
 		});
 
 		test("handles function type variables", () => {
@@ -264,7 +341,10 @@ describe("FindAvailableName", () => {
 			const funTypeRef = createTypeRef("TestFunctionType");
 			const variable = createMockVariable("TestFunction", funTypeRef);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestFunction"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestFunction"),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -278,13 +358,18 @@ describe("FindAvailableName", () => {
 			const objectTypeRef = createTypeRef("TestObjectType");
 			const variable = createMockVariable("TestObject", objectTypeRef);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestObject"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestObject"),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
 			// Should handle object types
 			expect(result.length).toBeGreaterThanOrEqual(1);
-			expect(result.toArray().every((item: any) => item._tag !== undefined)).toBe(true);
+			expect(
+				result.toArray().every((item: any) => item._tag !== undefined),
+			).toBe(true);
 		});
 	});
 
@@ -293,7 +378,10 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const variable = createMockVariable("TestVar"); // No type
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -307,7 +395,10 @@ describe("FindAvailableName", () => {
 			const longName = "A".repeat(100); // Very long identifier
 			const variable = createMockVariable(longName, TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple(longName), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple(longName),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -321,7 +412,10 @@ describe("FindAvailableName", () => {
 			const specialName = "$special_name123";
 			const variable = createMockVariable(specialName, TsTypeRef.string);
 			const parsedFile = createMockParsedFile("test");
-			parsedFile.membersByName.set(TsIdent.simple(specialName), IArray.apply(variable as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple(specialName),
+				IArray.apply(variable as any),
+			);
 
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
@@ -352,7 +446,10 @@ describe("FindAvailableName", () => {
 			const parsedFile = createMockParsedFile("test");
 			const existingClass = createMockClass("TestClass");
 			const testClassIdent = TsIdent.simple("TestClass");
-			parsedFile.membersByName.set(testClassIdent, IArray.apply(existingClass as any));
+			parsedFile.membersByName.set(
+				testClassIdent,
+				IArray.apply(existingClass as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(testClassIdent);
@@ -370,7 +467,10 @@ describe("FindAvailableName", () => {
 			const parsedFile = createMockParsedFile("test");
 			const existingInterface = createMockInterface("TestInterface");
 			const testInterfaceIdent = TsIdent.simple("TestInterface");
-			parsedFile.membersByName.set(testInterfaceIdent, IArray.apply(existingInterface as any));
+			parsedFile.membersByName.set(
+				testInterfaceIdent,
+				IArray.apply(existingInterface as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(testInterfaceIdent);
@@ -387,7 +487,10 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const parsedFile = createMockParsedFile("test");
 			const existingVar = createMockVariable("TestVar", TsTypeRef.string);
-			parsedFile.membersByName.set(TsIdent.simple("TestVar"), IArray.apply(existingVar as any));
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestVar"),
+				IArray.apply(existingVar as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(TsIdent.simple("TestVar"));
@@ -404,7 +507,10 @@ describe("FindAvailableName", () => {
 			const scope = createMockScope();
 			const parsedFile = createMockParsedFile("test");
 			const existingClass = createMockClass("namespaced");
-			parsedFile.membersByName.set(TsIdent.namespaced(), IArray.apply(existingClass as any));
+			parsedFile.membersByName.set(
+				TsIdent.namespaced(),
+				IArray.apply(existingClass as any),
+			);
 
 			const findName = FindAvailableName.apply(parsedFile, scope);
 			const result = findName.apply(TsIdent.namespaced());

@@ -2,7 +2,7 @@
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.ExpandCallables
  *
  * Work around https://github.com/scala-js/scala-js/issues/3435
- * 
+ *
  * For instance, every time we have this pattern:
  * ```typescript
  * interface I {
@@ -23,8 +23,8 @@
  * If not it wouldn't be safe to call from scala since it discards `this`.
  */
 
-import { isSome, none, type Option, some } from "fp-ts/Option";
 import { pipe } from "fp-ts/function";
+import { isSome, none, type Option, some } from "fp-ts/Option";
 import { ExpandedCallables } from "../../Comment.js";
 import { type Comments, NoComments } from "../../Comments.js";
 import { IArray, type PartialFunction } from "../../IArray.js";
@@ -32,7 +32,11 @@ import { AllMembersFor } from "../AllMembersFor.js";
 import { FillInTParams } from "../FillInTParams.js";
 import { MethodType } from "../MethodType.js";
 import { TransformClassMembers } from "../TreeTransformations.js";
-import { LoopDetector, TsQIdentUtils, type TsTreeScope } from "../TsTreeScope.js";
+import {
+	LoopDetector,
+	TsQIdentUtils,
+	type TsTreeScope,
+} from "../TsTreeScope.js";
 import {
 	type HasClassMembers,
 	type TsDeclInterface,
@@ -43,19 +47,21 @@ import {
 	TsMemberFunction,
 	type TsMemberProperty,
 	type TsType,
-	type TsTypeConstructor,
 	type TsTypeFunction,
 	type TsTypeIntersect,
 	type TsTypeObject,
 	type TsTypeRef,
-	type TsTypeUnion,
 } from "../trees.js";
 
 /**
  * Result type for callable type analysis
  */
-type Result = 
-	| { readonly _tag: "Expand"; readonly callables: IArray<[Comments, TsFunSig]>; readonly keepOriginalMember: boolean }
+type Result =
+	| {
+			readonly _tag: "Expand";
+			readonly callables: IArray<[Comments, TsFunSig]>;
+			readonly keepOriginalMember: boolean;
+	  }
 	| { readonly _tag: "Noop" };
 
 /**
@@ -65,7 +71,10 @@ const Result = {
 	/**
 	 * Create an Expand result
 	 */
-	expand: (callables: IArray<[Comments, TsFunSig]>, keepOriginalMember: boolean): Result => ({
+	expand: (
+		callables: IArray<[Comments, TsFunSig]>,
+		keepOriginalMember: boolean,
+	): Result => ({
 		_tag: "Expand",
 		callables,
 		keepOriginalMember,
@@ -80,11 +89,17 @@ const Result = {
 	 * Combine multiple results into a single result
 	 */
 	combine: (results: IArray<Result>): Result => {
-		const expands = results.toArray().filter((r): r is Extract<Result, { _tag: "Expand" }> => r._tag === "Expand");
+		const expands = results
+			.toArray()
+			.filter(
+				(r): r is Extract<Result, { _tag: "Expand" }> => r._tag === "Expand",
+			);
 
 		if (expands.length > 0) {
-			const allCallables = IArray.fromArray(expands.flatMap(e => e.callables.toArray()));
-			const keepOriginal = expands.some(e => e.keepOriginalMember);
+			const allCallables = IArray.fromArray(
+				expands.flatMap((e) => e.callables.toArray()),
+			);
+			const keepOriginal = expands.some((e) => e.keepOriginalMember);
 			return Result.expand(allCallables, keepOriginal);
 		}
 
@@ -94,7 +109,7 @@ const Result = {
 
 /**
  * Transform that expands callable properties into methods.
- * 
+ *
  * This transform extends TransformClassMembers and processes class/interface members.
  * It looks for properties with callable types and converts them into method declarations.
  */
@@ -107,50 +122,57 @@ export class ExpandCallables extends TransformClassMembers {
 			// Only process properties with types but no expressions
 			if (member._tag === "TsMemberProperty") {
 				const prop = member as TsMemberProperty;
-				
+
 				// Only process properties that have a type but no initializer expression
 				if (isSome(prop.tpe) && !isSome(prop.expr)) {
 					const actualType = prop.tpe.value;
 					const callableResult = this.callableTypes(scope)(actualType);
 
-					if (callableResult._tag === "Expand" && callableResult.callables.length > 0) {
+					if (
+						callableResult._tag === "Expand" &&
+						callableResult.callables.length > 0
+					) {
 						// Determine if we should keep the original property
 						const keptOpt: Option<TsMemberProperty> =
-							(callableResult.keepOriginalMember || !prop.isReadOnly)
+							callableResult.keepOriginalMember || !prop.isReadOnly
 								? some({
-									...prop,
-									comments: prop.comments.add(ExpandedCallables.instance),
-								})
+										...prop,
+										comments: prop.comments.add(ExpandedCallables.instance),
+									})
 								: none;
 
 						// Create method functions for each callable signature
-						const methods: IArray<TsMemberFunction> = callableResult.callables.map(([comments, sig]) => {
-							const newComments = comments.concat(prop.comments);
-							return TsMemberFunction.create(
-								newComments,
-								prop.level,
-								prop.name,
-								MethodType.normal(),
-								sig,
-								prop.isStatic,
-								true, // isReadOnly = true for expanded methods
-							);
-						});
+						const methods: IArray<TsMemberFunction> =
+							callableResult.callables.map(([comments, sig]) => {
+								const newComments = comments.concat(prop.comments);
+								return TsMemberFunction.create(
+									newComments,
+									prop.level,
+									prop.name,
+									MethodType.normal(),
+									sig,
+									prop.isStatic,
+									true, // isReadOnly = true for expanded methods
+								);
+							});
 
-						scope.logger.info(`Expanded ${prop.name.value} into ${methods.length} methods`);
+						scope.logger.info(
+							`Expanded ${prop.name.value} into ${methods.length} methods`,
+						);
 
 						// Return methods plus optionally kept property
-						const methodsAsMembers = methods.map(m => m as TsMember);
-						const finalResult: IArray<TsMember> = pipe(
-							keptOpt,
-							(opt) => isSome(opt)
-								? methodsAsMembers.concat(IArray.fromArray([opt.value as TsMember]))
-								: methodsAsMembers
+						const methodsAsMembers = methods.map((m) => m as TsMember);
+						const finalResult: IArray<TsMember> = pipe(keptOpt, (opt) =>
+							isSome(opt)
+								? methodsAsMembers.concat(
+										IArray.fromArray([opt.value as TsMember]),
+									)
+								: methodsAsMembers,
 						);
 						return finalResult;
 					}
 				}
-				
+
 				// Return original property unchanged
 				return IArray.fromArray([prop as TsMember]);
 			}
@@ -170,7 +192,7 @@ export class ExpandCallables extends TransformClassMembers {
 					const funcType = tpe as TsTypeFunction;
 					return Result.expand(
 						IArray.fromArray([[NoComments.instance, funcType.signature]]),
-						false // keepOriginalMember = false for direct function types
+						false, // keepOriginalMember = false for direct function types
 					);
 				}
 
@@ -187,7 +209,7 @@ export class ExpandCallables extends TransformClassMembers {
 						apply: (member: TsMember) => {
 							const callMember = member as TsMemberCall;
 							return [callMember.comments, callMember.signature];
-						}
+						},
 					};
 					const [callables, rest] = objType.members.partitionCollect(pf);
 
@@ -199,7 +221,7 @@ export class ExpandCallables extends TransformClassMembers {
 
 				case "TsTypeRef": {
 					const typeRef = tpe as TsTypeRef;
-					
+
 					// Skip primitive types
 					if (TsQIdentUtils.Primitive(typeRef.name)) {
 						return Result.noop();
@@ -207,7 +229,7 @@ export class ExpandCallables extends TransformClassMembers {
 
 					// Look up the type reference in scope
 					const lookupResults = scope.lookupTypeIncludeScope(typeRef.name);
-					
+
 					for (const [decl, newScope] of lookupResults.toArray()) {
 						if (decl._tag === "TsDeclInterface") {
 							const interfaceDecl = decl as TsDeclInterface;
@@ -215,28 +237,32 @@ export class ExpandCallables extends TransformClassMembers {
 								LoopDetector.initial,
 								interfaceDecl,
 								newScope,
-								typeRef.tparams
+								typeRef.tparams,
 							);
-							
+
 							const pf: PartialFunction<TsMember, [Comments, TsFunSig]> = {
-								isDefinedAt: (member: TsMember) => member._tag === "TsMemberCall",
+								isDefinedAt: (member: TsMember) =>
+									member._tag === "TsMemberCall",
 								apply: (member: TsMember) => {
 									const callMember = member as TsMemberCall;
 									return [callMember.comments, callMember.signature];
-								}
+								},
 							};
 							const [callables, rest] = members.partitionCollect(pf);
-							
+
 							if (callables.length > 0) {
 								return Result.expand(callables, rest.length > 0);
 							}
 						} else if (decl._tag === "TsDeclTypeAlias") {
 							const typeAlias = decl as TsDeclTypeAlias;
-							const filledAlias = FillInTParams.apply(typeAlias, typeRef.tparams);
+							const filledAlias = FillInTParams.apply(
+								typeAlias,
+								typeRef.tparams,
+							);
 							return this.callableTypes(newScope)(filledAlias.alias);
 						}
 					}
-					
+
 					return Result.noop();
 				}
 

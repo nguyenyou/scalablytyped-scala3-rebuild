@@ -6,24 +6,23 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option } from "fp-ts/Option";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
+import { TypeRewriter } from "@/internal/ts/transforms/TypeRewriter.js";
 import {
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsIdent,
-	TsIdentSimple,
+	type TsIdentSimple,
 	TsQIdent,
-	type TsTree,
 	type TsType,
 	TsTypeParam,
 	TsTypeRef,
 } from "@/internal/ts/trees.js";
-import { TypeRewriter } from "@/internal/ts/transforms/TypeRewriter.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -178,7 +177,10 @@ describe("TypeRewriter", () => {
 
 			// Create a type parameter T
 			const tParam = createTypeParam("T");
-			const classWithTParam = createMockClass("GenericClass", IArray.fromArray([tParam]));
+			const classWithTParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam]),
+			);
 
 			// Create a type reference to T that should be filtered out
 			const tTypeRef = createTypeRef("T");
@@ -186,8 +188,8 @@ describe("TypeRewriter", () => {
 			const numberType = createTypeRef("number");
 
 			const replacements = new Map<TsType, TsType>([
-				[tTypeRef, stringType],    // This should be filtered out due to shadowing
-				[stringType, numberType],  // This should remain
+				[tTypeRef, stringType], // This should be filtered out due to shadowing
+				[stringType, numberType], // This should remain
 			]);
 
 			const result = rewriter.withTree(replacements, classWithTParam);
@@ -206,7 +208,10 @@ describe("TypeRewriter", () => {
 
 			// Create a type parameter U
 			const uParam = createTypeParam("U");
-			const classWithUParam = createMockClass("GenericClass", IArray.fromArray([uParam]));
+			const classWithUParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([uParam]),
+			);
 
 			// Create type references - T is not shadowed, U is shadowed
 			const tTypeRef = createTypeRef("T");
@@ -215,9 +220,9 @@ describe("TypeRewriter", () => {
 			const numberType = createTypeRef("number");
 
 			const replacements = new Map<TsType, TsType>([
-				[tTypeRef, stringType],    // This should remain (T is not a type param of this class)
-				[uTypeRef, numberType],    // This should be filtered out (U is a type param)
-				[stringType, numberType],  // This should remain
+				[tTypeRef, stringType], // This should remain (T is not a type param of this class)
+				[uTypeRef, numberType], // This should be filtered out (U is a type param)
+				[stringType, numberType], // This should remain
 			]);
 
 			const result = rewriter.withTree(replacements, classWithUParam);
@@ -242,7 +247,10 @@ describe("TypeRewriter", () => {
 			const tParam = createTypeParam("T");
 			const uParam = createTypeParam("U");
 			const vParam = createTypeParam("V");
-			const classWithMultipleParams = createMockClass("GenericClass", IArray.fromArray([tParam, uParam, vParam]));
+			const classWithMultipleParams = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam, uParam, vParam]),
+			);
 
 			const tTypeRef = createTypeRef("T");
 			const uTypeRef = createTypeRef("U");
@@ -251,10 +259,10 @@ describe("TypeRewriter", () => {
 			const stringType = createTypeRef("string");
 
 			const replacements = new Map<TsType, TsType>([
-				[tTypeRef, stringType],  // Should be filtered out
-				[uTypeRef, stringType],  // Should be filtered out
-				[vTypeRef, stringType],  // Should be filtered out
-				[wTypeRef, stringType],  // Should remain
+				[tTypeRef, stringType], // Should be filtered out
+				[uTypeRef, stringType], // Should be filtered out
+				[vTypeRef, stringType], // Should be filtered out
+				[wTypeRef, stringType], // Should remain
 			]);
 
 			const result = rewriter.withTree(replacements, classWithMultipleParams);
@@ -275,7 +283,10 @@ describe("TypeRewriter", () => {
 
 			// Create an interface with type parameter
 			const tParam = createTypeParam("T");
-			const interfaceWithTParam = createMockInterface("GenericInterface", IArray.fromArray([tParam]));
+			const interfaceWithTParam = createMockInterface(
+				"GenericInterface",
+				IArray.fromArray([tParam]),
+			);
 
 			const tTypeRef = createTypeRef("T");
 			const stringType = createTypeRef("string");
@@ -338,15 +349,21 @@ describe("TypeRewriter", () => {
 
 			// Create a type parameter T
 			const tParam = createTypeParam("T");
-			const classWithTParam = createMockClass("GenericClass", IArray.fromArray([tParam]));
+			const classWithTParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam]),
+			);
 
 			// Create a complex type reference T<string> (T with type arguments)
 			const stringType = createTypeRef("string");
-			const complexTTypeRef = createTypeRef("T", IArray.fromArray<TsType>([stringType]));
+			const complexTTypeRef = createTypeRef(
+				"T",
+				IArray.fromArray<TsType>([stringType]),
+			);
 			const numberType = createTypeRef("number");
 
 			const replacements = new Map<TsType, TsType>([
-				[complexTTypeRef, numberType],  // This should be filtered out
+				[complexTTypeRef, numberType], // This should be filtered out
 			]);
 
 			const result = rewriter.withTree(replacements, classWithTParam);
@@ -361,7 +378,10 @@ describe("TypeRewriter", () => {
 
 			// Create a type parameter T
 			const tParam = createTypeParam("T");
-			const classWithTParam = createMockClass("GenericClass", IArray.fromArray([tParam]));
+			const classWithTParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam]),
+			);
 
 			// Create a qualified type reference (e.g., Namespace.T)
 			const qualifiedTTypeRef = TsTypeRef.create(
@@ -371,7 +391,9 @@ describe("TypeRewriter", () => {
 			);
 			const stringType = createTypeRef("string");
 
-			const replacements = new Map<TsType, TsType>([[qualifiedTTypeRef, stringType]]);
+			const replacements = new Map<TsType, TsType>([
+				[qualifiedTTypeRef, stringType],
+			]);
 
 			const result = rewriter.withTree(replacements, classWithTParam);
 
@@ -385,7 +407,10 @@ describe("TypeRewriter", () => {
 			const rewriter = new TypeRewriter(baseTree);
 
 			const tParam = createTypeParam("T");
-			const classWithTParam = createMockClass("GenericClass", IArray.fromArray([tParam]));
+			const classWithTParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam]),
+			);
 
 			const emptyReplacements = new Map<TsType, TsType>();
 
@@ -400,15 +425,18 @@ describe("TypeRewriter", () => {
 
 			// Create type parameters with different cases
 			const tParam = createTypeParam("T");
-			const classWithTParam = createMockClass("GenericClass", IArray.fromArray([tParam]));
+			const classWithTParam = createMockClass(
+				"GenericClass",
+				IArray.fromArray([tParam]),
+			);
 
-			const tLowerTypeRef = createTypeRef("t");  // lowercase t
-			const TUpperTypeRef = createTypeRef("T");  // uppercase T
+			const tLowerTypeRef = createTypeRef("t"); // lowercase t
+			const TUpperTypeRef = createTypeRef("T"); // uppercase T
 			const stringType = createTypeRef("string");
 
 			const replacements = new Map<TsType, TsType>([
-				[tLowerTypeRef, stringType],  // Should remain (different case)
-				[TUpperTypeRef, stringType],  // Should be filtered out (exact match)
+				[tLowerTypeRef, stringType], // Should remain (different case)
+				[TUpperTypeRef, stringType], // Should be filtered out (exact match)
 			]);
 
 			const result = rewriter.withTree(replacements, classWithTParam);
@@ -455,7 +483,10 @@ describe("TypeRewriter", () => {
 			const outerClass = createMockClass("Outer", IArray.fromArray([tParam]));
 
 			// Inner interface with U (nested inside outer)
-			const innerInterface = createMockInterface("Inner", IArray.fromArray([uParam]));
+			const innerInterface = createMockInterface(
+				"Inner",
+				IArray.fromArray([uParam]),
+			);
 
 			const tTypeRef = createTypeRef("T");
 			const uTypeRef = createTypeRef("U");
@@ -502,7 +533,10 @@ describe("TypeRewriter", () => {
 
 			// Test withTree with large map
 			const classWithoutParams = createMockClass("SimpleClass", IArray.Empty);
-			const treeResult = rewriter.withTree(largeReplacements, classWithoutParams);
+			const treeResult = rewriter.withTree(
+				largeReplacements,
+				classWithoutParams,
+			);
 			expect(treeResult.size).toBe(1000);
 		});
 
