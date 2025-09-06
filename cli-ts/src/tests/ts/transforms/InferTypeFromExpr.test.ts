@@ -428,7 +428,8 @@ describe("InferTypeFromExpr", () => {
 			expect(result.readOnly).toBe(true);
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.string);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "string");
 		});
 	});
 
@@ -458,7 +459,8 @@ describe("InferTypeFromExpr", () => {
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
 			// Should compute 5 + 3 = 8 as literal type, then widen to number
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "number");
 			assertHasComments(inferredType);
 		});
 
@@ -472,7 +474,8 @@ describe("InferTypeFromExpr", () => {
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
 			// Should compute 4 * 2 = 8 as literal type, then widen to number
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "number");
 			assertHasComments(inferredType);
 		});
 
@@ -486,7 +489,8 @@ describe("InferTypeFromExpr", () => {
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
 			// Should compute 8 << 2 = 32 as literal type, then widen to number
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "number");
 			assertHasComments(inferredType);
 		});
 
@@ -500,7 +504,8 @@ describe("InferTypeFromExpr", () => {
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "number");
 			assertHasComments(inferredType);
 		});
 	});
@@ -568,7 +573,8 @@ describe("InferTypeFromExpr", () => {
 			expect(result.isReadOnly).toBe(true);
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.string);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "string");
 		});
 	});
 
@@ -598,11 +604,11 @@ describe("InferTypeFromExpr", () => {
 
 			// Check specific types
 			const inferredTypeProp1 = expectSomeType(resultProp1.tpe);
-			expect(inferredTypeProp1).toEqual(TsTypeRef.string);
+			expectTypeRefWithComments(inferredTypeProp1, "string");
 			const inferredTypeProp2 = expectSomeType(resultProp2.tpe);
-			expect(inferredTypeProp2).toEqual(TsTypeRef.number);
+			expectTypeRefWithComments(inferredTypeProp2, "number");
 			const inferredTypeVar1 = expectSomeType(resultVar1.tpe);
-			expect(inferredTypeVar1).toEqual(TsTypeRef.boolean);
+			expectTypeRefWithComments(inferredTypeVar1, "boolean");
 			const inferredTypeVar2 = expectSomeType(resultVar2.tpe);
 			expect(inferredTypeVar2._tag).toBe("TsTypeUnion"); // Default type for references
 		});
