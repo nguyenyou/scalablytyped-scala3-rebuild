@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { none, some, type Option } from "fp-ts/Option";
+import { Comment } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
@@ -163,6 +164,17 @@ function expectSomeType(optType: Option<TsType>): TsType {
 	throw new Error("Expected Some but got None");
 }
 
+// Helper function to check that a type is a TsTypeRef with the expected name and has comments
+function expectTypeRefWithComments(type: TsType, expectedTypeName: string): void {
+	expect(type._tag).toBe("TsTypeRef");
+	if (type._tag === "TsTypeRef") {
+		const typeRef = type as TsTypeRef;
+		expect(typeRef.name.asString).toBe(`TsQIdent(${expectedTypeName})`);
+		expect(typeRef.comments.cs.length).toBeGreaterThan(0);
+		expect(typeRef.comments.cs[0]._tag).toBe("Comment");
+	}
+}
+
 // ============================================================================
 // Test Suite
 // ============================================================================
@@ -218,15 +230,25 @@ describe("InferTypeFromExpr", () => {
 		test("infers type from string literal", () => {
 			const scope = createMockScope();
 			const property = createMockProperty("testProp", none, some(createLiteralExpr("hello")));
-			
+
 			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
-			
+
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None"); // Expression should be removed
 			const inferredType = expectSomeType(result.tpe);
-			expect(inferredType).toEqual(TsTypeRef.string);
-			// Should have comment with original expression (only for TsTypeRef)
-			assertHasComments(inferredType);
+
+			// Check that it's a string type
+			expect(inferredType._tag).toBe("TsTypeRef");
+			if (inferredType._tag === "TsTypeRef") {
+				const typeRef = inferredType as TsTypeRef;
+				expect(typeRef.name.asString).toBe("TsQIdent(string)");
+				// Should have comment with original expression
+				expect(typeRef.comments.cs.length).toBe(1);
+				expect(typeRef.comments.cs[0]).toMatchObject({
+					_tag: "Comment",
+					raw: "/* \"hello\" */ "
+				});
+			}
 		});
 
 		test("infers type from number literal", () => {
@@ -238,8 +260,19 @@ describe("InferTypeFromExpr", () => {
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
 			const inferredType = expectSomeType(result.tpe);
-			expect(inferredType).toEqual(TsTypeRef.number);
-			assertHasComments(inferredType);
+
+			// Check that it's a number type
+			expect(inferredType._tag).toBe("TsTypeRef");
+			if (inferredType._tag === "TsTypeRef") {
+				const typeRef = inferredType as TsTypeRef;
+				expect(typeRef.name.asString).toBe("TsQIdent(number)");
+				// Should have comment with original expression
+				expect(typeRef.comments.cs.length).toBe(1);
+				expect(typeRef.comments.cs[0]).toMatchObject({
+					_tag: "Comment",
+					raw: "/* 42 */ "
+				});
+			}
 		});
 
 		test("infers type from boolean literal", () => {
@@ -251,8 +284,19 @@ describe("InferTypeFromExpr", () => {
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
 			const inferredType = expectSomeType(result.tpe);
-			expect(inferredType).toEqual(TsTypeRef.boolean);
-			assertHasComments(inferredType);
+
+			// Check that it's a boolean type
+			expect(inferredType._tag).toBe("TsTypeRef");
+			if (inferredType._tag === "TsTypeRef") {
+				const typeRef = inferredType as TsTypeRef;
+				expect(typeRef.name.asString).toBe("TsQIdent(boolean)");
+				// Should have comment with original expression
+				expect(typeRef.comments.cs.length).toBe(1);
+				expect(typeRef.comments.cs[0]).toMatchObject({
+					_tag: "Comment",
+					raw: "/* true */ "
+				});
+			}
 		});
 
 		test("infers type from reference expression", () => {
@@ -293,8 +337,20 @@ describe("InferTypeFromExpr", () => {
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
-			assertHasComments(inferredType);
+			const inferredType = expectSomeType(result.tpe);
+
+			// Check that it's a number type (from the cast)
+			expect(inferredType._tag).toBe("TsTypeRef");
+			if (inferredType._tag === "TsTypeRef") {
+				const typeRef = inferredType as TsTypeRef;
+				expect(typeRef.name.asString).toBe("TsQIdent(number)");
+				// Should have comment with original expression
+				expect(typeRef.comments.cs.length).toBe(1);
+				expect(typeRef.comments.cs[0]).toMatchObject({
+					_tag: "Comment",
+					raw: expect.stringContaining("/* \"value\" as TsTypeRef(TsQIdent(number)) */")
+				});
+			}
 		});
 
 		test("infers type from array expression", () => {
@@ -322,8 +378,8 @@ describe("InferTypeFromExpr", () => {
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.string);
-			assertHasComments(inferredType);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "string");
 		});
 
 		test("infers type from number literal in variable", () => {
@@ -334,8 +390,8 @@ describe("InferTypeFromExpr", () => {
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.number);
-			assertHasComments(inferredType);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "number");
 		});
 
 		test("infers type from boolean literal in variable", () => {
@@ -346,8 +402,8 @@ describe("InferTypeFromExpr", () => {
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
-			const inferredType = expectSomeType(result.tpe); expect(inferredType).toEqual(TsTypeRef.boolean);
-			assertHasComments(inferredType);
+			const inferredType = expectSomeType(result.tpe);
+			expectTypeRefWithComments(inferredType, "boolean");
 		});
 
 		test("preserves variable metadata", () => {
