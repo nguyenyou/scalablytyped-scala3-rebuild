@@ -58,6 +58,9 @@ import {
 	type TsTypeParam,
 	type TsTypeQuery,
 	TsTypeRef,
+	TsDeclEnum,
+	TsEnumMember,
+	TsExprLiteral,
 } from "@/internal/ts/trees.js";
 
 // ============================================================================
@@ -168,6 +171,22 @@ export function createTypeRef(
 		withComments: (cs: Comments) => createTypeRef(name, tparams, cs),
 		addComment: (c: any) => createTypeRef(name, tparams, comments.add(c)),
 	};
+}
+
+/**
+ * Creates a TsTypeRef with a specific qualified identifier.
+ *
+ * @param qident - The qualified identifier
+ * @param tparams - Optional type parameters (defaults to empty)
+ * @param comments - Optional comments (defaults to empty)
+ * @returns A properly formed TsTypeRef
+ */
+export function createTypeRefWithQIdent(
+	qident: TsQIdent,
+	tparams: IArray<any> = IArray.Empty,
+	comments: Comments = Comments.empty(),
+): TsTypeRef {
+	return TsTypeRef.create(comments, qident, tparams);
 }
 
 /**
@@ -1196,3 +1215,85 @@ export const TestAssertions = {
 		return arr1.every((item, index) => item === arr2[index]);
 	},
 };
+
+// ============================================================================
+// Enum Creation Utilities
+// ============================================================================
+
+/**
+ * Creates a TsEnumMember for testing.
+ *
+ * @param name - The member name
+ * @param expr - Optional expression for the member value
+ * @returns A TsEnumMember instance
+ */
+export function createEnumMember(
+	name: string,
+	expr?: Option<TsExprLiteral>,
+): TsEnumMember {
+	return TsEnumMember.create(
+		Comments.empty(),
+		TsIdent.simple(name),
+		expr || none,
+	);
+}
+
+/**
+ * Creates a TsExprLiteral for testing.
+ *
+ * @param value - The literal value
+ * @returns A TsExprLiteral instance
+ */
+export function createLiteralExpr(value: string): TsExprLiteral {
+	return TsExprLiteral.string(value);
+}
+
+/**
+ * Creates a numeric TsExprLiteral for testing.
+ *
+ * @param value - The numeric value as string
+ * @returns A TsExprLiteral instance
+ */
+export function createNumLiteralExpr(value: string): TsExprLiteral {
+	return TsExprLiteral.number(value);
+}
+
+/**
+ * Creates a boolean TsExprLiteral for testing.
+ *
+ * @param value - The boolean value
+ * @returns A TsExprLiteral instance
+ */
+export function createBoolLiteralExpr(value: boolean): TsExprLiteral {
+	return TsExprLiteral.boolean(value);
+}
+
+/**
+ * Creates a TsDeclEnum for testing.
+ *
+ * @param name - The enum name
+ * @param members - The enum members
+ * @param isConst - Whether this is a const enum (defaults to false)
+ * @returns A TsDeclEnum instance
+ */
+export function createMockEnum(
+	name: string,
+	members: IArray<TsEnumMember>,
+	isConst: boolean = false,
+): TsDeclEnum {
+	const libIdent = TsIdent.librarySimple("test-lib");
+	const enumIdent = TsIdent.simple(name);
+	const qident = TsQIdent.of(libIdent, enumIdent);
+
+	return TsDeclEnum.create(
+		Comments.empty(),
+		false, // declared
+		isConst,
+		enumIdent,
+		members,
+		true, // isValue
+		none, // exportedFrom
+		JsLocation.zero(),
+		CodePath.hasPath(libIdent, qident),
+	);
+}
