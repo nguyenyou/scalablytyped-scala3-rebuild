@@ -29,7 +29,8 @@ import {
 	type TsDeclClass,
 	TsDeclEnum,
 	type TsDeclFunction,
-	type TsDeclInterface,
+	TsDeclInterface,
+	type TsDeclInterface as TsDeclInterfaceType,
 	type TsDeclModule,
 	type TsDeclNamespace,
 	type TsDeclTypeAlias,
@@ -512,32 +513,17 @@ export function createMockInterface(
 	name: string,
 	members: IArray<any> = IArray.Empty,
 	inheritance?: IArray<TsTypeRef>,
-): TsDeclInterface {
-	return {
-		_tag: "TsDeclInterface",
-		asString: `interface ${name}`,
-		comments: Comments.empty(),
-		declared: false,
-		name: TsIdent.simple(name),
-		tparams: IArray.Empty,
-		inheritance: inheritance || IArray.Empty,
+): TsDeclInterfaceType {
+	// Use the proper TsDeclInterface.create function to ensure membersByName is populated correctly
+	return TsDeclInterface.create(
+		Comments.empty(),
+		false, // declared
+		TsIdent.simple(name),
+		IArray.Empty, // tparams
+		inheritance || IArray.Empty,
 		members,
-		codePath: CodePath.noPath(),
-		withCodePath: function (cp: CodePath) {
-			return { ...this, codePath: cp };
-		},
-		membersByName: new Map(),
-		unnamed: IArray.Empty,
-		withName: function (n: any) {
-			return { ...this, name: n };
-		},
-		withComments: function (cs: any) {
-			return { ...this, comments: cs };
-		},
-		addComment: function (_c: any) {
-			return this;
-		},
-	};
+		CodePath.noPath(),
+	);
 }
 
 /**

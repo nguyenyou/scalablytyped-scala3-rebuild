@@ -17,16 +17,23 @@ import {
 	TsIdentConstructor,
 	TsMemberCtor,
 	TsProtectionLevel,
+	TsTypeConstructor,
+	TsTypeFunction,
+	TsTypeIntersect,
+	TsTypeObject,
 	TsTypeRef,
 	TsTypeUnion,
 } from "../../../internal/ts/trees.js";
 import {
 	createFunParam,
+	createIntersectionType,
 	createMockClass,
 	createMockFunSig,
 	createMockInterface,
 	createMockScope,
 	createSimpleIdent,
+	createTypeConstructor,
+	createTypeFunction,
 	createTypeParam,
 	createTypeRef,
 } from "../../utils/TestUtils.js";
@@ -127,12 +134,95 @@ describe("AnalyzedCtors", () => {
 
 		test("returns None for type with no constructors", () => {
 			const interface1 = createMockInterface("TestInterface");
-			const scope = createMockScope();
+			const scope = createMockScope("test-lib", interface1);
 			const typeRef = createTypeRef("TestInterface");
 
 			const result = AnalyzedCtors.from(scope, typeRef);
 
 			expect(result._tag).toBe("None");
+		});
+
+		// BATCH 1: Missing positive "from method" test cases
+		test("returns Some for interface with constructors", () => {
+			const resultType = createTypeRef("TestInterface");
+			const ctor = createMockCtor(IArray.Empty, IArray.Empty, some(resultType));
+			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor]));
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("TestInterface");
+
+			// Debug: Check if the interface is actually in scope
+			const lookupResult = scope.lookupType(typeRef.name);
+			console.log("Lookup result length:", lookupResult.length);
+			if (lookupResult.length > 0) {
+				console.log("Found interface:", lookupResult.get(0)._tag);
+			}
+
+			// Debug: Check findCtors directly
+			const ctors = AnalyzedCtors.findCtors(scope, LoopDetector.initial)(typeRef);
+			console.log("findCtors result length:", ctors.length);
+
+			const result = AnalyzedCtors.from(scope, typeRef);
+
+			expect(result._tag).toBe("Some");
+			if (result._tag === "Some") {
+				expect(result.value.ctors.length).toBe(1);
+				expect(result.value.resultType).toEqual(resultType);
+			}
+		});
+
+		test("selects constructor with most type parameters", () => {
+			const resultType = createTypeRef("TestInterface");
+			const ctor1 = createMockCtor(IArray.fromArray([createTypeParam("T")]), IArray.Empty, some(resultType));
+			const ctor2 = createMockCtor(IArray.fromArray([createTypeParam("T"), createTypeParam("U")]), IArray.Empty, some(resultType));
+			const ctor3 = createMockCtor(IArray.Empty, IArray.Empty, some(resultType));
+			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor1, ctor2, ctor3]));
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("TestInterface");
+
+			const result = AnalyzedCtors.from(scope, typeRef);
+
+			expect(result._tag).toBe("Some");
+			if (result._tag === "Some") {
+				expect(result.value.longestTParams.length).toBe(2);
+				expect(result.value.longestTParams.get(0).name.value).toBe("T");
+				expect(result.value.longestTParams.get(1).name.value).toBe("U");
+			}
+		});
+
+		test("filters out constructors with incompatible return types", () => {
+			const resultType1 = createTypeRef("TestInterface");
+			const resultType2 = createTypeRef("OtherInterface");
+			const ctor1 = createMockCtor(IArray.Empty, IArray.Empty, some(resultType1));
+			const ctor2 = createMockCtor(IArray.Empty, IArray.Empty, some(resultType2));
+			const ctor3 = createMockCtor(IArray.Empty, IArray.Empty, some(resultType1));
+			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor1, ctor2, ctor3]));
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("TestInterface");
+
+			const result = AnalyzedCtors.from(scope, typeRef);
+
+			expect(result._tag).toBe("Some");
+			if (result._tag === "Some") {
+				expect(result.value.ctors.length).toBe(2); // Only ctor1 and ctor3 should be included
+				expect(result.value.resultType).toEqual(resultType1);
+			}
+		});
+
+		test("handles complex type parameter scenarios", () => {
+			const resultType = createTypeRef("TestInterface", IArray.fromArray([TsTypeRef.string as any]));
+			const ctor1 = createMockCtor(IArray.fromArray([createTypeParam("T")]), IArray.Empty, some(resultType));
+			const ctor2 = createMockCtor(IArray.fromArray([createTypeParam("T"), createTypeParam("U")]), IArray.Empty, some(resultType));
+			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor1, ctor2]));
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("TestInterface", IArray.fromArray([TsTypeRef.string as any]));
+
+			const result = AnalyzedCtors.from(scope, typeRef);
+
+			expect(result._tag).toBe("Some");
+			if (result._tag === "Some") {
+				expect(result.value.longestTParams.length).toBe(2);
+				expect(result.value.ctors.length).toBe(2);
+			}
 		});
 	});
 
