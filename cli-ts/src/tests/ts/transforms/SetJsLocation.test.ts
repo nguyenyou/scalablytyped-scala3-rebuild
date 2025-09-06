@@ -1,18 +1,15 @@
 /**
  * Tests for SetJsLocation transform.
- * 
+ *
  * Port of org.scalablytyped.converter.internal.ts.transforms.SetJsLocationTests
  */
 
 import { describe, expect, it } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
-import { SetJsLocation, SetJsLocationTransform } from "@/internal/ts/transforms/SetJsLocation.js";
 import { AbstractTreeTransformation } from "@/internal/ts/TreeTransformation.js";
-import { TsIdentModule } from "@/internal/ts/trees.js";
+import { SetJsLocationTransform } from "@/internal/ts/transforms/SetJsLocation.js";
 import {
-	createJsLocation,
 	createJsLocationBoth,
 	createJsLocationGlobal,
 	createJsLocationModule,
@@ -26,7 +23,6 @@ import {
 	createMockParsedFile,
 	createMockTypeAlias,
 	createMockVariable,
-	createSimpleIdent,
 } from "@/tests/utils/TestUtils.js";
 
 describe("SetJsLocation", () => {
@@ -46,7 +42,8 @@ describe("SetJsLocation", () => {
 		it("has enterTsContainer method", () => {
 			const jsLocation = JsLocation.zero();
 			const namespace = createMockNamespace("TestNamespace");
-			const result = SetJsLocationTransform.enterTsContainer(jsLocation)(namespace);
+			const result =
+				SetJsLocationTransform.enterTsContainer(jsLocation)(namespace);
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsDeclNamespace");
 		});
@@ -54,7 +51,8 @@ describe("SetJsLocation", () => {
 		it("has enterTsParsedFile method", () => {
 			const jsLocation = JsLocation.zero();
 			const parsedFile = createMockParsedFile("test-lib");
-			const result = SetJsLocationTransform.enterTsParsedFile(jsLocation)(parsedFile);
+			const result =
+				SetJsLocationTransform.enterTsParsedFile(jsLocation)(parsedFile);
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsParsedFile");
 		});
@@ -71,9 +69,9 @@ describe("SetJsLocation", () => {
 		it("sets JS location on class declaration", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
 			const clazz = createMockClass("TestClass");
-			
+
 			const result = SetJsLocationTransform.enterTsDecl(jsLocation)(clazz);
-			
+
 			expect(result._tag).toBe("TsDeclClass");
 			const resultClass = result as any;
 			expect(resultClass.jsLocation).toBe(jsLocation);
@@ -83,9 +81,9 @@ describe("SetJsLocation", () => {
 		it("sets JS location on function declaration", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
 			const func = createMockFunction("testFunc");
-			
+
 			const result = SetJsLocationTransform.enterTsDecl(jsLocation)(func);
-			
+
 			expect(result._tag).toBe("TsDeclFunction");
 			const resultFunc = result as any;
 			expect(resultFunc.jsLocation).toBe(jsLocation);
@@ -95,9 +93,9 @@ describe("SetJsLocation", () => {
 		it("sets JS location on variable declaration", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
 			const variable = createMockVariable("testVar");
-			
+
 			const result = SetJsLocationTransform.enterTsDecl(jsLocation)(variable);
-			
+
 			expect(result._tag).toBe("TsDeclVar");
 			const resultVar = result as any;
 			expect(resultVar.jsLocation).toBe(jsLocation);
@@ -119,16 +117,19 @@ describe("SetJsLocation", () => {
 		it("leaves interface declarations unchanged (no JsLocation.Has)", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
 			const interface_ = createMockInterface("TestInterface");
-			
+
 			const result = SetJsLocationTransform.enterTsDecl(jsLocation)(interface_);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			expect(result).toBe(interface_); // Should remain unchanged
 		});
 
 		it("leaves type alias declarations unchanged (no JsLocation.Has)", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
-			const typeAlias = createMockTypeAlias("TestType", { _tag: "TsTypeRef", asString: "string" } as any);
+			const typeAlias = createMockTypeAlias("TestType", {
+				_tag: "TsTypeRef",
+				asString: "string",
+			} as any);
 
 			const result = SetJsLocationTransform.enterTsDecl(jsLocation)(typeAlias);
 
@@ -141,9 +142,10 @@ describe("SetJsLocation", () => {
 		it("sets JS location on namespace container", () => {
 			const jsLocation = createJsLocationModule("test-module");
 			const namespace = createMockNamespace("TestNamespace");
-			
-			const result = SetJsLocationTransform.enterTsContainer(jsLocation)(namespace);
-			
+
+			const result =
+				SetJsLocationTransform.enterTsContainer(jsLocation)(namespace);
+
 			expect(result._tag).toBe("TsDeclNamespace");
 			const resultNamespace = result as any;
 			expect(resultNamespace.jsLocation).toBe(jsLocation);
@@ -152,9 +154,10 @@ describe("SetJsLocation", () => {
 		it("sets JS location on module container", () => {
 			const jsLocation = createJsLocationModule("test-module");
 			const module = createMockModule("TestModule");
-			
-			const result = SetJsLocationTransform.enterTsContainer(jsLocation)(module);
-			
+
+			const result =
+				SetJsLocationTransform.enterTsContainer(jsLocation)(module);
+
 			expect(result._tag).toBe("TsDeclModule");
 			const resultModule = result as any;
 			expect(resultModule.jsLocation).toBe(jsLocation);
@@ -163,9 +166,10 @@ describe("SetJsLocation", () => {
 		it("leaves global container unchanged (no JsLocation.Has)", () => {
 			const jsLocation = JsLocation.zero();
 			const global = createMockGlobal();
-			
-			const result = SetJsLocationTransform.enterTsContainer(jsLocation)(global);
-			
+
+			const result =
+				SetJsLocationTransform.enterTsContainer(jsLocation)(global);
+
 			expect(result._tag).toBe("TsGlobal");
 			expect(result).toBe(global); // Should remain unchanged since TsGlobal doesn't implement JsLocation.Has
 		});
@@ -175,9 +179,10 @@ describe("SetJsLocation", () => {
 		it("leaves parsed file unchanged (no JsLocation.Has in Scala)", () => {
 			const jsLocation = createJsLocationGlobal("MyGlobal");
 			const parsedFile = createMockParsedFile("test-lib");
-			
-			const result = SetJsLocationTransform.enterTsParsedFile(jsLocation)(parsedFile);
-			
+
+			const result =
+				SetJsLocationTransform.enterTsParsedFile(jsLocation)(parsedFile);
+
 			expect(result._tag).toBe("TsParsedFile");
 			expect(result).toBe(parsedFile); // Should remain unchanged since TsParsedFile doesn't implement JsLocation.Has in Scala
 		});
@@ -192,7 +197,9 @@ describe("SetJsLocation", () => {
 
 			expect(JsLocation.isGlobal(result)).toBe(true);
 			if (JsLocation.isGlobal(result)) {
-				expect(result.jsPath.parts.toArray().map(p => p.value)).toEqual(["TestClass"]);
+				expect(result.jsPath.parts.toArray().map((p) => p.value)).toEqual([
+					"TestClass",
+				]);
 			}
 		});
 
@@ -217,7 +224,10 @@ describe("SetJsLocation", () => {
 
 			expect(JsLocation.isGlobal(result)).toBe(true);
 			if (JsLocation.isGlobal(result)) {
-				expect(result.jsPath.parts.toArray().map(p => p.value)).toEqual(["MyGlobal", "TestClass"]);
+				expect(result.jsPath.parts.toArray().map((p) => p.value)).toEqual([
+					"MyGlobal",
+					"TestClass",
+				]);
 			}
 		});
 
@@ -240,7 +250,10 @@ describe("SetJsLocation", () => {
 				asString: "TsTypeRef(test)",
 			};
 
-			const result = SetJsLocationTransform.withTree(jsLocation, typeRef as any);
+			const result = SetJsLocationTransform.withTree(
+				jsLocation,
+				typeRef as any,
+			);
 
 			expect(result).toBe(jsLocation); // Should remain unchanged for non-navigable trees
 		});
@@ -249,7 +262,10 @@ describe("SetJsLocation", () => {
 			const jsLocation = JsLocation.zero();
 			const namespacedClass = createMockClass("^"); // TsIdent.namespaced
 
-			const result = SetJsLocationTransform.withTree(jsLocation, namespacedClass);
+			const result = SetJsLocationTransform.withTree(
+				jsLocation,
+				namespacedClass,
+			);
 
 			expect(JsLocation.isZero(result)).toBe(true); // Should remain Zero for namespaced identifiers
 		});

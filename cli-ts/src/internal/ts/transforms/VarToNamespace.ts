@@ -21,24 +21,24 @@
  * ```
  */
 
+import { Hoisting } from "../Hoisting.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
 	TsDecl,
-	TsDeclVar,
 	TsDeclNamespace,
+	TsDeclVar,
 	TsTypeObject,
 } from "../trees.js";
-import { Hoisting } from "../Hoisting.js";
 
 /**
  * Transform that converts variable declarations with object types to namespace declarations.
- * 
+ *
  * This transform extends TreeTransformationScopedChanges and processes TsDecl nodes.
  * It specifically looks for TsDeclVar nodes that have:
  * - A TsTypeObject as their type
  * - No initializer expression (expr is None)
- * 
+ *
  * When these conditions are met, it converts the variable declaration into a namespace
  * declaration and hoists the object type's members as declarations within the namespace.
  */
@@ -46,7 +46,7 @@ export class VarToNamespace extends TreeTransformationScopedChanges {
 	/**
 	 * Processes TsDecl nodes, converting variable declarations with object types to namespaces.
 	 */
-	override enterTsDecl(scope: TsTreeScope): (decl: TsDecl) => TsDecl {
+	override enterTsDecl(_scope: TsTreeScope): (decl: TsDecl) => TsDecl {
 		return (decl: TsDecl) => {
 			// Check if this is a variable declaration with an object type and no initializer
 			if (decl._tag === "TsDeclVar") {
@@ -60,12 +60,12 @@ export class VarToNamespace extends TreeTransformationScopedChanges {
 					!varDecl.expr
 				) {
 					const objectType = varDecl.tpe.value as TsTypeObject;
-					
+
 					// Hoist the object's members to declarations
 					const hoistedMembers = objectType.members.mapNotNoneOption(
-						Hoisting.memberToDecl(varDecl.codePath, varDecl.jsLocation)
+						Hoisting.memberToDecl(varDecl.codePath, varDecl.jsLocation),
 					) as any; // TsNamedValueDecl extends TsContainerOrDecl
-					
+
 					// Create a namespace declaration with the hoisted members
 					// Use the same pattern as createMockNamespace in TestUtils
 					const namespace: TsDeclNamespace = {
@@ -80,11 +80,16 @@ export class VarToNamespace extends TreeTransformationScopedChanges {
 						asString: `namespace ${varDecl.name.value}`,
 
 						// MemberCache properties (computed lazily in real implementation)
-						nameds: hoistedMembers.filter((m: any) =>
-							m._tag === "TsDeclClass" || m._tag === "TsDeclInterface" ||
-							m._tag === "TsDeclEnum" || m._tag === "TsDeclFunction" ||
-							m._tag === "TsDeclVar" || m._tag === "TsDeclTypeAlias" ||
-							m._tag === "TsDeclNamespace" || m._tag === "TsDeclModule"
+						nameds: hoistedMembers.filter(
+							(m: any) =>
+								m._tag === "TsDeclClass" ||
+								m._tag === "TsDeclInterface" ||
+								m._tag === "TsDeclEnum" ||
+								m._tag === "TsDeclFunction" ||
+								m._tag === "TsDeclVar" ||
+								m._tag === "TsDeclTypeAlias" ||
+								m._tag === "TsDeclNamespace" ||
+								m._tag === "TsDeclModule",
 						) as any,
 						exports: [] as any,
 						imports: [] as any,
@@ -121,11 +126,11 @@ export class VarToNamespace extends TreeTransformationScopedChanges {
 							members: ms,
 						}),
 					};
-					
+
 					return namespace;
 				}
 			}
-			
+
 			// For all other cases, return the declaration unchanged
 			return decl;
 		};
@@ -145,9 +150,11 @@ export const VarToNamespaceTransformFunction = {
 	/**
 	 * Transform function that can be used directly.
 	 */
-	enterTsDecl: (scope: TsTreeScope) => (x: TsDecl): TsDecl => {
-		return VarToNamespaceTransform.enterTsDecl(scope)(x);
-	},
+	enterTsDecl:
+		(scope: TsTreeScope) =>
+		(x: TsDecl): TsDecl => {
+			return VarToNamespaceTransform.enterTsDecl(scope)(x);
+		},
 
 	withTree: (scope: TsTreeScope, tree: any): TsTreeScope => {
 		return VarToNamespaceTransform.withTree(scope, tree);

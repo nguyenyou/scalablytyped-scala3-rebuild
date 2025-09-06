@@ -6,39 +6,35 @@
  * and converts 'this' types back to class references in certain contexts like constructors.
  */
 
+import { NoComments } from "../../Comments.js";
+import { IArray } from "../../IArray.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
-	TsTree,
-	TsType,
-	TsTypeRef,
-	TsTypeThis,
-	TsQIdent,
 	TsDeclClass,
 	TsDeclInterface,
-	TsTypeFunction,
-	TsTypeConstructor,
 	TsMemberFunction,
-	TsMemberCtor,
-	TsTypeLookup,
+	TsQIdent,
+	TsTree,
+	TsType,
 	TsTypeParam,
+	TsTypeRef,
+	TsTypeThis,
 } from "../trees.js";
 import { TsIdent } from "../trees.js";
-import { NoComments } from "../../Comments.js";
-import { IArray } from "../../IArray.js";
 
 /**
  * Transform that rewrites 'this' type references.
- * 
+ *
  * This transform extends TreeTransformationScopedChanges and processes TsType nodes.
  * It performs two main transformations:
- * 
+ *
  * 1. Converts type references to the owning class/interface into 'this' types when:
  *    - The reference has no type parameters
  *    - The reference points to the current owner (class/interface)
  *    - The reference is inside a function type
  *    - The reference is NOT in an index type, type lookup, or constructor
- * 
+ *
  * 2. Converts 'this' types back to class references when:
  *    - The 'this' type is referenced in a constructor or index type
  */
@@ -177,16 +173,19 @@ export class RewriteTypeThis extends TreeTransformationScopedChanges {
 	 * This is equivalent to TsTypeParam.asTypeArgs in Scala.
 	 */
 	private asTypeArgs(tparams: IArray<TsTypeParam>): IArray<TsType> {
-		return tparams.map((tparam) => ({
-			_tag: "TsTypeRef",
-			comments: NoComments.instance,
-			name: {
-				parts: IArray.fromArray([tparam.name]),
-				asString: tparam.name.value,
-			} as TsQIdent,
-			tparams: IArray.Empty,
-			asString: `TsTypeRef(${tparam.name.value})`,
-		} as TsTypeRef)) as unknown as IArray<TsType>;
+		return tparams.map(
+			(tparam) =>
+				({
+					_tag: "TsTypeRef",
+					comments: NoComments.instance,
+					name: {
+						parts: IArray.fromArray([tparam.name]),
+						asString: tparam.name.value,
+					} as TsQIdent,
+					tparams: IArray.Empty,
+					asString: `TsTypeRef(${tparam.name.value})`,
+				}) as TsTypeRef,
+		) as unknown as IArray<TsType>;
 	}
 }
 
@@ -203,9 +202,11 @@ export const RewriteTypeThisTransformFunction = {
 	/**
 	 * Transform function that can be used directly.
 	 */
-	enterTsType: (scope: TsTreeScope) => (x: TsType): TsType => {
-		return RewriteTypeThisTransform.enterTsType(scope)(x);
-	},
+	enterTsType:
+		(scope: TsTreeScope) =>
+		(x: TsType): TsType => {
+			return RewriteTypeThisTransform.enterTsType(scope)(x);
+		},
 
 	withTree: (scope: TsTreeScope, tree: TsTree): TsTreeScope => {
 		return RewriteTypeThisTransform.withTree(scope, tree);

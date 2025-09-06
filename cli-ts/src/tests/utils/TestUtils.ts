@@ -7,14 +7,19 @@
  */
 
 import { none, type Option, some } from "fp-ts/Option";
-import { Raw, type Comment } from "@/internal/Comment.js";
+import { type Comment, Raw } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath, type CodePathHasPath } from "@/internal/ts/CodePath.js";
-import { JsLocation, type JsLocationGlobal, type JsLocationModule, type JsLocationBoth } from "@/internal/ts/JsLocation.js";
-import { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
+import {
+	JsLocation,
+	type JsLocationBoth,
+	type JsLocationGlobal,
+	type JsLocationModule,
+} from "@/internal/ts/JsLocation.js";
+import { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
 import type { TsLib } from "@/internal/ts/TsTreeScope.js";
 import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
@@ -351,20 +356,22 @@ export function createMemberCtor(): TsMemberCtor {
 		level: TsProtectionLevel.default(),
 		signature,
 		asString: "constructor()",
-		withComments: (cs: Comments) => ({
-			_tag: "TsMemberCtor",
-			comments: cs,
-			level: TsProtectionLevel.default(),
-			signature,
-			asString: "constructor()",
-		} as TsMemberCtor),
-		addComment: (c: Comment) => ({
-			_tag: "TsMemberCtor",
-			comments: Comments.empty().add(c),
-			level: TsProtectionLevel.default(),
-			signature,
-			asString: "constructor()",
-		} as TsMemberCtor),
+		withComments: (cs: Comments) =>
+			({
+				_tag: "TsMemberCtor",
+				comments: cs,
+				level: TsProtectionLevel.default(),
+				signature,
+				asString: "constructor()",
+			}) as TsMemberCtor,
+		addComment: (c: Comment) =>
+			({
+				_tag: "TsMemberCtor",
+				comments: Comments.empty().add(c),
+				level: TsProtectionLevel.default(),
+				signature,
+				asString: "constructor()",
+			}) as TsMemberCtor,
 	};
 }
 
@@ -375,7 +382,10 @@ export function createMemberCtor(): TsMemberCtor {
  * @param functionType - Optional function type (defaults to void function)
  * @returns A TsMemberFunction object
  */
-export function createMemberFunction(name: string, functionType?: TsTypeFunction): TsMemberFunction {
+export function createMemberFunction(
+	name: string,
+	functionType?: TsTypeFunction,
+): TsMemberFunction {
 	const funcType = functionType || createTypeFunction();
 	const nameIdent = createSimpleIdent(name);
 	return {
@@ -388,28 +398,30 @@ export function createMemberFunction(name: string, functionType?: TsTypeFunction
 		isStatic: false,
 		isReadOnly: false,
 		asString: `${name}${funcType.signature.asString}`,
-		withComments: (cs: Comments) => ({
-			_tag: "TsMemberFunction",
-			comments: cs,
-			level: TsProtectionLevel.default(),
-			name: nameIdent,
-			methodType: MethodType.normal(),
-			signature: funcType.signature,
-			isStatic: false,
-			isReadOnly: false,
-			asString: `${name}${funcType.signature.asString}`,
-		} as TsMemberFunction),
-		addComment: (c: Comment) => ({
-			_tag: "TsMemberFunction",
-			comments: Comments.empty().add(c),
-			level: TsProtectionLevel.default(),
-			name: nameIdent,
-			methodType: MethodType.normal(),
-			signature: funcType.signature,
-			isStatic: false,
-			isReadOnly: false,
-			asString: `${name}${funcType.signature.asString}`,
-		} as TsMemberFunction),
+		withComments: (cs: Comments) =>
+			({
+				_tag: "TsMemberFunction",
+				comments: cs,
+				level: TsProtectionLevel.default(),
+				name: nameIdent,
+				methodType: MethodType.normal(),
+				signature: funcType.signature,
+				isStatic: false,
+				isReadOnly: false,
+				asString: `${name}${funcType.signature.asString}`,
+			}) as TsMemberFunction,
+		addComment: (c: Comment) =>
+			({
+				_tag: "TsMemberFunction",
+				comments: Comments.empty().add(c),
+				level: TsProtectionLevel.default(),
+				name: nameIdent,
+				methodType: MethodType.normal(),
+				signature: funcType.signature,
+				isStatic: false,
+				isReadOnly: false,
+				asString: `${name}${funcType.signature.asString}`,
+			}) as TsMemberFunction,
 	};
 }
 
@@ -1114,7 +1126,7 @@ export function createJsLocation(): JsLocation {
  * @returns A JsLocationGlobal
  */
 export function createJsLocationGlobal(...parts: string[]): JsLocationGlobal {
-	const pathParts = parts.map(part => createSimpleIdent(part));
+	const pathParts = parts.map((part) => createSimpleIdent(part));
 	return JsLocation.global(TsQIdent.of(...pathParts));
 }
 

@@ -5,8 +5,8 @@
  * It traverses the tree and updates the jsLocation property on nodes that support it.
  */
 
+import { JsLocation } from "../JsLocation.js";
 import { AbstractTreeTransformation } from "../TreeTransformation.js";
-import { JsLocation, type JsLocationHas } from "../JsLocation.js";
 import type {
 	TsContainer,
 	TsDecl,
@@ -24,10 +24,10 @@ import type {
 
 /**
  * Transform that sets JavaScript location information on tree nodes.
- * 
+ *
  * This transform extends TreeTransformation with JsLocation as the context type.
  * It updates the jsLocation property on nodes that implement HasJsLocation interface.
- * 
+ *
  * The transform works by:
  * 1. Checking if a node implements HasJsLocation (has withJsLocation method)
  * 2. If yes, calling withJsLocation to update the node with the current location
@@ -59,7 +59,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsContainer nodes, setting JS location if they implement HasJsLocation.
 	 */
-	override enterTsContainer(jsLocation: JsLocation): (x: TsContainer) => TsContainer {
+	override enterTsContainer(
+		jsLocation: JsLocation,
+	): (x: TsContainer) => TsContainer {
 		return (x: TsContainer) => {
 			// Check if this container implements HasJsLocation
 			if (this.hasJsLocation(x)) {
@@ -73,7 +75,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	 * Processes TsParsedFile nodes. TsParsedFile does NOT implement HasJsLocation in the Scala version,
 	 * so we leave it unchanged.
 	 */
-	override enterTsParsedFile(jsLocation: JsLocation): (x: TsParsedFile) => TsParsedFile {
+	override enterTsParsedFile(
+		_jsLocation: JsLocation,
+	): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => {
 			// TsParsedFile does NOT implement JsLocation.Has in Scala, so leave unchanged
 			return x;
@@ -83,7 +87,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclClass nodes, setting JS location since they implement HasJsLocation.
 	 */
-	override enterTsDeclClass(jsLocation: JsLocation): (x: TsDeclClass) => TsDeclClass {
+	override enterTsDeclClass(
+		jsLocation: JsLocation,
+	): (x: TsDeclClass) => TsDeclClass {
 		return (x: TsDeclClass) => {
 			// TsDeclClass always implements JsLocation.Has
 			return x.withJsLocation(jsLocation);
@@ -93,7 +99,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclInterface nodes, setting JS location if they implement HasJsLocation.
 	 */
-	override enterTsDeclInterface(jsLocation: JsLocation): (x: TsDeclInterface) => TsDeclInterface {
+	override enterTsDeclInterface(
+		_jsLocation: JsLocation,
+	): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => {
 			// TsDeclInterface does not implement JsLocation.Has in Scala, so leave unchanged
 			return x;
@@ -103,7 +111,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclNamespace nodes, setting JS location since they implement HasJsLocation.
 	 */
-	override enterTsDeclNamespace(jsLocation: JsLocation): (x: TsDeclNamespace) => TsDeclNamespace {
+	override enterTsDeclNamespace(
+		jsLocation: JsLocation,
+	): (x: TsDeclNamespace) => TsDeclNamespace {
 		return (x: TsDeclNamespace) => {
 			// TsDeclNamespace always implements JsLocation.Has
 			return x.withJsLocation(jsLocation);
@@ -113,7 +123,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclModule nodes, setting JS location since they implement HasJsLocation.
 	 */
-	override enterTsDeclModule(jsLocation: JsLocation): (x: TsDeclModule) => TsDeclModule {
+	override enterTsDeclModule(
+		jsLocation: JsLocation,
+	): (x: TsDeclModule) => TsDeclModule {
 		return (x: TsDeclModule) => {
 			// TsDeclModule always implements JsLocation.Has
 			return x.withJsLocation(jsLocation);
@@ -133,7 +145,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclFunction nodes, setting JS location since they implement HasJsLocation.
 	 */
-	override enterTsDeclFunction(jsLocation: JsLocation): (x: TsDeclFunction) => TsDeclFunction {
+	override enterTsDeclFunction(
+		jsLocation: JsLocation,
+	): (x: TsDeclFunction) => TsDeclFunction {
 		return (x: TsDeclFunction) => {
 			// TsDeclFunction always implements JsLocation.Has
 			return x.withJsLocation(jsLocation);
@@ -143,7 +157,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclTypeAlias nodes, setting JS location if they implement HasJsLocation.
 	 */
-	override enterTsDeclTypeAlias(jsLocation: JsLocation): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	override enterTsDeclTypeAlias(
+		_jsLocation: JsLocation,
+	): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => {
 			// TsDeclTypeAlias does not implement JsLocation.Has in Scala, so leave unchanged
 			return x;
@@ -153,7 +169,9 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	/**
 	 * Processes TsDeclEnum nodes, setting JS location since they implement HasJsLocation.
 	 */
-	override enterTsDeclEnum(jsLocation: JsLocation): (x: TsDeclEnum) => TsDeclEnum {
+	override enterTsDeclEnum(
+		jsLocation: JsLocation,
+	): (x: TsDeclEnum) => TsDeclEnum {
 		return (x: TsDeclEnum) => {
 			// TsDeclEnum always implements JsLocation.Has
 			return x.withJsLocation(jsLocation);
@@ -164,7 +182,10 @@ export class SetJsLocation extends AbstractTreeTransformation<JsLocation> {
 	 * Type guard to check if an object implements HasJsLocation.
 	 * An object implements HasJsLocation if it has both jsLocation property and withJsLocation method.
 	 */
-	private hasJsLocation(obj: any): obj is { jsLocation: JsLocation; withJsLocation(newLocation: JsLocation): any } {
+	private hasJsLocation(obj: any): obj is {
+		jsLocation: JsLocation;
+		withJsLocation(newLocation: JsLocation): any;
+	} {
 		return (
 			obj != null &&
 			typeof obj === "object" &&
@@ -188,17 +209,23 @@ export const SetJsLocationTransformFunction = {
 	/**
 	 * Transform function that can be used directly.
 	 */
-	enterTsDecl: (jsLocation: JsLocation) => (x: TsDecl): TsDecl => {
-		return SetJsLocationTransform.enterTsDecl(jsLocation)(x);
-	},
+	enterTsDecl:
+		(jsLocation: JsLocation) =>
+		(x: TsDecl): TsDecl => {
+			return SetJsLocationTransform.enterTsDecl(jsLocation)(x);
+		},
 
-	enterTsContainer: (jsLocation: JsLocation) => (x: TsContainer): TsContainer => {
-		return SetJsLocationTransform.enterTsContainer(jsLocation)(x);
-	},
+	enterTsContainer:
+		(jsLocation: JsLocation) =>
+		(x: TsContainer): TsContainer => {
+			return SetJsLocationTransform.enterTsContainer(jsLocation)(x);
+		},
 
-	enterTsParsedFile: (jsLocation: JsLocation) => (x: TsParsedFile): TsParsedFile => {
-		return SetJsLocationTransform.enterTsParsedFile(jsLocation)(x);
-	},
+	enterTsParsedFile:
+		(jsLocation: JsLocation) =>
+		(x: TsParsedFile): TsParsedFile => {
+			return SetJsLocationTransform.enterTsParsedFile(jsLocation)(x);
+		},
 
 	withTree: (jsLocation: JsLocation, tree: TsTree): JsLocation => {
 		return SetJsLocationTransform.withTree(jsLocation, tree);
