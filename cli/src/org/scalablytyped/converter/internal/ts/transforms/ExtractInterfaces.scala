@@ -28,7 +28,7 @@ object ExtractInterfaces {
     }
   }
 
-  private class ConflictHandlingStore(inLibrary: TsIdent, into: TsIdentSimple) {
+  class ConflictHandlingStore(inLibrary: TsIdent, into: TsIdentSimple) {
     val interfaces = mutable.Map.empty[TsIdent, TsDeclInterface]
 
     def addInterface(
@@ -57,7 +57,7 @@ object ExtractInterfaces {
     }
   }
 
-  private def willBeErased(stack: List[TsTree], obj: TsTypeObject): Boolean =
+  def willBeErased(stack: List[TsTree], obj: TsTypeObject): Boolean =
     stack.exists {
       case _: TsMemberTypeMapped => true
       case _: TsTypePredicate    => true
@@ -70,7 +70,7 @@ object ExtractInterfaces {
       case _                                              => false
     }
 
-  private class LiftTypeObjects(store: ConflictHandlingStore) extends TreeTransformationScopedChanges {
+  class LiftTypeObjects(store: ConflictHandlingStore) extends TreeTransformationScopedChanges {
     override def leaveTsType(scope: TsTreeScope)(x: TsType): TsType =
       x match {
         case obj: TsTypeObject
@@ -113,7 +113,7 @@ object ExtractInterfaces {
       }
   }
 
-  private def shouldBeExtracted(t: TsTreeScope): Boolean =
+  def shouldBeExtracted(t: TsTreeScope): Boolean =
     t.stack match {
       case _ :: (_: TsDeclVar) :: _ => false
       case _                        => true
