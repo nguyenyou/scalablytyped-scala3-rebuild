@@ -6,18 +6,18 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
-import { Comment } from "@/internal/Comment.js";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, type Option, some } from "fp-ts/Option";
+import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { InferTypeFromExprTransform } from "@/internal/ts/transforms/InferTypeFromExpr.js";
 import {
 	TsDeclVar,
-	TsExpr,
+	type TsExpr,
 	TsExprArrayOf,
 	TsExprBinaryOp,
 	TsExprCall,
@@ -26,7 +26,7 @@ import {
 	TsExprRef,
 	TsExprUnary,
 	TsIdent,
-	TsIdentSimple,
+	type TsIdentSimple,
 	TsLiteral,
 	TsMemberProperty,
 	TsParsedFile,
@@ -34,12 +34,7 @@ import {
 	TsQIdent,
 	type TsType,
 	TsTypeRef,
-	TsTypeUnion,
 } from "@/internal/ts/trees.js";
-import {
-	InferTypeFromExpr,
-	InferTypeFromExprTransform,
-} from "@/internal/ts/transforms/InferTypeFromExpr.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -53,7 +48,7 @@ function createQIdent(name: string): TsQIdent {
 	return TsQIdent.of(createSimpleIdent(name));
 }
 
-function createTypeRef(
+function _createTypeRef(
 	name: string,
 	tparams: IArray<TsType> = IArray.Empty,
 ): TsTypeRef {
@@ -142,7 +137,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 	);
 	const deps = new Map();
 	const logger = Logger.DevNull();
-	
+
 	const root = TsTreeScope.create(libName, false, deps, logger);
 	return root["/"](parsedFile);
 }
@@ -165,7 +160,10 @@ function expectSomeType(optType: Option<TsType>): TsType {
 }
 
 // Helper function to check that a type is a TsTypeRef with the expected name and has comments
-function expectTypeRefWithComments(type: TsType, expectedTypeName: string): void {
+function expectTypeRefWithComments(
+	type: TsType,
+	expectedTypeName: string,
+): void {
 	expect(type._tag).toBe("TsTypeRef");
 	if (type._tag === "TsTypeRef") {
 		const typeRef = type as TsTypeRef;
@@ -182,13 +180,16 @@ function expectTypeRefWithComments(type: TsType, expectedTypeName: string): void
 describe("InferTypeFromExpr", () => {
 	describe("Basic Functionality", () => {
 		test("extends TreeTransformationScopedChanges", () => {
-			expect(InferTypeFromExprTransform).toBeInstanceOf(TreeTransformationScopedChanges);
+			expect(InferTypeFromExprTransform).toBeInstanceOf(
+				TreeTransformationScopedChanges,
+			);
 		});
 
 		test("has enterTsMemberProperty method", () => {
 			const scope = createMockScope();
 			const property = createMockProperty("testProp");
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsMemberProperty");
 		});
@@ -204,10 +205,15 @@ describe("InferTypeFromExpr", () => {
 		test("leaves properties with types unchanged", () => {
 			const scope = createMockScope();
 			const stringType = TsTypeRef.string;
-			const property = createMockProperty("testProp", some(stringType), some(createLiteralExpr("value")));
-			
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
-			
+			const property = createMockProperty(
+				"testProp",
+				some(stringType),
+				some(createLiteralExpr("value")),
+			);
+
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+
 			expect(result).toBe(property); // Should be unchanged
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("Some");
@@ -216,10 +222,14 @@ describe("InferTypeFromExpr", () => {
 		test("leaves variables with types unchanged", () => {
 			const scope = createMockScope();
 			const stringType = TsTypeRef.string;
-			const variable = createMockVar("testVar", some(stringType), some(createLiteralExpr("value")));
-			
+			const variable = createMockVar(
+				"testVar",
+				some(stringType),
+				some(createLiteralExpr("value")),
+			);
+
 			const result = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable);
-			
+
 			expect(result).toBe(variable); // Should be unchanged
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("Some");
@@ -229,9 +239,14 @@ describe("InferTypeFromExpr", () => {
 	describe("Property Type Inference", () => {
 		test("infers type from string literal", () => {
 			const scope = createMockScope();
-			const property = createMockProperty("testProp", none, some(createLiteralExpr("hello")));
+			const property = createMockProperty(
+				"testProp",
+				none,
+				some(createLiteralExpr("hello")),
+			);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None"); // Expression should be removed
@@ -246,16 +261,21 @@ describe("InferTypeFromExpr", () => {
 				expect(typeRef.comments.cs.length).toBe(1);
 				expect(typeRef.comments.cs[0]).toMatchObject({
 					_tag: "Comment",
-					raw: "/* \"hello\" */ "
+					raw: '/* "hello" */ ',
 				});
 			}
 		});
 
 		test("infers type from number literal", () => {
 			const scope = createMockScope();
-			const property = createMockProperty("testProp", none, some(createNumLiteralExpr("42")));
+			const property = createMockProperty(
+				"testProp",
+				none,
+				some(createNumLiteralExpr("42")),
+			);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -270,16 +290,21 @@ describe("InferTypeFromExpr", () => {
 				expect(typeRef.comments.cs.length).toBe(1);
 				expect(typeRef.comments.cs[0]).toMatchObject({
 					_tag: "Comment",
-					raw: "/* 42 */ "
+					raw: "/* 42 */ ",
 				});
 			}
 		});
 
 		test("infers type from boolean literal", () => {
 			const scope = createMockScope();
-			const property = createMockProperty("testProp", none, some(createBoolLiteralExpr(true)));
+			const property = createMockProperty(
+				"testProp",
+				none,
+				some(createBoolLiteralExpr(true)),
+			);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -294,16 +319,21 @@ describe("InferTypeFromExpr", () => {
 				expect(typeRef.comments.cs.length).toBe(1);
 				expect(typeRef.comments.cs[0]).toMatchObject({
 					_tag: "Comment",
-					raw: "/* true */ "
+					raw: "/* true */ ",
 				});
 			}
 		});
 
 		test("infers type from reference expression", () => {
 			const scope = createMockScope();
-			const property = createMockProperty("testProp", none, some(createRefExpr("someRef")));
+			const property = createMockProperty(
+				"testProp",
+				none,
+				some(createRefExpr("someRef")),
+			);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -318,7 +348,8 @@ describe("InferTypeFromExpr", () => {
 			const callExpr = createCallExpr(createRefExpr("someFunction"));
 			const property = createMockProperty("testProp", none, some(callExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -330,10 +361,14 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from cast expression", () => {
 			const scope = createMockScope();
-			const castExpr = createCastExpr(createLiteralExpr("value"), TsTypeRef.number);
+			const castExpr = createCastExpr(
+				createLiteralExpr("value"),
+				TsTypeRef.number,
+			);
 			const property = createMockProperty("testProp", none, some(castExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -348,7 +383,9 @@ describe("InferTypeFromExpr", () => {
 				expect(typeRef.comments.cs.length).toBe(1);
 				expect(typeRef.comments.cs[0]).toMatchObject({
 					_tag: "Comment",
-					raw: expect.stringContaining("/* \"value\" as TsTypeRef(TsQIdent(number)) */")
+					raw: expect.stringContaining(
+						'/* "value" as TsTypeRef(TsQIdent(number)) */',
+					),
 				});
 			}
 		});
@@ -358,7 +395,8 @@ describe("InferTypeFromExpr", () => {
 			const arrayExpr = createArrayOfExpr(createLiteralExpr("item"));
 			const property = createMockProperty("testProp", none, some(arrayExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -372,7 +410,11 @@ describe("InferTypeFromExpr", () => {
 	describe("Variable Type Inference", () => {
 		test("infers type from string literal in variable", () => {
 			const scope = createMockScope();
-			const variable = createMockVar("testVar", none, some(createLiteralExpr("hello")));
+			const variable = createMockVar(
+				"testVar",
+				none,
+				some(createLiteralExpr("hello")),
+			);
 
 			const result = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable);
 
@@ -384,7 +426,11 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from number literal in variable", () => {
 			const scope = createMockScope();
-			const variable = createMockVar("testVar", none, some(createNumLiteralExpr("3.14")));
+			const variable = createMockVar(
+				"testVar",
+				none,
+				some(createNumLiteralExpr("3.14")),
+			);
 
 			const result = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable);
 
@@ -396,7 +442,11 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from boolean literal in variable", () => {
 			const scope = createMockScope();
-			const variable = createMockVar("testVar", none, some(createBoolLiteralExpr(false)));
+			const variable = createMockVar(
+				"testVar",
+				none,
+				some(createBoolLiteralExpr(false)),
+			);
 
 			const result = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable);
 
@@ -439,7 +489,8 @@ describe("InferTypeFromExpr", () => {
 			const unaryExpr = createUnaryExpr("!", createBoolLiteralExpr(true));
 			const property = createMockProperty("testProp", none, some(unaryExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -451,10 +502,15 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from binary operation - addition", () => {
 			const scope = createMockScope();
-			const binaryExpr = createBinaryOpExpr(createNumLiteralExpr("5"), "+", createNumLiteralExpr("3"));
+			const binaryExpr = createBinaryOpExpr(
+				createNumLiteralExpr("5"),
+				"+",
+				createNumLiteralExpr("3"),
+			);
 			const property = createMockProperty("testProp", none, some(binaryExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -466,10 +522,15 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from binary operation - multiplication", () => {
 			const scope = createMockScope();
-			const binaryExpr = createBinaryOpExpr(createNumLiteralExpr("4"), "*", createNumLiteralExpr("2"));
+			const binaryExpr = createBinaryOpExpr(
+				createNumLiteralExpr("4"),
+				"*",
+				createNumLiteralExpr("2"),
+			);
 			const property = createMockProperty("testProp", none, some(binaryExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -481,10 +542,15 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from binary operation - bit shift", () => {
 			const scope = createMockScope();
-			const binaryExpr = createBinaryOpExpr(createNumLiteralExpr("8"), "<<", createNumLiteralExpr("2"));
+			const binaryExpr = createBinaryOpExpr(
+				createNumLiteralExpr("8"),
+				"<<",
+				createNumLiteralExpr("2"),
+			);
 			const property = createMockProperty("testProp", none, some(binaryExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -496,11 +562,16 @@ describe("InferTypeFromExpr", () => {
 
 		test("infers type from nested expressions", () => {
 			const scope = createMockScope();
-			const innerExpr = createBinaryOpExpr(createNumLiteralExpr("2"), "+", createNumLiteralExpr("3"));
+			const innerExpr = createBinaryOpExpr(
+				createNumLiteralExpr("2"),
+				"+",
+				createNumLiteralExpr("3"),
+			);
 			const outerExpr = createUnaryExpr("-", innerExpr);
 			const property = createMockProperty("testProp", none, some(outerExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -515,7 +586,8 @@ describe("InferTypeFromExpr", () => {
 			const scope = createMockScope();
 			const property = createMockProperty("testProp", none, none);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result).toBe(property); // Should be unchanged
 			expect(result.tpe._tag).toBe("None");
@@ -537,11 +609,15 @@ describe("InferTypeFromExpr", () => {
 			const scope = createMockScope();
 			const complexExpr = createCallExpr(
 				createRefExpr("complexFunction"),
-				IArray.fromArray([createLiteralExpr("arg1"), createNumLiteralExpr("42")])
+				IArray.fromArray([
+					createLiteralExpr("arg1"),
+					createNumLiteralExpr("42"),
+				]),
 			);
 			const property = createMockProperty("testProp", none, some(complexExpr));
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			expect(result.tpe._tag).toBe("Some");
 			expect(result.expr._tag).toBe("None");
@@ -564,7 +640,8 @@ describe("InferTypeFromExpr", () => {
 				true, // isReadOnly
 			);
 
-			const result = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
+			const result =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property);
 
 			// Should preserve all metadata except add type and remove expression
 			expect(result.comments).toEqual(originalComments);
@@ -582,15 +659,35 @@ describe("InferTypeFromExpr", () => {
 		test("handles mixed property and variable inference", () => {
 			const scope = createMockScope();
 
-			const property1 = createMockProperty("prop1", none, some(createLiteralExpr("string")));
-			const property2 = createMockProperty("prop2", none, some(createNumLiteralExpr("123")));
-			const variable1 = createMockVar("var1", none, some(createBoolLiteralExpr(true)));
-			const variable2 = createMockVar("var2", none, some(createRefExpr("reference")));
+			const property1 = createMockProperty(
+				"prop1",
+				none,
+				some(createLiteralExpr("string")),
+			);
+			const property2 = createMockProperty(
+				"prop2",
+				none,
+				some(createNumLiteralExpr("123")),
+			);
+			const variable1 = createMockVar(
+				"var1",
+				none,
+				some(createBoolLiteralExpr(true)),
+			);
+			const variable2 = createMockVar(
+				"var2",
+				none,
+				some(createRefExpr("reference")),
+			);
 
-			const resultProp1 = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property1);
-			const resultProp2 = InferTypeFromExprTransform.enterTsMemberProperty(scope)(property2);
-			const resultVar1 = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable1);
-			const resultVar2 = InferTypeFromExprTransform.enterTsDeclVar(scope)(variable2);
+			const resultProp1 =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property1);
+			const resultProp2 =
+				InferTypeFromExprTransform.enterTsMemberProperty(scope)(property2);
+			const resultVar1 =
+				InferTypeFromExprTransform.enterTsDeclVar(scope)(variable1);
+			const resultVar2 =
+				InferTypeFromExprTransform.enterTsDeclVar(scope)(variable2);
 
 			// All should have inferred types and no expressions
 			expect(resultProp1.tpe._tag).toBe("Some");

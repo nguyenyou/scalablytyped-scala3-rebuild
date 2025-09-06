@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, type Option, some } from "fp-ts/Option";
+import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
@@ -15,27 +15,24 @@ import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { InferReturnTypesTransform } from "@/internal/ts/transforms/InferReturnTypes.js";
 import {
-  TsContainerOrDecl,
-  TsDeclClass,
-  TsDeclInterface,
-  TsFunParam,
-  TsFunSig,
-  TsIdent,
-  TsIdentSimple,
-  TsMember,
-  TsMemberFunction,
-  TsMemberProperty,
-  TsParsedFile,
-  TsProtectionLevel,
-  TsQIdent,
-  type TsType,
-  TsTypeRef,
+	type TsContainerOrDecl,
+	TsDeclClass,
+	TsDeclInterface,
+	TsFunParam,
+	TsFunSig,
+	TsIdent,
+	type TsIdentSimple,
+	type TsMember,
+	TsMemberFunction,
+	TsMemberProperty,
+	TsParsedFile,
+	TsProtectionLevel,
+	TsQIdent,
+	type TsType,
+	TsTypeRef,
 } from "@/internal/ts/trees.js";
-import {
-	InferReturnTypes,
-	InferReturnTypesTransform,
-} from "@/internal/ts/transforms/InferReturnTypes.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -60,11 +57,7 @@ function createFunParam(
 	name: string,
 	tpe: Option<TsType> = some(TsTypeRef.string),
 ): TsFunParam {
-	return TsFunParam.create(
-		NoComments.instance,
-		createSimpleIdent(name),
-		tpe,
-	);
+	return TsFunParam.create(NoComments.instance, createSimpleIdent(name), tpe);
 }
 
 function createFunSig(
@@ -72,12 +65,7 @@ function createFunSig(
 	resultType: Option<TsType> = none,
 	tparams: IArray<any> = IArray.Empty,
 ): TsFunSig {
-	return TsFunSig.create(
-		NoComments.instance,
-		tparams,
-		params,
-		resultType,
-	);
+	return TsFunSig.create(NoComments.instance, tparams, params, resultType);
 }
 
 function createMockFunction(
@@ -97,7 +85,7 @@ function createMockFunction(
 	);
 }
 
-function createMockProperty(
+function _createMockProperty(
 	name: string,
 	tpe: Option<TsType> = some(TsTypeRef.string),
 ): TsMemberProperty {
@@ -141,7 +129,7 @@ function createMockClass(
 		createSimpleIdent(name),
 		IArray.Empty, // tparams
 		parent,
-    implementsInterfaces,
+		implementsInterfaces,
 		members,
 		JsLocation.zero(),
 		CodePath.noPath(),
@@ -158,7 +146,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 	);
 	const deps = new Map();
 	const logger = Logger.DevNull();
-	
+
 	const root = TsTreeScope.create(libName, false, deps, logger);
 	return root["/"](parsedFile);
 }
@@ -185,13 +173,16 @@ function paramsArray(...params: TsFunParam[]): IArray<TsFunParam> {
 describe("InferReturnTypes", () => {
 	describe("Basic Functionality", () => {
 		test("extends TreeTransformationScopedChanges", () => {
-			expect(InferReturnTypesTransform).toBeInstanceOf(TreeTransformationScopedChanges);
+			expect(InferReturnTypesTransform).toBeInstanceOf(
+				TreeTransformationScopedChanges,
+			);
 		});
 
 		test("has enterTsMemberFunction method", () => {
 			const scope = createMockScope();
 			const function_ = createMockFunction("testMethod");
-			const result = InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsMemberFunction");
 		});
@@ -199,9 +190,14 @@ describe("InferReturnTypes", () => {
 		test("leaves functions with return types unchanged", () => {
 			const scope = createMockScope();
 			const stringType = TsTypeRef.string;
-			const function_ = createMockFunction("testMethod", IArray.Empty, some(stringType));
+			const function_ = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(stringType),
+			);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
 
 			expect(result).toBe(function_); // Should be unchanged
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -211,9 +207,10 @@ describe("InferReturnTypes", () => {
 		test("leaves constructor functions unchanged", () => {
 			const scope = createMockScope();
 			const constructor = createMockFunction("constructor", IArray.Empty, none);
-			
-			const result = InferReturnTypesTransform.enterTsMemberFunction(scope)(constructor);
-			
+
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(scope)(constructor);
+
 			expect(result).toBe(constructor); // Should be unchanged
 			expect(result.signature.resultType._tag).toBe("None");
 		});
@@ -221,9 +218,10 @@ describe("InferReturnTypes", () => {
 		test("leaves functions without owner unchanged", () => {
 			const scope = createMockScope();
 			const function_ = createMockFunction("testMethod", IArray.Empty, none);
-			
-			const result = InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
-			
+
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(scope)(function_);
+
 			expect(result).toBe(function_); // Should be unchanged since no owner in scope
 			expect(result.signature.resultType._tag).toBe("None");
 		});
@@ -232,11 +230,22 @@ describe("InferReturnTypes", () => {
 	describe("Return Type Inference", () => {
 		test("infers return type from parent interface", () => {
 			const stringType = TsTypeRef.string;
-			const parentMethod = createMockFunction("testMethod", IArray.Empty, some(stringType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod));
+			const parentMethod = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(stringType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none); // No return type
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -253,7 +262,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer return type from parent
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -262,11 +274,22 @@ describe("InferReturnTypes", () => {
 
 		test("infers return type from parent class", () => {
 			const numberType = TsTypeRef.number;
-			const parentMethod = createMockFunction("testMethod", IArray.Empty, some(numberType));
-			const parentClass = createMockClass("ParentClass", membersArray(parentMethod));
+			const parentMethod = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(numberType),
+			);
+			const parentClass = createMockClass(
+				"ParentClass",
+				membersArray(parentMethod),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none); // No return type
-			const childClass = createMockClass("ChildClass", membersArray(childMethod), some(createTypeRef("ParentClass")));
+			const childClass = createMockClass(
+				"ChildClass",
+				membersArray(childMethod),
+				some(createTypeRef("ParentClass")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -283,7 +306,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childClass);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer return type from parent
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -293,12 +319,31 @@ describe("InferReturnTypes", () => {
 		test("matches parameter count for inference", () => {
 			const stringType = TsTypeRef.string;
 			const numberType = TsTypeRef.number;
-			const parentMethod1 = createMockFunction("testMethod", paramsArray(createFunParam("param1")), some(stringType));
-			const parentMethod2 = createMockFunction("testMethod", paramsArray(createFunParam("param1"), createFunParam("param2")), some(numberType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod1, parentMethod2));
+			const parentMethod1 = createMockFunction(
+				"testMethod",
+				paramsArray(createFunParam("param1")),
+				some(stringType),
+			);
+			const parentMethod2 = createMockFunction(
+				"testMethod",
+				paramsArray(createFunParam("param1"), createFunParam("param2")),
+				some(numberType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod1, parentMethod2),
+			);
 
-			const childMethod = createMockFunction("testMethod", paramsArray(createFunParam("param1"), createFunParam("param2")), none);
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childMethod = createMockFunction(
+				"testMethod",
+				paramsArray(createFunParam("param1"), createFunParam("param2")),
+				none,
+			);
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -315,7 +360,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer return type from method with matching parameter count
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -324,11 +372,23 @@ describe("InferReturnTypes", () => {
 
 		test("does not infer from non-normal methods", () => {
 			const stringType = TsTypeRef.string;
-			const parentGetter = createMockFunction("getValue", IArray.Empty, some(stringType), MethodType.getter());
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentGetter));
+			const parentGetter = createMockFunction(
+				"getValue",
+				IArray.Empty,
+				some(stringType),
+				MethodType.getter(),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentGetter),
+			);
 
 			const childMethod = createMockFunction("getValue", IArray.Empty, none); // Normal method, not getter
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -345,7 +405,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should not infer from getter to normal method
 			expect(result.signature.resultType._tag).toBe("None");
@@ -356,22 +419,46 @@ describe("InferReturnTypes", () => {
 		test("infers from first matching parent", () => {
 			const stringType = TsTypeRef.string;
 			const numberType = TsTypeRef.number;
-			const parent1Method = createMockFunction("testMethod", IArray.Empty, some(stringType));
-			const parent1Interface = createMockInterface("Parent1Interface", membersArray(parent1Method));
+			const parent1Method = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(stringType),
+			);
+			const parent1Interface = createMockInterface(
+				"Parent1Interface",
+				membersArray(parent1Method),
+			);
 
-			const parent2Method = createMockFunction("testMethod", IArray.Empty, some(numberType));
-			const parent2Interface = createMockInterface("Parent2Interface", membersArray(parent2Method));
+			const parent2Method = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(numberType),
+			);
+			const parent2Interface = createMockInterface(
+				"Parent2Interface",
+				membersArray(parent2Method),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none);
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod),
-				typeRefsArray(createTypeRef("Parent1Interface"), createTypeRef("Parent2Interface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(
+					createTypeRef("Parent1Interface"),
+					createTypeRef("Parent2Interface"),
+				),
+			);
 
 			// Create scope with all declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty, // directives
-				IArray.fromArray<TsContainerOrDecl>([parent1Interface, parent2Interface, childInterface]),
+				IArray.fromArray<TsContainerOrDecl>([
+					parent1Interface,
+					parent2Interface,
+					childInterface,
+				]),
 				CodePath.noPath(),
 			);
 			const deps = new Map();
@@ -381,7 +468,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer from first matching parent
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -390,20 +480,39 @@ describe("InferReturnTypes", () => {
 
 		test("handles inheritance chain", () => {
 			const booleanType = TsTypeRef.boolean;
-			const grandparentMethod = createMockFunction("testMethod", IArray.Empty, some(booleanType));
-			const grandparentInterface = createMockInterface("GrandparentInterface", membersArray(grandparentMethod));
+			const grandparentMethod = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(booleanType),
+			);
+			const grandparentInterface = createMockInterface(
+				"GrandparentInterface",
+				membersArray(grandparentMethod),
+			);
 
-			const parentInterface = createMockInterface("ParentInterface", IArray.Empty, typeRefsArray(createTypeRef("GrandparentInterface")));
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				IArray.Empty,
+				typeRefsArray(createTypeRef("GrandparentInterface")),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none);
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with all declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty, // directives
-				IArray.fromArray<TsContainerOrDecl>([grandparentInterface, parentInterface, childInterface]),
+				IArray.fromArray<TsContainerOrDecl>([
+					grandparentInterface,
+					parentInterface,
+					childInterface,
+				]),
 				CodePath.noPath(),
 			);
 			const deps = new Map();
@@ -413,7 +522,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer from grandparent through parent
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -424,11 +536,22 @@ describe("InferReturnTypes", () => {
 	describe("Edge Cases", () => {
 		test("handles method not found in parents", () => {
 			const stringType = TsTypeRef.string;
-			const parentMethod = createMockFunction("otherMethod", IArray.Empty, some(stringType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod));
+			const parentMethod = createMockFunction(
+				"otherMethod",
+				IArray.Empty,
+				some(stringType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none); // Different method name
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -445,7 +568,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should not infer anything
 			expect(result.signature.resultType._tag).toBe("None");
@@ -453,11 +579,22 @@ describe("InferReturnTypes", () => {
 
 		test("handles parent without matching method signature", () => {
 			const stringType = TsTypeRef.string;
-			const parentMethod = createMockFunction("testMethod", paramsArray(createFunParam("param1")), some(stringType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod));
+			const parentMethod = createMockFunction(
+				"testMethod",
+				paramsArray(createFunParam("param1")),
+				some(stringType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none); // Different parameter count
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -474,7 +611,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should not infer due to parameter count mismatch
 			expect(result.signature.resultType._tag).toBe("None");
@@ -482,7 +622,11 @@ describe("InferReturnTypes", () => {
 
 		test("handles non-existent parent", () => {
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none);
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("NonExistentParent")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("NonExistentParent")),
+			);
 
 			// Create scope with only child declaration (parent doesn't exist)
 			const libName = TsIdent.librarySimple("test-lib");
@@ -499,7 +643,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should not infer anything
 			expect(result.signature.resultType._tag).toBe("None");
@@ -507,8 +654,15 @@ describe("InferReturnTypes", () => {
 
 		test("preserves function metadata", () => {
 			const stringType = TsTypeRef.string;
-			const parentMethod = createMockFunction("testMethod", IArray.Empty, some(stringType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod));
+			const parentMethod = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(stringType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod),
+			);
 
 			const originalComments = NoComments.instance;
 			const childMethod = TsMemberFunction.create(
@@ -520,7 +674,11 @@ describe("InferReturnTypes", () => {
 				true, // isStatic
 				true, // isReadOnly
 			);
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -537,7 +695,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should preserve all metadata except add return type
 			expect(result.comments).toEqual(originalComments);
@@ -552,20 +713,44 @@ describe("InferReturnTypes", () => {
 	describe("Integration Scenarios", () => {
 		test("complex inheritance with mixed classes and interfaces", () => {
 			const stringType = TsTypeRef.string;
-			const baseMethod = createMockFunction("process", paramsArray(createFunParam("data")), some(stringType));
-			const baseInterface = createMockInterface("BaseInterface", membersArray(baseMethod));
+			const baseMethod = createMockFunction(
+				"process",
+				paramsArray(createFunParam("data")),
+				some(stringType),
+			);
+			const baseInterface = createMockInterface(
+				"BaseInterface",
+				membersArray(baseMethod),
+			);
 
-			const middleClass = createMockClass("MiddleClass", IArray.Empty, none, typeRefsArray(createTypeRef("BaseInterface")));
+			const middleClass = createMockClass(
+				"MiddleClass",
+				IArray.Empty,
+				none,
+				typeRefsArray(createTypeRef("BaseInterface")),
+			);
 
-			const childMethod = createMockFunction("process", paramsArray(createFunParam("data")), none);
-			const childClass = createMockClass("ChildClass", membersArray(childMethod), some(createTypeRef("MiddleClass")));
+			const childMethod = createMockFunction(
+				"process",
+				paramsArray(createFunParam("data")),
+				none,
+			);
+			const childClass = createMockClass(
+				"ChildClass",
+				membersArray(childMethod),
+				some(createTypeRef("MiddleClass")),
+			);
 
 			// Create scope with all declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty, // directives
-				IArray.fromArray<TsContainerOrDecl>([baseInterface, middleClass, childClass]),
+				IArray.fromArray<TsContainerOrDecl>([
+					baseInterface,
+					middleClass,
+					childClass,
+				]),
 				CodePath.noPath(),
 			);
 			const deps = new Map();
@@ -575,7 +760,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childClass);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer through the inheritance chain
 			expect(result.signature.resultType._tag).toBe("Some");
@@ -585,12 +773,27 @@ describe("InferReturnTypes", () => {
 		test("handles overloaded methods", () => {
 			const stringType = TsTypeRef.string;
 			const numberType = TsTypeRef.number;
-			const parentMethod1 = createMockFunction("testMethod", IArray.Empty, some(stringType));
-			const parentMethod2 = createMockFunction("testMethod", paramsArray(createFunParam("param")), some(numberType));
-			const parentInterface = createMockInterface("ParentInterface", membersArray(parentMethod1, parentMethod2));
+			const parentMethod1 = createMockFunction(
+				"testMethod",
+				IArray.Empty,
+				some(stringType),
+			);
+			const parentMethod2 = createMockFunction(
+				"testMethod",
+				paramsArray(createFunParam("param")),
+				some(numberType),
+			);
+			const parentInterface = createMockInterface(
+				"ParentInterface",
+				membersArray(parentMethod1, parentMethod2),
+			);
 
 			const childMethod = createMockFunction("testMethod", IArray.Empty, none); // Matches first overload
-			const childInterface = createMockInterface("ChildInterface", membersArray(childMethod), typeRefsArray(createTypeRef("ParentInterface")));
+			const childInterface = createMockInterface(
+				"ChildInterface",
+				membersArray(childMethod),
+				typeRefsArray(createTypeRef("ParentInterface")),
+			);
 
 			// Create scope with both declarations available for lookup
 			const libName = TsIdent.librarySimple("test-lib");
@@ -607,7 +810,10 @@ describe("InferReturnTypes", () => {
 			const scope = rootScope["/"](parsedFile);
 			const childScope = scope["/"](childInterface);
 
-			const result = InferReturnTypesTransform.enterTsMemberFunction(childScope)(childMethod);
+			const result =
+				InferReturnTypesTransform.enterTsMemberFunction(childScope)(
+					childMethod,
+				);
 
 			// Should infer from matching overload
 			expect(result.signature.resultType._tag).toBe("Some");

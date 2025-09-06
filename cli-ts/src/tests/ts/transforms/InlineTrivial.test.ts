@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option, some } from "fp-ts/Option";
 import { Comment, IsTrivial } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
@@ -15,12 +15,13 @@ import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { InlineTrivialTransform } from "@/internal/ts/transforms/InlineTrivial.js";
 import {
 	TsDeclEnum,
 	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsIdent,
-	TsIdentSimple,
+	type TsIdentSimple,
 	TsParsedFile,
 	TsQIdent,
 	type TsType,
@@ -28,10 +29,6 @@ import {
 	TsTypeRef,
 	TsTypeUnion,
 } from "@/internal/ts/trees.js";
-import {
-	InlineTrivialTransform,
-	InlineTrivialTransformFunction,
-} from "@/internal/ts/transforms/InlineTrivial.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -52,7 +49,10 @@ function createTypeRef(
 	return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 }
 
-function createTypeRefWithComments(name: string, comments: Comments): TsTypeRef {
+function createTypeRefWithComments(
+	name: string,
+	comments: Comments,
+): TsTypeRef {
 	return TsTypeRef.create(comments, createQIdent(name), IArray.Empty);
 }
 
@@ -120,7 +120,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 	);
 	const deps = new Map();
 	const logger = Logger.DevNull();
-	
+
 	const root = TsTreeScope.create(libName, false, deps, logger);
 	return root["/"](parsedFile);
 }
@@ -132,7 +132,9 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 describe("InlineTrivial", () => {
 	describe("Basic Functionality", () => {
 		test("extends TreeTransformationScopedChanges", () => {
-			expect(InlineTrivialTransform).toBeInstanceOf(TreeTransformationScopedChanges);
+			expect(InlineTrivialTransform).toBeInstanceOf(
+				TreeTransformationScopedChanges,
+			);
 		});
 
 		test("has enterTsTypeRef method", () => {
@@ -155,11 +157,11 @@ describe("InlineTrivial", () => {
 			const stringRef = createTypeRef("string");
 			const numberRef = createTypeRef("number");
 			const booleanRef = createTypeRef("boolean");
-			
+
 			const result1 = InlineTrivialTransform.enterTsTypeRef(scope)(stringRef);
 			const result2 = InlineTrivialTransform.enterTsTypeRef(scope)(numberRef);
 			const result3 = InlineTrivialTransform.enterTsTypeRef(scope)(booleanRef);
-			
+
 			expect(result1).toBe(stringRef);
 			expect(result2).toBe(numberRef);
 			expect(result3).toBe(booleanRef);
@@ -168,9 +170,9 @@ describe("InlineTrivial", () => {
 		test("leaves non-existent type references unchanged", () => {
 			const scope = createMockScope();
 			const typeRef = createTypeRef("NonExistentType");
-			
+
 			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRef);
-			
+
 			expect(result).toBe(typeRef);
 		});
 	});
@@ -197,7 +199,7 @@ describe("InlineTrivial", () => {
 			const typeRef = TsTypeRef.create(
 				NoComments.instance,
 				createQIdent("LocalEnum"),
-				IArray.fromArray<TsType>([createTypeRef("string")])
+				IArray.fromArray<TsType>([createTypeRef("string")]),
 			);
 			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRef);
 
@@ -221,7 +223,11 @@ describe("InlineTrivial", () => {
 		test("inlines trivial type alias", () => {
 			const targetRef = createTypeRef("TargetType");
 			// Create a non-trivial target type alias so it exists in scope
-			const targetAlias = createMockTypeAlias("TargetType", createTypeRef("string"), false);
+			const targetAlias = createMockTypeAlias(
+				"TargetType",
+				createTypeRef("string"),
+				false,
+			);
 			const trivialAlias = createMockTypeAlias("TrivialAlias", targetRef, true);
 			const scope = createMockScope(targetAlias, trivialAlias);
 
@@ -234,7 +240,11 @@ describe("InlineTrivial", () => {
 
 		test("does not inline non-trivial type alias", () => {
 			const targetRef = createTypeRef("TargetType");
-			const nonTrivialAlias = createMockTypeAlias("NonTrivialAlias", targetRef, false);
+			const nonTrivialAlias = createMockTypeAlias(
+				"NonTrivialAlias",
+				targetRef,
+				false,
+			);
 			const scope = createMockScope(nonTrivialAlias);
 
 			const typeRef = createTypeRef("NonTrivialAlias");
@@ -247,7 +257,11 @@ describe("InlineTrivial", () => {
 		test("follows chain of trivial type aliases", () => {
 			const finalRef = createTypeRef("FinalType");
 			const alias2 = createMockTypeAlias("Alias2", finalRef, true);
-			const alias1 = createMockTypeAlias("Alias1", createTypeRef("Alias2"), true);
+			const alias1 = createMockTypeAlias(
+				"Alias1",
+				createTypeRef("Alias2"),
+				true,
+			);
 			const scope = createMockScope(alias1, alias2);
 
 			const typeRef = createTypeRef("Alias1");
@@ -258,10 +272,12 @@ describe("InlineTrivial", () => {
 		});
 
 		test("handles complex type in alias", () => {
-			const unionType = TsTypeUnion.create(IArray.fromArray<TsType>([
-				createTypeRef("string"),
-				createTypeRef("number")
-			]));
+			const unionType = TsTypeUnion.create(
+				IArray.fromArray<TsType>([
+					createTypeRef("string"),
+					createTypeRef("number"),
+				]),
+			);
 			const alias = createMockTypeAlias("ComplexAlias", unionType, true);
 			const scope = createMockScope(alias);
 
@@ -276,7 +292,11 @@ describe("InlineTrivial", () => {
 	describe("Interface Inlining", () => {
 		test("inlines trivial interface", () => {
 			const targetRef = createTypeRef("TargetInterface");
-			const trivialInterface = createMockInterface("TrivialInterface", IArray.fromArray([targetRef]), true);
+			const trivialInterface = createMockInterface(
+				"TrivialInterface",
+				IArray.fromArray([targetRef]),
+				true,
+			);
 			const scope = createMockScope(trivialInterface);
 
 			const typeRef = createTypeRef("TrivialInterface");
@@ -288,7 +308,11 @@ describe("InlineTrivial", () => {
 
 		test("does not inline non-trivial interface", () => {
 			const targetRef = createTypeRef("TargetInterface");
-			const nonTrivialInterface = createMockInterface("NonTrivialInterface", IArray.fromArray([targetRef]), false);
+			const nonTrivialInterface = createMockInterface(
+				"NonTrivialInterface",
+				IArray.fromArray([targetRef]),
+				false,
+			);
 			const scope = createMockScope(nonTrivialInterface);
 
 			const typeRef = createTypeRef("NonTrivialInterface");
@@ -301,7 +325,11 @@ describe("InlineTrivial", () => {
 		test("inlines interface with multiple inheritance to first target", () => {
 			const targetRef1 = createTypeRef("TargetInterface1");
 			const targetRef2 = createTypeRef("TargetInterface2");
-			const multiInterface = createMockInterface("MultiInterface", IArray.fromArray([targetRef1, targetRef2]), true);
+			const multiInterface = createMockInterface(
+				"MultiInterface",
+				IArray.fromArray([targetRef1, targetRef2]),
+				true,
+			);
 			const scope = createMockScope(multiInterface);
 
 			const typeRef = createTypeRef("MultiInterface");
@@ -313,8 +341,16 @@ describe("InlineTrivial", () => {
 
 		test("follows chain of trivial interfaces", () => {
 			const finalRef = createTypeRef("FinalInterface");
-			const interface2 = createMockInterface("Interface2", IArray.fromArray([finalRef]), true);
-			const interface1 = createMockInterface("Interface1", IArray.fromArray([createTypeRef("Interface2")]), true);
+			const interface2 = createMockInterface(
+				"Interface2",
+				IArray.fromArray([finalRef]),
+				true,
+			);
+			const interface1 = createMockInterface(
+				"Interface1",
+				IArray.fromArray([createTypeRef("Interface2")]),
+				true,
+			);
 			const scope = createMockScope(interface1, interface2);
 
 			const typeRef = createTypeRef("Interface1");
@@ -328,24 +364,39 @@ describe("InlineTrivial", () => {
 	describe("Edge Cases", () => {
 		test("avoids infinite recursion with different code paths", () => {
 			// The transform has protection against infinite recursion by checking codePath
-			const alias1 = createMockTypeAlias("Alias1", createTypeRef("Alias2"), true);
-			const alias2 = createMockTypeAlias("Alias2", createTypeRef("FinalType"), true);
+			const alias1 = createMockTypeAlias(
+				"Alias1",
+				createTypeRef("Alias2"),
+				true,
+			);
+			const alias2 = createMockTypeAlias(
+				"Alias2",
+				createTypeRef("FinalType"),
+				true,
+			);
 			const scope = createMockScope(alias1, alias2);
 
 			const typeRef = createTypeRef("Alias1");
 			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRef);
 
 			// Should follow the chain safely
-			expect(result.name.parts.apply(result.name.parts.length - 1)?.value).toBe("FinalType");
+			expect(result.name.parts.apply(result.name.parts.length - 1)?.value).toBe(
+				"FinalType",
+			);
 		});
 
 		test("preserves type reference metadata", () => {
-			const originalComments = Comments.apply([Comment.create("Type reference comment")]);
+			const originalComments = Comments.apply([
+				Comment.create("Type reference comment"),
+			]);
 			const targetRef = createTypeRef("TargetType");
 			const trivialAlias = createMockTypeAlias("TrivialAlias", targetRef, true);
 			const scope = createMockScope(trivialAlias);
 
-			const typeRef = createTypeRefWithComments("TrivialAlias", originalComments);
+			const typeRef = createTypeRefWithComments(
+				"TrivialAlias",
+				originalComments,
+			);
 			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRef);
 
 			// Should preserve original comments
@@ -356,8 +407,14 @@ describe("InlineTrivial", () => {
 		test("handles intersection types in EffectiveTypeRef", () => {
 			const ref1 = createTypeRef("SameType");
 			const ref2 = createTypeRef("SameType");
-			const intersectionType = TsTypeIntersect.create(IArray.fromArray<TsType>([ref1, ref2]));
-			const alias = createMockTypeAlias("IntersectionAlias", intersectionType, true);
+			const intersectionType = TsTypeIntersect.create(
+				IArray.fromArray<TsType>([ref1, ref2]),
+			);
+			const alias = createMockTypeAlias(
+				"IntersectionAlias",
+				intersectionType,
+				true,
+			);
 			const scope = createMockScope(alias);
 
 			const typeRef = createTypeRef("IntersectionAlias");
@@ -370,8 +427,14 @@ describe("InlineTrivial", () => {
 		test("does not inline intersection with different types", () => {
 			const ref1 = createTypeRef("Type1");
 			const ref2 = createTypeRef("Type2");
-			const intersectionType = TsTypeIntersect.create(IArray.fromArray<TsType>([ref1, ref2]));
-			const alias = createMockTypeAlias("IntersectionAlias", intersectionType, true);
+			const intersectionType = TsTypeIntersect.create(
+				IArray.fromArray<TsType>([ref1, ref2]),
+			);
+			const alias = createMockTypeAlias(
+				"IntersectionAlias",
+				intersectionType,
+				true,
+			);
 			const scope = createMockScope(alias);
 
 			const typeRef = createTypeRef("IntersectionAlias");
@@ -386,14 +449,20 @@ describe("InlineTrivial", () => {
 		test("handles mixed trivial and non-trivial declarations", () => {
 			const finalRef = createTypeRef("FinalType");
 			const trivialAlias = createMockTypeAlias("TrivialAlias", finalRef, true);
-			const nonTrivialAlias = createMockTypeAlias("NonTrivialAlias", finalRef, false);
+			const nonTrivialAlias = createMockTypeAlias(
+				"NonTrivialAlias",
+				finalRef,
+				false,
+			);
 			const scope = createMockScope(trivialAlias, nonTrivialAlias);
 
 			const trivialTypeRef = createTypeRef("TrivialAlias");
 			const nonTrivialTypeRef = createTypeRef("NonTrivialAlias");
 
-			const result1 = InlineTrivialTransform.enterTsTypeRef(scope)(trivialTypeRef);
-			const result2 = InlineTrivialTransform.enterTsTypeRef(scope)(nonTrivialTypeRef);
+			const result1 =
+				InlineTrivialTransform.enterTsTypeRef(scope)(trivialTypeRef);
+			const result2 =
+				InlineTrivialTransform.enterTsTypeRef(scope)(nonTrivialTypeRef);
 
 			// Should inline trivial but not non-trivial
 			expect(result1.name.asString).toBe(finalRef.name.asString);
@@ -403,14 +472,20 @@ describe("InlineTrivial", () => {
 		test("handles type alias to enum inlining", () => {
 			const exportedFromRef = createTypeRef("ExportedEnum");
 			const enumDecl = createMockEnum("LocalEnum", some(exportedFromRef));
-			const trivialAlias = createMockTypeAlias("AliasToEnum", createTypeRef("LocalEnum"), true);
+			const trivialAlias = createMockTypeAlias(
+				"AliasToEnum",
+				createTypeRef("LocalEnum"),
+				true,
+			);
 			const scope = createMockScope(enumDecl, trivialAlias);
 
 			const typeRef = createTypeRef("AliasToEnum");
 			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRef);
 
 			// Should inline the alias to the enum reference (not the exported enum)
-			expect(result.name.parts.apply(result.name.parts.length - 1)?.value).toBe("LocalEnum");
+			expect(result.name.parts.apply(result.name.parts.length - 1)?.value).toBe(
+				"LocalEnum",
+			);
 		});
 
 		test("does not inline type alias with type parameters", () => {
@@ -421,9 +496,13 @@ describe("InlineTrivial", () => {
 			const typeRefWithParams = TsTypeRef.create(
 				NoComments.instance,
 				createQIdent("TrivialAlias"),
-				IArray.fromArray<TsType>([createTypeRef("string"), createTypeRef("number")])
+				IArray.fromArray<TsType>([
+					createTypeRef("string"),
+					createTypeRef("number"),
+				]),
 			);
-			const result = InlineTrivialTransform.enterTsTypeRef(scope)(typeRefWithParams);
+			const result =
+				InlineTrivialTransform.enterTsTypeRef(scope)(typeRefWithParams);
 
 			// Should not inline when type parameters are present
 			expect(result).toBe(typeRefWithParams); // Should be unchanged
