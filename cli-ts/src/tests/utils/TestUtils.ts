@@ -12,8 +12,9 @@ import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath, type CodePathHasPath } from "@/internal/ts/CodePath.js";
+import { JsLocation, type JsLocationGlobal, type JsLocationModule, type JsLocationBoth } from "@/internal/ts/JsLocation.js";
+import { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
 import type { TsLib } from "@/internal/ts/TsTreeScope.js";
 import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
@@ -39,7 +40,7 @@ import {
 	TsIdent,
 	type TsIdentLibraryScoped,
 	type TsIdentLibrarySimple,
-	type TsIdentModule,
+	TsIdentModule,
 	type TsIdentSimple,
 	TsImport,
 	TsImportedIdent,
@@ -932,6 +933,47 @@ export function createCodePathWithParts(
  */
 export function createJsLocation(): JsLocation {
 	return JsLocation.zero();
+}
+
+/**
+ * Creates a JsLocation.Global with the given path.
+ *
+ * @param parts - The path parts
+ * @returns A JsLocationGlobal
+ */
+export function createJsLocationGlobal(...parts: string[]): JsLocationGlobal {
+	const pathParts = parts.map(part => createSimpleIdent(part));
+	return JsLocation.global(TsQIdent.of(...pathParts));
+}
+
+/**
+ * Creates a JsLocation.Module with the given module name and spec.
+ *
+ * @param moduleName - The module name
+ * @param spec - The module spec (defaults to namespaced)
+ * @returns A JsLocationModule
+ */
+export function createJsLocationModule(
+	moduleName: string,
+	spec: ModuleSpec = ModuleSpec.namespaced(),
+): JsLocationModule {
+	return JsLocation.module(TsIdentModule.simple(moduleName), spec);
+}
+
+/**
+ * Creates a JsLocation.Both with the given module and global locations.
+ *
+ * @param moduleName - The module name
+ * @param globalParts - The global path parts
+ * @returns A JsLocationBoth
+ */
+export function createJsLocationBoth(
+	moduleName: string,
+	...globalParts: string[]
+): JsLocationBoth {
+	const module = createJsLocationModule(moduleName);
+	const global = createJsLocationGlobal(...globalParts);
+	return JsLocation.both(module, global);
 }
 
 /**

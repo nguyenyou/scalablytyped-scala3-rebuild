@@ -12,11 +12,12 @@
 		"dev": "bun --watch src/main.ts convert",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
-		"format": "bunx biome format --write",
-		"lint": "bunx biome check --write src",
+		"format": "biome format --write",
+		"lint": "biome check --write src",
     "lint:fix": "bunx biome check --write --unsafe src",
 		"clean": "rm -rf dist",
-		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json"
+		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json",
+    "tc": "bun typecheck"
 	},
 	"dependencies": {
 		"@types/tabulator-tables": "6.2.10",
