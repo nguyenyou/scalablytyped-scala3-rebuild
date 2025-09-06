@@ -29,6 +29,7 @@ import {
 	TsExport,
 	type TsExporteeNames,
 	TsExporteeTree,
+	TsFunParam,
 	TsFunSig,
 	TsGlobal,
 	TsIdent,
@@ -101,6 +102,20 @@ export const createEmptyScope = createMockScope;
  */
 export function createLoopDetector(): LoopDetector {
 	return LoopDetector.initial;
+}
+
+/**
+ * Creates a function parameter for testing.
+ *
+ * @param name - The parameter name
+ * @param tpe - Optional parameter type (defaults to string)
+ * @returns A TsFunParam
+ */
+export function createFunParam(
+	name: string,
+	tpe: Option<TsType> = some(TsTypeRef.string),
+): TsFunParam {
+	return TsFunParam.create(Comments.empty(), createSimpleIdent(name), tpe);
 }
 
 // ============================================================================

@@ -11,31 +11,36 @@ import {
 	DeriveNonConflictingName,
 	Detail,
 } from "@/internal/ts/DeriveNonConflictingName.ts";
-import { MethodType } from "@/internal/ts/MethodType.ts";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.ts";
 import {
-	TsFunParam,
+	type TsFunParam,
 	TsFunSig,
-	TsIdent,
 	type TsIdentSimple,
 	type TsMember,
 	TsMemberCall,
 	TsMemberCtor,
-	TsMemberFunction,
+	type TsMemberFunction,
 	TsMemberProperty,
 	type TsType,
 	TsTypeRef,
 } from "@/internal/ts/trees.ts";
+import {
+	createFunParam,
+	createMockMethod,
+	createSimpleIdent,
+} from "../utils/TestUtils.js";
 
 // ============================================================================
 // Helper methods for creating test data
 // ============================================================================
 
-function createSimpleIdent(name: string): TsIdentSimple {
-	return TsIdent.simple(name);
+// Wrapper functions to maintain compatibility with existing test code
+function createMockFunction(name: string): TsMemberFunction {
+	return createMockMethod(name, TsTypeRef.void);
 }
 
-function createMockProperty(
+// Custom createMockProperty to maintain original signature with Option<TsType>
+function createMockPropertyLocal(
 	name: string,
 	tpe: Option<TsType> = some(TsTypeRef.string),
 ): TsMemberProperty {
@@ -50,26 +55,10 @@ function createMockProperty(
 	);
 }
 
-function createMockFunction(name: string): TsMemberFunction {
-	return TsMemberFunction.create(
-		Comments.empty(),
-		TsProtectionLevel.default(),
-		createSimpleIdent(name),
-		MethodType.normal(),
-		TsFunSig.create(
-			Comments.empty(),
-			IArray.Empty, // tparams
-			IArray.Empty, // params
-			some(TsTypeRef.void),
-		),
-		false, // isStatic
-		false, // isReadOnly
-	);
-}
-
 function createMockCall(
 	params: IArray<TsFunParam> = IArray.Empty,
 ): TsMemberCall {
+	// Create a custom call member with specific parameters
 	return TsMemberCall.create(
 		Comments.empty(),
 		TsProtectionLevel.default(),
@@ -83,16 +72,13 @@ function createMockCall(
 }
 
 function createParam(name: string): TsFunParam {
-	return TsFunParam.create(
-		Comments.empty(),
-		createSimpleIdent(name),
-		some(TsTypeRef.string),
-	);
+	return createFunParam(name, some(TsTypeRef.string));
 }
 
 function createMockCtor(
 	resultType: Option<TsType> = some(TsTypeRef.string),
 ): TsMemberCtor {
+	// Create a custom constructor with specific result type
 	return TsMemberCtor.create(
 		Comments.empty(),
 		TsProtectionLevel.default(),
@@ -152,7 +138,7 @@ describe("DeriveNonConflictingName - Basic Functionality", () => {
 
 describe("DeriveNonConflictingName - Single Member Types", () => {
 	test("single property member", () => {
-		const property = createMockProperty("userName");
+		const property = createMockPropertyLocal("userName");
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect(result).toBe("UserName");
@@ -197,9 +183,9 @@ describe("DeriveNonConflictingName - Single Member Types", () => {
 
 describe("DeriveNonConflictingName - Multiple Members", () => {
 	test("multiple properties sorted by name", () => {
-		const prop1 = createMockProperty("zebra");
-		const prop2 = createMockProperty("alpha");
-		const prop3 = createMockProperty("beta");
+		const prop1 = createMockPropertyLocal("zebra");
+		const prop2 = createMockPropertyLocal("alpha");
+		const prop3 = createMockPropertyLocal("beta");
 		const members = IArray.fromArray<TsMember>([prop1, prop2, prop3]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		// Should be sorted: Alpha, Beta, Zebra
@@ -207,7 +193,7 @@ describe("DeriveNonConflictingName - Multiple Members", () => {
 	});
 
 	test("mixed member types", () => {
-		const property = createMockProperty("name");
+		const property = createMockPropertyLocal("name");
 		const func = createMockFunction("getValue");
 		const ctor = createMockCtor();
 		const members = IArray.fromArray<TsMember>([property, func, ctor]);
@@ -217,7 +203,7 @@ describe("DeriveNonConflictingName - Multiple Members", () => {
 	});
 
 	test("prefix with single member", () => {
-		const property = createMockProperty("value");
+		const property = createMockPropertyLocal("value");
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply(
 			"Test",
@@ -229,7 +215,7 @@ describe("DeriveNonConflictingName - Multiple Members", () => {
 
 describe("DeriveNonConflictingName - Conflict Resolution", () => {
 	test("first choice conflicts, second succeeds", () => {
-		const property = createMockProperty("name");
+		const property = createMockPropertyLocal("name");
 		const members = IArray.fromArray<TsMember>([property]);
 		const conflicts = new Set(["Name"]);
 		const result = DeriveNonConflictingName.apply(
@@ -242,7 +228,7 @@ describe("DeriveNonConflictingName - Conflict Resolution", () => {
 	});
 
 	test("all variants conflict, fallback to numbered", () => {
-		const property = createMockProperty("test");
+		const property = createMockPropertyLocal("test");
 		const members = IArray.fromArray<TsMember>([property]);
 		const conflicts = new Set(["Test", "TestString", "0", "1", "2"]);
 		const result = DeriveNonConflictingName.apply(
@@ -253,7 +239,7 @@ describe("DeriveNonConflictingName - Conflict Resolution", () => {
 	});
 
 	test("prefix conflicts resolved with members", () => {
-		const property = createMockProperty("value");
+		const property = createMockPropertyLocal("value");
 		const members = IArray.fromArray<TsMember>([property]);
 		const conflicts = new Set(["Test"]);
 		const result = DeriveNonConflictingName.apply(
@@ -318,28 +304,28 @@ describe("DeriveNonConflictingName - Detail Class Functionality", () => {
 
 describe("DeriveNonConflictingName - Edge Cases and Boundary Conditions", () => {
 	test("empty property name", () => {
-		const property = createMockProperty("");
+		const property = createMockPropertyLocal("");
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect(result).toBe("");
 	});
 
 	test("property with None type", () => {
-		const property = createMockProperty("test", none);
+		const property = createMockPropertyLocal("test", none);
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect(result).toBe("Test");
 	});
 
 	test("special characters in names", () => {
-		const property = createMockProperty("user-name");
+		const property = createMockPropertyLocal("user-name");
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect(result).toBe("Username");
 	});
 
 	test("numeric names", () => {
-		const property = createMockProperty("123");
+		const property = createMockPropertyLocal("123");
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect(result).toBe("123");
@@ -347,7 +333,7 @@ describe("DeriveNonConflictingName - Edge Cases and Boundary Conditions", () => 
 
 	test("very long member names", () => {
 		const longName = "a".repeat(100);
-		const property = createMockProperty(longName);
+		const property = createMockPropertyLocal(longName);
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		expect((result as string).length).toBe(100);
@@ -356,7 +342,7 @@ describe("DeriveNonConflictingName - Edge Cases and Boundary Conditions", () => 
 
 	test("many members with conflicts", () => {
 		const properties = Array.from({ length: 10 }, (_, i) =>
-			createMockProperty(`prop${i + 1}`),
+			createMockPropertyLocal(`prop${i + 1}`),
 		);
 		const members = IArray.fromArray<TsMember>(properties);
 		const conflicts = new Set(["Prop1", "Prop2", "Prop3"]);
@@ -393,7 +379,7 @@ describe("DeriveNonConflictingName - Fallback Mechanism", () => {
 
 describe("DeriveNonConflictingName - Name Generation Algorithm", () => {
 	test("short version preferred over long version", () => {
-		const property = createMockProperty("test", some(TsTypeRef.string));
+		const property = createMockPropertyLocal("test", some(TsTypeRef.string));
 		const members = IArray.fromArray<TsMember>([property]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 		// Should prefer "Test" over "TestString"
@@ -401,7 +387,7 @@ describe("DeriveNonConflictingName - Name Generation Algorithm", () => {
 	});
 
 	test("long version used when short conflicts", () => {
-		const property = createMockProperty("test", some(TsTypeRef.string));
+		const property = createMockPropertyLocal("test", some(TsTypeRef.string));
 		const members = IArray.fromArray<TsMember>([property]);
 		const conflicts = new Set(["Test"]);
 		const result = DeriveNonConflictingName.apply(
@@ -412,8 +398,8 @@ describe("DeriveNonConflictingName - Name Generation Algorithm", () => {
 	});
 
 	test("different amounts of details tried", () => {
-		const prop1 = createMockProperty("alpha");
-		const prop2 = createMockProperty("beta");
+		const prop1 = createMockPropertyLocal("alpha");
+		const prop2 = createMockPropertyLocal("beta");
 		const members = IArray.fromArray<TsMember>([prop1, prop2]);
 		const conflicts = new Set(["Alpha", "AlphaBeta", "Beta", "BetaAlpha"]);
 		const result = DeriveNonConflictingName.apply(
@@ -426,7 +412,7 @@ describe("DeriveNonConflictingName - Name Generation Algorithm", () => {
 	});
 
 	test("prefix combined with member details", () => {
-		const property = createMockProperty("value");
+		const property = createMockPropertyLocal("value");
 		const members = IArray.fromArray<TsMember>([property]);
 		const conflicts = new Set(["Test", "Value"]);
 		const result = DeriveNonConflictingName.apply(
@@ -439,7 +425,7 @@ describe("DeriveNonConflictingName - Name Generation Algorithm", () => {
 
 describe("DeriveNonConflictingName - Integration and Real-world Scenarios", () => {
 	test("complex object with multiple member types", () => {
-		const property = createMockProperty("name");
+		const property = createMockPropertyLocal("name");
 		const func = createMockFunction("getValue");
 		const ctor = createMockCtor(some(TsTypeRef.string));
 		const call = createMockCall(IArray.apply(createParam("id")));
@@ -452,9 +438,9 @@ describe("DeriveNonConflictingName - Integration and Real-world Scenarios", () =
 
 	test("realistic naming scenario with conflicts", () => {
 		const properties = IArray.fromArray<TsMember>([
-			createMockProperty("id"),
-			createMockProperty("name"),
-			createMockProperty("value"),
+			createMockPropertyLocal("id"),
+			createMockPropertyLocal("name"),
+			createMockPropertyLocal("value"),
 		]);
 		const conflicts = new Set(["Id", "Name", "Value", "IdName", "IdNameValue"]);
 		const result = DeriveNonConflictingName.apply(
@@ -468,8 +454,8 @@ describe("DeriveNonConflictingName - Integration and Real-world Scenarios", () =
 	});
 
 	test("empty names and edge cases combined", () => {
-		const emptyProp = createMockProperty("");
-		const normalProp = createMockProperty("test");
+		const emptyProp = createMockPropertyLocal("");
+		const normalProp = createMockPropertyLocal("test");
 		const members = IArray.fromArray<TsMember>([emptyProp, normalProp]);
 		const result = DeriveNonConflictingName.apply("", members)(simpleTryCreate);
 
