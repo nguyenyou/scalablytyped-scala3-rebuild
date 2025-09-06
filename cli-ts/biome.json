@@ -20,16 +20,16 @@
 				"noExplicitAny": "off",
 				"noShadowRestrictedNames": "off",
 				"noApproximativeNumericConstant": "off",
-        "useIterableCallbackReturn": "off",
-        "useAdjacentOverloadSignatures": "off"
+				"useIterableCallbackReturn": "off",
+				"useAdjacentOverloadSignatures": "off"
 			},
 			"style": {
 				"noNonNullAssertion": "off"
 			},
-      "complexity": {
-        "noStaticOnlyClass": "off",
-        "noFlatMapIdentity": "off"
-      }
+			"complexity": {
+				"noStaticOnlyClass": "off",
+				"noFlatMapIdentity": "off"
+			}
 		}
 	},
 	"javascript": {

@@ -7,42 +7,16 @@ import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { AllMembersFor } from "@/internal/ts/AllMembersFor.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { MethodType } from "@/internal/ts/MethodType.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
-import { LoopDetector, MockTsTreeScope } from "@/internal/ts/TsTreeScope.js";
-import {
-	createLoopDetector,
-	createMockClass,
-	createMockInterface,
-	createMockMethod,
-	createMockProperty,
-	createMockScope,
-	createMockTypeAlias,
-	createQIdent,
-	createSimpleIdent,
-	createTypeRef,
-} from "../utils/TestUtils.js";
-
+import { LoopDetector } from "@/internal/ts/TsTreeScope.js";
 // Import tree types and constructors
-import type {
-	TsIdentSimple,
-	TsMember,
-	TsQIdent,
-	TsType,
-} from "@/internal/ts/trees.ts";
-
+import type { TsMember, TsType } from "@/internal/ts/trees.ts";
 import {
-	TsDeclClass,
-	TsDeclInterface,
-	TsDeclTypeAlias,
 	TsFunSig,
 	TsLiteral,
 	TsMemberCall,
 	TsMemberCtor,
-	TsMemberFunction,
-	TsMemberProperty,
+	type TsMemberProperty,
 	TsTypeAsserts,
 	TsTypeConstructor as TsTypeConstructorConstructor,
 	TsTypeFunction,
@@ -59,8 +33,16 @@ import {
 	TsTypeTuple,
 	TsTypeUnion,
 } from "../../internal/ts/trees.js";
-
-
+import {
+	createLoopDetector,
+	createMockInterface,
+	createMockMethod,
+	createMockProperty,
+	createMockScope,
+	createQIdent,
+	createSimpleIdent,
+	createTypeRef,
+} from "../utils/TestUtils.js";
 
 describe("AllMembersFor", () => {
 	describe("forType", () => {
