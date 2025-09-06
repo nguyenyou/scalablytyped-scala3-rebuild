@@ -838,5 +838,175 @@ describe("FollowAliases", () => {
 				expect(result).toBe(typeRef);
 			});
 		});
+
+		describe("error handling and robustness", () => {
+			it("handles malformed type references gracefully", () => {
+				const scope = createMockScope();
+				const malformedTypeRef = TsTypeRef.create(
+					Comments.empty(),
+					TsQIdent.of(createSimpleIdent("")), // Empty name
+					IArray.Empty,
+				);
+
+				const result = FollowAliases.apply(scope)(malformedTypeRef);
+
+				expect(result).toBe(malformedTypeRef); // Should return original
+			});
+
+			it("handles empty union after alias resolution", () => {
+				const scope = createMockScope();
+				const emptyUnion = TsTypeUnion.create(IArray.Empty);
+
+				const result = FollowAliases.apply(scope)(emptyUnion);
+
+				expect(result._tag).toBe("TsTypeRef");
+				expect((result as TsTypeRef).name.parts.apply(0).value).toBe("never"); // Empty union becomes never
+			});
+
+			it("handles empty intersection after alias resolution", () => {
+				const scope = createMockScope();
+				const emptyIntersection = TsTypeIntersect.create(IArray.Empty);
+
+				const result = FollowAliases.apply(scope)(emptyIntersection);
+
+				expect(result._tag).toBe("TsTypeRef");
+				expect((result as TsTypeRef).name.parts.apply(0).value).toBe("never"); // Empty intersection becomes never
+			});
+
+			it("preserves original type for non-alias types", () => {
+				const scope = createMockScope();
+				const primitiveTypes = [
+					TsTypeRef.string,
+					TsTypeRef.number,
+					TsTypeRef.boolean,
+					TsTypeRef.any,
+					TsTypeRef.never,
+					TsTypeRef.undefined,
+					TsTypeRef.null,
+				];
+
+				primitiveTypes.forEach((primitiveType) => {
+					const result = FollowAliases.apply(scope)(primitiveType);
+					expect(result).toBe(primitiveType);
+				});
+			});
+
+			it("handles mixed valid and invalid aliases in unions", () => {
+				const validAlias = createMockTypeAlias("ValidAlias", TsTypeRef.string);
+				const scope = createMockScope(validAlias);
+
+				const mixedUnion = TsTypeUnion.create(
+					IArray.fromArray<TsType>([
+						TsTypeRef.create(
+							Comments.empty(),
+							createQIdent("ValidAlias"),
+							IArray.Empty,
+						) as TsType,
+						TsTypeRef.create(
+							Comments.empty(),
+							createQIdent("InvalidAlias"),
+							IArray.Empty,
+						) as TsType,
+						TsTypeRef.number as TsType,
+					]),
+				);
+
+				const result = FollowAliases.apply(scope)(mixedUnion);
+
+				expect(result._tag).toBe("TsTypeUnion");
+				const resultUnion = result as any;
+				const types = resultUnion.types.toArray();
+				expect(
+					types.some(
+						(t: TsType) =>
+							t._tag === "TsTypeRef" &&
+							(t as TsTypeRef).name.parts.apply(0).value === "string",
+					),
+				).toBe(true); // Valid alias resolved
+				expect(
+					types.some(
+						(t: TsType) =>
+							t._tag === "TsTypeRef" &&
+							(t as TsTypeRef).name.parts.apply(0).value === "InvalidAlias",
+					),
+				).toBe(true); // Invalid alias preserved
+				expect(
+					types.some(
+						(t: TsType) =>
+							t._tag === "TsTypeRef" &&
+							(t as TsTypeRef).name.parts.apply(0).value === "number",
+					),
+				).toBe(true); // Primitive preserved
+			});
+		});
+
+		describe("performance and edge cases", () => {
+			it("handles large union types efficiently", () => {
+				const aliases = Array.from({ length: 50 }, (_, i) =>
+					createMockTypeAlias(`Alias${i + 1}`, TsTypeRef.string),
+				);
+				const scope = createMockScope(...aliases);
+
+				const largeUnion = TsTypeUnion.create(
+					IArray.fromArray<TsType>(
+						Array.from({ length: 50 }, (_, i) =>
+							TsTypeRef.create(
+								Comments.empty(),
+								createQIdent(`Alias${i + 1}`),
+								IArray.Empty,
+							),
+						) as TsType[],
+					),
+				);
+
+				const result = FollowAliases.apply(scope)(largeUnion);
+
+				// All aliases resolve to string, so union gets simplified to just string
+				expect(result._tag).toBe("TsTypeRef");
+				expect((result as TsTypeRef).name.parts.apply(0).value).toBe("string");
+			});
+
+			it("handles large intersection types efficiently", () => {
+				const aliases = Array.from({ length: 20 }, (_, i) =>
+					createMockTypeAlias(`Alias${i + 1}`, TsTypeRef.string),
+				);
+				const scope = createMockScope(...aliases);
+
+				const largeIntersection = TsTypeIntersect.create(
+					IArray.fromArray<TsType>(
+						Array.from({ length: 20 }, (_, i) =>
+							TsTypeRef.create(
+								Comments.empty(),
+								createQIdent(`Alias${i + 1}`),
+								IArray.Empty,
+							),
+						) as TsType[],
+					),
+				);
+
+				const result = FollowAliases.apply(scope)(largeIntersection);
+
+				// All aliases resolve to string, so intersection gets simplified to just string
+				expect(result._tag).toBe("TsTypeRef");
+				expect((result as TsTypeRef).name.parts.apply(0).value).toBe("string");
+			});
+
+			it("handles scope with many declarations efficiently", () => {
+				const manyAliases = Array.from({ length: 100 }, (_, i) =>
+					createMockTypeAlias(`Alias${i + 1}`, TsTypeRef.string),
+				);
+				const scope = createMockScope(...manyAliases);
+
+				const typeRef = TsTypeRef.create(
+					Comments.empty(),
+					createQIdent("Alias50"),
+					IArray.Empty,
+				);
+				const result = FollowAliases.apply(scope)(typeRef);
+
+				expect(result._tag).toBe("TsTypeRef");
+				expect((result as TsTypeRef).name.parts.apply(0).value).toBe("string");
+			});
+		});
 	});
 });

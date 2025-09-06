@@ -19,3 +19,9 @@ Or specific
 ```sh
 ./mill cli.test.testOnly FlattenTreesTests
 ```
+
+## Unit Test
+
+```sh
+npm test -- src/tests/ts/FollowAliases.test.ts
+```
