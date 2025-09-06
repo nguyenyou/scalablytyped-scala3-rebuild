@@ -208,13 +208,4 @@ export class InlineConstEnum extends TreeTransformationScopedChanges {
 /**
  * Static transform function for functional usage.
  */
-export const InlineConstEnumTransform = {
-	/**
-	 * Transform function that can be used directly.
-	 */
-	enterTsType:
-		(scope: TsTreeScope) =>
-		(x: TsType): TsType => {
-			return InlineConstEnum.instance.enterTsType(scope)(x);
-		},
-};
+export const InlineConstEnumTransform = InlineConstEnum.instance;
