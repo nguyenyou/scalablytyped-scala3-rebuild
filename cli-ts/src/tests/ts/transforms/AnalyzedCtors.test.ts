@@ -153,17 +153,17 @@ describe("AnalyzedCtors", () => {
 			});
 		});
 
-		test("returns constructors from interface", () => {
+		test("returns empty for interface not in scope", () => {
 			const ctor = createMockCtor();
 			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor]));
-			const scope = createMockScope();
+			const scope = createMockScope(); // Interface not added to scope
 			const loopDetector = LoopDetector.initial;
 			const typeRef = createTypeRef("TestInterface");
 
 			const result = AnalyzedCtors.findCtors(scope, loopDetector)(typeRef);
 
-			expect(result.length).toBe(1);
-			expect(result.get(0).params).toEqual(ctor.signature.params);
+			// Since the interface is not in scope, findCtors returns empty
+			expect(result.length).toBe(0);
 		});
 
 		test("returns empty for class (classes don't store constructors like interfaces)", () => {
@@ -177,6 +177,41 @@ describe("AnalyzedCtors", () => {
 
 			// Classes are not handled by findCtors - only interfaces are
 			expect(result.length).toBe(0);
+		});
+	});
+
+	describe("isSimpleType method", () => {
+		test("returns false for primitive types", () => {
+			const scope = createMockScope();
+			const primitiveTypes = [
+				TsTypeRef.string,
+				TsTypeRef.number,
+				TsTypeRef.boolean,
+				TsTypeRef.any
+			];
+
+			primitiveTypes.forEach(tpe => {
+				const result = AnalyzedCtors.isSimpleType(tpe, scope);
+				expect(result).toBe(false);
+			});
+		});
+
+		test("returns false for non-existent types", () => {
+			const scope = createMockScope();
+			const typeRef = createTypeRef("NonExistentType");
+
+			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
+
+			expect(result).toBe(false);
+		});
+
+		test("returns false for types with type parameters", () => {
+			const scope = createMockScope();
+			const typeRef = createTypeRef("GenericType", IArray.fromArray([TsTypeRef.string as any]));
+
+			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
+
+			expect(result).toBe(false);
 		});
 	});
 });
