@@ -17,7 +17,7 @@ object ExtractClasses extends TransformLeaveMembers {
     x.unnamed ++ rewrittenNameds
   }
 
-  private def extractClasses(
+  def extractClasses(
       scope: TsTreeScope,
       sameName: IArray[TsNamedDecl],
       findName: FindAvailableName
@@ -92,7 +92,7 @@ object ExtractClasses extends TransformLeaveMembers {
     }
   }
 
-  private def commentFor(wasBackup: Boolean): Comments = {
+  def commentFor(wasBackup: Boolean): Comments = {
     val msg = ("This class was inferred from a value with a constructor", wasBackup) match {
       case (base, true) =>
         s"/* $base, it was renamed because a distinct type already exists with the same name. */\n"
@@ -102,7 +102,7 @@ object ExtractClasses extends TransformLeaveMembers {
     Comments(List(Marker.ExpandedClass, Comment(msg)))
   }
 
-  private def extractClassFromMember(
+  def extractClassFromMember(
       scope: TsTreeScope,
       findName: FindAvailableName,
       ownerLoc: JsLocation,
@@ -144,7 +144,7 @@ object ExtractClasses extends TransformLeaveMembers {
 
   case class AnalyzedCtors(longestTParams: IArray[TsTypeParam], resultType: TsTypeRef, ctors: IArray[TsFunSig])
 
-  private object AnalyzedCtors {
+  object AnalyzedCtors {
     def from(scope: TsTreeScope, tpe: TsType): Option[AnalyzedCtors] = {
       val ctors = findCtors(scope, LoopDetector.initial)(tpe)
 
@@ -175,7 +175,7 @@ object ExtractClasses extends TransformLeaveMembers {
       }
     }
 
-    private def findCtors(scope: TsTreeScope, loopDetector: LoopDetector)(tpe: TsType): IArray[TsFunSig] = {
+    def findCtors(scope: TsTreeScope, loopDetector: LoopDetector)(tpe: TsType): IArray[TsFunSig] = {
       def from(x: HasClassMembers): IArray[TsFunSig] =
         x.membersByName.get(TsIdent.constructor) match {
           case Some(ctors) =>
@@ -204,7 +204,7 @@ object ExtractClasses extends TransformLeaveMembers {
 
     /* avoid generating a class extending from a type parameter, say */
     @scala.annotation.tailrec
-    private def isSimpleType(ref: TsTypeRef, s: TsTreeScope): Boolean =
+    def isSimpleType(ref: TsTypeRef, s: TsTreeScope): Boolean =
       if (s.isAbstract(ref.name)) false
       else
         s.lookupTypeIncludeScope(ref.name).headOption match {
@@ -216,7 +216,7 @@ object ExtractClasses extends TransformLeaveMembers {
         }
   }
 
-  private object FindAvailableName {
+  object FindAvailableName {
     def apply(x: TsContainer, scope: TsTreeScope): FindAvailableName = {
       val idx = scope.stack match {
         case (x1: TsDeclNamespace) :: (x2: TsContainer) :: _ if x1.name === TsIdent.namespaced =>
@@ -236,7 +236,7 @@ object ExtractClasses extends TransformLeaveMembers {
       availableTypeName(potentialName, wasBackup = false).orElse(availableTypeName(backupName, wasBackup = true))
     }
 
-    private def availableTypeName(potentialName: TsIdentSimple, wasBackup: Boolean): Option[(TsIdentSimple, Boolean)] =
+    def availableTypeName(potentialName: TsIdentSimple, wasBackup: Boolean): Option[(TsIdentSimple, Boolean)] =
       index.get(potentialName) match {
         case None => Some((potentialName, wasBackup))
         case Some(existings) =>
