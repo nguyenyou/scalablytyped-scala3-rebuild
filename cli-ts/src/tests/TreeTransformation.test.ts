@@ -12,15 +12,14 @@ import {
 	TreeTransformations,
 	TreeTransformationUnit,
 } from "@/internal/ts/TreeTransformations.js";
+import type { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
-	TsIdent,
-	TsTypeRef,
 	type TsDeclClass,
 	type TsDeclInterface,
 	type TsGlobal,
-	type TsParsedFile,
+	TsIdent,
+	TsTypeRef,
 } from "@/internal/ts/trees.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
 	createMockClass,
 	createMockGlobal,
@@ -28,8 +27,6 @@ import {
 	createMockParsedFile,
 	createMockScope,
 } from "./utils/TestUtils.js";
-
-
 
 describe("TreeTransformation", () => {
 	describe("Basic Functionality", () => {
