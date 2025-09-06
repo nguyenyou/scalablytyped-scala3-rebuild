@@ -8,7 +8,7 @@ import { describe, expect, it } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import { RewriteTypeThis, RewriteTypeThisTransform } from "@/internal/ts/transforms/RewriteTypeThis.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
-import { TsIdent } from "@/internal/ts/trees.js";
+import { TsIdent, TsQIdent } from "@/internal/ts/trees.js";
 import {
 	createKeyOfType,
 	createMemberCtor,
@@ -21,6 +21,7 @@ import {
 	createTypeLookup,
 	createTypeParam,
 	createTypeRef,
+	createTypeRefWithQIdent,
 	createTypeThis,
 } from "@/tests/utils/TestUtils.js";
 
@@ -168,7 +169,8 @@ describe("RewriteTypeThis", () => {
 			const scopeWithFunction = scopeWithClass["/"](functionType);
 			
 			// Create a qualified reference where the last part matches
-			const qualifiedRef = createTypeRef("lib.TestClass");
+			const qualifiedName = TsQIdent.ofStrings("lib", "TestClass");
+			const qualifiedRef = createTypeRefWithQIdent(qualifiedName);
 
 			const result = RewriteTypeThisTransform.enterTsType(scopeWithFunction)(qualifiedRef);
 
