@@ -1,7 +1,7 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.InferTypeFromExpr
  *
- * This transform infers types from expressions for properties and variables that have 
+ * This transform infers types from expressions for properties and variables that have
  * expressions but no explicit type annotations.
  *
  * The transform processes:
@@ -26,22 +26,16 @@
  * ```
  */
 
+import { none, some } from "fp-ts/Option";
+import { Comment } from "../../Comment.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
-import type {
-	TsMemberProperty,
-	TsDeclVar,
-	TsType,
-} from "../trees.js";
+import type { TsDeclVar, TsMemberProperty, TsType } from "../trees.js";
 import { TsExpr, TsTypeRef } from "../trees.js";
-import { IArray } from "../../IArray.js";
-import { some, none, type Option } from "fp-ts/Option";
-import { Comments } from "../../Comments.js";
-import { Comment } from "../../Comment.js";
 
 /**
  * Transform that infers types from expressions for properties and variables.
- * 
+ *
  * This transform extends TreeTransformationScopedChanges and processes TsMemberProperty
  * and TsDeclVar nodes that have expressions but no explicit type annotations.
  */
@@ -49,7 +43,9 @@ export class InferTypeFromExpr extends TreeTransformationScopedChanges {
 	/**
 	 * Processes TsMemberProperty nodes, inferring types from expressions.
 	 */
-	enterTsMemberProperty(scope: TsTreeScope): (x: TsMemberProperty) => TsMemberProperty {
+	enterTsMemberProperty(
+		_scope: TsTreeScope,
+	): (x: TsMemberProperty) => TsMemberProperty {
 		return (x: TsMemberProperty) => {
 			// Only process properties with no type but with an expression
 			if (x.tpe._tag === "None" && x.expr._tag === "Some") {
@@ -67,7 +63,7 @@ export class InferTypeFromExpr extends TreeTransformationScopedChanges {
 	/**
 	 * Processes TsDeclVar nodes, inferring types from expressions.
 	 */
-	enterTsDeclVar(scope: TsTreeScope): (x: TsDeclVar) => TsDeclVar {
+	enterTsDeclVar(_scope: TsTreeScope): (x: TsDeclVar) => TsDeclVar {
 		return (x: TsDeclVar) => {
 			// Only process variables with no type but with an expression
 			if (x.tpe._tag === "None" && x.expr._tag === "Some") {
@@ -85,7 +81,7 @@ export class InferTypeFromExpr extends TreeTransformationScopedChanges {
 	/**
 	 * Converts an expression to a type by inferring the type and widening it.
 	 * Adds a comment with the original expression if the result is a TsTypeRef.
-	 * 
+	 *
 	 * @param expr The expression to convert to a type
 	 * @returns The inferred and widened type
 	 */
@@ -121,16 +117,20 @@ export const InferTypeFromExprTransformFunction = {
 	/**
 	 * Transform function for member properties.
 	 */
-	enterTsMemberProperty: (scope: TsTreeScope) => (x: TsMemberProperty): TsMemberProperty => {
-		return InferTypeFromExprTransform.enterTsMemberProperty(scope)(x);
-	},
+	enterTsMemberProperty:
+		(scope: TsTreeScope) =>
+		(x: TsMemberProperty): TsMemberProperty => {
+			return InferTypeFromExprTransform.enterTsMemberProperty(scope)(x);
+		},
 
 	/**
 	 * Transform function for variable declarations.
 	 */
-	enterTsDeclVar: (scope: TsTreeScope) => (x: TsDeclVar): TsDeclVar => {
-		return InferTypeFromExprTransform.enterTsDeclVar(scope)(x);
-	},
+	enterTsDeclVar:
+		(scope: TsTreeScope) =>
+		(x: TsDeclVar): TsDeclVar => {
+			return InferTypeFromExprTransform.enterTsDeclVar(scope)(x);
+		},
 
 	withTree: (scope: TsTreeScope, tree: any): TsTreeScope => {
 		return InferTypeFromExprTransform.withTree(scope, tree);

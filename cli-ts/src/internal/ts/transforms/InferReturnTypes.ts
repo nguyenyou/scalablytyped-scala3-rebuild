@@ -1,7 +1,7 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.InferReturnTypes
  *
- * This transform infers return types for functions by looking at parent class/interface 
+ * This transform infers return types for functions by looking at parent class/interface
  * implementations with the same signature.
  *
  * The transform processes TsMemberFunction nodes and:
@@ -18,7 +18,7 @@
  * interface Parent {
  *   method(x: string): number;
  * }
- * 
+ *
  * interface Child extends Parent {
  *   method(x: string);  // No return type
  * }
@@ -30,24 +30,22 @@
  * ```
  */
 
+import { none, type Option, some } from "fp-ts/Option";
+import { MethodType } from "../MethodType.js";
+import { type InterfaceOrClass, ParentsResolver } from "../ParentsResolver.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
-	TsMemberFunction,
 	TsFunSig,
 	TsIdent,
-	TsType,
-	TsTree,
 	TsMember,
+	TsMemberFunction,
+	TsTree,
 } from "../trees.js";
-import { MethodType } from "../MethodType.js";
-import { ParentsResolver, type InterfaceOrClass } from "../ParentsResolver.js";
-import { IArray } from "../../IArray.js";
-import { some, none, type Option } from "fp-ts/Option";
 
 /**
  * Transform that infers return types for functions by looking at parent implementations.
- * 
+ *
  * This transform extends TreeTransformationScopedChanges and processes TsMemberFunction nodes.
  * It looks for parent class/interface implementations with the same signature and copies
  * their return types.
@@ -56,10 +54,14 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 	/**
 	 * Processes TsMemberFunction nodes, inferring return types from parent implementations.
 	 */
-	enterTsMemberFunction(scope: TsTreeScope): (x: TsMemberFunction) => TsMemberFunction {
+	enterTsMemberFunction(
+		scope: TsTreeScope,
+	): (x: TsMemberFunction) => TsMemberFunction {
 		return (x: TsMemberFunction) => {
 			// Find the owner (class or interface) in the scope stack
-			const ownerOpt: Option<InterfaceOrClass> = this.findOwnerInStack(scope.stack);
+			const ownerOpt: Option<InterfaceOrClass> = this.findOwnerInStack(
+				scope.stack,
+			);
 
 			// Pattern match on name, signature, and owner
 			if (this.isConstructor(x.name)) {
@@ -127,11 +129,11 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 		func: TsMemberFunction,
 	): Option<TsMemberFunction> {
 		const parentsResult = ParentsResolver.apply(scope, owner);
-		
+
 		for (const parent of parentsResult.parents) {
 			const membersByName = this.getMembersByName(parent);
 			const sameNameMembers = membersByName.get(func.name.value);
-			
+
 			if (sameNameMembers) {
 				for (const member of sameNameMembers) {
 					if (this.isMatchingFunction(member, func)) {
@@ -159,7 +161,7 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 	 */
 	private getMembersByName(parent: InterfaceOrClass): Map<string, TsMember[]> {
 		const membersByName = new Map<string, TsMember[]>();
-		
+
 		for (const member of parent.members) {
 			if (this.hasMemberName(member)) {
 				const name = this.getMemberName(member);
@@ -170,7 +172,7 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 				}
 			}
 		}
-		
+
 		return membersByName;
 	}
 
@@ -205,20 +207,25 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 	/**
 	 * Checks if a member is a matching function with the same signature.
 	 */
-	private isMatchingFunction(member: TsMember, targetFunc: TsMemberFunction): boolean {
+	private isMatchingFunction(
+		member: TsMember,
+		targetFunc: TsMemberFunction,
+	): boolean {
 		if (member._tag !== "TsMemberFunction") {
 			return false;
 		}
 
 		const memberFunc = member as TsMemberFunction;
-		
+
 		// Check if it's a normal method (not constructor, getter, setter)
 		if (!MethodType.isNormal(memberFunc.methodType)) {
 			return false;
 		}
 
 		// Check if parameter count matches
-		if (memberFunc.signature.params.length !== targetFunc.signature.params.length) {
+		if (
+			memberFunc.signature.params.length !== targetFunc.signature.params.length
+		) {
 			return false;
 		}
 
@@ -239,9 +246,11 @@ export const InferReturnTypesTransformFunction = {
 	/**
 	 * Transform function for member functions.
 	 */
-	enterTsMemberFunction: (scope: TsTreeScope) => (x: TsMemberFunction): TsMemberFunction => {
-		return InferReturnTypesTransform.enterTsMemberFunction(scope)(x);
-	},
+	enterTsMemberFunction:
+		(scope: TsTreeScope) =>
+		(x: TsMemberFunction): TsMemberFunction => {
+			return InferReturnTypesTransform.enterTsMemberFunction(scope)(x);
+		},
 
 	withTree: (scope: TsTreeScope, tree: any): TsTreeScope => {
 		return InferReturnTypesTransform.withTree(scope, tree);

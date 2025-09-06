@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { none, type Option, some } from "fp-ts/Option";
+import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
@@ -15,6 +15,7 @@ import { Hoisting } from "@/internal/ts/Hoisting.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { VarToNamespaceTransform } from "@/internal/ts/transforms/VarToNamespace.js";
 import {
 	MethodType,
 	TsDeclClass,
@@ -22,12 +23,10 @@ import {
 	TsDeclInterface,
 	TsDeclNamespace,
 	TsDeclVar,
-	TsExpr,
+	type TsExpr,
 	TsFunSig,
 	TsIdent,
-	TsIdentApply,
 	type TsIdentSimple,
-	TsMemberCall,
 	TsMemberFunction,
 	TsMemberProperty,
 	TsParsedFile,
@@ -37,7 +36,6 @@ import {
 	TsTypeObject,
 	TsTypeRef,
 } from "@/internal/ts/trees.js";
-import { VarToNamespaceTransform } from "@/internal/ts/transforms/VarToNamespace.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -172,8 +170,14 @@ describe("VarToNamespace", () => {
 
 	describe("Variable to Namespace Conversion", () => {
 		test("converts variable with object type to namespace", () => {
-			const prop1 = createMemberProperty("prop1", some(createTypeRef("string")));
-			const prop2 = createMemberProperty("prop2", some(createTypeRef("number")));
+			const prop1 = createMemberProperty(
+				"prop1",
+				some(createTypeRef("string")),
+			);
+			const prop2 = createMemberProperty(
+				"prop2",
+				some(createTypeRef("number")),
+			);
 			const objectType = createObjectType(IArray.fromArray([prop1, prop2]));
 
 			const variable = createMockVar("TestNamespace", some(objectType));
@@ -250,7 +254,10 @@ describe("VarToNamespace", () => {
 		});
 
 		test("preserves variable with non-object type", () => {
-			const variable = createMockVar("StringVar", some(createTypeRef("string")));
+			const variable = createMockVar(
+				"StringVar",
+				some(createTypeRef("string")),
+			);
 			const scope = createMockScope([]);
 
 			const result = VarToNamespaceTransform.enterTsDecl(scope)(variable);

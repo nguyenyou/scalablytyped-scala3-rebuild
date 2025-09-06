@@ -21,16 +21,16 @@
  * ```
  */
 
-import { IArray } from "../../IArray.js";
+import type { IArray } from "../../IArray.js";
 import { Hoisting } from "../Hoisting.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import {
-	TsContainerOrDecl,
-	TsDecl,
+	type TsContainerOrDecl,
+	type TsDecl,
 	TsDeclNamespace,
-	TsDeclVar,
-	TsTypeObject,
+	type TsDeclVar,
+	type TsTypeObject,
 } from "../trees.js";
 
 /**

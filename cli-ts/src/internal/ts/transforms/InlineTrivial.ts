@@ -1,14 +1,14 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.InlineTrivial
  *
- * This is the first part of a two-step process to eliminate the myriad of type aliases 
+ * This is the first part of a two-step process to eliminate the myriad of type aliases
  * and interfaces resulting from module resolution.
  *
- * This transform inlines trivial type aliases and interfaces by following chains of 
- * type references to their final targets. A "trivial" declaration is one marked with 
+ * This transform inlines trivial type aliases and interfaces by following chains of
+ * type references to their final targets. A "trivial" declaration is one marked with
  * the IsTrivial marker that simply points to another type without adding any value.
  *
- * The second part of this process is done in scala.js (CleanupTrivial) to ensure 
+ * The second part of this process is done in scala.js (CleanupTrivial) to ensure
  * that all dependencies can resolve their uses of the intermediate type aliases.
  *
  * Example transformation:
@@ -22,27 +22,26 @@
  * ```
  */
 
+import { none, type Option, some } from "fp-ts/Option";
+import { IsTrivial } from "../../Comment.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import { TsQIdentUtils } from "../TsTreeScope.js";
 import type {
-	TsTypeRef,
-	TsType,
 	TsDecl,
-	TsDeclTypeAlias,
-	TsDeclInterface,
 	TsDeclEnum,
+	TsDeclInterface,
+	TsDeclTypeAlias,
 	TsNamedDecl,
-	TsTypeIntersect,
 	TsQIdent,
+	TsType,
+	TsTypeIntersect,
+	TsTypeRef,
 } from "../trees.js";
-import { IArray } from "../../IArray.js";
-import { some, none, type Option } from "fp-ts/Option";
-import { IsTrivial } from "../../Comment.js";
 
 /**
  * Transform that inlines trivial type aliases and interfaces.
- * 
+ *
  * This transform extends TreeTransformationScopedChanges and processes TsTypeRef nodes.
  * It looks up type references in scope and follows chains of trivial declarations
  * to their final targets.
@@ -60,7 +59,7 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 
 	/**
 	 * Attempts to rewrite a type reference by following trivial declarations.
-	 * 
+	 *
 	 * @param scope The current tree scope
 	 * @param x The type reference to potentially rewrite
 	 * @returns Some(rewritten) if the reference was rewritten, None otherwise
@@ -72,7 +71,7 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 		}
 
 		const lookupResults = scope.lookupTypeIncludeScope(x.name);
-		
+
 		for (const [decl, newScope] of lookupResults) {
 			// Handle exported enums
 			if (decl._tag === "TsDeclEnum" && x.tparams.length === 0) {
@@ -129,28 +128,31 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 
 		if (cur._tag === "TsDeclInterface") {
 			const interface_ = cur as TsDeclInterface;
-			
+
 			// Look for the first effective type reference in inheritance
 			if (interface_.inheritance.length > 0) {
 				const firstInheritance = interface_.inheritance.apply(0);
 				const effectiveRef = this.extractEffectiveTypeRef(firstInheritance);
-				
+
 				if (effectiveRef._tag === "Some") {
 					const nextName = effectiveRef.value.name;
-					
+
 					// Look up the next declaration and follow the chain
 					const lookupResults = scope.lookupTypeIncludeScope(nextName);
-					
+
 					for (const [nextDecl, newScope] of lookupResults) {
 						// Avoid infinite recursion by checking code paths
-						if (this.isNamedDecl(nextDecl) && !this.sameCodePath(nextDecl, cur)) {
+						if (
+							this.isNamedDecl(nextDecl) &&
+							!this.sameCodePath(nextDecl, cur)
+						) {
 							const followResult = this.followTrivial(newScope, nextDecl);
 							if (followResult._tag === "Some") {
 								return followResult;
 							}
 						}
 					}
-					
+
 					// If we can't follow further, return the next name
 					return some(nextName);
 				}
@@ -160,13 +162,13 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 		if (cur._tag === "TsDeclTypeAlias") {
 			const alias = cur as TsDeclTypeAlias;
 			const effectiveRef = this.extractEffectiveTypeRef(alias.alias);
-			
+
 			if (effectiveRef._tag === "Some") {
 				const nextName = effectiveRef.value.name;
-				
+
 				// Look up the next declaration and follow the chain
 				const lookupResults = scope.lookupTypeIncludeScope(nextName);
-				
+
 				for (const [nextDecl, newScope] of lookupResults) {
 					// Avoid infinite recursion by checking code paths
 					if (this.isNamedDecl(nextDecl) && !this.sameCodePath(nextDecl, cur)) {
@@ -176,7 +178,7 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 						}
 					}
 				}
-				
+
 				// If we can't follow further, return the next name
 				return some(nextName);
 			}
@@ -211,10 +213,12 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 
 			// If all are type refs and they all point to the same type, return the first one
 			if (nonTypeRefs.length === 0 && typeRefs.length > 0) {
-				const distinctNames = new Set(typeRefs.map(ref => {
-					const lastPart = ref.name.parts.apply(ref.name.parts.length - 1);
-					return lastPart ? lastPart.value : "";
-				}));
+				const distinctNames = new Set(
+					typeRefs.map((ref) => {
+						const lastPart = ref.name.parts.apply(ref.name.parts.length - 1);
+						return lastPart ? lastPart.value : "";
+					}),
+				);
 				if (distinctNames.size === 1) {
 					return some(typeRefs[0]);
 				}
@@ -248,10 +252,10 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 		if (!("codePath" in decl1) || !("codePath" in decl2)) {
 			return false;
 		}
-		
+
 		const path1 = (decl1 as any).codePath;
 		const path2 = (decl2 as any).codePath;
-		
+
 		// Simple equality check - in a real implementation this would be more sophisticated
 		return JSON.stringify(path1) === JSON.stringify(path2);
 	}
@@ -270,9 +274,11 @@ export const InlineTrivialTransformFunction = {
 	/**
 	 * Transform function that can be used directly.
 	 */
-	enterTsTypeRef: (scope: TsTreeScope) => (x: TsTypeRef): TsTypeRef => {
-		return InlineTrivialTransform.enterTsTypeRef(scope)(x);
-	},
+	enterTsTypeRef:
+		(scope: TsTreeScope) =>
+		(x: TsTypeRef): TsTypeRef => {
+			return InlineTrivialTransform.enterTsTypeRef(scope)(x);
+		},
 
 	rewritten: (scope: TsTreeScope, x: TsTypeRef): Option<TsTypeRef> => {
 		return InlineTrivialTransform.rewritten(scope, x);
