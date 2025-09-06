@@ -69,7 +69,12 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 				return x;
 			}
 
-			if (this.hasNoReturnType(x.signature) && ownerOpt._tag === "Some") {
+			// Debug logging
+			const hasNoReturn = this.hasNoReturnType(x.signature);
+			const hasOwner = ownerOpt._tag === "Some";
+
+			// Only process functions with no return type
+			if (hasNoReturn && hasOwner) {
 				const owner = ownerOpt.value;
 				const rewrittenOpt = this.findParentImplementation(scope, owner, x);
 
@@ -82,7 +87,7 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 				}
 			}
 
-			// Default case: return unchanged
+			// Default case: return unchanged (functions with return types, constructors, etc.)
 			return x;
 		};
 	}
@@ -107,10 +112,10 @@ export class InferReturnTypes extends TreeTransformationScopedChanges {
 	}
 
 	/**
-	 * Checks if a function signature has no return type but has parameters.
+	 * Checks if a function signature has no return type.
 	 */
 	private hasNoReturnType(signature: TsFunSig): boolean {
-		return signature.resultType._tag === "None" && signature.params.length > 0;
+		return signature.resultType._tag === "None";
 	}
 
 	/**
