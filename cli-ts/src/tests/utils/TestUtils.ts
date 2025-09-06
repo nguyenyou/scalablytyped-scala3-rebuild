@@ -11,7 +11,7 @@ import { Raw } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
+import { CodePath, type CodePathHasPath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import type { TsLib } from "@/internal/ts/TsTreeScope.js";
@@ -904,6 +904,24 @@ export function createCodePath(
 	return CodePath.hasPath(
 		TsIdent.librarySimple(libName),
 		TsQIdent.of(createSimpleIdent(pathName)),
+	);
+}
+
+/**
+ * Creates a CodePath with multiple path parts.
+ *
+ * @param libName - The library name
+ * @param parts - The path parts
+ * @returns A CodePathHasPath
+ */
+export function createCodePathWithParts(
+	libName: string,
+	...parts: string[]
+): CodePathHasPath {
+	const pathParts = parts.map(part => createSimpleIdent(part));
+	return CodePath.hasPath(
+		TsIdent.librarySimple(libName),
+		TsQIdent.of(...pathParts),
 	);
 }
 
