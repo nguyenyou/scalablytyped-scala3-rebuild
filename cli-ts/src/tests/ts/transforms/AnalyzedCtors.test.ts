@@ -9,9 +9,11 @@ import { describe, expect, test } from "bun:test";
 import { none, type Option, some } from "fp-ts/Option";
 import { Comments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
+import { CodePath } from "../../../internal/ts/CodePath.js";
 import { LoopDetector } from "../../../internal/ts/TsTreeScope.js";
 import { AnalyzedCtors } from "../../../internal/ts/transforms/ExtractClasses.js";
 import {
+	TsDeclInterface,
 	TsFunSig,
 	TsIdent,
 	TsIdentConstructor,
@@ -435,6 +437,48 @@ describe("AnalyzedCtors", () => {
 			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
 
 			expect(result).toBe(false);
+		});
+
+		// BATCH 3: Missing positive "isSimpleType method" test cases
+		test("returns true for simple interface without type parameters", () => {
+			const interface1 = createMockInterface("SimpleInterface", IArray.Empty);
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("SimpleInterface");
+
+			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
+
+			expect(result).toBe(true);
+		});
+
+		test("returns true for simple class without type parameters", () => {
+			const class1 = createMockClass("SimpleClass", IArray.Empty);
+			const scope = createMockScope("test-lib", class1);
+			const typeRef = createTypeRef("SimpleClass");
+
+			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
+
+			expect(result).toBe(true);
+		});
+
+		test("returns true for interface with type parameters (current implementation behavior)", () => {
+			// Create interface with type parameters using TsDeclInterface.create directly
+			const interface1 = TsDeclInterface.create(
+				Comments.empty(),
+				false, // declared
+				TsIdent.simple("GenericInterface"),
+				IArray.fromArray([createTypeParam("T")]), // tparams
+				IArray.Empty, // inheritance
+				IArray.Empty, // members
+				CodePath.noPath(),
+			);
+			const scope = createMockScope("test-lib", interface1);
+			const typeRef = createTypeRef("GenericInterface");
+
+			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
+
+			// Current implementation returns true because it only checks if the declaration
+			// exists and is a class/interface, not whether the declaration has type parameters
+			expect(result).toBe(true);
 		});
 	});
 });
