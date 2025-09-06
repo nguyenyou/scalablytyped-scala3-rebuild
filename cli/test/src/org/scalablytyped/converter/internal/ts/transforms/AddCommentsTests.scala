@@ -3,89 +3,9 @@ package ts
 package transforms
 
 import utest.*
+import TestUtils.*
 
 object AddCommentsTests extends TestSuite {
-
-  // Helper methods for creating test data
-  def createSimpleIdent(name: String): TsIdentSimple = TsIdentSimple(name)
-
-  def createQIdent(name: String): TsQIdent = TsQIdent.of(createSimpleIdent(name))
-
-  def createTypeRef(name: String, tparams: IArray[TsType] = Empty): TsTypeRef =
-    TsTypeRef(NoComments, createQIdent(name), tparams)
-
-  def createMockProperty(name: String, tpe: TsType = TsTypeRef.string): TsMemberProperty =
-    TsMemberProperty(
-      comments = NoComments,
-      level = TsProtectionLevel.Default,
-      name = createSimpleIdent(name),
-      tpe = Some(tpe),
-      expr = None,
-      isStatic = false,
-      isReadOnly = false
-    )
-
-  def createMockMethod(name: String): TsMemberFunction =
-    TsMemberFunction(
-      comments = NoComments,
-      level = TsProtectionLevel.Default,
-      name = createSimpleIdent(name),
-      methodType = MethodType.Normal,
-      signature = TsFunSig(
-        comments = NoComments,
-        tparams = Empty,
-        params = Empty,
-        resultType = Some(TsTypeRef.void)
-      ),
-      isStatic = false,
-      isReadOnly = false
-    )
-
-  def createMockCall(): TsMemberCall =
-    TsMemberCall(
-      comments = NoComments,
-      level = TsProtectionLevel.Default,
-      signature = TsFunSig(
-        comments = NoComments,
-        tparams = Empty,
-        params = Empty,
-        resultType = Some(TsTypeRef.void)
-      )
-    )
-
-  def createMockCtor(): TsMemberCtor =
-    TsMemberCtor(
-      comments = NoComments,
-      level = TsProtectionLevel.Default,
-      signature = TsFunSig(
-        comments = NoComments,
-        tparams = Empty,
-        params = Empty,
-        resultType = None
-      )
-    )
-
-  def createMockIndex(): TsMemberIndex =
-    TsMemberIndex(
-      comments = NoComments,
-      isReadOnly = false,
-      level = TsProtectionLevel.Default,
-      indexing = Indexing.Dict(createSimpleIdent("key"), TsTypeRef.string),
-      valueType = Some(TsTypeRef.string)
-    )
-
-  def createMockTypeMapped(): TsMemberTypeMapped =
-    TsMemberTypeMapped(
-      comments = NoComments,
-      level = TsProtectionLevel.Default,
-      readonly = ReadonlyModifier.Noop,
-      key = createSimpleIdent("K"),
-      from = TsTypeRef.string,
-      as = None,
-      optionalize = OptionalModifier.Noop,
-      to = TsTypeRef.string
-    )
-
   def tests = Tests {
     test("AddComments - Basic Functionality") {
       test("case class creation") {

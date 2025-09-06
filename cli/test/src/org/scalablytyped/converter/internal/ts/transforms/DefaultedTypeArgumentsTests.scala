@@ -2,61 +2,10 @@ package org.scalablytyped.converter.internal
 package ts
 package transforms
 
-import org.scalablytyped.converter.internal.logging.Logger
 import utest.*
+import TestUtils.*
 
 object DefaultedTypeArgumentsTests extends TestSuite {
-
-  // Helper methods for creating test data
-  def createSimpleIdent(name: String): TsIdentSimple = TsIdentSimple(name)
-
-  def createQIdent(name: String): TsQIdent = TsQIdent.of(createSimpleIdent(name))
-
-  def createTypeRef(name: String, tparams: IArray[TsType] = Empty): TsTypeRef =
-    TsTypeRef(NoComments, createQIdent(name), tparams)
-
-  def createTypeParam(name: String, default: Option[TsType] = None, upperBound: Option[TsType] = None): TsTypeParam =
-    TsTypeParam(NoComments, createSimpleIdent(name), upperBound, default)
-
-  def createMockInterface(name: String, tparams: IArray[TsTypeParam] = Empty): TsDeclInterface =
-    TsDeclInterface(
-      comments = NoComments,
-      declared = false,
-      name = createSimpleIdent(name),
-      tparams = tparams,
-      inheritance = Empty,
-      members = Empty,
-      codePath = CodePath.NoPath
-    )
-
-  def createMockTypeAlias(name: String, tparams: IArray[TsTypeParam] = Empty, alias: TsType = TsTypeRef.any): TsDeclTypeAlias =
-    TsDeclTypeAlias(
-      comments = NoComments,
-      declared = false,
-      name = createSimpleIdent(name),
-      tparams = tparams,
-      alias = alias,
-      codePath = CodePath.NoPath
-    )
-
-  def createMockScope(declarations: TsDecl*): TsTreeScope = {
-    val parsedFile = TsParsedFile(
-      comments = NoComments,
-      directives = Empty,
-      members = IArray.fromTraversable(declarations),
-      codePath = CodePath.NoPath
-    )
-
-    val root = TsTreeScope(
-      libName = TsIdentLibrarySimple("test-lib"),
-      pedantic = false,
-      deps = Map.empty,
-      logger = Logger.DevNull
-    )
-
-    root / parsedFile
-  }
-
   def tests = Tests {
     test("DefaultedTypeArguments - Basic Functionality") {
       test("extends TreeTransformationScopedChanges") {

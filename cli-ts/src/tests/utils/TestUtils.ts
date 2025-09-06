@@ -51,6 +51,7 @@ import {
 	TsQIdent,
 	type TsType,
 	type TsTypeIntersect,
+	type TsTypeKeyOf,
 	TsTypeLiteral,
 	type TsTypeParam,
 	type TsTypeQuery,
@@ -183,6 +184,20 @@ export function createTypeQuery(expr: TsQIdent): TsTypeQuery {
  */
 export function createTypeLiteral(value: string): TsTypeLiteral {
 	return TsTypeLiteral.create(TsLiteral.str(value));
+}
+
+/**
+ * Creates a TsTypeKeyOf representing a keyof expression.
+ *
+ * @param key - The type to get the keys of
+ * @returns A TsTypeKeyOf object
+ */
+export function createKeyOfType(key: TsType): TsTypeKeyOf {
+	return {
+		_tag: "TsTypeKeyOf",
+		key,
+		asString: `keyof ${key.asString}`,
+	};
 }
 
 // ============================================================================
