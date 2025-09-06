@@ -1,15 +1,15 @@
 /**
  * Tests for SetCodePath transform.
- * 
+ *
  * Port of org.scalablytyped.converter.internal.ts.transforms.SetCodePathTests
  */
 
 import { describe, expect, it } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
-import { CodePath, CodePathNoPath } from "@/internal/ts/CodePath.js";
-import { SetCodePath, SetCodePathTransform } from "@/internal/ts/transforms/SetCodePath.js";
+import { CodePathNoPath } from "@/internal/ts/CodePath.js";
 import { AbstractTreeTransformation } from "@/internal/ts/TreeTransformation.js";
-import { TsIdent, TsIdentGlobal } from "@/internal/ts/trees.js";
+import { SetCodePathTransform } from "@/internal/ts/transforms/SetCodePath.js";
+import { TsIdentGlobal } from "@/internal/ts/trees.js";
 import {
 	createCodePathWithParts,
 	createMockClass,
@@ -20,7 +20,6 @@ import {
 	createMockNamespace,
 	createMockParsedFile,
 	createMockVariable,
-	createSimpleIdent,
 } from "@/tests/utils/TestUtils.js";
 
 describe("SetCodePath", () => {
@@ -48,7 +47,8 @@ describe("SetCodePath", () => {
 		it("has enterTsParsedFile method", () => {
 			const codePath = createCodePathWithParts("test-lib", "path");
 			const parsedFile = createMockParsedFile("test-lib");
-			const result = SetCodePathTransform.enterTsParsedFile(codePath)(parsedFile);
+			const result =
+				SetCodePathTransform.enterTsParsedFile(codePath)(parsedFile);
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsParsedFile");
 		});
@@ -146,7 +146,9 @@ describe("SetCodePath", () => {
 				asString: "TsExport(test)",
 			};
 
-			const result = SetCodePathTransform.enterTsDecl(codePath)(exportDecl as any);
+			const result = SetCodePathTransform.enterTsDecl(codePath)(
+				exportDecl as any,
+			);
 
 			expect(result).toBe(exportDecl); // Should remain unchanged
 		});
@@ -196,10 +198,15 @@ describe("SetCodePath", () => {
 				members: IArray.Empty,
 				codePath: CodePathNoPath,
 				jsLocation: {} as any,
-				withCodePath: (newCodePath: any) => ({ ...augmentedModule, codePath: newCodePath }),
+				withCodePath: (newCodePath: any) => ({
+					...augmentedModule,
+					codePath: newCodePath,
+				}),
 			};
 
-			const result = SetCodePathTransform.enterTsContainer(codePath)(augmentedModule as any);
+			const result = SetCodePathTransform.enterTsContainer(codePath)(
+				augmentedModule as any,
+			);
 
 			expect(result._tag).toBe("TsAugmentedModule");
 			const resultAugmented = result as any;
@@ -211,9 +218,10 @@ describe("SetCodePath", () => {
 		it("sets code path on parsed file", () => {
 			const codePath = createCodePathWithParts("test-lib", "module");
 			const parsedFile = createMockParsedFile("test-lib");
-			
-			const result = SetCodePathTransform.enterTsParsedFile(codePath)(parsedFile);
-			
+
+			const result =
+				SetCodePathTransform.enterTsParsedFile(codePath)(parsedFile);
+
 			expect(result._tag).toBe("TsParsedFile");
 			const resultFile = result as any;
 			expect(resultFile.codePath).toBe(codePath);
@@ -230,7 +238,10 @@ describe("SetCodePath", () => {
 			expect(result._tag).toBe("HasPath");
 			expect(result.inLibrary.value).toBe("test-lib");
 			// Should have added TestClass identifier to the path
-			expect(result.codePathPart.parts.toArray().map(p => p.value)).toEqual(["module", "TestClass"]);
+			expect(result.codePathPart.parts.toArray().map((p) => p.value)).toEqual([
+				"module",
+				"TestClass",
+			]);
 		});
 
 		it("navigates into global declaration", () => {
@@ -260,21 +271,30 @@ describe("SetCodePath", () => {
 			// For non-named trees, the path should remain unchanged
 			expect(result._tag).toBe("HasPath");
 			expect(result.inLibrary.value).toBe("test-lib");
-			expect(result.codePathPart.parts.toArray().map(p => p.value)).toEqual(["module"]);
+			expect(result.codePathPart.parts.toArray().map((p) => p.value)).toEqual([
+				"module",
+			]);
 		});
 	});
 
 	describe("Edge Cases and Error Handling", () => {
 		it("handles null containers gracefully", () => {
 			const codePath = createCodePathWithParts("test-lib", "module");
-			
+
 			expect(() => {
 				SetCodePathTransform.enterTsContainer(codePath)(null as any);
 			}).not.toThrow();
 		});
 
 		it("handles very long code paths", () => {
-			const codePath = createCodePathWithParts("test-lib", "level1", "level2", "level3", "level4", "level5");
+			const codePath = createCodePathWithParts(
+				"test-lib",
+				"level1",
+				"level2",
+				"level3",
+				"level4",
+				"level5",
+			);
 			const func = createMockFunction("deepFunc");
 
 			const result = SetCodePathTransform.enterTsDecl(codePath)(func);
@@ -288,8 +308,15 @@ describe("SetCodePath", () => {
 		it("handles complex nested structures", () => {
 			const codePath = createCodePathWithParts("test-lib", "module");
 			const innerClass = createMockClass("InnerClass");
-			const outerClass = createMockClass("OuterClass", undefined, IArray.fromArray([innerClass as any]));
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([outerClass as any]));
+			const outerClass = createMockClass(
+				"OuterClass",
+				undefined,
+				IArray.fromArray([innerClass as any]),
+			);
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([outerClass as any]),
+			);
 
 			const result = SetCodePathTransform.enterTsContainer(codePath)(namespace);
 
@@ -308,13 +335,17 @@ describe("SetCodePath", () => {
 			const readFileFunc = createMockFunction("readFile");
 			const writeFileFunc = createMockFunction("writeFile");
 			const statsClass = createMockClass("Stats");
-			const fsNamespace = createMockNamespace("fs", IArray.fromArray([
-				readFileFunc as any,
-				writeFileFunc as any,
-				statsClass as any,
-			]));
+			const fsNamespace = createMockNamespace(
+				"fs",
+				IArray.fromArray([
+					readFileFunc as any,
+					writeFileFunc as any,
+					statsClass as any,
+				]),
+			);
 
-			const result = SetCodePathTransform.enterTsContainer(codePath)(fsNamespace);
+			const result =
+				SetCodePathTransform.enterTsContainer(codePath)(fsNamespace);
 
 			expect(result._tag).toBe("TsDeclNamespace");
 			const resultNamespace = result as any;

@@ -918,7 +918,7 @@ export function createCodePathWithParts(
 	libName: string,
 	...parts: string[]
 ): CodePathHasPath {
-	const pathParts = parts.map(part => createSimpleIdent(part));
+	const pathParts = parts.map((part) => createSimpleIdent(part));
 	return CodePath.hasPath(
 		TsIdent.librarySimple(libName),
 		TsQIdent.of(...pathParts),

@@ -5,22 +5,16 @@
  * It traverses the tree and updates the codePath property on nodes that support it.
  */
 
-import { AbstractTreeTransformation } from "../TreeTransformation.js";
 import type { CodePathHasPath } from "../CodePath.js";
-import type {
-	TsContainer,
-	TsDecl,
-	TsNamedDecl,
-	TsParsedFile,
-	TsTree,
-} from "../trees.js";
+import { AbstractTreeTransformation } from "../TreeTransformation.js";
+import type { TsContainer, TsDecl, TsParsedFile, TsTree } from "../trees.js";
 
 /**
  * Transform that sets code path information on tree nodes.
- * 
+ *
  * This transform extends TreeTransformation with CodePathHasPath as the context type.
  * It updates the codePath property on nodes that implement HasCodePath interface.
- * 
+ *
  * The transform works by:
  * 1. Checking if a node implements HasCodePath (has withCodePath method)
  * 2. If yes, calling withCodePath to update the node with the current path
@@ -52,7 +46,9 @@ export class SetCodePath extends AbstractTreeTransformation<CodePathHasPath> {
 	/**
 	 * Processes TsContainer nodes, setting code path if they implement HasCodePath.
 	 */
-	override enterTsContainer(codePath: CodePathHasPath): (x: TsContainer) => TsContainer {
+	override enterTsContainer(
+		codePath: CodePathHasPath,
+	): (x: TsContainer) => TsContainer {
 		return (x: TsContainer) => {
 			// Check if this container implements HasCodePath
 			if (this.hasCodePath(x)) {
@@ -62,12 +58,12 @@ export class SetCodePath extends AbstractTreeTransformation<CodePathHasPath> {
 		};
 	}
 
-
-
 	/**
 	 * Processes TsParsedFile nodes, always setting code path since they implement HasCodePath.
 	 */
-	override enterTsParsedFile(codePath: CodePathHasPath): (x: TsParsedFile) => TsParsedFile {
+	override enterTsParsedFile(
+		codePath: CodePathHasPath,
+	): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => {
 			// TsParsedFile always implements HasCodePath
 			return x.withCodePath(codePath) as TsParsedFile;
@@ -78,7 +74,9 @@ export class SetCodePath extends AbstractTreeTransformation<CodePathHasPath> {
 	 * Type guard to check if an object implements HasCodePath.
 	 * An object implements HasCodePath if it has both codePath property and withCodePath method.
 	 */
-	private hasCodePath(obj: any): obj is { withCodePath(newCodePath: CodePathHasPath): any } {
+	private hasCodePath(
+		obj: any,
+	): obj is { withCodePath(newCodePath: CodePathHasPath): any } {
 		return (
 			obj != null &&
 			typeof obj === "object" &&
@@ -102,19 +100,23 @@ export const SetCodePathTransformFunction = {
 	/**
 	 * Transform function that can be used directly.
 	 */
-	enterTsDecl: (codePath: CodePathHasPath) => (x: TsDecl): TsDecl => {
-		return SetCodePathTransform.enterTsDecl(codePath)(x);
-	},
+	enterTsDecl:
+		(codePath: CodePathHasPath) =>
+		(x: TsDecl): TsDecl => {
+			return SetCodePathTransform.enterTsDecl(codePath)(x);
+		},
 
-	enterTsContainer: (codePath: CodePathHasPath) => (x: TsContainer): TsContainer => {
-		return SetCodePathTransform.enterTsContainer(codePath)(x);
-	},
+	enterTsContainer:
+		(codePath: CodePathHasPath) =>
+		(x: TsContainer): TsContainer => {
+			return SetCodePathTransform.enterTsContainer(codePath)(x);
+		},
 
-
-
-	enterTsParsedFile: (codePath: CodePathHasPath) => (x: TsParsedFile): TsParsedFile => {
-		return SetCodePathTransform.enterTsParsedFile(codePath)(x);
-	},
+	enterTsParsedFile:
+		(codePath: CodePathHasPath) =>
+		(x: TsParsedFile): TsParsedFile => {
+			return SetCodePathTransform.enterTsParsedFile(codePath)(x);
+		},
 
 	withTree: (codePath: CodePathHasPath, tree: TsTree): CodePathHasPath => {
 		return SetCodePathTransform.withTree(codePath, tree);
