@@ -460,7 +460,7 @@ describe("AnalyzedCtors", () => {
 			expect(result).toBe(true);
 		});
 
-		test("returns true for interface with type parameters (current implementation behavior)", () => {
+		test("returns false for interface with type parameters", () => {
 			// Create interface with type parameters using TsDeclInterface.create directly
 			const interface1 = TsDeclInterface.create(
 				Comments.empty(),
@@ -476,9 +476,8 @@ describe("AnalyzedCtors", () => {
 
 			const result = AnalyzedCtors.isSimpleType(typeRef, scope);
 
-			// Current implementation returns true because it only checks if the declaration
-			// exists and is a class/interface, not whether the declaration has type parameters
-			expect(result).toBe(true);
+			// Should return false because the interface has type parameters
+			expect(result).toBe(false);
 		});
 	});
 });
