@@ -13,6 +13,7 @@ import { MethodType } from "@/internal/ts/MethodType.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import { LoopDetector, MockTsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
+	createLoopDetector,
 	createMockClass,
 	createMockInterface,
 	createMockMethod,
@@ -59,10 +60,7 @@ import {
 	TsTypeUnion,
 } from "../../internal/ts/trees.js";
 
-// Helper functions for creating test data
-function createLoopDetector(): LoopDetector {
-	return LoopDetector.initial;
-}
+
 
 describe("AllMembersFor", () => {
 	describe("forType", () => {

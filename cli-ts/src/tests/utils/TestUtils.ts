@@ -14,7 +14,7 @@ import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { LoopDetector, TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
 	MethodType,
 	TsAugmentedModule,
@@ -92,6 +92,16 @@ export function createMockScope(
  * Alias for createMockScope for backward compatibility.
  */
 export const createEmptyScope = createMockScope;
+
+/**
+ * Creates a LoopDetector for testing.
+ * This is a simple wrapper around LoopDetector.initial for consistency.
+ *
+ * @returns A LoopDetector initialized to the initial state
+ */
+export function createLoopDetector(): LoopDetector {
+	return LoopDetector.initial;
+}
 
 // ============================================================================
 // Type Reference Creation Utilities
