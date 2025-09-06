@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option, some } from "fp-ts/Option";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";
 import { HasClassMembers } from "../../internal/ts/MemberCache.js";
@@ -21,13 +21,12 @@ import {
 	TsIdentApply,
 	TsIdentConstructor,
 	type TsIdentSimple,
-
+	type TsMember,
 	TsMemberCall,
 	TsMemberCtor,
 	TsMemberFunction,
 	TsMemberProperty,
 	TsMemberTypeMapped,
-	type TsMember,
 	type TsType,
 	TsTypeRef,
 } from "../../internal/ts/trees.js";
@@ -139,47 +138,65 @@ describe("HasClassMembers - Basic Functionality", () => {
 
 	it("single named member - function", () => {
 		const memberFunction = createMockMemberFunction("testMethod");
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberFunction]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberFunction]),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(memberFunction.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(memberFunction.name)?.apply(0)).toBe(memberFunction);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction.name)?.apply(0),
+		).toBe(memberFunction);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("single named member - property", () => {
 		const memberProperty = createMockMemberProperty("testProp");
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberProperty]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberProperty]),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(memberProperty.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(memberProperty.name)?.apply(0)).toBe(memberProperty);
+		expect(
+			hasClassMembers.membersByName.get(memberProperty.name)?.apply(0),
+		).toBe(memberProperty);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("call signature mapped to TsIdentApply", () => {
 		const memberCall = createMockMemberCall();
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberCall]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberCall]),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(TsIdentApply)).toBe(true);
-		expect(hasClassMembers.membersByName.get(TsIdentApply)?.apply(0)).toBe(memberCall);
+		expect(hasClassMembers.membersByName.get(TsIdentApply)?.apply(0)).toBe(
+			memberCall,
+		);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("constructor signature mapped to TsIdentConstructor", () => {
 		const memberCtor = createMockMemberCtor();
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberCtor]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberCtor]),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(TsIdentConstructor)).toBe(true);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.apply(0)).toBe(memberCtor);
+		expect(
+			hasClassMembers.membersByName.get(TsIdentConstructor)?.apply(0),
+		).toBe(memberCtor);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("unnamed member - type mapped", () => {
 		const memberTypeMapped = createMockMemberTypeMapped();
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberTypeMapped]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberTypeMapped]),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(0);
 		expect(hasClassMembers.unnamed.length).toBe(1);
@@ -195,7 +212,12 @@ describe("HasClassMembers - Mixed Member Types", () => {
 		const memberCtor = createMockMemberCtor();
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberFunction, memberProperty, memberCall, memberCtor])
+			IArray.fromArray<TsMember>([
+				memberFunction,
+				memberProperty,
+				memberCall,
+				memberCtor,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(4);
@@ -212,7 +234,11 @@ describe("HasClassMembers - Mixed Member Types", () => {
 		const memberTypeMapped = createMockMemberTypeMapped();
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberFunction, memberProperty, memberTypeMapped])
+			IArray.fromArray<TsMember>([
+				memberFunction,
+				memberProperty,
+				memberTypeMapped,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(2);
@@ -227,7 +253,7 @@ describe("HasClassMembers - Mixed Member Types", () => {
 		const memberTypeMapped2 = createMockMemberTypeMapped("K2");
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberTypeMapped1, memberTypeMapped2])
+			IArray.fromArray<TsMember>([memberTypeMapped1, memberTypeMapped2]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(0);
@@ -242,14 +268,20 @@ describe("HasClassMembers - Same Name Grouping", () => {
 		const memberFunction1 = createMockMemberFunction("sameName");
 		const memberFunction2 = createMockMemberFunction("sameName");
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberFunction1, memberFunction2])
+			IArray.fromArray<TsMember>([memberFunction1, memberFunction2]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(memberFunction1.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(memberFunction1.name)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(memberFunction1.name)?.toArray()).toContain(memberFunction1);
-		expect(hasClassMembers.membersByName.get(memberFunction1.name)?.toArray()).toContain(memberFunction2);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction1.name)?.length,
+		).toBe(2);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction1.name)?.toArray(),
+		).toContain(memberFunction1);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction1.name)?.toArray(),
+		).toContain(memberFunction2);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
@@ -257,14 +289,20 @@ describe("HasClassMembers - Same Name Grouping", () => {
 		const memberProperty1 = createMockMemberProperty("sameName");
 		const memberProperty2 = createMockMemberProperty("sameName");
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberProperty1, memberProperty2])
+			IArray.fromArray<TsMember>([memberProperty1, memberProperty2]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(memberProperty1.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(memberProperty1.name)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(memberProperty1.name)?.toArray()).toContain(memberProperty1);
-		expect(hasClassMembers.membersByName.get(memberProperty1.name)?.toArray()).toContain(memberProperty2);
+		expect(
+			hasClassMembers.membersByName.get(memberProperty1.name)?.length,
+		).toBe(2);
+		expect(
+			hasClassMembers.membersByName.get(memberProperty1.name)?.toArray(),
+		).toContain(memberProperty1);
+		expect(
+			hasClassMembers.membersByName.get(memberProperty1.name)?.toArray(),
+		).toContain(memberProperty2);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
@@ -272,14 +310,20 @@ describe("HasClassMembers - Same Name Grouping", () => {
 		const memberFunction = createMockMemberFunction("sameName");
 		const memberProperty = createMockMemberProperty("sameName");
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberFunction, memberProperty])
+			IArray.fromArray<TsMember>([memberFunction, memberProperty]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(memberFunction.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(memberFunction.name)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(memberFunction.name)?.toArray()).toContain(memberFunction);
-		expect(hasClassMembers.membersByName.get(memberFunction.name)?.toArray()).toContain(memberProperty);
+		expect(hasClassMembers.membersByName.get(memberFunction.name)?.length).toBe(
+			2,
+		);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction.name)?.toArray(),
+		).toContain(memberFunction);
+		expect(
+			hasClassMembers.membersByName.get(memberFunction.name)?.toArray(),
+		).toContain(memberProperty);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
@@ -287,14 +331,18 @@ describe("HasClassMembers - Same Name Grouping", () => {
 		const memberCall1 = createMockMemberCall();
 		const memberCall2 = createMockMemberCall();
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberCall1, memberCall2])
+			IArray.fromArray<TsMember>([memberCall1, memberCall2]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(TsIdentApply)).toBe(true);
 		expect(hasClassMembers.membersByName.get(TsIdentApply)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(TsIdentApply)?.toArray()).toContain(memberCall1);
-		expect(hasClassMembers.membersByName.get(TsIdentApply)?.toArray()).toContain(memberCall2);
+		expect(
+			hasClassMembers.membersByName.get(TsIdentApply)?.toArray(),
+		).toContain(memberCall1);
+		expect(
+			hasClassMembers.membersByName.get(TsIdentApply)?.toArray(),
+		).toContain(memberCall2);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
@@ -302,25 +350,34 @@ describe("HasClassMembers - Same Name Grouping", () => {
 		const memberCtor1 = createMockMemberCtor();
 		const memberCtor2 = createMockMemberCtor();
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([memberCtor1, memberCtor2])
+			IArray.fromArray<TsMember>([memberCtor1, memberCtor2]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
 		expect(hasClassMembers.membersByName.has(TsIdentConstructor)).toBe(true);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.toArray()).toContain(memberCtor1);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.toArray()).toContain(memberCtor2);
+		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(
+			2,
+		);
+		expect(
+			hasClassMembers.membersByName.get(TsIdentConstructor)?.toArray(),
+		).toContain(memberCtor1);
+		expect(
+			hasClassMembers.membersByName.get(TsIdentConstructor)?.toArray(),
+		).toContain(memberCtor2);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 });
 
 describe("HasClassMembers - Member Properties and Variations", () => {
 	it("function with different method types", () => {
-		const normalMethod = createMockMemberFunction("method", MethodType.normal());
+		const normalMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+		);
 		const getter = createMockMemberFunction("prop", MethodType.getter());
 		const setter = createMockMemberFunction("prop", MethodType.setter());
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([normalMethod, getter, setter])
+			IArray.fromArray<TsMember>([normalMethod, getter, setter]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(2);
@@ -331,65 +388,158 @@ describe("HasClassMembers - Member Properties and Variations", () => {
 	});
 
 	it("static and instance members", () => {
-		const staticMethod = createMockMemberFunction("method", MethodType.normal(), true);
-		const instanceMethod = createMockMemberFunction("method", MethodType.normal(), false);
-		const staticProperty = createMockMemberProperty("prop", some(TsTypeRef.string), none, true);
-		const instanceProperty = createMockMemberProperty("prop", some(TsTypeRef.string), none, false);
+		const staticMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			true,
+		);
+		const instanceMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+		);
+		const staticProperty = createMockMemberProperty(
+			"prop",
+			some(TsTypeRef.string),
+			none,
+			true,
+		);
+		const instanceProperty = createMockMemberProperty(
+			"prop",
+			some(TsTypeRef.string),
+			none,
+			false,
+		);
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([staticMethod, instanceMethod, staticProperty, instanceProperty])
+			IArray.fromArray<TsMember>([
+				staticMethod,
+				instanceMethod,
+				staticProperty,
+				instanceProperty,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(2);
 		expect(hasClassMembers.membersByName.has(staticMethod.name)).toBe(true);
 		expect(hasClassMembers.membersByName.has(staticProperty.name)).toBe(true);
-		expect(hasClassMembers.membersByName.get(staticMethod.name)?.length).toBe(2); // static and instance methods
-		expect(hasClassMembers.membersByName.get(staticProperty.name)?.length).toBe(2); // static and instance properties
+		expect(hasClassMembers.membersByName.get(staticMethod.name)?.length).toBe(
+			2,
+		); // static and instance methods
+		expect(hasClassMembers.membersByName.get(staticProperty.name)?.length).toBe(
+			2,
+		); // static and instance properties
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("readonly and mutable members", () => {
-		const readonlyMethod = createMockMemberFunction("method", MethodType.normal(), false, true);
-		const mutableMethod = createMockMemberFunction("method", MethodType.normal(), false, false);
-		const readonlyProperty = createMockMemberProperty("prop", some(TsTypeRef.string), none, false, true);
-		const mutableProperty = createMockMemberProperty("prop", some(TsTypeRef.string), none, false, false);
+		const readonlyMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+			true,
+		);
+		const mutableMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+			false,
+		);
+		const readonlyProperty = createMockMemberProperty(
+			"prop",
+			some(TsTypeRef.string),
+			none,
+			false,
+			true,
+		);
+		const mutableProperty = createMockMemberProperty(
+			"prop",
+			some(TsTypeRef.string),
+			none,
+			false,
+			false,
+		);
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([readonlyMethod, mutableMethod, readonlyProperty, mutableProperty])
+			IArray.fromArray<TsMember>([
+				readonlyMethod,
+				mutableMethod,
+				readonlyProperty,
+				mutableProperty,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(2);
-		expect(hasClassMembers.membersByName.get(readonlyMethod.name)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(readonlyProperty.name)?.length).toBe(2);
+		expect(hasClassMembers.membersByName.get(readonlyMethod.name)?.length).toBe(
+			2,
+		);
+		expect(
+			hasClassMembers.membersByName.get(readonlyProperty.name)?.length,
+		).toBe(2);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("different protection levels", () => {
-		const publicMethod = createMockMemberFunction("method", MethodType.normal(), false, false, TsProtectionLevel.default());
-		const privateMethod = createMockMemberFunction("method", MethodType.normal(), false, false, TsProtectionLevel.private());
-		const protectedMethod = createMockMemberFunction("method", MethodType.normal(), false, false, TsProtectionLevel.protected());
+		const publicMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+			false,
+			TsProtectionLevel.default(),
+		);
+		const privateMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+			false,
+			TsProtectionLevel.private(),
+		);
+		const protectedMethod = createMockMemberFunction(
+			"method",
+			MethodType.normal(),
+			false,
+			false,
+			TsProtectionLevel.protected(),
+		);
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([publicMethod, privateMethod, protectedMethod])
+			IArray.fromArray<TsMember>([
+				publicMethod,
+				privateMethod,
+				protectedMethod,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(1);
-		expect(hasClassMembers.membersByName.get(publicMethod.name)?.length).toBe(3);
+		expect(hasClassMembers.membersByName.get(publicMethod.name)?.length).toBe(
+			3,
+		);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
 	it("properties with different types and expressions", () => {
-		const stringProp = createMockMemberProperty("stringProp", some(TsTypeRef.string));
-		const numberProp = createMockMemberProperty("numberProp", some(TsTypeRef.number));
+		const stringProp = createMockMemberProperty(
+			"stringProp",
+			some(TsTypeRef.string),
+		);
+		const numberProp = createMockMemberProperty(
+			"numberProp",
+			some(TsTypeRef.number),
+		);
 		const untypedProp = createMockMemberProperty("untypedProp", none);
 		const propWithExpr = createMockMemberProperty(
 			"propWithExpr",
 			some(TsTypeRef.string),
-			some(TsExprLiteral.string("default"))
+			some(TsExprLiteral.string("default")),
 		);
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([stringProp, numberProp, untypedProp, propWithExpr])
+			IArray.fromArray<TsMember>([
+				stringProp,
+				numberProp,
+				untypedProp,
+				propWithExpr,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(4);
@@ -403,18 +553,34 @@ describe("HasClassMembers - Member Properties and Variations", () => {
 
 describe("HasClassMembers - Edge Cases and Complex Scenarios", () => {
 	it("large number of members", () => {
-		const functions = Array.from({ length: 50 }, (_, i) => createMockMemberFunction(`method${i + 1}`));
-		const properties = Array.from({ length: 50 }, (_, i) => createMockMemberProperty(`prop${i + 1}`));
+		const functions = Array.from({ length: 50 }, (_, i) =>
+			createMockMemberFunction(`method${i + 1}`),
+		);
+		const properties = Array.from({ length: 50 }, (_, i) =>
+			createMockMemberProperty(`prop${i + 1}`),
+		);
 		const calls = Array.from({ length: 10 }, () => createMockMemberCall());
 		const ctors = Array.from({ length: 5 }, () => createMockMemberCtor());
-		const typeMapped = Array.from({ length: 10 }, (_, i) => createMockMemberTypeMapped(`K${i + 1}`));
+		const typeMapped = Array.from({ length: 10 }, (_, i) =>
+			createMockMemberTypeMapped(`K${i + 1}`),
+		);
 
-		const allMembers = [...functions, ...properties, ...calls, ...ctors, ...typeMapped];
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>(allMembers));
+		const allMembers = [
+			...functions,
+			...properties,
+			...calls,
+			...ctors,
+			...typeMapped,
+		];
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>(allMembers),
+		);
 
 		expect(hasClassMembers.membersByName.size).toBe(102); // 50 functions + 50 properties + Apply + constructor
 		expect(hasClassMembers.membersByName.get(TsIdentApply)?.length).toBe(10);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(5);
+		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(
+			5,
+		);
 		expect(hasClassMembers.unnamed.length).toBe(10); // type mapped members
 	});
 
@@ -429,13 +595,24 @@ describe("HasClassMembers - Edge Cases and Complex Scenarios", () => {
 		const ctor2 = createMockMemberCtor();
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([method1, method2, property1, property2, call1, call2, ctor1, ctor2])
+			IArray.fromArray<TsMember>([
+				method1,
+				method2,
+				property1,
+				property2,
+				call1,
+				call2,
+				ctor1,
+				ctor2,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(3); // collision, Apply, constructor
 		expect(hasClassMembers.membersByName.get(method1.name)?.length).toBe(4); // 2 methods + 2 properties
 		expect(hasClassMembers.membersByName.get(TsIdentApply)?.length).toBe(2);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(2);
+		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(
+			2,
+		);
 		expect(hasClassMembers.unnamed.length).toBe(0);
 	});
 
@@ -448,13 +625,22 @@ describe("HasClassMembers - Edge Cases and Complex Scenarios", () => {
 		const typeMapped2 = createMockMemberTypeMapped("K2");
 
 		const hasClassMembers = new TestHasClassMembers(
-			IArray.fromArray<TsMember>([method, property, call, ctor, typeMapped1, typeMapped2])
+			IArray.fromArray<TsMember>([
+				method,
+				property,
+				call,
+				ctor,
+				typeMapped1,
+				typeMapped2,
+			]),
 		);
 
 		expect(hasClassMembers.membersByName.size).toBe(3); // test, Apply, constructor
 		expect(hasClassMembers.membersByName.get(method.name)?.length).toBe(2); // method + property
 		expect(hasClassMembers.membersByName.get(TsIdentApply)?.length).toBe(1);
-		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(1);
+		expect(hasClassMembers.membersByName.get(TsIdentConstructor)?.length).toBe(
+			1,
+		);
 		expect(hasClassMembers.unnamed.length).toBe(2); // type mapped members
 	});
 });
@@ -462,7 +648,9 @@ describe("HasClassMembers - Edge Cases and Complex Scenarios", () => {
 describe("HasClassMembers - Lazy Evaluation", () => {
 	it("membersByName is computed lazily", () => {
 		const memberFunction = createMockMemberFunction("testMethod");
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberFunction]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberFunction]),
+		);
 
 		// Access membersByName multiple times to ensure it's computed once
 		const result1 = hasClassMembers.membersByName;
@@ -475,7 +663,9 @@ describe("HasClassMembers - Lazy Evaluation", () => {
 
 	it("unnamed is computed lazily", () => {
 		const memberTypeMapped = createMockMemberTypeMapped();
-		const hasClassMembers = new TestHasClassMembers(IArray.fromArray<TsMember>([memberTypeMapped]));
+		const hasClassMembers = new TestHasClassMembers(
+			IArray.fromArray<TsMember>([memberTypeMapped]),
+		);
 
 		// Access unnamed multiple times to ensure it's computed once
 		const result1 = hasClassMembers.unnamed;

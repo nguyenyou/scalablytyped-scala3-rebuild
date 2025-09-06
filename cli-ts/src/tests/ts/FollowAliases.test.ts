@@ -696,7 +696,9 @@ describe("FollowAliases", () => {
 					),
 				).toBe(true); // NumberAlias resolved
 
-				const intersectionType = types.find((t: TsType) => t._tag === "TsTypeIntersect");
+				const intersectionType = types.find(
+					(t: TsType) => t._tag === "TsTypeIntersect",
+				);
 				expect(intersectionType).toBeDefined();
 				const intersectionTypes = (intersectionType as any).types.toArray();
 				expect(

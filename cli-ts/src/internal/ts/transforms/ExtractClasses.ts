@@ -22,7 +22,7 @@ import { getOrElse, isSome, none, type Option, some } from "fp-ts/Option";
 import { IArray } from "../../IArray.js";
 import { FillInTParams } from "../FillInTParams.js";
 import { FollowAliases } from "../FollowAliases.js";
-import { HasClassMembers } from "../MemberCache.js";
+import type { HasClassMembers } from "../MemberCache.js";
 import { TransformLeaveMembers } from "../TreeTransformations.js";
 import { LoopDetector, type TsTreeScope } from "../TsTreeScope.js";
 import {
@@ -128,7 +128,7 @@ export class AnalyzedCtors {
 
 		// Find the constructor with the most type parameters
 		const maxEntry = withSimpleType.reduce((max, current) =>
-			current[0].tparams.length > max[0].tparams.length ? current : max
+			current[0].tparams.length > max[0].tparams.length ? current : max,
 		);
 		const longestTParams = maxEntry[0].tparams;
 		const resultType = maxEntry[1]; // Use the TsTypeRef from the tuple
@@ -142,8 +142,10 @@ export class AnalyzedCtors {
 			// Check type parameter compatibility
 			if (isCompatible) {
 				for (let i = 0; i < ctor.tparams.length; i++) {
-					if (i >= longestTParams.length ||
-						ctor.tparams.get(i).name.value !== longestTParams.get(i).name.value) {
+					if (
+						i >= longestTParams.length ||
+						ctor.tparams.get(i).name.value !== longestTParams.get(i).name.value
+					) {
 						isCompatible = false;
 						break;
 					}
@@ -154,7 +156,10 @@ export class AnalyzedCtors {
 			if (isCompatible && isSome(ctor.resultType)) {
 				const ctorResultType = ctor.resultType.value;
 				if (ctorResultType._tag === "TsTypeRef") {
-					isCompatible = this.typeRefsEqual(ctorResultType as TsTypeRef, resultType);
+					isCompatible = AnalyzedCtors.typeRefsEqual(
+						ctorResultType as TsTypeRef,
+						resultType,
+					);
 				} else {
 					isCompatible = false;
 				}
@@ -171,7 +176,13 @@ export class AnalyzedCtors {
 			return none;
 		}
 
-		return some(new AnalyzedCtors(longestTParams, resultType, IArray.fromArray(conforming)));
+		return some(
+			new AnalyzedCtors(
+				longestTParams,
+				resultType,
+				IArray.fromArray(conforming),
+			),
+		);
 	}
 
 	/**
@@ -179,7 +190,10 @@ export class AnalyzedCtors {
 	 */
 	private static typeRefsEqual(a: TsTypeRef, b: TsTypeRef): boolean {
 		// Compare the string representation of qualified names
-		return a.name.asString === b.name.asString && a.tparams.length === b.tparams.length;
+		return (
+			a.name.asString === b.name.asString &&
+			a.tparams.length === b.tparams.length
+		);
 	}
 
 	/**
@@ -187,7 +201,10 @@ export class AnalyzedCtors {
 	 *
 	 * This method recursively searches through types to find constructor signatures.
 	 */
-	static findCtors(scope: TsTreeScope, loopDetector: LoopDetector): (tpe: TsType) => IArray<TsFunSig> {
+	static findCtors(
+		scope: TsTreeScope,
+		loopDetector: LoopDetector,
+	): (tpe: TsType) => IArray<TsFunSig> {
 		return (tpe: TsType): IArray<TsFunSig> => {
 			// Helper function to extract constructors from HasClassMembers
 			const fromHasClassMembers = (x: HasClassMembers): IArray<TsFunSig> => {
@@ -203,7 +220,7 @@ export class AnalyzedCtors {
 						// Copy signature with combined comments
 						constructorSigs.push({
 							...ctor.signature,
-							comments: ctor.signature.comments.concat(ctor.comments)
+							comments: ctor.signature.comments.concat(ctor.comments),
 						});
 					}
 				}
@@ -218,7 +235,10 @@ export class AnalyzedCtors {
 					const intersectType = resolvedType as TsTypeIntersect;
 					const allCtors: TsFunSig[] = [];
 					for (const subType of intersectType.types) {
-						const subCtors = AnalyzedCtors.findCtors(scope, loopDetector)(subType);
+						const subCtors = AnalyzedCtors.findCtors(
+							scope,
+							loopDetector,
+						)(subType);
 						allCtors.push(...subCtors.toArray());
 					}
 					return IArray.fromArray(allCtors);
@@ -248,13 +268,19 @@ export class AnalyzedCtors {
 						if (decl._tag === "TsDeclInterface") {
 							const iface = decl as TsDeclInterface;
 							// Apply type parameters using FillInTParams
-							const filledInterface = FillInTParams.apply(iface, typeRef.tparams);
+							const filledInterface = FillInTParams.apply(
+								iface,
+								typeRef.tparams,
+							);
 							const directCtors = fromHasClassMembers(filledInterface);
 
 							// Also check inheritance
 							const inheritanceCtors: TsFunSig[] = [];
 							for (const inheritedType of filledInterface.inheritance) {
-								const inheritedCtors = AnalyzedCtors.findCtors(scope, newLoopDetector)(inheritedType);
+								const inheritedCtors = AnalyzedCtors.findCtors(
+									scope,
+									newLoopDetector,
+								)(inheritedType);
 								inheritanceCtors.push(...inheritedCtors.toArray());
 							}
 
