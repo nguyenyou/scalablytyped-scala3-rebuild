@@ -30,6 +30,7 @@ import {
 	type TsExporteeNames,
 	TsExporteeTree,
 	TsFunSig,
+	TsGlobal,
 	TsIdent,
 	type TsIdentLibraryScoped,
 	type TsIdentLibrarySimple,
@@ -497,6 +498,27 @@ export function createMockTypeAlias(
 			return this;
 		},
 	};
+}
+
+/**
+ * Creates a mock TsGlobal with all required properties.
+ *
+ * @param members - Optional members array (defaults to empty)
+ * @param declared - Whether this is a declared global (defaults to false)
+ * @param comments - Optional comments (defaults to empty)
+ * @returns A mock TsGlobal
+ */
+export function createMockGlobal(
+	members: any[] = [],
+	declared: boolean = false,
+	comments: Comments = Comments.empty(),
+): TsGlobal {
+	return TsGlobal.create(
+		comments,
+		declared,
+		createIArray(members),
+		CodePath.noPath(),
+	);
 }
 
 // ============================================================================

@@ -7,162 +7,29 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { NoComments } from "@/internal/Comments.js";
-import { IArray } from "@/internal/IArray.js";
-import { Logger } from "@/internal/logging/index.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
 import {
 	TreeTransformationScopedChanges,
 	TreeTransformations,
 	TreeTransformationUnit,
 } from "@/internal/ts/TreeTransformations.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
+	TsIdent,
+	TsTypeRef,
 	type TsDeclClass,
 	type TsDeclInterface,
 	type TsGlobal,
-	TsIdent,
 	type TsParsedFile,
-	TsTypeRef,
 } from "@/internal/ts/trees.js";
+import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import {
+	createMockClass,
+	createMockGlobal,
+	createMockInterface,
+	createMockParsedFile,
+	createMockScope,
+} from "./utils/TestUtils.js";
 
-// Helper function to create a test TsDeclClass
-function createTestClass(name: string): TsDeclClass {
-	// Create a minimal mock that satisfies the interface
-	const mockClass = {
-		_tag: "TsDeclClass" as const,
-		asString: `class ${name}`,
-		comments: NoComments,
-		declared: false,
-		isAbstract: false,
-		name: TsIdent.simple(name),
-		tparams: IArray.Empty,
-		parent: undefined,
-		implements: IArray.Empty,
-		members: IArray.Empty,
-		jsLocation: JsLocation.zero(),
-		codePath: CodePath.noPath(),
-		// Add missing required properties with minimal implementations
-		implementsInterfaces: IArray.Empty,
-		withCodePath: function (cp: any) {
-			return { ...this, codePath: cp };
-		},
-		withJsLocation: function (loc: any) {
-			return { ...this, jsLocation: loc };
-		},
-		membersByName: new Map(),
-		unnamed: IArray.Empty,
-		withComments: function (cs: any) {
-			return { ...this, comments: cs };
-		},
-		withName: function (name: any) {
-			return { ...this, name: TsIdent.simple(name.value) };
-		},
-		addComment: function (_c: any) {
-			return this;
-		},
-		withMembers: function (newMembers: any) {
-			return { ...this, members: newMembers };
-		},
-	};
-	return mockClass as unknown as TsDeclClass;
-}
 
-// Helper function to create a test TsDeclInterface
-function createTestInterface(name: string): TsDeclInterface {
-	const mockInterface = {
-		_tag: "TsDeclInterface" as const,
-		asString: `interface ${name}`,
-		comments: NoComments,
-		declared: false,
-		name: TsIdent.simple(name),
-		tparams: IArray.Empty,
-		inheritance: IArray.Empty,
-		members: IArray.Empty,
-		codePath: CodePath.noPath(),
-		// Add missing required properties
-		withCodePath: function (cp: any) {
-			return { ...this, codePath: cp };
-		},
-		membersByName: new Map(),
-		unnamed: IArray.Empty,
-		withComments: function (cs: any) {
-			return { ...this, comments: cs };
-		},
-		withName: function (name: any) {
-			return { ...this, name: TsIdent.simple(name.value) };
-		},
-		addComment: function (_c: any) {
-			return this;
-		},
-		withMembers: function (newMembers: any) {
-			return { ...this, members: newMembers };
-		},
-	};
-	return mockInterface as unknown as TsDeclInterface;
-}
-
-// Helper function to create a test TsGlobal
-function createTestGlobal(): TsGlobal {
-	const mockGlobal = {
-		_tag: "TsGlobal" as const,
-		asString: "global",
-		comments: NoComments,
-		declared: false,
-		members: IArray.Empty,
-		codePath: CodePath.noPath(),
-		// Add missing required properties
-		withCodePath: function (cp: any) {
-			return { ...this, codePath: cp };
-		},
-		nameds: new Map(),
-		exports: IArray.Empty,
-		imports: IArray.Empty,
-		modules: new Map(),
-		modulesByName: new Map(),
-		withMembers: function (newMembers: any) {
-			return { ...this, members: newMembers };
-		},
-	};
-	return mockGlobal as unknown as TsGlobal;
-}
-
-// Helper function to create a test TsParsedFile
-function createTestParsedFile(): TsParsedFile {
-	const mockParsedFile = {
-		_tag: "TsParsedFile" as const,
-		asString: "parsed file",
-		comments: NoComments,
-		directives: IArray.Empty,
-		members: IArray.Empty,
-		codePath: CodePath.noPath(),
-		// Add missing required properties
-		isStdLib: false,
-		nameds: new Map(),
-		exports: IArray.Empty,
-		imports: IArray.Empty,
-		modules: new Map(),
-		modulesByName: new Map(),
-		withCodePath: function (cp: any) {
-			return { ...this, codePath: cp };
-		},
-		withMembers: function (newMembers: any) {
-			return { ...this, members: newMembers };
-		},
-	};
-	return mockParsedFile as unknown as TsParsedFile;
-}
-
-// Helper function to create an empty TsTreeScope for testing
-function createEmptyScope(): TsTreeScope {
-	return TsTreeScope.create(
-		TsIdent.librarySimple("test-lib"),
-		false,
-		new Map(),
-		Logger.DevNull(),
-	);
-}
 
 describe("TreeTransformation", () => {
 	describe("Basic Functionality", () => {
@@ -175,8 +42,8 @@ describe("TreeTransformation", () => {
 						}
 					})();
 
-				const initialScope = createEmptyScope();
-				const tree = createTestClass("TestClass");
+				const initialScope = createMockScope();
+				const tree = createMockClass("TestClass");
 
 				const newScope = transformation.withTree(initialScope, tree);
 				expect(newScope).not.toBe(initialScope);
@@ -191,7 +58,7 @@ describe("TreeTransformation", () => {
 					}
 				})();
 
-				const tree = createTestClass("TestClass");
+				const tree = createMockClass("TestClass");
 				const result = transformation.withTree(undefined, tree);
 				expect(result).toBeUndefined();
 			});
@@ -200,7 +67,7 @@ describe("TreeTransformation", () => {
 		describe("default enter methods return unchanged objects", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {})();
-			const scope = createEmptyScope();
+			const scope = createMockScope();
 
 			test("enterTsTree returns unchanged", () => {
 				const tree = TsIdent.simple("test");
@@ -209,7 +76,7 @@ describe("TreeTransformation", () => {
 			});
 
 			test("enterTsDecl returns unchanged", () => {
-				const decl = createTestClass("TestClass");
+				const decl = createMockClass("TestClass");
 				const result = transformation.enterTsDecl(scope)(decl);
 				expect(result).toBe(decl);
 			});
@@ -221,7 +88,7 @@ describe("TreeTransformation", () => {
 			});
 
 			test("enterTsContainer returns unchanged", () => {
-				const global = createTestGlobal();
+				const global = createMockGlobal();
 				const result = transformation.enterTsContainer(scope)(global);
 				expect(result).toBe(global);
 			});
@@ -230,16 +97,16 @@ describe("TreeTransformation", () => {
 		describe("default leave methods return unchanged objects", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {})();
-			const scope = createEmptyScope();
+			const scope = createMockScope();
 
 			test("leaveTsParsedFile returns unchanged", () => {
-				const parsedFile = createTestParsedFile();
+				const parsedFile = createMockParsedFile("test-lib");
 				const result = transformation.leaveTsParsedFile(scope)(parsedFile);
 				expect(result).toBe(parsedFile);
 			});
 
 			test("leaveTsDeclClass returns unchanged", () => {
-				const declClass = createTestClass("TestClass");
+				const declClass = createMockClass("TestClass");
 				const result = transformation.leaveTsDeclClass(scope)(declClass);
 				expect(result).toBe(declClass);
 			});
@@ -256,10 +123,10 @@ describe("TreeTransformation", () => {
 		describe("visitTsTree dispatches to correct visit method", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {})();
-			const scope = createEmptyScope();
+			const scope = createMockScope();
 
 			test("dispatches TsDeclClass to visitTsContainerOrDecl", () => {
-				const declClass = createTestClass("TestClass");
+				const declClass = createMockClass("TestClass");
 				const result = transformation.visitTsTree(scope)(declClass);
 				expect(result._tag).toBe("TsDeclClass");
 			});
@@ -288,8 +155,8 @@ describe("TreeTransformation", () => {
 					}
 				})();
 
-			const scope = createEmptyScope();
-			const declClass = createTestClass("OriginalClass");
+			const scope = createMockScope();
+			const declClass = createMockClass("OriginalClass");
 
 			const result = transformation.visitTsDeclClass(scope)(declClass);
 			expect(result.name.value).toBe("ModifiedClass");
@@ -306,8 +173,8 @@ describe("TreeTransformation", () => {
 					}
 				})();
 
-			const scope = createEmptyScope();
-			const declInterface = createTestInterface("OriginalInterface");
+			const scope = createMockScope();
+			const declInterface = createMockInterface("OriginalInterface");
 
 			const result = transformation.visitTsDeclInterface(scope)(declInterface);
 			expect(result.name.value).toBe("ModifiedInterface");
@@ -324,8 +191,8 @@ describe("TreeTransformation", () => {
 					}
 				})();
 
-			const scope = createEmptyScope();
-			const global = createTestGlobal();
+			const scope = createMockScope();
+			const global = createMockGlobal();
 
 			const result = transformation.visitTsDeclGlobal(scope)(global);
 			expect(result.declared).toBe(true);
@@ -334,8 +201,8 @@ describe("TreeTransformation", () => {
 		test("visitTsParsedFile processes parsed file", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {})();
-			const scope = createEmptyScope();
-			const parsedFile = createTestParsedFile();
+			const scope = createMockScope();
+			const parsedFile = createMockParsedFile("test-lib");
 
 			const result = transformation.visitTsParsedFile(scope)(parsedFile);
 			expect(result).toBe(parsedFile);
@@ -365,8 +232,8 @@ describe("TreeTransformation", () => {
 				})();
 
 			const combined = transformation1.combine(transformation2);
-			const scope = createEmptyScope();
-			const declClass = createTestClass("TestClass");
+			const scope = createMockScope();
+			const declClass = createMockClass("TestClass");
 
 			const result = combined.visitTsDeclClass(scope)(declClass);
 			// Note: In our simplified implementation, the combined transformation
@@ -410,7 +277,7 @@ describe("TreeTransformation", () => {
 				new (class extends TreeTransformationScopedChanges {})();
 			const combined = transformation1.combine(transformation2);
 
-			const scope = createEmptyScope();
+			const scope = createMockScope();
 			const tree = TsIdent.simple("test");
 			const result = combined.withTree(scope, tree);
 
@@ -423,8 +290,8 @@ describe("TreeTransformation", () => {
 	describe("TreeTransformations Utility Functions", () => {
 		test("identity transformation returns everything unchanged", () => {
 			const identity = TreeTransformations.identity<TsTreeScope>();
-			const scope = createEmptyScope();
-			const tree = createTestClass("TestClass");
+			const scope = createMockScope();
+			const tree = createMockClass("TestClass");
 
 			const result = identity.visitTsDeclClass(scope)(tree);
 			expect(result).toBe(tree);
@@ -432,8 +299,8 @@ describe("TreeTransformation", () => {
 
 		test("identityScoped returns everything unchanged", () => {
 			const identity = TreeTransformations.identityScoped();
-			const scope = createEmptyScope();
-			const tree = createTestClass("TestClass");
+			const scope = createMockScope();
+			const tree = createMockClass("TestClass");
 
 			const result = identity.visitTsDeclClass(scope)(tree);
 			expect(result).toBe(tree);
@@ -441,7 +308,7 @@ describe("TreeTransformation", () => {
 
 		test("identityUnit returns everything unchanged", () => {
 			const identity = TreeTransformations.identityUnit();
-			const tree = createTestClass("TestClass");
+			const tree = createMockClass("TestClass");
 
 			const result = identity.visitTsDeclClass(undefined)(tree);
 			expect(result).toBe(tree);
@@ -490,7 +357,7 @@ describe("TreeTransformation", () => {
 	describe("Edge Cases and Error Handling", () => {
 		test("transformation with null/undefined scope handles gracefully", () => {
 			const transformation = new (class extends TreeTransformationUnit {})();
-			const tree = createTestClass("TestClass");
+			const tree = createMockClass("TestClass");
 
 			expect(() => {
 				transformation.visitTsDeclClass(undefined)(tree);
@@ -500,8 +367,8 @@ describe("TreeTransformation", () => {
 		test("transformation with empty tree stack", () => {
 			const transformation =
 				new (class extends TreeTransformationScopedChanges {})();
-			const emptyScope = createEmptyScope();
-			const tree = createTestClass("TestClass");
+			const emptyScope = createMockScope();
+			const tree = createMockClass("TestClass");
 
 			const result = transformation.withTree(emptyScope, tree);
 			expect(result.stack.length).toBe(1);
@@ -522,7 +389,7 @@ describe("TreeTransformation", () => {
 
 			const transformation = new TestableTransformation();
 
-			const declClass = createTestClass("TestClass");
+			const declClass = createMockClass("TestClass");
 			const typeRef = TsTypeRef.string;
 			const ident = TsIdent.simple("test");
 
