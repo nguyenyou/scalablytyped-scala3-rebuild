@@ -213,7 +213,8 @@ describe("ExpandTypeParams", () => {
 			const result = ExpandTypeParams.instance.newClassMembers(scope, interface_);
 
 			expect(result.length).toBe(1);
-			expect(result.contains(method)).toBe(true);
+			expect(result).toBe(interface_.members); // Check that the same array is returned
+			expect(result.apply(0)).toBe(method); // Check object identity directly
 		});
 	});
 
@@ -375,7 +376,7 @@ describe("ExpandTypeParams", () => {
 			const result = ExpandTypeParams.instance.newMembers(scope, parsedFile);
 
 			expect(result.length).toBe(1);
-			expect(result.contains(funcDecl)).toBe(true);
+			expect(result.apply(0)).toBe(funcDecl); // Check object identity directly
 		});
 	});
 
@@ -392,7 +393,7 @@ describe("ExpandTypeParams", () => {
 
 			// Should not expand since no upper bound
 			expect(result.length).toBe(1);
-			expect(result.contains(method)).toBe(true);
+			expect(result.apply(0)).toBe(method); // Check object identity directly
 		});
 
 		it("handles type parameters not used in parameters", () => {
@@ -412,7 +413,7 @@ describe("ExpandTypeParams", () => {
 
 			// Should not expand since T is not used in parameters
 			expect(result.length).toBe(1);
-			expect(result.contains(method)).toBe(true);
+			expect(result.apply(0)).toBe(method); // Check object identity directly
 		});
 
 		it("handles circular type references", () => {
@@ -563,7 +564,7 @@ describe("ExpandTypeParams", () => {
 			const methods = result.map(m => m as TsMemberFunction);
 			// First method should preserve original comments, others should have reduced comments
 			expect(methods.apply(0).comments.cs.length).toBeGreaterThan(0);
-			expect(methods.forall(m => m.level === TsProtectionLevel.private())).toBe(true);
+			expect(methods.forall(m => m.level._tag === "Private")).toBe(true);
 			expect(methods.forall(m => m.isStatic === true)).toBe(true);
 			expect(methods.forall(m => m.isReadOnly === true)).toBe(true);
 		});

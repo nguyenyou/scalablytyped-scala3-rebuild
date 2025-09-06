@@ -141,7 +141,14 @@ export class ExpandTypeParams extends TransformMembers {
 	 * Process class members, expanding type parameters in function signatures.
 	 */
 	newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
-		return x.members.flatMap((member: TsMember): IArray<TsMember> => {
+		// First pass: check if any members need expansion
+		let hasExpansions = false;
+		const expandedMembers: (IArray<TsMember> | null)[] = [];
+
+		for (let i = 0; i < x.members.length; i++) {
+			const member = x.members.apply(i);
+			let memberExpansion: IArray<TsMember> | null = null;
+
 			switch (member._tag) {
 				case "TsMemberCall": {
 					const m = member as TsMemberCall;
@@ -151,9 +158,10 @@ export class ExpandTypeParams extends TransformMembers {
 							...m,
 							signature: newSig,
 						}));
-						return RemoveComment.keepFirstOnly(newMembers, RemoveComment.r2) as unknown as IArray<TsMember>;
+						memberExpansion = RemoveComment.keepFirstOnly(newMembers, RemoveComment.r2) as unknown as IArray<TsMember>;
+						hasExpansions = true;
 					}
-					return IArray.fromArray([m as TsMember]);
+					break;
 				}
 
 				case "TsMemberFunction": {
@@ -165,23 +173,48 @@ export class ExpandTypeParams extends TransformMembers {
 								...m,
 								signature: newSig,
 							}));
-							return RemoveComment.keepFirstOnly(newMembers, RemoveComment.r1) as unknown as IArray<TsMember>;
+							memberExpansion = RemoveComment.keepFirstOnly(newMembers, RemoveComment.r1) as unknown as IArray<TsMember>;
+							hasExpansions = true;
 						}
 					}
-					return IArray.fromArray([m as TsMember]);
+					break;
 				}
-
-				default:
-					return IArray.fromArray([member]);
 			}
-		});
+
+			// Store the expansion result or null if no expansion
+			expandedMembers.push(memberExpansion);
+		}
+
+		// If no expansions occurred, return the original members array
+		if (!hasExpansions) {
+			return x.members;
+		}
+		// Otherwise, build the new array with expansions
+		let resultMembers: TsMember[] = [];
+		for (let i = 0; i < x.members.length; i++) {
+			const member = x.members.apply(i);
+			const expansion = expandedMembers[i];
+			if (expansion !== null) {
+				resultMembers = resultMembers.concat(expansion.toArray());
+			} else {
+				resultMembers.push(member);
+			}
+		}
+		return IArray.fromArray(resultMembers);
 	}
 
 	/**
 	 * Process container members, expanding type parameters in function declarations.
 	 */
 	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
-		return x.members.flatMap((member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
+		// First pass: check if any members need expansion
+		let hasExpansions = false;
+		const expandedMembers: (IArray<TsContainerOrDecl> | null)[] = [];
+
+		for (let i = 0; i < x.members.length; i++) {
+			const member = x.members.apply(i);
+			let memberExpansion: IArray<TsContainerOrDecl> | null = null;
+
 			if (member._tag === "TsDeclFunction") {
 				const m = member as TsDeclFunction;
 				const expandedSigs = this.expandTParams(scope["/"](m), m.signature);
@@ -190,11 +223,32 @@ export class ExpandTypeParams extends TransformMembers {
 						...m,
 						signature: newSig,
 					}));
-					return RemoveComment.keepFirstOnly(newMembers, RemoveComment.r3) as unknown as IArray<TsContainerOrDecl>;
+					memberExpansion = RemoveComment.keepFirstOnly(newMembers, RemoveComment.r3) as unknown as IArray<TsContainerOrDecl>;
+					hasExpansions = true;
 				}
 			}
-			return IArray.fromArray([member]);
-		});
+
+			// Store the expansion result or null if no expansion
+			expandedMembers.push(memberExpansion);
+		}
+
+		// If no expansions occurred, return the original members array
+		if (!hasExpansions) {
+			return x.members;
+		}
+
+		// Otherwise, build the new array with expansions
+		let resultMembers: TsContainerOrDecl[] = [];
+		for (let i = 0; i < x.members.length; i++) {
+			const member = x.members.apply(i);
+			const expansion = expandedMembers[i];
+			if (expansion !== null) {
+				resultMembers = resultMembers.concat(expansion.toArray());
+			} else {
+				resultMembers.push(member);
+			}
+		}
+		return IArray.fromArray(resultMembers);
 	}
 
 	/**
@@ -227,7 +281,12 @@ export class ExpandTypeParams extends TransformMembers {
 	 */
 	private expandTParams(scope: TsTreeScope, sig: TsFunSig): Option<IArray<TsFunSig>> {
 		const expandables = sig.tparams.mapNotNoneOption(tp => this.expandable(scope, sig)(tp));
-		
+
+		// If no expandable type parameters, return none (no expansion needed)
+		if (expandables.isEmpty) {
+			return none;
+		}
+
 		const expanded = expandables.foldLeft(
 			IArray.fromArray([sig]),
 			(currentSigs: IArray<TsFunSig>, exp: ExpandableTypeParam) =>
@@ -246,10 +305,17 @@ export class ExpandTypeParams extends TransformMembers {
 	 */
 	private expandable(scope: TsTreeScope, sig: TsFunSig): (tp: TsTypeParam) => Option<ExpandableTypeParam> {
 		return (tp: TsTypeParam): Option<ExpandableTypeParam> => {
+	
+
 			/**
-			 * Recursively flatten union types
+			 * Recursively flatten union types, but preserve keyof types
 			 */
 			const flatPick = (tpe: TsType): IArray<TsType> => {
+				// Don't follow aliases for keyof types - they should be preserved
+				if (tpe._tag === "TsTypeKeyOf") {
+					return IArray.fromArray([tpe]);
+				}
+
 				const followed = FollowAliases.apply(scope)(tpe);
 				if (followed._tag === "TsTypeUnion") {
 					const union = followed as TsTypeUnion;
@@ -274,13 +340,17 @@ export class ExpandTypeParams extends TransformMembers {
 				return false;
 			});
 
+			console.log("isParam:", isParam);
+
 
 
 			return pipe(
 				tp.upperBound,
 				(boundOpt) => {
-					if (!isSome(boundOpt)) return none;
-					
+					if (!isSome(boundOpt)) {
+						return none;
+					}
+
 					const bound = boundOpt.value;
 					const flattened = flatPick(bound);
 					const typeRefPF = createTypeRefPartialFunction(scope);
@@ -310,7 +380,7 @@ export class ExpandTypeParams extends TransformMembers {
 							toExpand,
 						});
 					}
-					
+
 					return none;
 				}
 			);
