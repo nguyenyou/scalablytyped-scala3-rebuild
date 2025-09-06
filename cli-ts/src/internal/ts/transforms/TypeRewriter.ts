@@ -32,7 +32,7 @@ interface HasTParams {
  * Type guard to check if a tree has type parameters
  */
 function hasTParams(tree: TsTree): tree is TsTree & HasTParams {
-	return "tparams" in tree && Array.isArray((tree as any).tparams);
+	return "tparams" in tree && (tree as any).tparams !== undefined;
 }
 
 /**
@@ -76,8 +76,9 @@ export class TypeRewriter extends AbstractTreeTransformation<
 		if (key._tag === "TsTypeRef") {
 			const typeRef = key as TsTypeRef;
 
-			// Check if this is a simple type reference that matches a type parameter name
-			if (typeRef.tparams.length === 0 && typeRef.name.parts.length === 1) {
+			// Check if this type reference starts with a type parameter name
+			// This includes both simple references (T) and complex ones (T<string>)
+			if (typeRef.name.parts.length === 1) {
 				const namePart = typeRef.name.parts.get(0);
 				if (namePart._tag === "TsIdentSimple") {
 					const simpleName = namePart as TsIdentSimple;
