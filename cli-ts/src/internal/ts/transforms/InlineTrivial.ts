@@ -122,7 +122,7 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 	private followTrivial(scope: TsTreeScope, cur: TsDecl): Option<TsQIdent> {
 		// Check if the declaration is marked as trivial
 		// Only named declarations have comments
-		if (!this.isNamedDecl(cur) || !cur.comments.has(IsTrivial.instance)) {
+		if (!this.isNamedDecl(cur) || !cur.comments.has(IsTrivial)) {
 			return none;
 		}
 
@@ -179,7 +179,7 @@ export class InlineTrivial extends TreeTransformationScopedChanges {
 					}
 				}
 
-				// If we can't follow further, return the next name
+				// If we can't follow further, return the next name (equivalent to .orElse(Some(nextName)) in Scala)
 				return some(nextName);
 			}
 		}
