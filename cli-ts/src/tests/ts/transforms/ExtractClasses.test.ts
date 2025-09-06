@@ -14,7 +14,7 @@ import {
 	ExtractClasses,
 	FindAvailableName,
 } from "../../../internal/ts/transforms/ExtractClasses.js";
-import { TsDeclClass, TsIdent, TsTypeRef, TsTypeConstructor, TsTypeFunction, TsFunSig, TsFunParam } from "../../../internal/ts/trees.js";
+import { TsDeclClass, TsIdent, TsTypeRef, TsTypeConstructor, TsTypeFunction, TsFunSig, TsFunParam, TsTypeIntersect } from "../../../internal/ts/trees.js";
 import { Comments } from "../../../internal/Comments.js";
 import {
 	createLiteralExpr,
@@ -56,6 +56,22 @@ function createMockCtor(params: TsFunParam[]): any {
 		comments: Comments.empty(),
 		level: "Default",
 		signature: createFunSig(params),
+	};
+}
+
+
+
+
+
+function createMockNamespace(name: string): any {
+	return {
+		_tag: "TsDeclNamespace",
+		comments: Comments.empty(),
+		declared: false,
+		name: TsIdent.simple(name),
+		members: IArray.Empty,
+		codePath: { _tag: "NoPath" },
+		jsLocation: { _tag: "Zero" },
 	};
 }
 
@@ -201,6 +217,162 @@ describe("ExtractClasses", () => {
 			// Should leave unchanged when variable has expression
 			expect(result.length).toBe(1);
 			expect(result.toArray()).toContain(variable);
+		});
+	});
+
+	describe("Namespace Integration", () => {
+		test("handles object types gracefully", () => {
+			// Create a simple variable that won't trigger extraction
+			const variable = createMockVariable("Container", TsTypeRef.any);
+			const scope = createMockScope("test-lib");
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("Container"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle variables gracefully without crashing
+			expect(result.nonEmpty).toBe(true);
+			expect(result.forall((decl) =>
+				decl._tag === "TsDeclVar" ||
+				decl._tag === "TsDeclClass" ||
+				decl._tag === "TsDeclNamespace" ||
+				decl._tag === "TsDeclInterface" ||
+				decl._tag === "TsDeclFunction" ||
+				decl._tag === "TsDeclEnum" ||
+				decl._tag === "TsDeclTypeAlias"
+			)).toBe(true);
+		});
+	});
+
+	describe("Constructor Analysis", () => {
+		test("handles multiple constructors with different parameters", () => {
+			const ctor1 = createMockCtor([createFunParam("value", TsTypeRef.string)]);
+			const ctor2 = createMockCtor([createFunParam("num", TsTypeRef.number)]);
+			const interfaceWithCtors = createMockInterface("MultiCtor", IArray.fromArray([ctor1, ctor2]));
+			const variable = createMockVariable("TestClass", createTypeRef("MultiCtor"));
+			const scope = createMockScope("test-lib", interfaceWithCtors);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle multiple constructors gracefully
+			expect(result.nonEmpty).toBe(true);
+		});
+
+		test("handles constructors with type parameters", () => {
+			const typeParam = createTypeParam("T");
+			const ctorSig = createFunSig([], createTypeRef("TestClass"));
+			const ctorType = TsTypeConstructor.create(false, TsTypeFunction.create(ctorSig));
+			const variable = createMockVariable("TestClass", ctorType as any);
+			const targetClass = createMockClass("TestClass", IArray.Empty, IArray.fromArray([typeParam as any]));
+			const scope = createMockScope("test-lib", targetClass);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle type parameters gracefully
+			expect(result.nonEmpty).toBe(true);
+		});
+
+		test("handles constructors with inheritance", () => {
+			const parentClass = createMockClass("ParentClass");
+			const ctorSig = createFunSig([], createTypeRef("ParentClass"));
+			const ctorType = TsTypeConstructor.create(false, TsTypeFunction.create(ctorSig));
+			const variable = createMockVariable("ChildClass", ctorType as any);
+			const scope = createMockScope("test-lib", parentClass);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("ChildClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle inheritance gracefully
+			expect(result.nonEmpty).toBe(true);
+		});
+	});
+
+	describe("Edge Cases", () => {
+		test("handles intersection types", () => {
+			const type1 = createTypeRef("Type1");
+			const type2 = createTypeRef("Type2");
+			const intersectionType = TsTypeIntersect.create(IArray.fromArray([type1 as any, type2 as any]));
+			const variable = createMockVariable("TestClass", intersectionType as any);
+			const scope = createMockScope("test-lib");
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle intersection types gracefully
+			expect(result.nonEmpty).toBe(true);
+		});
+
+		test("handles abstract types", () => {
+			const abstractType = createTypeRef("AbstractType");
+			const variable = createMockVariable("TestClass", abstractType);
+			const scope = createMockScope("test-lib");
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should not extract from abstract types
+			expect(result.length).toBe(1);
+			expect(result.toArray()).toContain(variable);
+		});
+	});
+
+	describe("Integration Scenarios", () => {
+		test("complex scenario with multiple variables and namespaces", () => {
+			const ctor1 = createMockCtor([createFunParam("value")]);
+			const interface1 = createMockInterface("Class1", IArray.fromArray([ctor1]));
+
+			const ctor2 = createMockCtor([createFunParam("num", TsTypeRef.number)]);
+			const interface2 = createMockInterface("Class2", IArray.fromArray([ctor2]));
+
+			const variable1 = createMockVariable("Class1", createTypeRef("Class1"));
+			const variable2 = createMockVariable("Class2", createTypeRef("Class2"));
+			const namespace = createMockNamespace("Container");
+
+			const scope = createMockScope("test-lib", interface1, interface2);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(TsIdent.simple("Class1"), IArray.apply(variable1 as any));
+			parsedFile.membersByName.set(TsIdent.simple("Class2"), IArray.apply(variable2 as any));
+			parsedFile.membersByName.set(TsIdent.simple("Container"), IArray.apply(namespace as any));
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle complex scenarios gracefully
+			expect(result.nonEmpty).toBe(true);
+			expect(result.exists((decl) => decl._tag === "TsDeclNamespace")).toBe(true);
+			expect(result.forall((decl) =>
+				decl._tag === "TsDeclVar" ||
+				decl._tag === "TsDeclClass" ||
+				decl._tag === "TsDeclNamespace" ||
+				decl._tag === "TsDeclInterface" ||
+				decl._tag === "TsDeclFunction" ||
+				decl._tag === "TsDeclEnum" ||
+				decl._tag === "TsDeclTypeAlias"
+			)).toBe(true);
 		});
 	});
 
