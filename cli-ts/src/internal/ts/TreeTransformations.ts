@@ -113,6 +113,63 @@ export abstract class TransformMembers extends TreeTransformationScopedChanges {
 }
 
 /**
+ * Abstract class for transformations that modify container members on leave.
+ * Equivalent to the Scala TransformLeaveMembers trait.
+ */
+export abstract class TransformLeaveMembers extends TreeTransformationScopedChanges {
+	/**
+	 * Override this method to define how members should be transformed when leaving containers.
+	 */
+	abstract newMembers(
+		scope: TsTreeScope,
+		x: TsContainer,
+	): IArray<TsContainerOrDecl>;
+
+	override leaveTsParsedFile(
+		scope: TsTreeScope,
+	): (x: TsParsedFile) => TsParsedFile {
+		return (x: TsParsedFile) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
+
+	override leaveTsGlobal(scope: TsTreeScope): (x: TsGlobal) => TsGlobal {
+		return (x: TsGlobal) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
+
+	override leaveTsDeclNamespace(
+		scope: TsTreeScope,
+	): (x: TsDeclNamespace) => TsDeclNamespace {
+		return (x: TsDeclNamespace) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
+
+	override leaveTsDeclModule(
+		scope: TsTreeScope,
+	): (x: TsDeclModule) => TsDeclModule {
+		return (x: TsDeclModule) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
+
+	leaveTsAugmentedModule(
+		scope: TsTreeScope,
+	): (x: TsAugmentedModule) => TsAugmentedModule {
+		return (x: TsAugmentedModule) => ({
+			...x,
+			members: this.newMembers(scope, x),
+		});
+	}
+}
+
+/**
  * Abstract class for transformations that modify class members.
  * Equivalent to the Scala TransformClassMembers trait.
  */
