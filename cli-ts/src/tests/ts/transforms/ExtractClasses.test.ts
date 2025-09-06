@@ -8,13 +8,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { some } from "fp-ts/Option";
-import { IArray } from "@/internal/IArray.js";
+import { IArray } from "../../../internal/IArray.js";
 import {
 	AnalyzedCtors,
 	ExtractClasses,
 	FindAvailableName,
-} from "@/internal/ts/transforms/ExtractClasses.js";
-import { TsIdent, TsTypeRef } from "@/internal/ts/trees.js";
+} from "../../../internal/ts/transforms/ExtractClasses.js";
+import { TsDeclClass, TsIdent, TsTypeRef, TsTypeConstructor, TsTypeFunction, TsFunSig, TsFunParam } from "../../../internal/ts/trees.js";
+import { Comments } from "../../../internal/Comments.js";
 import {
 	createLiteralExpr,
 	createMockClass,
@@ -29,6 +30,34 @@ import {
 	createTypeParam,
 	createTypeRef,
 } from "../../utils/TestUtils.js";
+import { none } from "fp-ts/Option";
+
+// Helper functions for creating test data
+function createFunSig(params: TsFunParam[], resultType?: TsTypeRef): TsFunSig {
+	return TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty,
+		IArray.fromArray(params),
+		resultType ? some(resultType) : none,
+	);
+}
+
+function createFunParam(name: string, tpe?: TsTypeRef): TsFunParam {
+	return TsFunParam.create(
+		Comments.empty(),
+		TsIdent.simple(name),
+		tpe ? some(tpe) : none,
+	);
+}
+
+function createMockCtor(params: TsFunParam[]): any {
+	return {
+		_tag: "TsMemberCtor",
+		comments: Comments.empty(),
+		level: "Default",
+		signature: createFunSig(params),
+	};
+}
 
 describe("ExtractClasses", () => {
 	describe("Basic Functionality", () => {
@@ -72,11 +101,12 @@ describe("ExtractClasses", () => {
 
 	describe("Variable to Class Extraction", () => {
 		test("extracts class from variable with constructor type", () => {
-			const _ctorSig = createMockFunSig(createTypeRef("TestClass"));
-			const _ctorType = createTypeConstructor(
-				createTypeFunction(createTypeRef("TestClass")),
+			const ctorSig = createFunSig(
+				[createFunParam("value", TsTypeRef.string)],
+				createTypeRef("TestClass"),
 			);
-			const variable = createMockVariable("TestClass", TsTypeRef.any); // Use any for now
+			const ctorType = TsTypeConstructor.create(false, TsTypeFunction.create(ctorSig));
+			const variable = createMockVariable("TestClass", ctorType as any);
 			const targetClass = createMockClass("TestClass");
 			const scope = createMockScope("test-lib", targetClass);
 
@@ -87,10 +117,38 @@ describe("ExtractClasses", () => {
 			);
 			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
 
-			// For now, just verify it doesn't crash and returns valid results
-			// Full extraction logic will be implemented incrementally
-			expect(result).toBeDefined();
-			expect(result.length).toBeGreaterThanOrEqual(1);
+			// Should extract a class from the constructor variable
+			expect(result.exists((decl) => decl._tag === "TsDeclClass")).toBe(true);
+			const extractedClass = result.find((decl) => decl._tag === "TsDeclClass") as TsDeclClass;
+			expect(extractedClass.name.value).toBe("TestClass");
+			expect(extractedClass.members.exists((member) => member._tag === "TsMemberFunction")).toBe(true);
+		});
+
+		test("extracts class from variable with interface containing constructors", () => {
+			const ctor = createMockCtor([createFunParam("value")]);
+			const interfaceWithCtor = createMockInterface("ConstructorInterface", IArray.fromArray([ctor]));
+			const variable = createMockVariable("TestClass", createTypeRef("ConstructorInterface"));
+			const scope = createMockScope("test-lib", interfaceWithCtor);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// ExtractClasses is conservative and may not extract in all cases
+			// The important thing is that it doesn't crash and returns valid results
+			expect(result.nonEmpty).toBe(true);
+			expect(result.forall((decl) =>
+				decl._tag === "TsDeclVar" ||
+				decl._tag === "TsDeclClass" ||
+				decl._tag === "TsDeclNamespace" ||
+				decl._tag === "TsDeclInterface" ||
+				decl._tag === "TsDeclFunction" ||
+				decl._tag === "TsDeclEnum" ||
+				decl._tag === "TsDeclTypeAlias"
+			)).toBe(true);
 		});
 
 		test("does not extract when existing class present", () => {

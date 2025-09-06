@@ -18,22 +18,35 @@
  * ```
  */
 
-import { getOrElse, isSome, none, type Option, some } from "fp-ts/Option";
-import { IArray } from "../../IArray.js";
+import { chain, getOrElse, isSome, none, type Option, some } from "fp-ts/Option";
+import { Comment, Marker } from "../../Comment.js";
+import { Comments } from "../../Comments.js";
+import { IArray, partialFunction } from "../../IArray.js";
+import { AllMembersFor } from "../AllMembersFor.js";
+import { CodePath } from "../CodePath.js";
 import { FillInTParams } from "../FillInTParams.js";
 import { FollowAliases } from "../FollowAliases.js";
+import { JsLocation } from "../JsLocation.js";
 import type { HasClassMembers } from "../MemberCache.js";
+import { MethodType } from "../MethodType.js";
 import { TransformLeaveMembers } from "../TreeTransformations.js";
 import { LoopDetector, type TsTreeScope } from "../TsTreeScope.js";
+import { TsProtectionLevel } from "../TsProtectionLevel.js";
 import {
 	type TsContainer,
 	type TsContainerOrDecl,
+	TsDeclClass,
+	TsDeclNamespace,
 	type TsDeclInterface,
+	type TsDeclVar,
 	type TsFunSig,
 	TsIdent,
 	TsIdentConstructor,
 	type TsIdentSimple,
+	type TsMember,
 	type TsMemberCtor,
+	TsMemberFunction,
+	type TsMemberProperty,
 	type TsNamedDecl,
 	type TsType,
 	type TsTypeConstructor,
@@ -77,13 +90,210 @@ export class ExtractClasses extends TransformLeaveMembers {
 	 * Extract classes from a group of declarations with the same name.
 	 */
 	private extractClasses(
-		_scope: TsTreeScope,
-		_sameName: IArray<TsNamedDecl>,
-		_findName: FindAvailableName,
+		scope: TsTreeScope,
+		sameName: IArray<TsNamedDecl>,
+		findName: FindAvailableName,
 	): Option<IArray<TsNamedDecl>> {
-		// TODO: Implement the core extraction logic
-		// This will be implemented incrementally in the next steps
+		// Partition declarations into vars, namespaces, classes, and rest
+		const [vars, namespaces, classes, rest] = sameName.partitionCollect3(
+			partialFunction(
+				(x: TsNamedDecl): x is TsDeclVar => x._tag === "TsDeclVar",
+				(x: TsNamedDecl) => x as TsDeclVar,
+			),
+			partialFunction(
+				(x: TsNamedDecl): x is TsDeclNamespace => x._tag === "TsDeclNamespace",
+				(x: TsNamedDecl) => x as TsDeclNamespace,
+			),
+			partialFunction(
+				(x: TsNamedDecl): x is TsDeclClass => x._tag === "TsDeclClass",
+				(x: TsNamedDecl) => x as TsDeclClass,
+			),
+		);
+
+		// Check if we have a variable with type but no expression, and no existing classes
+		if (vars.length > 0 && classes.isEmpty) {
+			const firstVar = vars.get(0);
+			const restVars = vars.drop(1);
+
+			// Check if this is a variable with a type but no expression
+			if (
+				isSome(firstVar.tpe) &&
+				firstVar.expr._tag === "None" &&
+				!firstVar.readOnly
+			) {
+				const tpe = firstVar.tpe.value;
+				const allMembers = AllMembersFor.forType(scope, LoopDetector.initial)(tpe);
+
+				// Try to extract a class from the constructor type
+				const clsOpt = chain((analyzedCtors: AnalyzedCtors) => {
+					const nameResult = findName.apply(firstVar.name);
+					if (nameResult._tag === "None") {
+						return none;
+					}
+
+					const [clsName, wasBackup] = nameResult.value;
+					const realCtors: IArray<TsMemberFunction> = analyzedCtors.ctors.map(
+						(ctor: TsFunSig) =>
+							TsMemberFunction.create(
+								ctor.comments,
+								TsProtectionLevel.default(),
+								TsIdentConstructor,
+								MethodType.normal(),
+								{
+									...ctor,
+									comments: Comments.empty(),
+									tparams: IArray.Empty,
+									resultType: none,
+								},
+								false, // isStatic
+								false, // isReadOnly
+							),
+					);
+
+					const clsCodePath =
+						clsName.value === TsIdent.namespaced().value
+							? firstVar.codePath
+							: firstVar.codePath.replaceLast(clsName);
+
+					return some(
+						TsDeclClass.create(
+							firstVar.comments.concat(ExtractClasses.commentFor(wasBackup)),
+							firstVar.declared,
+							false, // isAbstract
+							clsName,
+							analyzedCtors.longestTParams,
+							some(FollowAliases.typeRef(scope)(analyzedCtors.resultType)),
+							IArray.Empty, // implements
+							realCtors.map((m) => m as TsMember),
+							firstVar.jsLocation,
+							clsCodePath,
+						),
+					);
+				})(AnalyzedCtors.from(scope, tpe));
+
+				if (clsOpt._tag === "Some") {
+					const cls = clsOpt.value;
+
+					// Check if we need to create a namespace for extracted classes from members
+					const extractedFromMembers = allMembers
+						.map(
+							ExtractClasses.extractClassFromMember(
+								scope,
+								findName,
+								firstVar.jsLocation,
+								firstVar.codePath,
+							),
+						)
+						.collect(
+							partialFunction(
+								(opt: Option<TsDeclClass>): opt is Option<TsDeclClass> =>
+									opt._tag === "Some",
+								(opt: Option<TsDeclClass>) => (opt as any).value as TsDeclClass,
+							),
+						);
+
+					if (extractedFromMembers.nonEmpty) {
+						// Create a namespace to contain the extracted classes
+						const namespace = TsDeclNamespace.create(
+							Comments.empty(),
+							false, // declared
+							TsIdent.namespaced(),
+							extractedFromMembers.map((cls) => cls as TsContainerOrDecl),
+							firstVar.codePath,
+							firstVar.jsLocation,
+						);
+
+						return some(
+							IArray.fromArray([cls, namespace])
+								.concat(restVars)
+								.concat(namespaces)
+								.concat(rest),
+						);
+					} else {
+						return some(
+							IArray.fromArray([cls])
+								.concat(restVars)
+								.concat(namespaces)
+								.concat(rest),
+						);
+					}
+				}
+			}
+		}
+
+		// No extraction possible, return None to keep original declarations
 		return none;
+	}
+
+	/**
+	 * Create a comment for extracted classes indicating they were inferred from a constructor.
+	 */
+	static commentFor(wasBackup: boolean): Comments {
+		const base = "This class was inferred from a value with a constructor";
+		const msg = wasBackup
+			? `/* ${base}, it was renamed because a distinct type already exists with the same name. */\n`
+			: `/* ${base}. In rare cases (like HTMLElement in the DOM) it might not work as you expect. */\n`;
+
+		return new Comments([Marker.ExpandedClassInstance, Comment.create(msg)]);
+	}
+
+	/**
+	 * Extract a class from a member property with constructor type.
+	 */
+	static extractClassFromMember(
+		scope: TsTreeScope,
+		findName: FindAvailableName,
+		ownerLoc: JsLocation,
+		ownerCp: CodePath,
+	): (member: TsMember) => Option<TsDeclClass> {
+		return (member: TsMember): Option<TsDeclClass> => {
+			if (member._tag === "TsMemberProperty") {
+				const prop = member as TsMemberProperty;
+				if (isSome(prop.tpe) && prop.expr._tag === "None") {
+					const analyzedCtorsOpt = AnalyzedCtors.from(scope, prop.tpe.value);
+					if (analyzedCtorsOpt._tag === "Some") {
+						const analyzedCtors = analyzedCtorsOpt.value;
+						const nameResult = findName.apply(prop.name);
+						if (nameResult._tag === "Some") {
+							const [name, wasBackup] = nameResult.value;
+							const realCtors: IArray<TsMemberFunction> = analyzedCtors.ctors.map(
+								(ctor: TsFunSig) =>
+									TsMemberFunction.create(
+										ctor.comments,
+										prop.level,
+										TsIdentConstructor,
+										MethodType.normal(),
+										{
+											...ctor,
+											comments: Comments.empty(),
+											tparams: IArray.Empty,
+											resultType: none,
+										},
+										prop.isStatic,
+										prop.isReadOnly,
+									),
+							);
+
+							return some(
+								TsDeclClass.create(
+									prop.comments.concat(ExtractClasses.commentFor(wasBackup)),
+									false, // declared
+									false, // isAbstract
+									name,
+									analyzedCtors.longestTParams,
+									some(FollowAliases.typeRef(scope)(analyzedCtors.resultType)),
+									IArray.Empty, // implements
+									realCtors.map((m) => m as TsMember),
+									JsLocation.add(ownerLoc, prop.name),
+									ownerCp.add(name),
+								),
+							);
+						}
+					}
+				}
+			}
+			return none;
+		};
 	}
 }
 
