@@ -150,17 +150,6 @@ describe("AnalyzedCtors", () => {
 			const scope = createMockScope("test-lib", interface1);
 			const typeRef = createTypeRef("TestInterface");
 
-			// Debug: Check if the interface is actually in scope
-			const lookupResult = scope.lookupType(typeRef.name);
-			console.log("Lookup result length:", lookupResult.length);
-			if (lookupResult.length > 0) {
-				console.log("Found interface:", lookupResult.get(0)._tag);
-			}
-
-			// Debug: Check findCtors directly
-			const ctors = AnalyzedCtors.findCtors(scope, LoopDetector.initial)(typeRef);
-			console.log("findCtors result length:", ctors.length);
-
 			const result = AnalyzedCtors.from(scope, typeRef);
 
 			expect(result._tag).toBe("Some");
