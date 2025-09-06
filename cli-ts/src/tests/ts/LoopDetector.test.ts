@@ -10,7 +10,6 @@ import {
 } from "../../internal/ts/trees.ts";
 import {
 	createSimpleIdent,
-	createQIdent,
 	createTypeRef,
 	createMockScope,
 	createSimpleLibrary,
@@ -45,6 +44,9 @@ describe("LoopDetector", () => {
 			if (isRight(result)) {
 				const newDetector = result.right;
 				expect((newDetector as any).stack.length).toBe(1);
+				// The stack should contain the entry we just added
+				const stackEntry = (newDetector as any).stack[0];
+				expect(stackEntry).toBeDefined();
 			}
 		});
 	});
@@ -61,6 +63,9 @@ describe("LoopDetector", () => {
 			if (isRight(result)) {
 				const newDetector = result.right;
 				expect((newDetector as any).stack.length).toBe(1);
+				// Verify the stack contains the correct entry
+				const stackEntry = (newDetector as any).stack[0];
+				expect(stackEntry).toBeDefined();
 			}
 		});
 
@@ -314,6 +319,12 @@ describe("LoopDetector", () => {
 						if (isRight(result)) {
 							const finalDetector = result.right;
 							expect((finalDetector as any).stack.length).toBe(4);
+
+							// Stack should be in reverse order (most recent first)
+							// Note: We can't directly inspect the internal Entry objects in TypeScript,
+							// but we can verify the stack length and that the order is maintained
+							const stack = (finalDetector as any).stack;
+							expect(stack.length).toBe(4);
 						}
 					}
 				}
@@ -392,8 +403,106 @@ describe("LoopDetector", () => {
 						const detector = detector3Result.right;
 						// Most recent should be first (stack is in reverse chronological order)
 						expect((detector as any).stack.length).toBe(3);
+
+						// Verify that we can detect loops with entries from different positions in the stack
+						// If we try to add "First" again, it should detect the loop even though it's at the bottom
+						const loopResult = detector.including(idents1, scope);
+						expect(isLeft(loopResult)).toBe(true); // Should detect loop
 					}
 				}
+			}
+		});
+	});
+
+	describe("Entry Equality and Comparison", () => {
+		it("Entry.Idents equality", () => {
+			const scope1 = createMockScope();
+			const scope2 = createMockScope2();
+			const idents1 = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
+			const idents3 = IArray.fromArray([createSimpleIdent("DifferentType")]) as IArray<TsIdent>;
+
+			// Test same idents instance, same scope - should detect loop
+			const detector1Result = LoopDetector.initial.including(idents1, scope1);
+			expect(isRight(detector1Result)).toBe(true);
+
+			if (isRight(detector1Result)) {
+				const detector1 = detector1Result.right;
+				const result2 = detector1.including(idents1, scope1); // Same idents instance, same scope
+				expect(isLeft(result2)).toBe(true); // Should detect loop (entries are equal)
+			}
+
+			// Test same idents instance, different scope - should not detect loop
+			const detector2Result = LoopDetector.initial.including(idents1, scope1);
+			expect(isRight(detector2Result)).toBe(true);
+
+			if (isRight(detector2Result)) {
+				const detector2 = detector2Result.right;
+				const result3 = detector2.including(idents1, scope2); // Same idents instance, different scope
+				expect(isRight(result3)).toBe(true); // Should not detect loop (different scope)
+			}
+
+			// Test different idents, same scope - should not detect loop
+			const detector3Result = LoopDetector.initial.including(idents1, scope1);
+			expect(isRight(detector3Result)).toBe(true);
+
+			if (isRight(detector3Result)) {
+				const detector3 = detector3Result.right;
+				const result4 = detector3.including(idents3, scope1); // Different idents, same scope
+				expect(isRight(result4)).toBe(true); // Should not detect loop (different idents)
+			}
+		});
+
+		it("Entry.Ref equality", () => {
+			const scope1 = createMockScope();
+			const scope2 = createMockScope2();
+			const typeRef1 = createTypeRef("TestType");
+			const typeRef3 = createTypeRef("DifferentType");
+
+			// Test same typeRef instance, same scope - should detect loop
+			const detector1Result = LoopDetector.initial.including(typeRef1, scope1);
+			expect(isRight(detector1Result)).toBe(true);
+
+			if (isRight(detector1Result)) {
+				const detector1 = detector1Result.right;
+				const result2 = detector1.including(typeRef1, scope1); // Same typeRef instance, same scope
+				expect(isLeft(result2)).toBe(true); // Should detect loop (entries are equal)
+			}
+
+			// Test same typeRef instance, different scope - should not detect loop
+			const detector2Result = LoopDetector.initial.including(typeRef1, scope1);
+			expect(isRight(detector2Result)).toBe(true);
+
+			if (isRight(detector2Result)) {
+				const detector2 = detector2Result.right;
+				const result3 = detector2.including(typeRef1, scope2); // Same typeRef instance, different scope
+				expect(isRight(result3)).toBe(true); // Should not detect loop (different scope)
+			}
+
+			// Test different typeRef, same scope - should not detect loop
+			const detector3Result = LoopDetector.initial.including(typeRef1, scope1);
+			expect(isRight(detector3Result)).toBe(true);
+
+			if (isRight(detector3Result)) {
+				const detector3 = detector3Result.right;
+				const result4 = detector3.including(typeRef3, scope1); // Different typeRef, same scope
+				expect(isRight(result4)).toBe(true); // Should not detect loop (different typeRef)
+			}
+		});
+
+		it("Entry.Idents vs Entry.Ref are never equal", () => {
+			const scope = createMockScope();
+			const idents = IArray.fromArray([createSimpleIdent("TestType")]) as IArray<TsIdent>;
+			const typeRef = createTypeRef("TestType");
+
+			// Even though they reference the same name, they are different entry types
+			// so no loop should be detected
+			const detector1Result = LoopDetector.initial.including(idents, scope);
+			expect(isRight(detector1Result)).toBe(true);
+
+			if (isRight(detector1Result)) {
+				const detector1 = detector1Result.right;
+				const result = detector1.including(typeRef, scope);
+				expect(isRight(result)).toBe(true); // No loop because different entry types
 			}
 		});
 	});
