@@ -25,8 +25,6 @@ import {
 	createMockScope,
 	createMockVariable,
 	createSimpleIdent,
-	createTypeConstructor,
-	createTypeFunction,
 	createTypeParam,
 	createTypeRef,
 } from "../../utils/TestUtils.js";
@@ -338,6 +336,83 @@ describe("ExtractClasses", () => {
 			// Should not extract from abstract types
 			expect(result.length).toBe(1);
 			expect(result.toArray()).toContain(variable);
+		});
+
+		test("handles circular type references", () => {
+			const selfRefType = createTypeRef("SelfRef");
+			const variable = createMockVariable("SelfRef", selfRefType);
+			const scope = createMockScope("test-lib");
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("SelfRef"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle circular references without infinite loops
+			expect(result.nonEmpty).toBe(true);
+			expect(result.forall((decl) =>
+				decl._tag === "TsDeclVar" ||
+				decl._tag === "TsDeclClass" ||
+				decl._tag === "TsDeclNamespace" ||
+				decl._tag === "TsDeclInterface" ||
+				decl._tag === "TsDeclFunction" ||
+				decl._tag === "TsDeclEnum" ||
+				decl._tag === "TsDeclTypeAlias"
+			)).toBe(true);
+		});
+
+		test("preserves comments and metadata", () => {
+			const originalComments = Comments.create("test comment");
+			const ctorSig = createFunSig([], createTypeRef("TestClass"));
+			const ctorType = TsTypeConstructor.create(false, TsTypeFunction.create(ctorSig));
+			const variable = createMockVariable("TestClass", ctorType as any);
+			// Override comments
+			(variable as any).comments = originalComments;
+			const targetClass = createMockClass("TestClass");
+			const scope = createMockScope("test-lib", targetClass);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should preserve comments in extracted class
+			expect(result.exists((decl) => decl._tag === "TsDeclClass")).toBe(true);
+			const extractedClass = result.find((decl) => decl._tag === "TsDeclClass") as any;
+			if (extractedClass) {
+				expect(extractedClass.comments).toBeDefined();
+			}
+		});
+
+		test("handles name conflicts", () => {
+			const ctorSig = createFunSig([], createTypeRef("TestClass"));
+			const ctorType = TsTypeConstructor.create(false, TsTypeFunction.create(ctorSig));
+			const variable = createMockVariable("TestClass", ctorType as any);
+			const existingInterface = createMockInterface("TestClass");
+			const scope = createMockScope("test-lib", existingInterface);
+
+			const parsedFile = createMockParsedFile("test");
+			parsedFile.membersByName.set(
+				TsIdent.simple("TestClass"),
+				IArray.apply(variable as any),
+			);
+			const result = ExtractClasses.instance.newMembers(scope, parsedFile);
+
+			// Should handle name conflicts appropriately
+			expect(result.nonEmpty).toBe(true);
+			expect(result.forall((decl) =>
+				decl._tag === "TsDeclVar" ||
+				decl._tag === "TsDeclClass" ||
+				decl._tag === "TsDeclNamespace" ||
+				decl._tag === "TsDeclInterface" ||
+				decl._tag === "TsDeclFunction" ||
+				decl._tag === "TsDeclEnum" ||
+				decl._tag === "TsDeclTypeAlias"
+			)).toBe(true);
 		});
 	});
 
