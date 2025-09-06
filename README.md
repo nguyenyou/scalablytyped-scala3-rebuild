@@ -17,7 +17,7 @@ All
 Or specific
 
 ```sh
-./mill cli.test.testOnly FlattenTreesTests
+./mill cli.test.testOnly org.scalablytyped.converter.internal.ts.HasClassMembersTests
 ```
 
 ## Unit Test
