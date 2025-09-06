@@ -21,10 +21,12 @@
  * ```
  */
 
+import { IArray } from "../../IArray.js";
 import { Hoisting } from "../Hoisting.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
-import type {
+import {
+	TsContainerOrDecl,
 	TsDecl,
 	TsDeclNamespace,
 	TsDeclVar,
@@ -54,78 +56,30 @@ export class VarToNamespace extends TreeTransformationScopedChanges {
 
 				// Must have a type, and that type must be a TsTypeObject, and no initializer
 				if (
-					varDecl.tpe &&
 					varDecl.tpe._tag === "Some" &&
 					varDecl.tpe.value._tag === "TsTypeObject" &&
-					!varDecl.expr
+					varDecl.expr._tag === "None"
 				) {
 					const objectType = varDecl.tpe.value as TsTypeObject;
 
 					// Hoist the object's members to declarations
 					const hoistedMembers = objectType.members.mapNotNoneOption(
 						Hoisting.memberToDecl(varDecl.codePath, varDecl.jsLocation),
-					) as any; // TsNamedValueDecl extends TsContainerOrDecl
+					);
 
 					// Create a namespace declaration with the hoisted members
-					// Use the same pattern as createMockNamespace in TestUtils
-					const namespace: TsDeclNamespace = {
-						_tag: "TsDeclNamespace",
-						// Combine comments from the variable and the object type
-						comments: varDecl.comments.concat(objectType.comments),
-						declared: varDecl.declared,
-						name: varDecl.name,
-						members: hoistedMembers,
-						codePath: varDecl.codePath,
-						jsLocation: varDecl.jsLocation,
-						asString: `namespace ${varDecl.name.value}`,
+					// Combine comments from the variable and the object type
+					const combinedComments = varDecl.comments.concat(objectType.comments);
 
-						// MemberCache properties (computed lazily in real implementation)
-						nameds: hoistedMembers.filter(
-							(m: any) =>
-								m._tag === "TsDeclClass" ||
-								m._tag === "TsDeclInterface" ||
-								m._tag === "TsDeclEnum" ||
-								m._tag === "TsDeclFunction" ||
-								m._tag === "TsDeclVar" ||
-								m._tag === "TsDeclTypeAlias" ||
-								m._tag === "TsDeclNamespace" ||
-								m._tag === "TsDeclModule",
-						) as any,
-						exports: [] as any,
-						imports: [] as any,
-						unnamed: [] as any,
-						isModule: false,
-						membersByName: new Map(),
-						modules: new Map(),
-						augmentedModules: [] as any,
-						augmentedModulesMap: new Map(),
-
-						// Methods
-						withComments: (cs) => ({
-							...namespace,
-							comments: cs,
-						}),
-						addComment: (c) => ({
-							...namespace,
-							comments: namespace.comments.add(c),
-						}),
-						withCodePath: (cp) => ({
-							...namespace,
-							codePath: cp,
-						}),
-						withJsLocation: (loc) => ({
-							...namespace,
-							jsLocation: loc,
-						}),
-						withName: (n) => ({
-							...namespace,
-							name: n,
-						}),
-						withMembers: (ms) => ({
-							...namespace,
-							members: ms,
-						}),
-					};
+					// Cast to TsContainerOrDecl since TsNamedValueDecl extends TsContainerOrDecl
+					const namespace = TsDeclNamespace.create(
+						combinedComments,
+						varDecl.declared,
+						varDecl.name,
+						hoistedMembers as unknown as IArray<TsContainerOrDecl>,
+						varDecl.codePath,
+						varDecl.jsLocation,
+					);
 
 					return namespace;
 				}
