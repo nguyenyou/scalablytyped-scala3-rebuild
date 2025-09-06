@@ -78,6 +78,16 @@ export function createMockScope(
 ): TsTreeScope {
 	const libIdent = TsIdent.librarySimple(libraryName);
 
+	// If no declarations provided, return a root scope with empty stack
+	if (declarations.length === 0) {
+		return TsTreeScope.create(
+			libIdent,
+			false, // pedantic
+			new Map(), // empty deps
+			Logger.DevNull(),
+		);
+	}
+
 	// Create a mock parsed file with the declarations
 	const parsedFile = TsParsedFile.create(
 		NoComments.instance,
