@@ -36,35 +36,33 @@
  * ```
  */
 
-import { isNone, isSome, none, type Option } from "fp-ts/Option";
+import { isNone, none, type Option } from "fp-ts/Option";
 import { IsTrivial } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
-import { IArray, partialFunction, type PartialFunction } from "../../IArray.js";
-import type { CodePath } from "../CodePath.js";
+import { IArray, partialFunction } from "../../IArray.js";
 import { ExportType } from "../ExportType.js";
 import { JsLocation } from "../JsLocation.js";
-import { TreeTransformationScopedChanges, TreeTransformationUnit } from "../TreeTransformations.js";
+import {
+	TreeTransformationScopedChanges,
+	TreeTransformationUnit,
+} from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import { QualifyReferences } from "../transforms/QualifyReferences.js";
 import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
 import {
 	type TsContainerOrDecl,
 	type TsDeclModule,
-	TsDeclNamespace,
-	TsDeclTypeAlias,
+	type TsDeclNamespace,
+	type TsDeclTypeAlias,
 	TsDeclVar,
 	TsExport,
-	TsExportee,
-	TsExporteeNames,
+	type TsExporteeNames,
 	TsExporteeTree,
 	type TsIdent,
-	TsIdentSimple,
 	type TsImport,
-	type TsImportedIdent,
-	type TsImporteeLocal,
 	type TsNamedDecl,
 	TsQIdent,
-	TsTypeRef,
+	type TsTypeRef,
 	TsTypeThis,
 } from "../trees.js";
 
@@ -94,7 +92,7 @@ class EqualsExport {
 								exporteeNames.idents.length === 1 &&
 								isNone(exporteeNames.fromOpt)
 							) {
-								const [qident, aliasOpt] = exporteeNames.idents.get(0);
+								const [_qident, aliasOpt] = exporteeNames.idents.get(0);
 								if (isNone(aliasOpt)) {
 									return true;
 								}
@@ -131,11 +129,14 @@ class EraseNamespaceRefs extends TreeTransformationUnit {
 		super();
 	}
 
-	override enterTsTypeRef(_t: void): (x: TsTypeRef) => TsTypeRef {
+	override enterTsTypeRef(_t: undefined): (x: TsTypeRef) => TsTypeRef {
 		return (x: TsTypeRef) => {
 			if (x.name._tag === "TsQIdent") {
 				const qident = x.name as TsQIdent;
-				if (qident.parts.length > 0 && qident.parts.get(0).value === this.target.value) {
+				if (
+					qident.parts.length > 0 &&
+					qident.parts.get(0).value === this.target.value
+				) {
 					const remaining = qident.parts.drop(1);
 					if (remaining.isEmpty) {
 						return x;
@@ -157,7 +158,9 @@ class EraseNamespaceRefs extends TreeTransformationUnit {
  * Equivalent to the Scala object HandleCommonJsModules.
  */
 export class HandleCommonJsModules extends TreeTransformationScopedChanges {
-	override enterTsDeclModule(scope: TsTreeScope): (mod: TsDeclModule) => TsDeclModule {
+	override enterTsDeclModule(
+		scope: TsTreeScope,
+	): (mod: TsDeclModule) => TsDeclModule {
 		return (mod: TsDeclModule) => {
 			const equalsExportResult = EqualsExport.unapply(mod);
 
@@ -182,7 +185,8 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 							(member as TsDeclNamespace).name.value === target.value
 						);
 					},
-					(member: TsContainerOrDecl): TsDeclNamespace => member as TsDeclNamespace,
+					(member: TsContainerOrDecl): TsDeclNamespace =>
+						member as TsDeclNamespace,
 				),
 				partialFunction<TsContainerOrDecl, TsNamedDecl>(
 					(member: TsContainerOrDecl): boolean => {
@@ -364,7 +368,9 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 
 			// Handle (1) - erase namespace references
 			const eraseNamespaceRefs = new EraseNamespaceRefs(target);
-			return eraseNamespaceRefs.visitTsDeclModule()(mod.withMembers(patchedNewMembers));
+			return eraseNamespaceRefs.visitTsDeclModule()(
+				mod.withMembers(patchedNewMembers),
+			);
 		};
 	}
 }

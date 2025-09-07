@@ -3,7 +3,7 @@
  * Tests for HandleCommonJsModules.ts - comprehensive test coverage matching the original Scala implementation
  */
 
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option, some } from "fp-ts/Option";
 import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
@@ -111,7 +111,9 @@ function createCommonJsExport(targetName: string): TsExport {
 		false, // typeOnly
 		ExportType.namespaced(),
 		TsExporteeNames.create(
-			IArray.fromArray([[createQIdent(targetName), none as Option<TsIdentSimple>]]),
+			IArray.fromArray([
+				[createQIdent(targetName), none as Option<TsIdentSimple>],
+			]),
 			none,
 		),
 	);
@@ -171,7 +173,11 @@ describe("HandleCommonJsModules", () => {
 
 	describe("HandleCommonJsModules - CommonJS Export Detection", () => {
 		test("detects CommonJS export = pattern", () => {
-			const targetClass = createMockClass("MyClass", IArray.Empty, createHasPath("test", "MyClass"));
+			const targetClass = createMockClass(
+				"MyClass",
+				IArray.Empty,
+				createHasPath("test", "MyClass"),
+			);
 			const commonJsExport = createCommonJsExport("MyClass");
 			const module = createMockModule(
 				"TestModule",
@@ -185,7 +191,9 @@ describe("HandleCommonJsModules", () => {
 
 			// Should process the CommonJS pattern
 			expect(result.members.length).toBeGreaterThan(0);
-			expect(result.members.toArray().some(m => m === commonJsExport)).toBe(true); // Should keep the export
+			expect(result.members.toArray().some((m) => m === commonJsExport)).toBe(
+				true,
+			); // Should keep the export
 		});
 
 		test("ignores non-namespaced exports", () => {
@@ -195,7 +203,9 @@ describe("HandleCommonJsModules", () => {
 				false, // typeOnly
 				ExportType.named(),
 				TsExporteeNames.create(
-					IArray.fromArray([[createQIdent("MyClass"), none as Option<TsIdentSimple>]]),
+					IArray.fromArray([
+						[createQIdent("MyClass"), none as Option<TsIdentSimple>],
+					]),
 					none,
 				),
 			);
@@ -219,14 +229,21 @@ describe("HandleCommonJsModules", () => {
 			const nestedTypeAlias = createMockTypeAlias("NestedType");
 			const namespace = createMockNamespace(
 				"MyClass",
-				IArray.fromArray([nestedInterface, nestedTypeAlias] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					nestedInterface,
+					nestedTypeAlias,
+				] as TsContainerOrDecl[]),
 			);
 			const targetClass = createMockClass("MyClass");
 			const commonJsExport = createCommonJsExport("MyClass");
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, namespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					namespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -236,7 +253,9 @@ describe("HandleCommonJsModules", () => {
 
 			// Should flatten namespace members and export them
 			expect(result.members.length).toBeGreaterThan(3); // More than original due to flattening
-			expect(result.members.toArray().some(m => m._tag === "TsExport")).toBe(true); // Should have exports from flattening
+			expect(result.members.toArray().some((m) => m._tag === "TsExport")).toBe(
+				true,
+			); // Should have exports from flattening
 		});
 
 		test("handles module without matching namespace", () => {
@@ -246,7 +265,11 @@ describe("HandleCommonJsModules", () => {
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, otherNamespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					otherNamespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 			);
 			const scope = createMockScope();
 
@@ -268,7 +291,13 @@ describe("HandleCommonJsModules", () => {
 						comments: Comments.empty(),
 						level: { _tag: "Default" },
 						name: createSimpleIdent("nested"),
-						tpe: some(TsTypeRef.create(Comments.empty(), createQIdent("A", "B"), IArray.Empty)),
+						tpe: some(
+							TsTypeRef.create(
+								Comments.empty(),
+								createQIdent("A", "B"),
+								IArray.Empty,
+							),
+						),
 						expr: none,
 						isStatic: false,
 						isReadOnly: false,
@@ -278,7 +307,11 @@ describe("HandleCommonJsModules", () => {
 
 			const typeAlias = createMockTypeAlias(
 				"N",
-				TsTypeRef.create(Comments.empty(), createQIdent("number"), IArray.Empty),
+				TsTypeRef.create(
+					Comments.empty(),
+					createQIdent("number"),
+					IArray.Empty,
+				),
 			);
 
 			const namespace = createMockNamespace(
@@ -286,12 +319,20 @@ describe("HandleCommonJsModules", () => {
 				IArray.fromArray([nestedInterface, typeAlias] as TsContainerOrDecl[]),
 			);
 
-			const targetClass = createMockClass("A", IArray.Empty, createHasPath("test", "A"));
+			const targetClass = createMockClass(
+				"A",
+				IArray.Empty,
+				createHasPath("test", "A"),
+			);
 			const commonJsExport = createCommonJsExport("A");
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, namespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					namespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -301,9 +342,15 @@ describe("HandleCommonJsModules", () => {
 
 			// Should flatten namespace and keep the original class
 			expect(result.members.length).toBeGreaterThan(0);
-			expect(result.members.toArray().some(m => m._tag === "TsExport")).toBe(true); // Flattened exports
-			expect(result.members.toArray().some(m => m === targetClass)).toBe(true); // Original class preserved
-			expect(result.members.toArray().some(m => m === commonJsExport)).toBe(true); // Export statement preserved
+			expect(result.members.toArray().some((m) => m._tag === "TsExport")).toBe(
+				true,
+			); // Flattened exports
+			expect(result.members.toArray().some((m) => m === targetClass)).toBe(
+				true,
+			); // Original class preserved
+			expect(result.members.toArray().some((m) => m === commonJsExport)).toBe(
+				true,
+			); // Export statement preserved
 		});
 
 		test("handles import alias pattern", () => {
@@ -312,7 +359,9 @@ describe("HandleCommonJsModules", () => {
 			const importAlias = {
 				_tag: "TsImport",
 				typeOnly: false,
-				imported: IArray.fromArray([{ _tag: "TsImportedIdent", ident: createSimpleIdent("Types") }]),
+				imported: IArray.fromArray([
+					{ _tag: "TsImportedIdent", ident: createSimpleIdent("Types") },
+				]),
 				from: { _tag: "TsImporteeLocal", arg: createQIdent("A") },
 			} as any;
 
@@ -331,7 +380,11 @@ describe("HandleCommonJsModules", () => {
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, namespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					namespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -348,14 +401,23 @@ describe("HandleCommonJsModules", () => {
 			const targetClass = createMockClass("A");
 			const redundantTypeAlias = createMockTypeAlias(
 				"N",
-				TsTypeRef.create(Comments.empty(), createQIdent("A", "N"), IArray.Empty),
+				TsTypeRef.create(
+					Comments.empty(),
+					createQIdent("A", "N"),
+					IArray.Empty,
+				),
 			);
 			const namespace = createMockNamespace("A");
 			const commonJsExport = createCommonJsExport("A");
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, namespace, redundantTypeAlias, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					namespace,
+					redundantTypeAlias,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -364,21 +426,32 @@ describe("HandleCommonJsModules", () => {
 			const result = transformation.enterTsDeclModule(scope)(module);
 
 			// Should filter out redundant type alias
-			expect(result.members.toArray().some(m => m === redundantTypeAlias)).toBe(false);
+			expect(
+				result.members.toArray().some((m) => m === redundantTypeAlias),
+			).toBe(false);
 		});
 
 		test("preserves non-redundant type aliases", () => {
 			const targetClass = createMockClass("A");
 			const nonRedundantTypeAlias = createMockTypeAlias(
 				"Different",
-				TsTypeRef.create(Comments.empty(), createQIdent("A", "N"), IArray.Empty),
+				TsTypeRef.create(
+					Comments.empty(),
+					createQIdent("A", "N"),
+					IArray.Empty,
+				),
 			);
 			const namespace = createMockNamespace("A");
 			const commonJsExport = createCommonJsExport("A");
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, namespace, nonRedundantTypeAlias, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					namespace,
+					nonRedundantTypeAlias,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -387,13 +460,15 @@ describe("HandleCommonJsModules", () => {
 			const result = transformation.enterTsDeclModule(scope)(module);
 
 			// Should preserve non-redundant type alias (it may be reordered)
-			expect(result.members.toArray().some(m => {
-				if (m._tag === "TsDeclTypeAlias") {
-					const alias = m as TsDeclTypeAlias;
-					return alias.name.value === "Different";
-				}
-				return false;
-			})).toBe(true);
+			expect(
+				result.members.toArray().some((m) => {
+					if (m._tag === "TsDeclTypeAlias") {
+						const alias = m as TsDeclTypeAlias;
+						return alias.name.value === "Different";
+					}
+					return false;
+				}),
+			).toBe(true);
 		});
 	});
 
@@ -430,7 +505,11 @@ describe("HandleCommonJsModules", () => {
 
 			const module = createMockModule(
 				"mylib",
-				IArray.fromArray([mainClass, namespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					mainClass,
+					namespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("mylib"),
 			);
 			const scope = createMockScope();
@@ -440,21 +519,35 @@ describe("HandleCommonJsModules", () => {
 
 			// Should properly transform the CommonJS module
 			expect(result.members.length).toBeGreaterThan(3); // Should have flattened content
-			expect(result.members.toArray().some(m => m === mainClass)).toBe(true); // Original class preserved
-			expect(result.members.toArray().some(m => m === commonJsExport)).toBe(true); // Export preserved
-			expect(result.members.toArray().some(m => m._tag === "TsExport")).toBe(true); // Flattened exports added
+			expect(result.members.toArray().some((m) => m === mainClass)).toBe(true); // Original class preserved
+			expect(result.members.toArray().some((m) => m === commonJsExport)).toBe(
+				true,
+			); // Export preserved
+			expect(result.members.toArray().some((m) => m._tag === "TsExport")).toBe(
+				true,
+			); // Flattened exports added
 		});
 
 		test("handles nested namespace structures", () => {
 			const innerInterface = createMockInterface("InnerInterface");
-			const innerNamespace = createMockNamespace("Inner", IArray.fromArray([innerInterface] as TsContainerOrDecl[]));
-			const outerNamespace = createMockNamespace("Outer", IArray.fromArray([innerNamespace] as TsContainerOrDecl[]));
+			const innerNamespace = createMockNamespace(
+				"Inner",
+				IArray.fromArray([innerInterface] as TsContainerOrDecl[]),
+			);
+			const outerNamespace = createMockNamespace(
+				"Outer",
+				IArray.fromArray([innerNamespace] as TsContainerOrDecl[]),
+			);
 			const targetClass = createMockClass("Outer");
 			const commonJsExport = createCommonJsExport("Outer");
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, outerNamespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					outerNamespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 				createHasPath("test", "TestModule"),
 			);
 			const scope = createMockScope();
@@ -501,7 +594,11 @@ describe("HandleCommonJsModules", () => {
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, emptyNamespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					emptyNamespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 			);
 			const scope = createMockScope();
 
@@ -510,8 +607,12 @@ describe("HandleCommonJsModules", () => {
 
 			// Should handle empty namespace gracefully
 			expect(result.members.length).toBeGreaterThan(0);
-			expect(result.members.toArray().some(m => m === targetClass)).toBe(true);
-			expect(result.members.toArray().some(m => m === commonJsExport)).toBe(true);
+			expect(result.members.toArray().some((m) => m === targetClass)).toBe(
+				true,
+			);
+			expect(result.members.toArray().some((m) => m === commonJsExport)).toBe(
+				true,
+			);
 		});
 
 		test("preserves module structure when no namespace matches", () => {
@@ -521,7 +622,11 @@ describe("HandleCommonJsModules", () => {
 
 			const module = createMockModule(
 				"TestModule",
-				IArray.fromArray([targetClass, differentNamespace, commonJsExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					targetClass,
+					differentNamespace,
+					commonJsExport,
+				] as TsContainerOrDecl[]),
 			);
 			const scope = createMockScope();
 
@@ -568,7 +673,9 @@ describe("HandleCommonJsModules", () => {
 				false, // typeOnly
 				ExportType.namespaced(),
 				TsExporteeNames.create(
-					IArray.fromArray([[createQIdent("Target"), some(createSimpleIdent("Alias"))]]),
+					IArray.fromArray([
+						[createQIdent("Target"), some(createSimpleIdent("Alias"))],
+					]),
 					none,
 				),
 			);
