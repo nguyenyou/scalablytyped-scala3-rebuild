@@ -223,8 +223,8 @@ export function isDictionary(members: IArray<TsMember>): boolean {
 		if (member._tag === "TsMemberIndex") {
 			const indexMember = member as TsMemberIndex;
 			return (
-				indexMember.indexing._tag === "Dict" ||
-				indexMember.indexing._tag === "Computed"
+				indexMember.indexing._tag === "IndexingDict" ||
+				indexMember.indexing._tag === "IndexingSingle"
 			);
 		}
 		return false;
