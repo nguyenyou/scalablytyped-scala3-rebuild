@@ -2,51 +2,43 @@
  * Tests for ResolveTypeLookups transformation
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Comments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
-import { TsTreeScope, LoopDetector } from "../../../internal/ts/TsTreeScope.js";
+import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
 import { ResolveTypeLookups } from "../../../internal/ts/transforms/ResolveTypeLookups.js";
 import {
-	TsDeclClass,
+	IndexingDict,
+	MethodType,
 	TsDeclInterface,
-	TsGlobal,
+	TsFunSig,
 	TsIdent,
-	TsMemberProperty,
+	TsLiteral,
+	type TsMember,
 	TsMemberFunction,
 	TsMemberIndex,
-	TsParsedFile,
+	TsMemberProperty,
 	TsProtectionLevel,
-	TsQIdent,
-	TsTypeRef,
+	type TsQIdent,
+	TsTupleElement,
+	type TsType,
 	TsTypeLookup,
+	TsTypeObject,
+	TsTypeRef,
 	TsTypeTuple,
 	TsTypeUnion,
-	TsTypeObject,
-	TsTypeIntersect,
-	TsTypeFunction,
-	TsLiteral,
-	TsTupleElement,
-	TsFunSig,
-	TsFunParam,
-	MethodType,
-	IndexingDict,
-	type TsType,
-	type TsContainerOrDecl,
-	type TsMember,
 } from "../../../internal/ts/trees.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
 
 describe("ResolveTypeLookups", () => {
 	// Helper functions for creating test objects
 	function createQIdent(...parts: string[]): TsQIdent {
 		return {
 			_tag: "TsQIdent",
-			parts: IArray.fromArray(parts.map(p => TsIdent.simple(p) as TsIdent)),
-			asString: `TsQIdent(${parts.join(".")})`
+			parts: IArray.fromArray(parts.map((p) => TsIdent.simple(p) as TsIdent)),
+			asString: `TsQIdent(${parts.join(".")})`,
 		};
 	}
 
@@ -55,12 +47,15 @@ describe("ResolveTypeLookups", () => {
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 		return root;
 	}
 
-	function createMockInterface(name: string, members: IArray<TsMember> = IArray.Empty): TsDeclInterface {
+	function _createMockInterface(
+		name: string,
+		members: IArray<TsMember> = IArray.Empty,
+	): TsDeclInterface {
 		return TsDeclInterface.create(
 			Comments.empty(),
 			false,
@@ -68,7 +63,10 @@ describe("ResolveTypeLookups", () => {
 			IArray.Empty,
 			IArray.Empty,
 			members,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -80,16 +78,19 @@ describe("ResolveTypeLookups", () => {
 			tpe ? some(tpe) : none,
 			none,
 			false,
-			false
+			false,
 		);
 	}
 
-	function createMockFunction(name: string, returnType: TsType = TsTypeRef.any): TsMemberFunction {
+	function createMockFunction(
+		name: string,
+		returnType: TsType = TsTypeRef.any,
+	): TsMemberFunction {
 		const signature = TsFunSig.create(
 			Comments.empty(),
 			IArray.Empty,
 			IArray.Empty,
-			some(returnType)
+			some(returnType),
 		);
 		return TsMemberFunction.create(
 			Comments.empty(),
@@ -98,18 +99,21 @@ describe("ResolveTypeLookups", () => {
 			MethodType.normal(),
 			signature,
 			false,
-			false
+			false,
 		);
 	}
 
-	function createMockIndexSignature(keyType: TsType = TsTypeRef.string, valueType: TsType = TsTypeRef.any): TsMemberIndex {
+	function createMockIndexSignature(
+		keyType: TsType = TsTypeRef.string,
+		valueType: TsType = TsTypeRef.any,
+	): TsMemberIndex {
 		const indexing = IndexingDict.create(TsIdent.simple("key"), keyType);
 		return TsMemberIndex.create(
 			Comments.empty(),
 			false,
 			TsProtectionLevel.default(),
 			indexing,
-			some(valueType)
+			some(valueType),
 		);
 	}
 
@@ -118,7 +122,7 @@ describe("ResolveTypeLookups", () => {
 	}
 
 	function createTuple(...types: TsType[]): TsTypeTuple {
-		const elements = types.map(t => TsTupleElement.unlabeled(t));
+		const elements = types.map((t) => TsTupleElement.unlabeled(t));
 		return TsTypeTuple.create(IArray.fromArray(elements));
 	}
 
@@ -164,7 +168,11 @@ describe("ResolveTypeLookups", () => {
 			const scope = createMockScope();
 			const transform = visitor.leaveTsType(scope);
 
-			const tuple = createTuple(TsTypeRef.string, TsTypeRef.number, TsTypeRef.boolean);
+			const tuple = createTuple(
+				TsTypeRef.string,
+				TsTypeRef.number,
+				TsTypeRef.boolean,
+			);
 			const lookup = createTypeLookup(tuple, TsTypeRef.number);
 
 			const result = transform(lookup);
@@ -211,7 +219,10 @@ describe("ResolveTypeLookups", () => {
 			const transform = visitor.leaveTsType(scope);
 
 			const property = createMockProperty("testProp", TsTypeRef.string);
-			const objectType = TsTypeObject.create(Comments.empty(), IArray.apply(property as TsMember));
+			const objectType = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(property as TsMember),
+			);
 			const lookup = createTypeLookup(objectType, TsLiteral.str("testProp"));
 
 			// This test would require proper key evaluation which depends on ExpandTypeMappings
@@ -225,8 +236,14 @@ describe("ResolveTypeLookups", () => {
 			const scope = createMockScope();
 			const transform = visitor.leaveTsType(scope);
 
-			const indexSig = createMockIndexSignature(TsTypeRef.string, TsTypeRef.number);
-			const objectType = TsTypeObject.create(Comments.empty(), IArray.apply(indexSig as TsMember));
+			const indexSig = createMockIndexSignature(
+				TsTypeRef.string,
+				TsTypeRef.number,
+			);
+			const objectType = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(indexSig as TsMember),
+			);
 			const lookup = createTypeLookup(objectType, TsTypeRef.string);
 
 			const result = transform(lookup);
@@ -240,11 +257,18 @@ describe("ResolveTypeLookups", () => {
 
 			const property = createMockProperty("prop", TsTypeRef.string);
 			const method = createMockFunction("method", TsTypeRef.number);
-			const indexSig = createMockIndexSignature(TsTypeRef.string, TsTypeRef.boolean);
-			
+			const indexSig = createMockIndexSignature(
+				TsTypeRef.string,
+				TsTypeRef.boolean,
+			);
+
 			const objectType = TsTypeObject.create(
-				Comments.empty(), 
-				IArray.apply(property as TsMember, method as TsMember, indexSig as TsMember)
+				Comments.empty(),
+				IArray.apply(
+					property as TsMember,
+					method as TsMember,
+					indexSig as TsMember,
+				),
 			);
 			const lookup = createTypeLookup(objectType, TsTypeRef.string);
 
@@ -259,7 +283,11 @@ describe("ResolveTypeLookups", () => {
 			const scope = createMockScope();
 			const transform = visitor.leaveTsType(scope);
 
-			const typeRef = TsTypeRef.create(Comments.empty(), createQIdent("NonExistentType"), IArray.Empty);
+			const typeRef = TsTypeRef.create(
+				Comments.empty(),
+				createQIdent("NonExistentType"),
+				IArray.Empty,
+			);
 			const lookup = createTypeLookup(typeRef, TsTypeRef.string);
 
 			const result = transform(lookup);
@@ -272,11 +300,16 @@ describe("ResolveTypeLookups", () => {
 
 			// Mock isAbstract to return true
 			const originalIsAbstract = scope.isAbstract.bind(scope);
-			scope.isAbstract = (qname) => qname.parts.apply(0).value === "AbstractType";
+			scope.isAbstract = (qname) =>
+				qname.parts.apply(0).value === "AbstractType";
 
 			const transform = visitor.leaveTsType(scope);
 
-			const typeRef = TsTypeRef.create(Comments.empty(), createQIdent("AbstractType"), IArray.Empty);
+			const typeRef = TsTypeRef.create(
+				Comments.empty(),
+				createQIdent("AbstractType"),
+				IArray.Empty,
+			);
 			const lookup = createTypeLookup(typeRef, TsTypeRef.string);
 
 			const result = transform(lookup);
@@ -295,10 +328,16 @@ describe("ResolveTypeLookups", () => {
 
 			const prop1 = createMockProperty("prop", TsTypeRef.string);
 			const prop2 = createMockProperty("prop", TsTypeRef.number);
-			
-			const obj1 = TsTypeObject.create(Comments.empty(), IArray.apply(prop1 as TsMember));
-			const obj2 = TsTypeObject.create(Comments.empty(), IArray.apply(prop2 as TsMember));
-			
+
+			const obj1 = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(prop1 as TsMember),
+			);
+			const obj2 = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(prop2 as TsMember),
+			);
+
 			const unionType = TsTypeUnion.create(IArray.apply<TsType>(obj1, obj2));
 			const lookup = createTypeLookup(unionType, TsLiteral.str("prop"));
 
@@ -312,9 +351,12 @@ describe("ResolveTypeLookups", () => {
 			const transform = visitor.leaveTsType(scope);
 
 			const prop = createMockProperty("prop", TsTypeRef.string);
-			const obj1 = TsTypeObject.create(Comments.empty(), IArray.apply(prop as TsMember));
+			const obj1 = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(prop as TsMember),
+			);
 			const obj2 = TsTypeObject.create(Comments.empty(), IArray.Empty); // No matching property
-			
+
 			const unionType = TsTypeUnion.create(IArray.apply<TsType>(obj1, obj2));
 			const lookup = createTypeLookup(unionType, TsLiteral.str("prop"));
 
@@ -330,7 +372,10 @@ describe("ResolveTypeLookups", () => {
 			const transform = visitor.leaveTsType(scope);
 
 			const method = createMockFunction("testMethod", TsTypeRef.string);
-			const objectType = TsTypeObject.create(Comments.empty(), IArray.apply(method as TsMember));
+			const objectType = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(method as TsMember),
+			);
 			const lookup = createTypeLookup(objectType, TsLiteral.str("testMethod"));
 
 			const result = transform(lookup);
@@ -343,7 +388,10 @@ describe("ResolveTypeLookups", () => {
 			const transform = visitor.leaveTsType(scope);
 
 			const property = createMockProperty("testProp", TsTypeRef.number);
-			const objectType = TsTypeObject.create(Comments.empty(), IArray.apply(property as TsMember));
+			const objectType = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(property as TsMember),
+			);
 			const lookup = createTypeLookup(objectType, TsLiteral.str("testProp"));
 
 			const result = transform(lookup);
@@ -357,10 +405,10 @@ describe("ResolveTypeLookups", () => {
 
 			const method1 = createMockFunction("overloaded", TsTypeRef.string);
 			const method2 = createMockFunction("overloaded", TsTypeRef.number);
-			
+
 			const objectType = TsTypeObject.create(
-				Comments.empty(), 
-				IArray.apply(method1 as TsMember, method2 as TsMember)
+				Comments.empty(),
+				IArray.apply(method1 as TsMember, method2 as TsMember),
 			);
 			const lookup = createTypeLookup(objectType, TsLiteral.str("overloaded"));
 
@@ -375,10 +423,10 @@ describe("ResolveTypeLookups", () => {
 
 			const property = createMockProperty("mixed", TsTypeRef.string);
 			const method = createMockFunction("mixed", TsTypeRef.number);
-			
+
 			const objectType = TsTypeObject.create(
-				Comments.empty(), 
-				IArray.apply(property as TsMember, method as TsMember)
+				Comments.empty(),
+				IArray.apply(property as TsMember, method as TsMember),
 			);
 			const lookup = createTypeLookup(objectType, TsLiteral.str("mixed"));
 
@@ -445,9 +493,15 @@ describe("ResolveTypeLookups", () => {
 			const transform = visitor.leaveTsType(scope);
 
 			const innerProp = createMockProperty("inner", TsTypeRef.string);
-			const innerObj = TsTypeObject.create(Comments.empty(), IArray.apply(innerProp as TsMember));
+			const innerObj = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(innerProp as TsMember),
+			);
 			const outerProp = createMockProperty("outer", innerObj);
-			const outerObj = TsTypeObject.create(Comments.empty(), IArray.apply(outerProp as TsMember));
+			const outerObj = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(outerProp as TsMember),
+			);
 
 			const lookup = createTypeLookup(outerObj, TsLiteral.str("outer"));
 
@@ -463,7 +517,7 @@ describe("ResolveTypeLookups", () => {
 			const genericType = TsTypeRef.create(
 				Comments.empty(),
 				createQIdent("Array"),
-				IArray.apply<TsType>(TsTypeRef.string)
+				IArray.apply<TsType>(TsTypeRef.string),
 			);
 			const lookup = createTypeLookup(genericType, TsTypeRef.number);
 
@@ -478,8 +532,13 @@ describe("ResolveTypeLookups", () => {
 
 			// Create a complex scenario with multiple resolution steps
 			const property = createMockProperty("deep", TsTypeRef.boolean);
-			const objectType = TsTypeObject.create(Comments.empty(), IArray.apply(property as TsMember));
-			const unionType = TsTypeUnion.create(IArray.apply<TsType>(objectType, TsTypeRef.string));
+			const objectType = TsTypeObject.create(
+				Comments.empty(),
+				IArray.apply(property as TsMember),
+			);
+			const unionType = TsTypeUnion.create(
+				IArray.apply<TsType>(objectType, TsTypeRef.string),
+			);
 			const lookup = createTypeLookup(unionType, TsLiteral.str("deep"));
 
 			const result = transform(lookup);
@@ -491,12 +550,12 @@ describe("ResolveTypeLookups", () => {
 		it("works correctly with visitor pattern", () => {
 			const visitor = ResolveTypeLookups.apply();
 			const scope = createMockScope();
-			
+
 			expect(typeof visitor.leaveTsType).toBe("function");
-			
+
 			const transform = visitor.leaveTsType(scope);
 			const result = transform(TsTypeRef.string);
-			
+
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsTypeRef");
 		});
@@ -504,7 +563,7 @@ describe("ResolveTypeLookups", () => {
 		it("singleton instance works correctly", () => {
 			const visitor1 = ResolveTypeLookups.apply();
 			const visitor2 = ResolveTypeLookups.apply();
-			
+
 			// Should create separate instances
 			expect(visitor1).toBeDefined();
 			expect(visitor2).toBeDefined();
@@ -513,13 +572,13 @@ describe("ResolveTypeLookups", () => {
 		it("handles transformation pipeline integration", () => {
 			const visitor = ResolveTypeLookups.apply();
 			const scope = createMockScope();
-			
+
 			// Test that the transformation can be chained
 			const transform = visitor.leaveTsType(scope);
 			const type1 = TsTypeRef.string;
 			const result1 = transform(type1);
 			const result2 = transform(result1);
-			
+
 			expect(result1).toBe(type1);
 			expect(result2).toBe(type1);
 		});
@@ -529,7 +588,9 @@ describe("ResolveTypeLookups", () => {
 			const scope = createMockScope();
 			const transform = visitor.leaveTsType(scope);
 
-			const unionType = TsTypeUnion.create(IArray.apply<TsType>(TsTypeRef.string, TsTypeRef.number));
+			const unionType = TsTypeUnion.create(
+				IArray.apply<TsType>(TsTypeRef.string, TsTypeRef.number),
+			);
 			const result = transform(unionType);
 
 			expect(result).toBe(unionType);
@@ -545,7 +606,10 @@ describe("ResolveTypeLookups", () => {
 
 			// Process many lookup types
 			for (let i = 0; i < 100; i++) {
-				const lookup = createTypeLookup(TsTypeRef.string, TsLiteral.str(`prop${i}`));
+				const lookup = createTypeLookup(
+					TsTypeRef.string,
+					TsLiteral.str(`prop${i}`),
+				);
 				const result = transform(lookup);
 				expect(result).toBeDefined();
 			}

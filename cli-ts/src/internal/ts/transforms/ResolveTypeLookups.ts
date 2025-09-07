@@ -5,39 +5,33 @@
  * the actual type structure. Converts expressions like `MyType[K]` to their resolved types.
  */
 
-import { none, some, isSome } from "fp-ts/Option";
+import { isSome } from "fp-ts/Option";
+import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
 import { AllMembersFor } from "../AllMembersFor.js";
 import { FollowAliases } from "../FollowAliases.js";
-import { Comments } from "../../Comments.js";
-import { TsTreeScope, LoopDetector } from "../TsTreeScope.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
+import { LoopDetector, type TsTreeScope } from "../TsTreeScope.js";
 import {
-	evaluateKeys,
-	type TaggedLiteral,
-	type Res,
-} from "./ExpandTypeMappings.js";
-
-import {
-	TsTypeRef,
-	TsTypeUnion,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeFunction,
-	TsTypeLookup,
-	TsTypeTuple,
-	TsMemberFunction,
-	TsMemberProperty,
-	TsMemberIndex,
-	TsMemberCall,
-	TsProtectionLevel,
-	TsIdent,
 	MethodType,
-	type TsType,
-	type TsMember,
-	type TsLiteral,
 	type TsFunSig,
+	type TsLiteral,
+	type TsMember,
+	TsMemberCall,
+	type TsMemberFunction,
+	type TsMemberIndex,
+	type TsMemberProperty,
+	TsProtectionLevel,
+	type TsType,
+	TsTypeFunction,
+	TsTypeIntersect,
+	type TsTypeLookup,
+	TsTypeObject,
+	TsTypeRef,
+	type TsTypeTuple,
+	TsTypeUnion,
 } from "../trees.js";
+import { evaluateKeys, type TaggedLiteral } from "./ExpandTypeMappings.js";
 
 /**
  * Main ResolveTypeLookups transformation object
@@ -63,22 +57,24 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 			switch (x._tag) {
 				case "TsTypeLookup": {
 					const lookup = x as TsTypeLookup;
-					
+
 					// Special case: tuple[number] -> union of tuple element types
-					if (lookup.from._tag === "TsTypeTuple" && 
-						lookup.key._tag === "TsTypeRef" && 
+					if (
+						lookup.from._tag === "TsTypeTuple" &&
+						lookup.key._tag === "TsTypeRef" &&
 						(lookup.key as TsTypeRef).name.parts.length === 1 &&
-						(lookup.key as TsTypeRef).name.parts.apply(0).value === "number") {
+						(lookup.key as TsTypeRef).name.parts.apply(0).value === "number"
+					) {
 						const tuple = lookup.from as TsTypeTuple;
-						const elementTypes = tuple.elems.map(elem => elem.tpe);
+						const elementTypes = tuple.elems.map((elem) => elem.tpe);
 						return TsTypeUnion.simplified(elementTypes);
 					}
-					
+
 					// General lookup resolution
 					const resolved = this.expandLookupType(scope, lookup);
 					return resolved !== undefined ? resolved : x;
 				}
-				
+
 				default:
 					return x;
 			}
@@ -107,7 +103,10 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Expand a type lookup expression to its resolved type
 	 */
-	private expandLookupType(scope: TsTreeScope, lookup: TsTypeLookup): TsType | undefined {
+	private expandLookupType(
+		scope: TsTreeScope,
+		lookup: TsTypeLookup,
+	): TsType | undefined {
 		// Evaluate the keys using ExpandTypeMappings
 		const keysResult = evaluateKeys(scope, LoopDetector.initial)(lookup.key);
 
@@ -131,7 +130,10 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 					}
 
 					// Get all members for this type reference
-					const members = AllMembersFor.apply(scope, LoopDetector.initial)(typeRef);
+					const members = AllMembersFor.apply(
+						scope,
+						LoopDetector.initial,
+					)(typeRef);
 					return this.pick(members, keys);
 				}
 
@@ -172,14 +174,19 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Pick types from members based on a set of tagged literals
 	 */
-	private pick(members: IArray<TsMember>, strings: Set<TaggedLiteral>): TsType | undefined {
+	private pick(
+		members: IArray<TsMember>,
+		strings: Set<TaggedLiteral>,
+	): TsType | undefined {
 		if (strings.size === 0) {
 			// Look for index signature
 			for (let i = 0; i < members.length; i++) {
 				const member = members.apply(i);
 				if (member._tag === "TsMemberIndex") {
 					const indexMember = member as TsMemberIndex;
-					return isSome(indexMember.valueType) ? indexMember.valueType.value : TsTypeRef.any;
+					return isSome(indexMember.valueType)
+						? indexMember.valueType.value
+						: TsTypeRef.any;
 				}
 			}
 			return undefined;
@@ -199,11 +206,13 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 		}
 
 		const result = TsTypeUnion.simplified(IArray.fromArray(types));
-		
+
 		// Don't return 'never' type
-		if (result._tag === "TsTypeRef" && 
+		if (
+			result._tag === "TsTypeRef" &&
 			(result as TsTypeRef).name.parts.length === 1 &&
-			(result as TsTypeRef).name.parts.apply(0).value === "never") {
+			(result as TsTypeRef).name.parts.apply(0).value === "never"
+		) {
 			return undefined;
 		}
 
@@ -223,15 +232,19 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 
 			if (member._tag === "TsMemberFunction") {
 				const funcMember = member as TsMemberFunction;
-				if (funcMember.name.value === wanted.value &&
+				if (
+					funcMember.name.value === wanted.value &&
 					MethodType.isNormal(funcMember.methodType) &&
-					!funcMember.isStatic) {
+					!funcMember.isStatic
+				) {
 					functions.push(funcMember.signature);
 				}
 			} else if (member._tag === "TsMemberProperty") {
 				const propMember = member as TsMemberProperty;
 				if (propMember.name.value === wanted.value && !propMember.isStatic) {
-					const propType = isSome(propMember.tpe) ? propMember.tpe.value : TsTypeRef.any;
+					const propType = isSome(propMember.tpe)
+						? propMember.tpe.value
+						: TsTypeRef.any;
 					fields.push(propType);
 				}
 			}
@@ -243,10 +256,13 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 			combinedFunctions = TsTypeFunction.create(functions[0]);
 		} else if (functions.length > 1) {
 			// Create object type with call signatures
-			const callMembers = functions.map(sig =>
-				TsMemberCall.create(Comments.empty(), TsProtectionLevel.default(), sig)
+			const callMembers = functions.map((sig) =>
+				TsMemberCall.create(Comments.empty(), TsProtectionLevel.default(), sig),
 			);
-			combinedFunctions = TsTypeObject.create(Comments.empty(), IArray.fromArray(callMembers as TsMember[]));
+			combinedFunctions = TsTypeObject.create(
+				Comments.empty(),
+				IArray.fromArray(callMembers as TsMember[]),
+			);
 		}
 
 		// Combine all types
@@ -260,8 +276,8 @@ class ResolveTypeLookupsVisitor extends TreeTransformationScopedChanges {
 		}
 
 		// Filter out ignored types
-		const filteredTypes = allTypes.filter(t => !this.shouldIgnoreType(t));
-		
+		const filteredTypes = allTypes.filter((t) => !this.shouldIgnoreType(t));
+
 		if (filteredTypes.length === 0) {
 			return TsTypeRef.any;
 		}
