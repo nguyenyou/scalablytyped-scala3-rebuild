@@ -4,29 +4,29 @@
 
 import { none, some } from "fp-ts/Option";
 import { describe, expect, it } from "vitest";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import { type Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
 import { JsLocation } from "../../../internal/ts/JsLocation.js";
 import { MethodType } from "../../../internal/ts/MethodType.js";
-import { SplitMethods } from "../../../internal/ts/transforms/SplitMethods.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
-import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import type { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import { SplitMethods } from "../../../internal/ts/transforms/SplitMethods.js";
 import {
 	TsDeclFunction,
-	TsFunParam,
+	type TsFunParam,
 	TsFunSig,
 	TsIdent,
-	TsIdentSimple,
-	TsMemberCall,
-	TsMemberCtor,
+	type TsIdentSimple,
+	type TsMemberCall,
+	type TsMemberCtor,
 	TsMemberFunction,
 	TsQIdent,
-	TsTypeRef,
-	TsTypeUnion,
-	TsTypeLiteral,
-	TsTypeRepeated,
 	type TsType,
+	TsTypeLiteral,
+	TsTypeRef,
+	type TsTypeRepeated,
+	type TsTypeUnion,
 } from "../../../internal/ts/trees.js";
 
 describe("SplitMethods", () => {
@@ -38,7 +38,7 @@ describe("SplitMethods", () => {
 	function createCodePath(name: string): CodePath {
 		return CodePath.hasPath(
 			TsIdent.librarySimple("test"),
-			TsQIdent.of(createSimpleIdent(name))
+			TsQIdent.of(createSimpleIdent(name)),
 		);
 	}
 
@@ -48,9 +48,9 @@ describe("SplitMethods", () => {
 			comments: NoComments.instance,
 			name: createSimpleIdent(name),
 			tpe: tpe ? some(tpe) : none,
-			withComments: (cs: Comments) => createFunParam(name, tpe),
-			addComment: (c) => createFunParam(name, tpe),
-			equals: (other) => false,
+			withComments: (_cs: Comments) => createFunParam(name, tpe),
+			addComment: (_c) => createFunParam(name, tpe),
+			equals: (_other) => false,
 			asString: `TsFunParam(${name})`,
 		};
 	}
@@ -60,7 +60,7 @@ describe("SplitMethods", () => {
 			NoComments.instance,
 			IArray.Empty,
 			IArray.fromArray(params),
-			returnType ? some(returnType) : none
+			returnType ? some(returnType) : none,
 		);
 	}
 
@@ -68,7 +68,7 @@ describe("SplitMethods", () => {
 		return {
 			_tag: "TsTypeUnion",
 			types: IArray.fromArray(types),
-			asString: `TsTypeUnion(${types.map(t => t.asString).join(" | ")})`,
+			asString: `TsTypeUnion(${types.map((t) => t.asString).join(" | ")})`,
 		};
 	}
 
@@ -87,7 +87,7 @@ describe("SplitMethods", () => {
 	function createMemberFunction(
 		name: string,
 		signature: TsFunSig,
-		methodType: MethodType = MethodType.normal()
+		methodType: MethodType = MethodType.normal(),
 	): TsMemberFunction {
 		return TsMemberFunction.create(
 			NoComments.instance,
@@ -96,7 +96,7 @@ describe("SplitMethods", () => {
 			methodType,
 			signature,
 			false,
-			false
+			false,
 		);
 	}
 
@@ -106,8 +106,8 @@ describe("SplitMethods", () => {
 			comments: NoComments.instance,
 			level: TsProtectionLevel.default(),
 			signature,
-			withComments: (cs) => createMemberCtor(signature),
-			addComment: (c) => createMemberCtor(signature),
+			withComments: (_cs) => createMemberCtor(signature),
+			addComment: (_c) => createMemberCtor(signature),
 			asString: "TsMemberCtor",
 		};
 	}
@@ -118,20 +118,23 @@ describe("SplitMethods", () => {
 			comments: NoComments.instance,
 			level: TsProtectionLevel.default(),
 			signature,
-			withComments: (cs) => createMemberCall(signature),
-			addComment: (c) => createMemberCall(signature),
+			withComments: (_cs) => createMemberCall(signature),
+			addComment: (_c) => createMemberCall(signature),
 			asString: "TsMemberCall",
 		};
 	}
 
-	function createDeclFunction(name: string, signature: TsFunSig): TsDeclFunction {
+	function createDeclFunction(
+		name: string,
+		signature: TsFunSig,
+	): TsDeclFunction {
 		return TsDeclFunction.create(
 			NoComments.instance,
 			false,
 			createSimpleIdent(name),
 			signature,
 			JsLocation.zero(),
-			createCodePath(name)
+			createCodePath(name),
 		);
 	}
 
@@ -173,7 +176,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -227,7 +233,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const ctor = createMemberCtor(signature);
 
@@ -246,7 +255,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature, MethodType.normal());
 
@@ -265,7 +277,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const call = createMemberCall(signature);
 
@@ -284,7 +299,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createDeclFunction("test", signature);
 
@@ -304,7 +322,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature, MethodType.getter());
 
@@ -326,7 +347,10 @@ describe("SplitMethods", () => {
 
 			const literal1 = createLiteralType("'hello'");
 			const literal2 = createLiteralType("'world'");
-			const unionParam = createFunParam("param", createUnionType([literal1, literal2, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([literal1, literal2, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -344,7 +368,10 @@ describe("SplitMethods", () => {
 			const scope = createMockScope();
 
 			const literal = createLiteralType("'test'");
-			const unionParam = createFunParam("param", createUnionType([literal, TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([literal, TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -363,7 +390,10 @@ describe("SplitMethods", () => {
 
 			const literal1 = createLiteralType("'a'");
 			const literal2 = createLiteralType("'b'");
-			const unionParam = createFunParam("param", createUnionType([literal1, literal2]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([literal1, literal2]),
+			);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -383,7 +413,10 @@ describe("SplitMethods", () => {
 			const scope = createMockScope();
 
 			const normalParam = createFunParam("param1", TsTypeRef.string);
-			const repeatedParam = createFunParam("rest", createRepeatedType(TsTypeRef.number));
+			const repeatedParam = createFunParam(
+				"rest",
+				createRepeatedType(TsTypeRef.number),
+			);
 			const signature = createFunSig([normalParam, repeatedParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -401,8 +434,14 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
-			const repeatedParam = createFunParam("rest", createRepeatedType(TsTypeRef.boolean));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
+			const repeatedParam = createFunParam(
+				"rest",
+				createRepeatedType(TsTypeRef.boolean),
+			);
 			const signature = createFunSig([unionParam, repeatedParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -476,10 +515,38 @@ describe("SplitMethods", () => {
 			const scope = createMockScope();
 
 			// Create multiple union parameters that would create too many combinations
-			const union1 = createFunParam("param1", createUnionType([TsTypeRef.string, TsTypeRef.number, TsTypeRef.boolean]));
-			const union2 = createFunParam("param2", createUnionType([TsTypeRef.string, TsTypeRef.number, TsTypeRef.boolean]));
-			const union3 = createFunParam("param3", createUnionType([TsTypeRef.string, TsTypeRef.number, TsTypeRef.boolean]));
-			const union4 = createFunParam("param4", createUnionType([TsTypeRef.string, TsTypeRef.number, TsTypeRef.boolean]));
+			const union1 = createFunParam(
+				"param1",
+				createUnionType([
+					TsTypeRef.string,
+					TsTypeRef.number,
+					TsTypeRef.boolean,
+				]),
+			);
+			const union2 = createFunParam(
+				"param2",
+				createUnionType([
+					TsTypeRef.string,
+					TsTypeRef.number,
+					TsTypeRef.boolean,
+				]),
+			);
+			const union3 = createFunParam(
+				"param3",
+				createUnionType([
+					TsTypeRef.string,
+					TsTypeRef.number,
+					TsTypeRef.boolean,
+				]),
+			);
+			const union4 = createFunParam(
+				"param4",
+				createUnionType([
+					TsTypeRef.string,
+					TsTypeRef.number,
+					TsTypeRef.boolean,
+				]),
+			);
 
 			const signature = createFunSig([union1, union2, union3, union4]);
 			const func = createMemberFunction("test", signature);
@@ -502,8 +569,14 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const union1 = createFunParam("param1", createUnionType([TsTypeRef.string, TsTypeRef.number]));
-			const union2 = createFunParam("param2", createUnionType([TsTypeRef.boolean, TsTypeRef.object]));
+			const union1 = createFunParam(
+				"param1",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
+			const union2 = createFunParam(
+				"param2",
+				createUnionType([TsTypeRef.boolean, TsTypeRef.object]),
+			);
 			const signature = createFunSig([union1, union2]);
 			const func = createMemberFunction("test", signature);
 
@@ -521,7 +594,10 @@ describe("SplitMethods", () => {
 			const scope = createMockScope();
 
 			const normalParam = createFunParam("param1", TsTypeRef.string);
-			const unionParam = createFunParam("param2", createUnionType([TsTypeRef.number, TsTypeRef.boolean]));
+			const unionParam = createFunParam(
+				"param2",
+				createUnionType([TsTypeRef.number, TsTypeRef.boolean]),
+			);
 			const signature = createFunSig([normalParam, unionParam]);
 			const func = createMemberFunction("test", signature);
 
@@ -539,7 +615,10 @@ describe("SplitMethods", () => {
 			const scope = createMockScope();
 
 			const param1 = createFunParam("first", TsTypeRef.string);
-			const unionParam = createFunParam("second", createUnionType([TsTypeRef.number, TsTypeRef.boolean]));
+			const unionParam = createFunParam(
+				"second",
+				createUnionType([TsTypeRef.number, TsTypeRef.boolean]),
+			);
 			const param3 = createFunParam("third", TsTypeRef.object);
 			const signature = createFunSig([param1, unionParam, param3]);
 			const func = createMemberFunction("test", signature);
@@ -551,11 +630,11 @@ describe("SplitMethods", () => {
 			const result = transform.newClassMembers(scope, mockTree);
 
 			expect(result.length).toBe(2);
-			
+
 			// Check that parameter order is preserved
 			const sig1 = (result.apply(0) as TsMemberFunction).signature;
 			const sig2 = (result.apply(1) as TsMemberFunction).signature;
-			
+
 			expect(sig1.params.length).toBe(3);
 			expect(sig2.params.length).toBe(3);
 			expect(sig1.params.apply(0).name.value).toBe("first");
@@ -638,7 +717,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const singleUnion = createFunParam("param", createUnionType([TsTypeRef.string]));
+			const singleUnion = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string]),
+			);
 			const signature = createFunSig([singleUnion]);
 			const func = createMemberFunction("test", signature);
 
@@ -657,7 +739,7 @@ describe("SplitMethods", () => {
 			const arr = IArray.apply(1, 2, 3, 4, 5);
 			const [remaining, collected] = SplitMethods.collectRightWhile(
 				arr,
-				(x: number) => x > 3 ? x * 2 : null
+				(x: number) => (x > 3 ? x * 2 : null),
 			);
 
 			expect(remaining.toArray()).toEqual([1, 2, 3]);
@@ -668,7 +750,7 @@ describe("SplitMethods", () => {
 			const arr = IArray.apply(1, 2, 3);
 			const [remaining, collected] = SplitMethods.collectRightWhile(
 				arr,
-				(x: number) => x > 10 ? x * 2 : null
+				(x: number) => (x > 10 ? x * 2 : null),
 			);
 
 			expect(remaining.toArray()).toEqual([1, 2, 3]);
@@ -679,7 +761,7 @@ describe("SplitMethods", () => {
 			const arr = IArray.apply(1, 2, 3);
 			const [remaining, collected] = SplitMethods.collectRightWhile(
 				arr,
-				(x: number) => x > 0 ? x * 2 : null
+				(x: number) => (x > 0 ? x * 2 : null),
 			);
 
 			expect(remaining.toArray()).toEqual([]);
@@ -690,7 +772,7 @@ describe("SplitMethods", () => {
 			const arr = IArray.Empty;
 			const [remaining, collected] = SplitMethods.collectRightWhile(
 				arr,
-				(x: any) => x
+				(x: any) => x,
 			);
 
 			expect(remaining.toArray()).toEqual([]);
@@ -706,8 +788,13 @@ describe("SplitMethods", () => {
 			// Create complex union with literals and regular types
 			const literal1 = createLiteralType("'a'");
 			const literal2 = createLiteralType("'b'");
-			const complexUnion = createUnionType([literal1, literal2, TsTypeRef.string, TsTypeRef.number]);
-			
+			const complexUnion = createUnionType([
+				literal1,
+				literal2,
+				TsTypeRef.string,
+				TsTypeRef.number,
+			]);
+
 			const unionParam = createFunParam("param", complexUnion);
 			const signature = createFunSig([unionParam]);
 			const func = createMemberFunction("test", signature);
@@ -725,12 +812,18 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const union1 = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
-			const union2 = createFunParam("param", createUnionType([TsTypeRef.boolean, TsTypeRef.object]));
-			
+			const union1 = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
+			const union2 = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.boolean, TsTypeRef.object]),
+			);
+
 			const sig1 = createFunSig([union1]);
 			const sig2 = createFunSig([union2]);
-			
+
 			const func1 = createMemberFunction("test1", sig1);
 			const func2 = createMemberFunction("test2", sig2);
 
@@ -747,7 +840,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam], TsTypeRef.boolean);
 			const func = createMemberFunction("test", signature);
 
@@ -758,10 +854,10 @@ describe("SplitMethods", () => {
 			const result = transform.newClassMembers(scope, mockTree);
 
 			expect(result.length).toBe(2);
-			
+
 			const func1 = result.apply(0) as TsMemberFunction;
 			const func2 = result.apply(1) as TsMemberFunction;
-			
+
 			expect(func1.name.value).toBe("test");
 			expect(func2.name.value).toBe("test");
 			expect(func1.methodType._tag).toBe("Normal");
@@ -772,7 +868,10 @@ describe("SplitMethods", () => {
 			const transform = new SplitMethods();
 			const scope = createMockScope();
 
-			const unionParam = createFunParam("param", createUnionType([TsTypeRef.string, TsTypeRef.number]));
+			const unionParam = createFunParam(
+				"param",
+				createUnionType([TsTypeRef.string, TsTypeRef.number]),
+			);
 			const signature = createFunSig([unionParam], TsTypeRef.boolean);
 			const func = createMemberFunction("test", signature);
 
@@ -783,10 +882,10 @@ describe("SplitMethods", () => {
 			const result = transform.newClassMembers(scope, mockTree);
 
 			expect(result.length).toBe(2);
-			
+
 			const sig1 = (result.apply(0) as TsMemberFunction).signature;
 			const sig2 = (result.apply(1) as TsMemberFunction).signature;
-			
+
 			expect(sig1.resultType._tag).toBe("Some");
 			expect(sig2.resultType._tag).toBe("Some");
 		});

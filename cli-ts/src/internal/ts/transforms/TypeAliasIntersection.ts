@@ -6,46 +6,47 @@
  * This helps simplify complex type relationships and improves TypeScript's type resolution.
  */
 
+import type { IArray } from "../../IArray.js";
+import { type PartialFunction, partialFunction } from "../../IArray.js";
+import { FollowAliases } from "../FollowAliases.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
 	TsDecl,
-	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsType,
-	TsTypeFunction,
 	TsTypeIntersect,
 	TsTypeObject,
 	TsTypeRef,
 } from "../trees.js";
-import { TsDeclInterface as TsDeclInterfaceConstructor, TsType as TsTypeUtils } from "../trees.js";
-import { FollowAliases } from "../FollowAliases.js";
-import type { IArray } from "../../IArray.js";
-import { IArray as IArrayConstructor, partialFunction, type PartialFunction } from "../../IArray.js";
+import {
+	TsDeclInterface as TsDeclInterfaceConstructor,
+	TsType as TsTypeUtils,
+} from "../trees.js";
 
 /**
  * TypeAliasIntersection transformation.
- * 
+ *
  * Converts type aliases with intersection types into interfaces when possible.
  * This transformation looks for type aliases of the form:
- * 
+ *
  * ```typescript
  * type MyAlias = TypeA & TypeB & { prop: string }
  * ```
- * 
+ *
  * And converts them to:
- * 
+ *
  * ```typescript
  * interface MyAlias extends TypeA, TypeB {
  *   prop: string;
  * }
  * ```
- * 
+ *
  * This only happens when all types in the intersection are "legal inheritance" types:
  * - Type references (to interfaces, classes, etc.)
  * - Object types (that are not type mappings)
  * - Function types
- * 
+ *
  * The transformation helps simplify complex type relationships and makes them
  * more compatible with Scala's inheritance model.
  */
@@ -62,24 +63,24 @@ export class TypeAliasIntersection extends TreeTransformationScopedChanges {
 		return (x: TsDecl) => {
 			if (x._tag === "TsDeclTypeAlias") {
 				const typeAlias = x as TsDeclTypeAlias;
-				
+
 				// Only process type aliases with intersection types
 				if (typeAlias.alias._tag === "TsTypeIntersect") {
 					const intersectionType = typeAlias.alias as TsTypeIntersect;
-					
+
 					// Use partitionCollect2 to separate the intersection types
 					const typeRefPF = this.createTypeRefPartialFunction(scope);
 					const objectTypePF = this.createObjectTypePartialFunction();
-					
-					const [inheritance, objects, rest] = intersectionType.types.partitionCollect2(
-						typeRefPF,
-						objectTypePF
-					);
+
+					const [inheritance, objects, rest] =
+						intersectionType.types.partitionCollect2(typeRefPF, objectTypePF);
 
 					// Only convert to interface if there are no remaining types (all types were legal)
 					if (rest.length === 0) {
 						// Flatten all members from object types
-						const allMembers = objects.flatMap((obj) => (obj as TsTypeObject).members);
+						const allMembers = objects.flatMap(
+							(obj) => (obj as TsTypeObject).members,
+						);
 
 						// Create interface with inheritance and flattened members
 						return TsDeclInterfaceConstructor.create(
@@ -89,12 +90,12 @@ export class TypeAliasIntersection extends TreeTransformationScopedChanges {
 							typeAlias.tparams,
 							inheritance as IArray<TsTypeRef>,
 							allMembers,
-							typeAlias.codePath
+							typeAlias.codePath,
 						);
 					}
 				}
 			}
-			
+
 			return x;
 		};
 	}
@@ -105,20 +106,24 @@ export class TypeAliasIntersection extends TreeTransformationScopedChanges {
 	 * - It's not abstract in the current scope
 	 * - Following aliases leads to a legal inheritance type
 	 */
-	private createTypeRefPartialFunction(scope: TsTreeScope): PartialFunction<TsType, TsTypeRef> {
+	private createTypeRefPartialFunction(
+		scope: TsTreeScope,
+	): PartialFunction<TsType, TsTypeRef> {
 		return partialFunction<TsType, TsTypeRef>(
 			// Predicate: check if this is a legal type reference
 			(tpe: TsType): boolean => {
 				if (tpe._tag === "TsTypeRef") {
 					const typeRef = tpe as TsTypeRef;
 					// Check if not abstract and legal inheritance after following aliases
-					return !scope.isAbstract(typeRef.name) && 
-						   this.legalInheritance(FollowAliases.apply(scope)(typeRef));
+					return (
+						!scope.isAbstract(typeRef.name) &&
+						this.legalInheritance(FollowAliases.apply(scope)(typeRef))
+					);
 				}
 				return false;
 			},
 			// Transformer: extract the type reference
-			(tpe: TsType): TsTypeRef => tpe as TsTypeRef
+			(tpe: TsType): TsTypeRef => tpe as TsTypeRef,
 		);
 	}
 
@@ -126,7 +131,10 @@ export class TypeAliasIntersection extends TreeTransformationScopedChanges {
 	 * Creates a partial function for extracting legal object types from intersection types.
 	 * An object type is legal if it's not a type mapping.
 	 */
-	private createObjectTypePartialFunction(): PartialFunction<TsType, TsTypeObject> {
+	private createObjectTypePartialFunction(): PartialFunction<
+		TsType,
+		TsTypeObject
+	> {
 		return partialFunction<TsType, TsTypeObject>(
 			// Predicate: check if this is a legal object type
 			(tpe: TsType): boolean => {
@@ -137,7 +145,7 @@ export class TypeAliasIntersection extends TreeTransformationScopedChanges {
 				return false;
 			},
 			// Transformer: extract the object type
-			(tpe: TsType): TsTypeObject => tpe as TsTypeObject
+			(tpe: TsType): TsTypeObject => tpe as TsTypeObject,
 		);
 	}
 

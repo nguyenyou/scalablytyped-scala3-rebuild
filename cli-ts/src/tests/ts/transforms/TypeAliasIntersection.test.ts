@@ -2,37 +2,35 @@
  * Tests for TypeAliasIntersection.ts - TypeScript port of org.scalablytyped.converter.internal.ts.transforms.TypeAliasIntersection
  */
 
+import { none, type Option, some } from "fp-ts/Option";
 import { describe, expect, it } from "vitest";
-import { TypeAliasIntersection } from "../../../internal/ts/transforms/TypeAliasIntersection.js";
+import { Raw } from "../../../internal/Comment.js";
+import { Comments, NoComments } from "../../../internal/Comments.js";
+import { IArray } from "../../../internal/IArray.js";
+import { Logger } from "../../../internal/logging/index.js";
+import { CodePath } from "../../../internal/ts/CodePath.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import { TypeAliasIntersection } from "../../../internal/ts/transforms/TypeAliasIntersection.js";
 import {
 	TsDeclInterface,
 	TsDeclTypeAlias,
-	TsIdentSimple,
-	TsQIdent,
-	TsTypeRef,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeFunction,
-	TsTypeUnion,
-	TsTypeLiteral,
 	TsFunSig,
-	TsTypeParam,
-	TsMemberProperty,
-	TsProtectionLevel,
-	type TsDecl,
-	type TsType,
+	TsIdentLibrary,
+	type TsIdentSimple,
 	type TsMember,
+	TsMemberProperty,
+	TsParsedFile,
+	TsProtectionLevel,
+	TsQIdent,
+	type TsType,
+	TsTypeFunction,
+	TsTypeIntersect,
+	TsTypeLiteral,
+	TsTypeObject,
+	TsTypeParam,
+	TsTypeRef,
+	TsTypeUnion,
 } from "../../../internal/ts/trees.js";
-import { IArray } from "../../../internal/IArray.js";
-import { Raw } from "../../../internal/Comment.js";
-import { Comments, NoComments } from "../../../internal/Comments.js";
-import { CodePath } from "../../../internal/ts/CodePath.js";
-import { TsParsedFile } from "../../../internal/ts/trees.js";
-import { TsIdentLibrary } from "../../../internal/ts/trees.js";
-import { Logger } from "../../../internal/logging/index.js";
-import { Option } from "fp-ts/Option";
-import { none, some } from "fp-ts/Option";
 
 describe("TypeAliasIntersection", () => {
 	// Helper functions for creating test data
@@ -48,19 +46,20 @@ describe("TypeAliasIntersection", () => {
 		return TsQIdent.ofStrings(...parts);
 	}
 
-	function createTypeRef(name: string, tparams: IArray<TsType> = IArray.Empty): TsTypeRef {
-		return TsTypeRef.create(
-			NoComments.instance,
-			createQIdent(name),
-			tparams
-		);
+	function createTypeRef(
+		name: string,
+		tparams: IArray<TsType> = IArray.Empty,
+	): TsTypeRef {
+		return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 	}
 
 	function createIntersectionType(...types: TsType[]): TsTypeIntersect {
 		return TsTypeIntersect.create(IArray.fromArray(types));
 	}
 
-	function createObjectType(members: IArray<TsMember> = IArray.Empty): TsTypeObject {
+	function createObjectType(
+		members: IArray<TsMember> = IArray.Empty,
+	): TsTypeObject {
 		return TsTypeObject.create(NoComments.instance, members);
 	}
 
@@ -70,20 +69,20 @@ describe("TypeAliasIntersection", () => {
 
 	function createFunSig(
 		params: IArray<any> = IArray.Empty,
-		resultType: Option<TsType> = none
+		resultType: Option<TsType> = none,
 	): TsFunSig {
 		return TsFunSig.create(
 			NoComments.instance,
 			IArray.Empty, // tparams
 			params,
-			resultType
+			resultType,
 		);
 	}
 
 	function createMockTypeAlias(
 		name: string,
 		alias: TsType,
-		tparams: IArray<TsTypeParam> = IArray.Empty
+		tparams: IArray<TsTypeParam> = IArray.Empty,
 	): TsDeclTypeAlias {
 		return TsDeclTypeAlias.create(
 			NoComments.instance,
@@ -91,17 +90,14 @@ describe("TypeAliasIntersection", () => {
 			createSimpleIdent(name),
 			tparams,
 			alias,
-			CodePath.hasPath(
-				createSimpleIdent("test-lib"),
-				createQIdent(name)
-			)
+			CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent(name)),
 		);
 	}
 
 	function createMockInterface(
 		name: string,
 		inheritance: IArray<TsTypeRef> = IArray.Empty,
-		members: IArray<TsMember> = IArray.Empty
+		members: IArray<TsMember> = IArray.Empty,
 	): TsDeclInterface {
 		return TsDeclInterface.create(
 			NoComments.instance,
@@ -110,23 +106,20 @@ describe("TypeAliasIntersection", () => {
 			IArray.Empty, // tparams
 			inheritance,
 			members,
-			CodePath.hasPath(
-				createSimpleIdent("test-lib"),
-				createQIdent(name)
-			)
+			CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent(name)),
 		);
 	}
 
 	function createMockScope(
 		members: IArray<any> = IArray.Empty,
-		logger: Logger<void> = Logger.DevNull()
+		logger: Logger<void> = Logger.DevNull(),
 	): TsTreeScope {
 		const libName = TsIdentLibrary.construct("test-lib");
 		const parsedFile = TsParsedFile.create(
 			NoComments.instance,
 			IArray.Empty, // directives
 			members,
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 		const deps = new Map();
 		return TsTreeScope.create(libName, false, deps, logger)["/"](parsedFile);
@@ -140,7 +133,7 @@ describe("TypeAliasIntersection", () => {
 			some(tpe),
 			none, // expr
 			false, // isStatic
-			false  // isReadOnly
+			false, // isReadOnly
 		);
 	}
 
@@ -158,7 +151,10 @@ describe("TypeAliasIntersection", () => {
 
 		it("should have enterTsDecl method", () => {
 			const scope = createMockScope();
-			const typeAlias = createMockTypeAlias("TestAlias", createTypeRef("string"));
+			const typeAlias = createMockTypeAlias(
+				"TestAlias",
+				createTypeRef("string"),
+			);
 			const transform = new TypeAliasIntersection();
 			const result = transform.enterTsDecl(scope)(typeAlias);
 			expect(result).toBeDefined();
@@ -168,11 +164,14 @@ describe("TypeAliasIntersection", () => {
 	describe("Type Alias Processing", () => {
 		it("should preserve non-intersection type aliases", () => {
 			const scope = createMockScope();
-			const typeAlias = createMockTypeAlias("SimpleAlias", createTypeRef("string"));
+			const typeAlias = createMockTypeAlias(
+				"SimpleAlias",
+				createTypeRef("string"),
+			);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclTypeAlias");
 			const resultAlias = result as TsDeclTypeAlias;
 			expect(resultAlias.name.value).toBe("SimpleAlias");
@@ -183,9 +182,9 @@ describe("TypeAliasIntersection", () => {
 			const scope = createMockScope();
 			const interface_ = createMockInterface("TestInterface");
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(interface_);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			expect((result as TsDeclInterface).name.value).toBe("TestInterface");
 		});
@@ -194,19 +193,23 @@ describe("TypeAliasIntersection", () => {
 			const scope = createMockScope();
 			const intersectionType = createIntersectionType(
 				createTypeRef("BaseInterface"),
-				createTypeRef("MixinInterface")
+				createTypeRef("MixinInterface"),
 			);
 			const typeAlias = createMockTypeAlias("CombinedAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.name.value).toBe("CombinedAlias");
 			expect(resultInterface.inheritance.length).toBe(2);
-			expect(resultInterface.inheritance.apply(0).name.parts.apply(0).value).toBe("BaseInterface");
-			expect(resultInterface.inheritance.apply(1).name.parts.apply(0).value).toBe("MixinInterface");
+			expect(
+				resultInterface.inheritance.apply(0).name.parts.apply(0).value,
+			).toBe("BaseInterface");
+			expect(
+				resultInterface.inheritance.apply(1).name.parts.apply(0).value,
+			).toBe("MixinInterface");
 		});
 
 		it("should convert intersection with object types to interface", () => {
@@ -216,9 +219,9 @@ describe("TypeAliasIntersection", () => {
 			const intersectionType = createIntersectionType(objectType1, objectType2);
 			const typeAlias = createMockTypeAlias("ObjectAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.name.value).toBe("ObjectAlias");
@@ -233,14 +236,16 @@ describe("TypeAliasIntersection", () => {
 			const intersectionType = createIntersectionType(typeRef, objectType);
 			const typeAlias = createMockTypeAlias("MixedAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.name.value).toBe("MixedAlias");
 			expect(resultInterface.inheritance.length).toBe(1);
-			expect(resultInterface.inheritance.apply(0).name.parts.apply(0).value).toBe("BaseInterface");
+			expect(
+				resultInterface.inheritance.apply(0).name.parts.apply(0).value,
+			).toBe("BaseInterface");
 		});
 	});
 
@@ -250,13 +255,13 @@ describe("TypeAliasIntersection", () => {
 			const intersectionType = createIntersectionType(
 				createTypeRef("Interface1"),
 				createTypeRef("Interface2"),
-				createTypeRef("Interface3")
+				createTypeRef("Interface3"),
 			);
 			const typeAlias = createMockTypeAlias("LegalAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.inheritance.length).toBe(3);
@@ -269,9 +274,9 @@ describe("TypeAliasIntersection", () => {
 			const intersectionType = createIntersectionType(objectType1, objectType2);
 			const typeAlias = createMockTypeAlias("ObjectAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.name.value).toBe("ObjectAlias");
@@ -279,16 +284,21 @@ describe("TypeAliasIntersection", () => {
 
 		it("should preserve type alias with illegal inheritance types", () => {
 			const scope = createMockScope();
-			const unionType = TsTypeUnion.create(IArray.fromArray([
-				createTypeRef("Type1") as TsType,
-				createTypeRef("Type2") as TsType
-			]));
-			const intersectionType = createIntersectionType(unionType, createTypeRef("Interface"));
+			const unionType = TsTypeUnion.create(
+				IArray.fromArray([
+					createTypeRef("Type1") as TsType,
+					createTypeRef("Type2") as TsType,
+				]),
+			);
+			const intersectionType = createIntersectionType(
+				unionType,
+				createTypeRef("Interface"),
+			);
 			const typeAlias = createMockTypeAlias("IllegalAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
-			
+
 			const result = transform.enterTsDecl(scope)(typeAlias);
-			
+
 			// Should preserve as type alias since union type is not legal inheritance
 			expect(result._tag).toBe("TsDeclTypeAlias");
 			expect((result as TsDeclTypeAlias).name.value).toBe("IllegalAlias");
@@ -313,7 +323,9 @@ describe("TypeAliasIntersection", () => {
 
 		it("should handle single type intersection", () => {
 			const scope = createMockScope();
-			const singleIntersection = createIntersectionType(createTypeRef("SingleInterface"));
+			const singleIntersection = createIntersectionType(
+				createTypeRef("SingleInterface"),
+			);
 			const typeAlias = createMockTypeAlias("SingleAlias", singleIntersection);
 			const transform = new TypeAliasIntersection();
 
@@ -323,7 +335,9 @@ describe("TypeAliasIntersection", () => {
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.name.value).toBe("SingleAlias");
 			expect(resultInterface.inheritance.length).toBe(1);
-			expect(resultInterface.inheritance.apply(0).name.parts.apply(0).value).toBe("SingleInterface");
+			expect(
+				resultInterface.inheritance.apply(0).name.parts.apply(0).value,
+			).toBe("SingleInterface");
 		});
 
 		it("should preserve type parameters", () => {
@@ -332,13 +346,17 @@ describe("TypeAliasIntersection", () => {
 				NoComments.instance,
 				createSimpleIdent("T"),
 				none, // upperBound
-				none  // default
+				none, // default
 			);
 			const intersectionType = createIntersectionType(
 				createTypeRef("Interface1"),
-				createTypeRef("Interface2")
+				createTypeRef("Interface2"),
 			);
-			const typeAlias = createMockTypeAlias("GenericAlias", intersectionType, IArray.apply(tparam));
+			const typeAlias = createMockTypeAlias(
+				"GenericAlias",
+				intersectionType,
+				IArray.apply(tparam),
+			);
 			const transform = new TypeAliasIntersection();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -354,7 +372,9 @@ describe("TypeAliasIntersection", () => {
 			const scope = createMockScope();
 			const comment = new Raw("Test comment");
 			const comments = new Comments([comment]);
-			const intersectionType = createIntersectionType(createTypeRef("Interface1"));
+			const intersectionType = createIntersectionType(
+				createTypeRef("Interface1"),
+			);
 			const transform = new TypeAliasIntersection();
 
 			const typeAlias = TsDeclTypeAlias.create(
@@ -363,7 +383,10 @@ describe("TypeAliasIntersection", () => {
 				createSimpleIdent("CommentedAlias"),
 				IArray.Empty,
 				intersectionType,
-				CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent("CommentedAlias"))
+				CodePath.hasPath(
+					createSimpleIdent("test-lib"),
+					createQIdent("CommentedAlias"),
+				),
 			);
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -379,7 +402,9 @@ describe("TypeAliasIntersection", () => {
 	describe("Complex Scenarios", () => {
 		it("should handle large intersection types", () => {
 			const scope = createMockScope();
-			const types = Array.from({ length: 10 }, (_, i) => createTypeRef(`Interface${i + 1}`));
+			const types = Array.from({ length: 10 }, (_, i) =>
+				createTypeRef(`Interface${i + 1}`),
+			);
 			const largeIntersection = createIntersectionType(...types);
 			const typeAlias = createMockTypeAlias("LargeAlias", largeIntersection);
 			const transform = new TypeAliasIntersection();
@@ -394,8 +419,14 @@ describe("TypeAliasIntersection", () => {
 
 		it("should handle intersection with generic type references", () => {
 			const scope = createMockScope();
-			const genericType = createTypeRef("Generic", IArray.apply(createTypeRef("string") as TsType));
-			const intersectionType = createIntersectionType(genericType, createTypeRef("Interface"));
+			const genericType = createTypeRef(
+				"Generic",
+				IArray.apply(createTypeRef("string") as TsType),
+			);
+			const intersectionType = createIntersectionType(
+				genericType,
+				createTypeRef("Interface"),
+			);
 			const typeAlias = createMockTypeAlias("GenericAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -410,8 +441,14 @@ describe("TypeAliasIntersection", () => {
 			const scope = createMockScope();
 			const property = createProperty("prop", createTypeRef("string"));
 			const objectType = createObjectType(IArray.apply(property as TsMember));
-			const intersectionType = createIntersectionType(createTypeRef("Interface"), objectType);
-			const typeAlias = createMockTypeAlias("ObjectWithMembersAlias", intersectionType);
+			const intersectionType = createIntersectionType(
+				createTypeRef("Interface"),
+				objectType,
+			);
+			const typeAlias = createMockTypeAlias(
+				"ObjectWithMembersAlias",
+				intersectionType,
+			);
 			const transform = new TypeAliasIntersection();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -420,7 +457,9 @@ describe("TypeAliasIntersection", () => {
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.inheritance.length).toBe(1);
 			expect(resultInterface.members.length).toBe(1);
-			expect((resultInterface.members.apply(0) as TsMemberProperty).name.value).toBe("prop");
+			expect(
+				(resultInterface.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("prop");
 		});
 	});
 
@@ -431,7 +470,7 @@ describe("TypeAliasIntersection", () => {
 			const mixinIntersection = createIntersectionType(
 				createTypeRef("BaseClass"),
 				createTypeRef("MixinA"),
-				createTypeRef("MixinB")
+				createTypeRef("MixinB"),
 			);
 			const typeAlias = createMockTypeAlias("Mixin", mixinIntersection);
 			const transform = new TypeAliasIntersection();
@@ -447,9 +486,17 @@ describe("TypeAliasIntersection", () => {
 		it("should handle utility type pattern", () => {
 			const scope = createMockScope();
 			// Simulate: type Extended = BaseInterface & { additionalProp: string }
-			const additionalProp = createProperty("additionalProp", createTypeRef("string"));
-			const extensionObject = createObjectType(IArray.apply(additionalProp as TsMember));
-			const utilityIntersection = createIntersectionType(createTypeRef("BaseInterface"), extensionObject);
+			const additionalProp = createProperty(
+				"additionalProp",
+				createTypeRef("string"),
+			);
+			const extensionObject = createObjectType(
+				IArray.apply(additionalProp as TsMember),
+			);
+			const utilityIntersection = createIntersectionType(
+				createTypeRef("BaseInterface"),
+				extensionObject,
+			);
 			const typeAlias = createMockTypeAlias("Extended", utilityIntersection);
 			const transform = new TypeAliasIntersection();
 
@@ -460,7 +507,9 @@ describe("TypeAliasIntersection", () => {
 			expect(resultInterface.name.value).toBe("Extended");
 			expect(resultInterface.inheritance.length).toBe(1);
 			expect(resultInterface.members.length).toBe(1);
-			expect((resultInterface.members.apply(0) as TsMemberProperty).name.value).toBe("additionalProp");
+			expect(
+				(resultInterface.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("additionalProp");
 		});
 
 		it("should handle library augmentation pattern", () => {
@@ -468,9 +517,12 @@ describe("TypeAliasIntersection", () => {
 			// Simulate: type AugmentedLib = OriginalLib & Extensions
 			const augmentationIntersection = createIntersectionType(
 				createTypeRef("OriginalLib"),
-				createTypeRef("Extensions")
+				createTypeRef("Extensions"),
 			);
-			const typeAlias = createMockTypeAlias("AugmentedLib", augmentationIntersection);
+			const typeAlias = createMockTypeAlias(
+				"AugmentedLib",
+				augmentationIntersection,
+			);
 			const transform = new TypeAliasIntersection();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -486,7 +538,10 @@ describe("TypeAliasIntersection", () => {
 		it("should handle malformed intersection types gracefully", () => {
 			const scope = createMockScope();
 			const malformedIntersection = TsTypeIntersect.create(IArray.Empty); // Empty intersection
-			const typeAlias = createMockTypeAlias("MalformedAlias", malformedIntersection);
+			const typeAlias = createMockTypeAlias(
+				"MalformedAlias",
+				malformedIntersection,
+			);
 			const transform = new TypeAliasIntersection();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -501,7 +556,10 @@ describe("TypeAliasIntersection", () => {
 		it("should handle unknown type references", () => {
 			const scope = createMockScope();
 			const unknownRef = createTypeRef("UnknownInterface");
-			const intersectionType = createIntersectionType(unknownRef, createTypeRef("KnownInterface"));
+			const intersectionType = createIntersectionType(
+				unknownRef,
+				createTypeRef("KnownInterface"),
+			);
 			const typeAlias = createMockTypeAlias("UnknownAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -517,7 +575,7 @@ describe("TypeAliasIntersection", () => {
 			const literalType = TsTypeLiteral.string("literal");
 			const intersectionType = createIntersectionType(
 				createTypeRef("LegalInterface"),
-				literalType // Illegal inheritance type
+				literalType, // Illegal inheritance type
 			);
 			const typeAlias = createMockTypeAlias("MixedAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
@@ -533,9 +591,14 @@ describe("TypeAliasIntersection", () => {
 	describe("Performance", () => {
 		it("should handle very large intersection types efficiently", () => {
 			const scope = createMockScope();
-			const types = Array.from({ length: 100 }, (_, i) => createTypeRef(`Interface${i + 1}`));
+			const types = Array.from({ length: 100 }, (_, i) =>
+				createTypeRef(`Interface${i + 1}`),
+			);
 			const massiveIntersection = createIntersectionType(...types);
-			const typeAlias = createMockTypeAlias("MassiveAlias", massiveIntersection);
+			const typeAlias = createMockTypeAlias(
+				"MassiveAlias",
+				massiveIntersection,
+			);
 			const transform = new TypeAliasIntersection();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -549,8 +612,13 @@ describe("TypeAliasIntersection", () => {
 		it("should handle deeply nested object types", () => {
 			const scope = createMockScope();
 			const deepProperty = createProperty("deepProp", createObjectType());
-			const deepObjectType = createObjectType(IArray.apply(deepProperty as TsMember));
-			const intersectionType = createIntersectionType(createTypeRef("Interface"), deepObjectType);
+			const deepObjectType = createObjectType(
+				IArray.apply(deepProperty as TsMember),
+			);
+			const intersectionType = createIntersectionType(
+				createTypeRef("Interface"),
+				deepObjectType,
+			);
 			const typeAlias = createMockTypeAlias("DeepAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -566,7 +634,10 @@ describe("TypeAliasIntersection", () => {
 		it("should detect function types as preventing conversion", () => {
 			const scope = createMockScope();
 			const functionType = createFunctionType(createFunSig());
-			const intersectionType = createIntersectionType(createTypeRef("Interface"), functionType);
+			const intersectionType = createIntersectionType(
+				createTypeRef("Interface"),
+				functionType,
+			);
 			const typeAlias = createMockTypeAlias("FunctionAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -579,11 +650,16 @@ describe("TypeAliasIntersection", () => {
 
 		it("should detect union types as illegal inheritance", () => {
 			const scope = createMockScope();
-			const unionType = TsTypeUnion.create(IArray.fromArray([
-				createTypeRef("Type1") as TsType,
-				createTypeRef("Type2") as TsType
-			]));
-			const intersectionType = createIntersectionType(unionType, createTypeRef("Interface"));
+			const unionType = TsTypeUnion.create(
+				IArray.fromArray([
+					createTypeRef("Type1") as TsType,
+					createTypeRef("Type2") as TsType,
+				]),
+			);
+			const intersectionType = createIntersectionType(
+				unionType,
+				createTypeRef("Interface"),
+			);
 			const typeAlias = createMockTypeAlias("UnionAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -597,7 +673,10 @@ describe("TypeAliasIntersection", () => {
 		it("should detect literal types as illegal inheritance", () => {
 			const scope = createMockScope();
 			const literalType = TsTypeLiteral.string("literal");
-			const intersectionType = createIntersectionType(literalType, createTypeRef("Interface"));
+			const intersectionType = createIntersectionType(
+				literalType,
+				createTypeRef("Interface"),
+			);
 			const typeAlias = createMockTypeAlias("LiteralAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
 
@@ -625,8 +704,12 @@ describe("TypeAliasIntersection", () => {
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.members.length).toBe(2);
-			expect((resultInterface.members.apply(0) as TsMemberProperty).name.value).toBe("prop1");
-			expect((resultInterface.members.apply(1) as TsMemberProperty).name.value).toBe("prop2");
+			expect(
+				(resultInterface.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("prop1");
+			expect(
+				(resultInterface.members.apply(1) as TsMemberProperty).name.value,
+			).toBe("prop2");
 		});
 
 		it("should combine inheritance and object members", () => {
@@ -636,7 +719,7 @@ describe("TypeAliasIntersection", () => {
 			const intersectionType = createIntersectionType(
 				createTypeRef("BaseInterface"),
 				objectType,
-				createTypeRef("MixinInterface")
+				createTypeRef("MixinInterface"),
 			);
 			const typeAlias = createMockTypeAlias("CombinedAlias", intersectionType);
 			const transform = new TypeAliasIntersection();
@@ -647,7 +730,9 @@ describe("TypeAliasIntersection", () => {
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.inheritance.length).toBe(2);
 			expect(resultInterface.members.length).toBe(1);
-			expect((resultInterface.members.apply(0) as TsMemberProperty).name.value).toBe("additionalProp");
+			expect(
+				(resultInterface.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("additionalProp");
 		});
 	});
 });

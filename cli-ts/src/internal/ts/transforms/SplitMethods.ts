@@ -24,10 +24,9 @@
 
 import { none, type Option, some } from "fp-ts/Option";
 import { IArray } from "../../IArray.js";
-import { MethodType } from "../MethodType.js";
 import { OptionalType } from "../OptionalType.js";
 import { RemoveComment } from "../RemoveComment.js";
-import { TransformClassMembers, TransformMembers } from "../TreeTransformations.js";
+import { TransformMembers } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import type {
 	HasClassMembers,
@@ -42,7 +41,6 @@ import type {
 	TsMemberFunction,
 	TsType,
 	TsTypeLiteral,
-	TsTypeRepeated,
 	TsTypeUnion,
 } from "../trees.js";
 
@@ -67,31 +65,41 @@ export class SplitMethods extends TransformMembers {
 	 * Process class members, splitting methods with union type parameters.
 	 * This implements the TransformClassMembers functionality.
 	 */
-	newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
+	newClassMembers(_scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
 		return x.members.flatMap((member: TsMember): IArray<TsMember> => {
 			switch (member._tag) {
 				case "TsMemberCtor": {
 					const ctor = member as TsMemberCtor;
 					if (this.hasUnionType(ctor.signature.params)) {
 						const splitSignatures = this.split(ctor.signature);
-						const newCtors = splitSignatures.map(sig => ({
+						const newCtors = splitSignatures.map((sig) => ({
 							...ctor,
 							signature: sig,
 						}));
-						return RemoveComment.keepFirstOnly(newCtors, RemoveComment.r0) as unknown as IArray<TsMember>;
+						return RemoveComment.keepFirstOnly(
+							newCtors,
+							RemoveComment.r0,
+						) as unknown as IArray<TsMember>;
 					}
 					return IArray.apply(member);
 				}
 
 				case "TsMemberFunction": {
 					const func = member as TsMemberFunction;
-					if (func.methodType && func.methodType._tag === "Normal" && this.hasUnionType(func.signature.params)) {
+					if (
+						func.methodType &&
+						func.methodType._tag === "Normal" &&
+						this.hasUnionType(func.signature.params)
+					) {
 						const splitSignatures = this.split(func.signature);
-						const newFuncs = splitSignatures.map(sig => ({
+						const newFuncs = splitSignatures.map((sig) => ({
 							...func,
 							signature: sig,
 						}));
-						return RemoveComment.keepFirstOnly(newFuncs, RemoveComment.r1) as unknown as IArray<TsMember>;
+						return RemoveComment.keepFirstOnly(
+							newFuncs,
+							RemoveComment.r1,
+						) as unknown as IArray<TsMember>;
 					}
 					return IArray.apply(member);
 				}
@@ -100,11 +108,14 @@ export class SplitMethods extends TransformMembers {
 					const call = member as TsMemberCall;
 					if (this.hasUnionType(call.signature.params)) {
 						const splitSignatures = this.split(call.signature);
-						const newCalls = splitSignatures.map(sig => ({
+						const newCalls = splitSignatures.map((sig) => ({
 							...call,
 							signature: sig,
 						}));
-						return RemoveComment.keepFirstOnly(newCalls, RemoveComment.r2) as unknown as IArray<TsMember>;
+						return RemoveComment.keepFirstOnly(
+							newCalls,
+							RemoveComment.r2,
+						) as unknown as IArray<TsMember>;
 					}
 					return IArray.apply(member);
 				}
@@ -118,21 +129,26 @@ export class SplitMethods extends TransformMembers {
 	/**
 	 * Process container members, splitting function declarations with union type parameters.
 	 */
-	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
-		return x.members.flatMap((member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
-			if (member._tag === "TsDeclFunction") {
-				const func = member as TsDeclFunction;
-				if (this.hasUnionType(func.signature.params)) {
-					const splitSignatures = this.split(func.signature);
-					const newFuncs = splitSignatures.map(sig => ({
-						...func,
-						signature: sig,
-					}));
-					return RemoveComment.keepFirstOnly(newFuncs, RemoveComment.r3) as unknown as IArray<TsContainerOrDecl>;
+	newMembers(_scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
+		return x.members.flatMap(
+			(member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
+				if (member._tag === "TsDeclFunction") {
+					const func = member as TsDeclFunction;
+					if (this.hasUnionType(func.signature.params)) {
+						const splitSignatures = this.split(func.signature);
+						const newFuncs = splitSignatures.map((sig) => ({
+							...func,
+							signature: sig,
+						}));
+						return RemoveComment.keepFirstOnly(
+							newFuncs,
+							RemoveComment.r3,
+						) as unknown as IArray<TsContainerOrDecl>;
+					}
 				}
-			}
-			return IArray.apply(member);
-		});
+				return IArray.apply(member);
+			},
+		);
 	}
 
 	/**
@@ -151,63 +167,81 @@ export class SplitMethods extends TransformMembers {
 
 		if (lastParam !== undefined) {
 			const param = lastParam;
-			if (param.tpe._tag === "Some" && param.tpe.value._tag === "TsTypeRepeated") {
+			if (
+				param.tpe._tag === "Some" &&
+				param.tpe.value._tag === "TsTypeRepeated"
+			) {
 				repParamOpt = some(param);
 				paramsNoRep = origin.params.dropRight(1);
 			}
 		}
 
 		// Generate parameter possibilities for each position
-		const parameterPossibilitiesPerIndex: IArray<IArray<TsFunParam>> = 
-			paramsNoRep.foldLeft(IArray.Empty as IArray<IArray<TsFunParam>>, (acc, param) => {
-				if (param.tpe._tag === "Some" && param.tpe.value._tag === "TsTypeUnion") {
-					const unionType = param.tpe.value as TsTypeUnion;
-					if (unionType.types.length < SplitMethods.MAX_NUM) {
-						// Separate literal types from other types
-						const literalTypes: TsTypeLiteral[] = [];
-						const restTypes: TsType[] = [];
+		const parameterPossibilitiesPerIndex: IArray<IArray<TsFunParam>> =
+			paramsNoRep.foldLeft(
+				IArray.Empty as IArray<IArray<TsFunParam>>,
+				(acc, param) => {
+					if (
+						param.tpe._tag === "Some" &&
+						param.tpe.value._tag === "TsTypeUnion"
+					) {
+						const unionType = param.tpe.value as TsTypeUnion;
+						if (unionType.types.length < SplitMethods.MAX_NUM) {
+							// Separate literal types from other types
+							const literalTypes: TsTypeLiteral[] = [];
+							const restTypes: TsType[] = [];
 
-						for (let i = 0; i < unionType.types.length; i++) {
-							const t = unionType.types.apply(i);
-							if (t._tag === "TsTypeLiteral") {
-								literalTypes.push(t as TsTypeLiteral);
-							} else {
-								restTypes.push(t);
+							for (let i = 0; i < unionType.types.length; i++) {
+								const t = unionType.types.apply(i);
+								if (t._tag === "TsTypeLiteral") {
+									literalTypes.push(t as TsTypeLiteral);
+								} else {
+									restTypes.push(t);
+								}
 							}
+
+							// Create parameter for literals if any exist
+							const literalsParam =
+								literalTypes.length === 0
+									? IArray.Empty
+									: IArray.apply({
+											...param,
+											tpe: some({
+												_tag: "TsTypeUnion",
+												types: IArray.fromArray(
+													literalTypes.map((lit) => lit as TsType),
+												),
+												asString: `TsTypeUnion(${literalTypes.map((lit) => lit.asString).join(" | ")})`,
+											} as TsTypeUnion),
+										});
+
+							// Create parameters for each non-literal type
+							const restParams = IArray.fromArray(
+								restTypes.map((tpe) => ({
+									...param,
+									tpe: some(tpe),
+								})),
+							);
+
+							return acc.append(restParams.concat(literalsParam));
 						}
-
-						// Create parameter for literals if any exist
-						const literalsParam = literalTypes.length === 0
-							? IArray.Empty
-							: IArray.apply({
-								...param,
-								tpe: some({
-									_tag: "TsTypeUnion",
-									types: IArray.fromArray(literalTypes.map(lit => lit as TsType)),
-									asString: `TsTypeUnion(${literalTypes.map(lit => lit.asString).join(" | ")})`,
-								} as TsTypeUnion),
-							});
-
-						// Create parameters for each non-literal type
-						const restParams = IArray.fromArray(restTypes.map(tpe => ({
-							...param,
-							tpe: some(tpe),
-						})));
-
-						return acc.append(restParams.concat(literalsParam));
 					}
-				}
-				// Normal parameter - no union type
-				return acc.append(IArray.apply(param));
-			});
+					// Normal parameter - no union type
+					return acc.append(IArray.apply(param));
+				},
+			);
 
 		// Add repeated parameter if it exists
-		const parameterPossibilitiesPerIndexWithRep = repParamOpt._tag === "Some"
-			? parameterPossibilitiesPerIndex.append(IArray.apply(repParamOpt.value))
-			: parameterPossibilitiesPerIndex;
+		const parameterPossibilitiesPerIndexWithRep =
+			repParamOpt._tag === "Some"
+				? parameterPossibilitiesPerIndex.append(IArray.apply(repParamOpt.value))
+				: parameterPossibilitiesPerIndex;
 
 		// Calculate total number of combinations
-		const count = parameterPossibilitiesPerIndexWithRep.foldLeft(1, (acc, possibilities) => acc * possibilities.length);
+		const count = parameterPossibilitiesPerIndexWithRep.foldLeft(
+			1,
+			(acc, possibilities) => acc * possibilities.length,
+		);
 
 		// Don't split if too many combinations or overflow
 		if (count > SplitMethods.MAX_NUM || count < 0) {
@@ -218,14 +252,15 @@ export class SplitMethods extends TransformMembers {
 		const signatures = this.generateNewSignatures(
 			origin,
 			IArray.apply(IArray.Empty),
-			parameterPossibilitiesPerIndexWithRep
+			parameterPossibilitiesPerIndexWithRep,
 		);
 
 		// Clean up signatures by dropping trailing undefined parameters and sort by parameter count
 		return signatures
-			.map(sig => {
-				const dropTrailingUndefineds = sig.params.reverse()
-					.dropWhile(param => {
+			.map((sig) => {
+				const dropTrailingUndefineds = sig.params
+					.reverse()
+					.dropWhile((param) => {
 						if (param.tpe._tag === "Some") {
 							const typeStr = param.tpe.value.asString;
 							return OptionalType.undefineds.has(typeStr);
@@ -233,13 +268,13 @@ export class SplitMethods extends TransformMembers {
 						return false;
 					})
 					.reverse();
-				
+
 				return {
 					...sig,
 					params: dropTrailingUndefineds,
 				};
 			})
-			.sortBy(sig => sig.params.length);
+			.sortBy((sig) => sig.params.length);
 	}
 
 	/**
@@ -248,10 +283,10 @@ export class SplitMethods extends TransformMembers {
 	private generateNewSignatures(
 		origin: TsFunSig,
 		newParamss: IArray<IArray<TsFunParam>>,
-		remaining: IArray<IArray<TsFunParam>>
+		remaining: IArray<IArray<TsFunParam>>,
 	): IArray<TsFunSig> {
 		if (remaining.isEmpty) {
-			return newParamss.map(params => ({
+			return newParamss.map((params) => ({
 				...origin,
 				params,
 			}));
@@ -259,8 +294,8 @@ export class SplitMethods extends TransformMembers {
 
 		const heads = remaining.head;
 		const tail = remaining.tail;
-		const expandedParams = heads.flatMap(head => 
-			newParamss.map(existing => existing.append(head))
+		const expandedParams = heads.flatMap((head) =>
+			newParamss.map((existing) => existing.append(head)),
 		);
 
 		return this.generateNewSignatures(origin, expandedParams, tail);
@@ -270,7 +305,7 @@ export class SplitMethods extends TransformMembers {
 	 * Check if any parameter has a union type.
 	 */
 	private hasUnionType(params: IArray<TsFunParam>): boolean {
-		return params.exists(param => {
+		return params.exists((param) => {
 			if (param.tpe._tag === "Some") {
 				return param.tpe.value._tag === "TsTypeUnion";
 			}
@@ -291,7 +326,7 @@ export class SplitMethods extends TransformMembers {
 	 */
 	static collectRightWhile<T, U>(
 		ts: IArray<T>,
-		predicate: (t: T) => U | null
+		predicate: (t: T) => U | null,
 	): [IArray<T>, IArray<U>] {
 		let idx = ts.length - 1;
 		const collected: U[] = [];
