@@ -12,11 +12,11 @@ import { IArray } from "../../IArray.js";
 import { CodePath } from "../CodePath.js";
 import { JsLocation } from "../JsLocation.js";
 import { Picker } from "../Picker.js";
-import { SetJsLocationTransform } from "../transforms/SetJsLocation.js";
 import type { LoopDetector, TsTreeScope } from "../TsTreeScope.js";
+import { SetJsLocationTransform } from "../transforms/SetJsLocation.js";
 import {
 	TsDeclNamespace,
-	TsIdent,
+	type TsIdent,
 	TsIdentDummy,
 	type TsNamedDecl,
 	type TsTree,
@@ -98,8 +98,9 @@ export const Utils = {
 		const newScope = scope["/"](ns);
 
 		// Look up the wanted identifiers in the new scope
-		return newScope.lookupInternal(Picker.All, wanted, loopDetector).flatMap(
-			([foundDecl, newNewScope]) => {
+		return newScope
+			.lookupInternal(Picker.All, wanted, loopDetector)
+			.flatMap(([foundDecl, newNewScope]) => {
 				// Check if we found our dummy namespace
 				if (
 					foundDecl._tag === "TsDeclNamespace" &&
@@ -110,7 +111,10 @@ export const Utils = {
 					return namespace.members.flatMap((member: TsNamedDecl) => {
 						const picked = picker.pick(member);
 						if (isSome(picked)) {
-							return IArray.fromArray([[picked.value, newNewScope]] as [T, TsTreeScope][]);
+							return IArray.fromArray([[picked.value, newNewScope]] as [
+								T,
+								TsTreeScope,
+							][]);
 						}
 						return IArray.Empty;
 					});
@@ -118,12 +122,14 @@ export const Utils = {
 					// Direct match - check if it matches our picker
 					const picked = picker.pick(foundDecl);
 					if (isSome(picked)) {
-						return IArray.fromArray([[picked.value, newNewScope]] as [T, TsTreeScope][]);
+						return IArray.fromArray([[picked.value, newNewScope]] as [
+							T,
+							TsTreeScope,
+						][]);
 					}
 					return IArray.Empty;
 				}
-			},
-		);
+			});
 	},
 };
 
@@ -132,7 +138,9 @@ export const Utils = {
 /**
  * Type guard to check if a tree node has JavaScript location capability
  */
-function hasJsLocation(tree: TsTree): tree is TsTree & { withJsLocation: (loc: JsLocation) => any } {
+function hasJsLocation(
+	tree: TsTree,
+): tree is TsTree & { withJsLocation: (loc: JsLocation) => any } {
 	return typeof tree === "object" && tree !== null && "withJsLocation" in tree;
 }
 

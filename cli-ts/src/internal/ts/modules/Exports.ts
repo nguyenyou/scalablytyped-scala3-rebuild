@@ -6,42 +6,33 @@
  * including re-exports, star exports, and import-then-export patterns.
  */
 
-import { isLeft, isRight } from "fp-ts/Either";
 import { isNone, isSome, none, type Option, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import type { CodePathHasPath } from "../CodePath.js";
-import { ExportType } from "../ExportType.js";
-import { JsLocation, type JsLocationGlobal, type JsLocationModule } from "../JsLocation.js";
-import { ModuleSpec, type SpecifiedModuleSpec } from "../ModuleSpec.js";
+import type { ExportType } from "../ExportType.js";
+import { JsLocation } from "../JsLocation.js";
+import { ModuleSpec } from "../ModuleSpec.js";
 import { Picker } from "../Picker.js";
-import { SetCodePath } from "../transforms/SetCodePath.js";
 import type { LoopDetector, TsTreeScope } from "../TsTreeScope.js";
+import {
+	TsDeclNamespace,
+	type TsDeclNamespaceOrModule,
+	type TsExport,
+	TsExporteeNames,
+	type TsExporteeStar,
+	TsExporteeTree,
+	TsIdent,
+	type TsIdentSimple,
+	type TsImport,
+	type TsImportedIdent,
+	type TsNamedDecl,
+} from "../trees.js";
 import { DeriveCopy } from "./DeriveCopy.js";
 import { ExpandedMod } from "./ExpandedMod.js";
 import { Imports } from "./Imports.js";
 import { ReplaceExports } from "./ReplaceExports.js";
 import { Utils } from "./Utils.js";
-import {
-	TsDeclNamespace,
-	type TsExport,
-	type TsExportee,
-	TsExporteeNames,
-	TsExporteeStar,
-	TsExporteeTree,
-	TsIdent,
-	type TsIdentModule,
-	type TsIdentSimple,
-	type TsImport,
-	type TsImported,
-	TsImportedIdent,
-	type TsImportee,
-	TsImporteeLocal,
-	type TsNamedDecl,
-	type TsDeclNamespaceOrModule,
-	type TsContainer,
-	type TsQIdent,
-} from "../trees.js";
 
 /**
  * Interface for picked export results
@@ -88,7 +79,7 @@ export const Exports = {
 		owner: TsDeclNamespaceOrModule,
 	): IArray<TsNamedDecl> => {
 		// Cache key for memoization
-		const key = `${scope.toString()}-${JSON.stringify(e)}`;
+		const _key = `${scope.toString()}-${JSON.stringify(e)}`;
 
 		// Check cache first (stub implementation)
 		// if (scope.root.cache && scope.root.cache.expandExport.has(key)) {
@@ -312,7 +303,9 @@ function handleImportExport(
 			}
 
 			// If import resolution fails, log warning and return empty
-			scope.fatalMaybe(`Could not resolve import ${JSON.stringify(importDecl)}`);
+			scope.fatalMaybe(
+				`Could not resolve import ${JSON.stringify(importDecl)}`,
+			);
 			return IArray.Empty;
 		}
 	}
@@ -336,7 +329,11 @@ function handleNamedExports(
 		: scope;
 
 	return exporteeNames.idents.flatMap(([qIdent, asNameOpt]) => {
-		const found = newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector);
+		const found = newScope.lookupInternal(
+			Picker.All,
+			qIdent.parts,
+			loopDetector,
+		);
 		if (found.length === 0 && newScope.root.pedantic) {
 			// For debugging
 			newScope.lookupInternal(Picker.All, qIdent.parts, loopDetector);
@@ -368,7 +365,8 @@ function handleStarExports(
 	exportType: ExportType,
 ): IArray<TsNamedDecl> {
 	const moduleScope = scope.moduleScopes.get(exporteeStar.from);
-	if (moduleScope) { // TODO: check if scoped
+	if (moduleScope) {
+		// TODO: check if scoped
 		const scopedModule = moduleScope as any; // TsTreeScope.Scoped
 		if (scopedModule.current._tag === "TsDeclModule") {
 			const mod = scopedModule.current as any; // TsDeclModule
@@ -393,7 +391,9 @@ function handleStarExports(
 		}
 	}
 
-	scope.fatalMaybe(`Couldn't find expected module ${exporteeStar.from.toString()}`);
+	scope.fatalMaybe(
+		`Couldn't find expected module ${exporteeStar.from.toString()}`,
+	);
 	return IArray.Empty;
 }
 
@@ -436,7 +436,9 @@ function rewriteExports(
 	} else if (namedDecl._tag === "TsDeclNamespace") {
 		const namespace = namedDecl as any; // TsDeclNamespace
 		if (namespace.exports && namespace.exports.length > 0) {
-			return new ReplaceExports(loopDetector).visitTsDecl(scope)(namespace as any) as TsNamedDecl;
+			return new ReplaceExports(loopDetector).visitTsDecl(scope)(
+				namespace as any,
+			) as TsNamedDecl;
 		}
 	}
 	return namedDecl;
@@ -494,8 +496,8 @@ function handleDefaultedExport(
 	ownerCp: CodePathHasPath,
 	jsLocation: (spec: ModuleSpec) => JsLocation,
 ): IArray<TsNamedDecl> {
-	return DeriveCopy.apply(rewritten, ownerCp, some(TsIdent.default())).map((x) =>
-		Utils.withJsLocation(x, jsLocation(ModuleSpec.defaulted())),
+	return DeriveCopy.apply(rewritten, ownerCp, some(TsIdent.default())).map(
+		(x) => Utils.withJsLocation(x, jsLocation(ModuleSpec.defaulted())),
 	);
 }
 

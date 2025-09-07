@@ -20,12 +20,12 @@ import {
 	type TsImport,
 	type TsImported,
 	TsImportedDestructured,
-	TsImportedIdent,
-	TsImportedStar,
+	type TsImportedIdent,
+	type TsImportedStar,
 	type TsImportee,
-	TsImporteeFrom,
-	TsImporteeLocal,
-	TsImporteeRequired,
+	type TsImporteeFrom,
+	type TsImporteeLocal,
+	type TsImporteeRequired,
 	type TsNamedDecl,
 } from "../trees.js";
 import { DeriveCopy } from "./DeriveCopy.js";
@@ -66,7 +66,7 @@ export const Imports = {
 		imports: IArray<TsImport>,
 	): IArray<[T, TsTreeScope]> => {
 		// Cache key for memoization
-		const key: ImportCacheKey = { scope, picker, wanted };
+		const _key: ImportCacheKey = { scope, picker, wanted };
 
 		// Check cache first (stub for now)
 		// if (scope.root.cache && scope.root.cache.imports.has(key)) {
@@ -92,7 +92,13 @@ export const Imports = {
 								renamed,
 								true, // include namespace
 							);
-							return Utils.searchAmong(scope, picker, wanted, all, loopDetector);
+							return Utils.searchAmong(
+								scope,
+								picker,
+								wanted,
+								all,
+								loopDetector,
+							);
 						} else {
 							// Star import without rename: import * from "module"
 							const all: IArray<TsNamedDecl> = getDeclarationsFromExpanded(
@@ -100,7 +106,13 @@ export const Imports = {
 								undefined,
 								false, // no namespace
 							);
-							return Utils.searchAmong(scope, picker, wanted, all, loopDetector);
+							return Utils.searchAmong(
+								scope,
+								picker,
+								wanted,
+								all,
+								loopDetector,
+							);
 						}
 					} else if (imported._tag === "TsImportedIdent") {
 						// Named import: import ident from "module"
@@ -123,10 +135,18 @@ export const Imports = {
 						// Handle each destructured identifier
 						return destructuredImport.idents.flatMap(([ident, renamedOpt]) => {
 							if (isNone(renamedOpt)) {
-								return Utils.searchAmong(scope, picker, wanted, all, loopDetector);
+								return Utils.searchAmong(
+									scope,
+									picker,
+									wanted,
+									all,
+									loopDetector,
+								);
 							} else {
 								const renamed = renamedOpt.value;
-								const newWanted = wanted.startsWith(IArray.fromArray([renamed as any]))
+								const newWanted = wanted.startsWith(
+									IArray.fromArray([renamed as any]),
+								)
 									? IArray.fromArray([ident as any]).concat(wanted.tail)
 									: wanted;
 								return Utils.searchAmong(
@@ -135,7 +155,9 @@ export const Imports = {
 									newWanted,
 									all,
 									loopDetector,
-								).map(([t, s]) => [t.withName(renamed) as T, s] as [T, TsTreeScope]);
+								).map(
+									([t, s]) => [t.withName(renamed) as T, s] as [T, TsTreeScope],
+								);
 							}
 						});
 					}
@@ -168,7 +190,7 @@ export const Imports = {
 		loopDetector: LoopDetector,
 	): ExpandedMod => {
 		// Cache key for memoization
-		const key = `${scope.toString()}-${JSON.stringify(from)}`;
+		const _key = `${scope.toString()}-${JSON.stringify(from)}`;
 
 		// Check cache first (stub for now)
 		// if (scope.root.cache && scope.root.cache.expandImportee.has(key)) {
@@ -178,7 +200,11 @@ export const Imports = {
 		let ret: ExpandedMod;
 
 		if (from._tag === "TsImporteeRequired") {
-			ret = handleRequiredImport(from as TsImporteeRequired, scope, loopDetector);
+			ret = handleRequiredImport(
+				from as TsImporteeRequired,
+				scope,
+				loopDetector,
+			);
 		} else if (from._tag === "TsImporteeFrom") {
 			ret = handleFromImport(from as TsImporteeFrom, scope, loopDetector);
 		} else if (from._tag === "TsImporteeLocal") {
@@ -202,40 +228,48 @@ export const Imports = {
 	 * @param wanted The identifiers to look for
 	 * @returns Function that validates a single import
 	 */
-	validImport: (wanted: IArray<TsIdent>) => (importDecl: TsImport): Option<TsImport> => {
+	validImport:
+		(wanted: IArray<TsIdent>) =>
+		(importDecl: TsImport): Option<TsImport> => {
 			if (wanted.length === 0) {
 				return none;
 			}
 
 			const first = wanted.get(0);
-			const newImported: IArray<TsImported> = importDecl.imported.flatMap((imported) => {
-				if (imported._tag === "TsImportedIdent") {
-					const identImport = imported as TsImportedIdent;
-					if (identImport.ident === first) {
-						return IArray.fromArray([imported]);
+			const newImported: IArray<TsImported> = importDecl.imported.flatMap(
+				(imported) => {
+					if (imported._tag === "TsImportedIdent") {
+						const identImport = imported as TsImportedIdent;
+						if (identImport.ident === first) {
+							return IArray.fromArray([imported]);
+						}
+						return IArray.Empty;
+					} else if (imported._tag === "TsImportedDestructured") {
+						const destructuredImport = imported as TsImportedDestructured;
+						const matchingIdents = destructuredImport.idents.filter(
+							([ident, asOpt]) => {
+								return (
+									ident === first || (isSome(asOpt) && asOpt.value === first)
+								);
+							},
+						);
+						if (matchingIdents.length > 0) {
+							return IArray.fromArray([
+								TsImportedDestructured.create(matchingIdents),
+							]);
+						}
+						return IArray.Empty;
+					} else if (imported._tag === "TsImportedStar") {
+						const starImport = imported as TsImportedStar;
+						if (isSome(starImport.asOpt) && starImport.asOpt.value === first) {
+							return IArray.fromArray([imported]);
+						}
+						return IArray.Empty;
 					}
-					return IArray.Empty;
-				} else if (imported._tag === "TsImportedDestructured") {
-					const destructuredImport = imported as TsImportedDestructured;
-					const matchingIdents = destructuredImport.idents.filter(([ident, asOpt]) => {
-						return ident === first || (isSome(asOpt) && asOpt.value === first);
-					});
-					if (matchingIdents.length > 0) {
-						return IArray.fromArray([
-							TsImportedDestructured.create(matchingIdents),
-						]);
-					}
-					return IArray.Empty;
-				} else if (imported._tag === "TsImportedStar") {
-					const starImport = imported as TsImportedStar;
-					if (isSome(starImport.asOpt) && starImport.asOpt.value === first) {
-						return IArray.fromArray([imported]);
-					}
-					return IArray.Empty;
-				}
 
-				return IArray.Empty;
-			});
+					return IArray.Empty;
+				},
+			);
 
 			if (newImported.length > 0) {
 				return some({
@@ -253,10 +287,15 @@ export const Imports = {
 /**
  * Picks imports that match the wanted identifiers
  */
-function pickImport(imports: IArray<TsImport>, wanted: IArray<TsIdent>): IArray<TsImport> {
+function pickImport(
+	imports: IArray<TsImport>,
+	wanted: IArray<TsIdent>,
+): IArray<TsImport> {
 	return imports.flatMap((importDecl) => {
 		const validImportResult = Imports.validImport(wanted)(importDecl);
-		return isSome(validImportResult) ? IArray.fromArray([validImportResult.value]) : IArray.Empty;
+		return isSome(validImportResult)
+			? IArray.fromArray([validImportResult.value])
+			: IArray.Empty;
 	});
 }
 
@@ -286,7 +325,9 @@ function getDeclarationsFromExpanded(
 			);
 		} else {
 			// Star import without rename or regular processing
-			return expanded.rest.concat(expanded.defaults).concat(expanded.namespaced);
+			return expanded.rest
+				.concat(expanded.defaults)
+				.concat(expanded.namespaced);
 		}
 	}
 	return IArray.Empty;
@@ -315,7 +356,9 @@ function getDeclarationsForIdent(
 				CodePath.noPath(),
 				JsLocation.zero(),
 			);
-			return expanded.namespaced.map((decl) => decl.withName(ident)).concat(IArray.fromArray([ns]));
+			return expanded.namespaced
+				.map((decl) => decl.withName(ident))
+				.concat(IArray.fromArray([ns]));
 		}
 	}
 	return IArray.Empty;
@@ -332,19 +375,24 @@ function handleRequiredImport(
 	const fromModule = from.from;
 	const moduleScope = scope.moduleScopes.get(fromModule);
 
-	if (moduleScope) { // TODO: check if scoped
+	if (moduleScope) {
+		// TODO: check if scoped
 		const scopedModule = moduleScope as any; // TsTreeScope.Scoped
 		const mod = scopedModule.current;
 
 		if (mod._tag === "TsDeclModule") {
-			const newMod = ReplaceExports.cachedReplaceExports(scopedModule.outer, loopDetector, mod);
+			const newMod = ReplaceExports.cachedReplaceExports(
+				scopedModule.outer,
+				loopDetector,
+				mod,
+			);
 
 			// Handle augmented modules (stub for now)
 			const withAugmented = newMod; // TODO: implement augmented module merging
 
 			// Partition members
-			const namespaceds = withAugmented.members.filter((member: any) =>
-				member._tag && member.name === TsIdent.namespaced()
+			const namespaceds = withAugmented.members.filter(
+				(member: any) => member._tag && member.name === TsIdent.namespaced(),
 			);
 			const rest = withAugmented.members.flatMap((member: any) => {
 				if (member._tag && member.name !== TsIdent.namespaced()) {
@@ -353,7 +401,12 @@ function handleRequiredImport(
 				return IArray.Empty;
 			});
 
-			return ExpandedMod.Whole(IArray.Empty, namespaceds as any, rest as any, scopedModule);
+			return ExpandedMod.Whole(
+				IArray.Empty,
+				namespaceds as any,
+				rest as any,
+				scopedModule,
+			);
 		}
 	}
 
@@ -372,28 +425,41 @@ function handleFromImport(
 	const fromModule = from.from;
 	const moduleScope = scope.moduleScopes.get(fromModule);
 
-	if (moduleScope) { // TODO: check if scoped
+	if (moduleScope) {
+		// TODO: check if scoped
 		const scopedModule = moduleScope as any; // TsTreeScope.Scoped
 		const mod = scopedModule.current;
 
 		if (mod._tag === "TsDeclModule") {
-			const newMod = ReplaceExports.cachedReplaceExports(scopedModule.outer, loopDetector, mod);
+			const newMod = ReplaceExports.cachedReplaceExports(
+				scopedModule.outer,
+				loopDetector,
+				mod,
+			);
 
 			// Handle augmented modules (stub for now)
 			const withAugmented = newMod; // TODO: implement augmented module merging
 
 			// Partition members into defaults, namespaceds, and rest
-			const defaults = withAugmented.members.filter((member: any) =>
-				member._tag && member.name === TsIdent.default()
+			const defaults = withAugmented.members.filter(
+				(member: any) => member._tag && member.name === TsIdent.default(),
 			);
-			const namespaceds = withAugmented.members.filter((member: any) =>
-				member._tag && member.name === TsIdent.namespaced()
+			const namespaceds = withAugmented.members.filter(
+				(member: any) => member._tag && member.name === TsIdent.namespaced(),
 			);
-			const rest = withAugmented.members.filter((member: any) =>
-				member._tag && member.name !== TsIdent.default() && member.name !== TsIdent.namespaced()
+			const rest = withAugmented.members.filter(
+				(member: any) =>
+					member._tag &&
+					member.name !== TsIdent.default() &&
+					member.name !== TsIdent.namespaced(),
 			);
 
-			return ExpandedMod.Whole(defaults as any, namespaceds as any, rest as any, scopedModule);
+			return ExpandedMod.Whole(
+				defaults as any,
+				namespaceds as any,
+				rest as any,
+				scopedModule,
+			);
 		}
 	}
 
@@ -410,6 +476,10 @@ function handleLocalImport(
 	loopDetector: LoopDetector,
 ): ExpandedMod {
 	const qident = from.qident;
-	const found = scope.lookupInternal(Picker.NotModules, qident.parts, loopDetector);
+	const found = scope.lookupInternal(
+		Picker.NotModules,
+		qident.parts,
+		loopDetector,
+	);
 	return ExpandedMod.Picked(found);
 }

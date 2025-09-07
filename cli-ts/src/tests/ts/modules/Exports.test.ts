@@ -10,9 +10,9 @@ import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
-import { Exports } from "@/internal/ts/modules/Exports.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
+import type { ModuleSpec } from "@/internal/ts/ModuleSpec.js";
+import { Exports } from "@/internal/ts/modules/Exports.js";
 import { Picker } from "@/internal/ts/Picker.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
@@ -24,15 +24,12 @@ import {
 	TsDeclTypeAlias,
 	TsDeclVar,
 	TsExport,
-	TsExportee,
 	TsExporteeNames,
 	TsExporteeTree,
 	TsFunSig,
 	TsIdent,
 	TsImport,
-	TsImported,
 	TsImportedIdent,
-	TsImportee,
 	TsImporteeLocal,
 	TsQIdent,
 	TsTypeRef,
@@ -131,7 +128,12 @@ function createMockVar(
 
 function createMockFunction(
 	name: string,
-	signature: TsFunSig = TsFunSig.create(Comments.empty(), IArray.Empty, IArray.Empty, some(TsTypeRef.any)),
+	signature: TsFunSig = TsFunSig.create(
+		Comments.empty(),
+		IArray.Empty,
+		IArray.Empty,
+		some(TsTypeRef.any),
+	),
 	codePath: CodePath = createHasPath("test", name),
 ): TsDeclFunction {
 	return TsDeclFunction.create(
@@ -165,12 +167,7 @@ function createMockExport(
 	typeOnly: boolean = false,
 	comments: Comments = Comments.empty(),
 ): TsExport {
-	return TsExport.create(
-		comments,
-		typeOnly,
-		exportType,
-		exportee,
-	);
+	return TsExport.create(comments, typeOnly, exportType, exportee);
 }
 
 function createMockScope(): TsTreeScope {
@@ -186,7 +183,10 @@ function createScopedScope(container: any): any {
 }
 
 function createHasPath(...parts: string[]): CodePath {
-	return CodePath.hasPath(createSimpleIdent(parts[parts.length - 1]), createQIdent(...parts));
+	return CodePath.hasPath(
+		createSimpleIdent(parts[parts.length - 1]),
+		createQIdent(...parts),
+	);
 }
 
 function createMockImport(
@@ -194,14 +194,12 @@ function createMockImport(
 	from: any,
 	typeOnly: boolean = false,
 ): TsImport {
-	return TsImport.create(
-		typeOnly,
-		imported,
-		from,
-	);
+	return TsImport.create(typeOnly, imported, from);
 }
 
-function createJsLocationFunction(defaultLocation: JsLocation = JsLocation.zero()) {
+function createJsLocationFunction(
+	defaultLocation: JsLocation = JsLocation.zero(),
+) {
 	return (_: ModuleSpec) => defaultLocation;
 }
 
@@ -220,10 +218,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBe(0);
 		});
@@ -236,17 +244,29 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThanOrEqual(1);
 		});
 
 		test("handles TsExportee.Tree with TsImport", () => {
 			const import1 = createMockImport(
-				IArray.fromArray([TsImportedIdent.create(createSimpleIdent("TestImport"))]),
+				IArray.fromArray([
+					TsImportedIdent.create(createSimpleIdent("TestImport")),
+				]),
 				TsImporteeLocal.create(createQIdent("test")),
 			);
 			const export1 = createMockExport(
@@ -255,10 +275,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			// Import resolution may fail in test environment, result could be empty
 			expect(result.length).toBeGreaterThanOrEqual(0);
@@ -274,10 +304,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 		});
@@ -290,10 +330,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 		});
@@ -306,10 +356,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			// Namespaced exports may return empty results for empty namespaces
 			expect(result.length).toBeGreaterThanOrEqual(0);
@@ -327,10 +387,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			// Result depends on whether the identifier can be resolved in scope
 			expect(result.length).toBeGreaterThanOrEqual(0);
@@ -340,16 +410,31 @@ describe("Exports", () => {
 			const export1 = createMockExport(
 				ExportType.named(),
 				TsExporteeNames.create(
-					IArray.fromArray([[createQIdent("originalName"), some(createSimpleIdent("aliasName"))]]),
+					IArray.fromArray([
+						[
+							createQIdent("originalName"),
+							some(createSimpleIdent("aliasName")),
+						],
+					]),
 					none,
 				),
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThanOrEqual(0);
 		});
@@ -364,10 +449,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			// External module resolution may fail in test environment
 			expect(result.length).toBeGreaterThanOrEqual(0);
@@ -382,7 +477,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any; // Cast to CodePathHasPath
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), interface1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				interface1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0).name.value).toBe("TestInterface");
@@ -395,7 +498,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any; // Cast to CodePathHasPath
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.defaulted(), class1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.defaulted(),
+				class1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0).name).toBe(TsIdent.default());
@@ -409,7 +520,15 @@ describe("Exports", () => {
 			const jsLocationFn = createJsLocationFunction();
 			const renamedOpt = some(createSimpleIdent("newName"));
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), function1, renamedOpt, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				function1,
+				renamedOpt,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0).name.value).toBe("newName");
@@ -420,25 +539,55 @@ describe("Exports", () => {
 		test("handles empty exports", () => {
 			const namespace1 = createMockNamespace("TestNamespace", IArray.Empty);
 			const scope = createScopedScope(namespace1);
-			const wanted = IArray.fromArray([createSimpleIdent("nonExistent") as any]);
+			const wanted = IArray.fromArray([
+				createSimpleIdent("nonExistent") as any,
+			]);
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 
-			const result = Exports.lookupExportFrom(scope, Picker.All, wanted, loopDetector, owner);
+			const result = Exports.lookupExportFrom(
+				scope,
+				Picker.All,
+				wanted,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBe(0);
 		});
 
 		test("handles exports with matching identifiers", () => {
 			const interface1 = createMockInterface("TestInterface");
-			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
-			const namespace1 = createMockNamespace("TestNamespace", IArray.fromArray([interface1 as any, export1 as any]));
+			const export1 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(interface1),
+			);
+			const namespace1 = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([interface1 as any, export1 as any]),
+			);
 			const scope = createScopedScope(namespace1);
-			const wanted = IArray.fromArray([createSimpleIdent("TestInterface") as any]);
+			const wanted = IArray.fromArray([
+				createSimpleIdent("TestInterface") as any,
+			]);
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 
-			const result = Exports.lookupExportFrom(scope, Picker.All, wanted, loopDetector, owner);
+			const result = Exports.lookupExportFrom(
+				scope,
+				Picker.All,
+				wanted,
+				loopDetector,
+				owner,
+			);
 
 			// Result depends on export resolution
 			expect(result.length).toBeGreaterThanOrEqual(0);
@@ -447,16 +596,46 @@ describe("Exports", () => {
 		test("handles different picker types", () => {
 			const interface1 = createMockInterface("TestInterface");
 			const var1 = createMockVar("testVar");
-			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
-			const export2 = createMockExport(ExportType.named(), TsExporteeTree.create(var1));
-			const namespace1 = createMockNamespace("TestNamespace", IArray.fromArray([interface1 as any, var1 as any, export1 as any, export2 as any]));
+			const export1 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(interface1),
+			);
+			const export2 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(var1),
+			);
+			const namespace1 = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([
+					interface1 as any,
+					var1 as any,
+					export1 as any,
+					export2 as any,
+				]),
+			);
 			const scope = createScopedScope(namespace1);
 			const wanted = IArray.fromArray([createSimpleIdent("testVar") as any]);
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 
-			const resultAll = Exports.lookupExportFrom(scope, Picker.All, wanted, loopDetector, owner);
-			const resultVars = Exports.lookupExportFrom(scope, Picker.Vars, wanted, loopDetector, owner);
+			const resultAll = Exports.lookupExportFrom(
+				scope,
+				Picker.All,
+				wanted,
+				loopDetector,
+				owner,
+			);
+			const resultVars = Exports.lookupExportFrom(
+				scope,
+				Picker.Vars,
+				wanted,
+				loopDetector,
+				owner,
+			);
 
 			expect(resultAll.length).toBeGreaterThanOrEqual(0);
 			expect(resultVars.length).toBeGreaterThanOrEqual(0);
@@ -471,25 +650,54 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBe(0);
 		});
 
 		test("handles complex nested exports", () => {
 			const innerInterface = createMockInterface("InnerInterface");
-			const innerNamespace = createMockNamespace("InnerNamespace", IArray.fromArray([innerInterface as any]));
-			const outerNamespace = createMockNamespace("OuterNamespace", IArray.fromArray([innerNamespace as any]));
-			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(outerNamespace));
+			const innerNamespace = createMockNamespace(
+				"InnerNamespace",
+				IArray.fromArray([innerInterface as any]),
+			);
+			const outerNamespace = createMockNamespace(
+				"OuterNamespace",
+				IArray.fromArray([innerNamespace as any]),
+			);
+			const export1 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(outerNamespace),
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 		});
@@ -503,10 +711,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 		});
@@ -522,10 +740,20 @@ describe("Exports", () => {
 			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 		});
@@ -539,7 +767,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any;
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), interface1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				interface1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			// Export system may transform interfaces to type aliases during processing
@@ -553,7 +789,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any;
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), class1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				class1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0)._tag).toBe("TsDeclClass");
@@ -566,7 +810,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any;
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), function1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				function1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0)._tag).toBe("TsDeclFunction");
@@ -579,7 +831,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any;
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), var1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				var1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0)._tag).toBe("TsDeclVar");
@@ -592,7 +852,15 @@ describe("Exports", () => {
 			const ownerCp = createHasPath("test", "TestModule") as any;
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), typeAlias1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				typeAlias1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			expect(result.get(0)._tag).toBe("TsDeclTypeAlias");

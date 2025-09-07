@@ -10,7 +10,11 @@ import { CodePath } from "@/internal/ts/CodePath.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { Utils } from "@/internal/ts/modules/Utils.js";
 
-import { TsDeclInterface, TsDeclNamespace, TsIdent } from "@/internal/ts/trees.js";
+import {
+	TsDeclInterface,
+	TsDeclNamespace,
+	TsIdent,
+} from "@/internal/ts/trees.js";
 
 describe("Utils", () => {
 	describe("withJsLocation Function", () => {
@@ -43,7 +47,10 @@ describe("Utils", () => {
 			const mockContainer = {
 				_tag: "MockContainer",
 				members: IArray.fromArray([mockMember]),
-				withJsLocation: (loc: JsLocation) => ({ ...mockContainer, jsLocation: loc }),
+				withJsLocation: (loc: JsLocation) => ({
+					...mockContainer,
+					jsLocation: loc,
+				}),
 				withMembers: (members: any) => ({ ...mockContainer, members }),
 			} as any;
 			const jsLocation = JsLocation.zero();
@@ -94,8 +101,9 @@ describe("Utils", () => {
 				}),
 			} as any;
 
-			const mockPicker = { 
-				pick: (decl: any) => decl._tag === "TsDeclInterface" ? some(decl) : none 
+			const mockPicker = {
+				pick: (decl: any) =>
+					decl._tag === "TsDeclInterface" ? some(decl) : none,
 			};
 			const wanted = IArray.fromArray([TsIdent.simple("TestInterface") as any]);
 			const expandeds = IArray.fromArray([mockDecl as any]);
@@ -169,15 +177,16 @@ describe("Utils", () => {
 
 			const mockScope = {
 				"/": () => ({
-					lookupInternal: () => IArray.fromArray([
-						[mockDecl1, mockScope],
-						[mockDecl2, mockScope],
-					]),
+					lookupInternal: () =>
+						IArray.fromArray([
+							[mockDecl1, mockScope],
+							[mockDecl2, mockScope],
+						]),
 				}),
 			} as any;
 
-			const mockPicker = { 
-				pick: (decl: any) => some(decl) // Accept all declarations
+			const mockPicker = {
+				pick: (decl: any) => some(decl), // Accept all declarations
 			};
 			const wanted = IArray.fromArray([TsIdent.simple("TestType") as any]);
 			const expandeds = IArray.fromArray([mockDecl1 as any, mockDecl2 as any]);
@@ -200,7 +209,10 @@ describe("Utils", () => {
 		test("type guards work correctly", () => {
 			// Test hasJsLocation type guard indirectly
 			const treeWithLocation = {
-				withJsLocation: (loc: JsLocation) => ({ ...treeWithLocation, jsLocation: loc }),
+				withJsLocation: (loc: JsLocation) => ({
+					...treeWithLocation,
+					jsLocation: loc,
+				}),
 			} as any;
 
 			const treeWithoutLocation = {
@@ -223,11 +235,17 @@ describe("Utils", () => {
 			const container = {
 				members: IArray.Empty,
 				withMembers: (members: any) => ({ ...container, members }),
-				withJsLocation: (loc: JsLocation) => ({ ...container, jsLocation: loc }),
+				withJsLocation: (loc: JsLocation) => ({
+					...container,
+					jsLocation: loc,
+				}),
 			} as any;
 
 			const nonContainer = {
-				withJsLocation: (loc: JsLocation) => ({ ...nonContainer, jsLocation: loc }),
+				withJsLocation: (loc: JsLocation) => ({
+					...nonContainer,
+					jsLocation: loc,
+				}),
 			} as any;
 
 			const jsLocation = JsLocation.zero();
@@ -247,7 +265,9 @@ describe("Utils", () => {
 
 			// Should not throw for null/undefined trees
 			expect(() => Utils.withJsLocation(null as any, jsLocation)).not.toThrow();
-			expect(() => Utils.withJsLocation(undefined as any, jsLocation)).not.toThrow();
+			expect(() =>
+				Utils.withJsLocation(undefined as any, jsLocation),
+			).not.toThrow();
 		});
 
 		test("handles empty wanted array in searchAmong", () => {

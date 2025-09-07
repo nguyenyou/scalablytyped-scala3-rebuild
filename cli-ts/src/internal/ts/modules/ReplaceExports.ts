@@ -6,45 +6,39 @@
  * managing caching, and ensuring type preservation during the transformation process.
  */
 
-import { isLeft, isRight } from "fp-ts/Either";
-import { isNone, isSome, none, type Option, some } from "fp-ts/Option";
-import { Comments } from "../../Comments.js";
+import { isRight } from "fp-ts/Either";
+import { isNone, isSome, none } from "fp-ts/Option";
 import { IArray } from "../../IArray.js";
 import { ExportType } from "../ExportType.js";
 import { FlattenTrees } from "../FlattenTrees.js";
 import { JsLocation } from "../JsLocation.js";
-import { KeepTypesOnly } from "./KeepTypesOnly.js"; // TODO: implement
-
 import type { ModuleSpec } from "../ModuleSpec.js";
 import { Picker } from "../Picker.js";
-import { SetCodePath } from "../transforms/SetCodePath.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { LoopDetector, TsTreeScope } from "../TsTreeScope.js";
 import {
-	TsIdent,
 	type TsAugmentedModule,
 	type TsContainer,
 	type TsContainerOrDecl,
 	type TsDeclModule,
 	type TsDeclNamespace,
 	type TsDeclNamespaceOrModule,
-	TsExport,
-	TsExportee,
-	TsExporteeNames,
-	TsExporteeStar,
-	TsExporteeTree,
-	TsGlobal,
+	type TsExport,
+	type TsExporteeNames,
+	type TsExporteeStar,
+	type TsExporteeTree,
+	type TsGlobal,
+	TsIdent,
 	type TsImport,
-	TsImported,
-	TsImportedIdent,
-	TsImportee,
-	TsImporteeLocal,
+	type TsImportedIdent,
+	type TsImporteeLocal,
 	type TsNamedDecl,
 	type TsNamedValueDecl,
 	type TsParsedFile,
 	TsQIdent,
 } from "../trees.js";
 import { Exports } from "./Exports.js";
+import { KeepTypesOnly } from "./KeepTypesOnly.js"; // TODO: implement
 import { Utils } from "./Utils.js";
 
 /**
@@ -123,86 +117,99 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 				return x;
 			}
 
-			const newMembers: IArray<TsContainerOrDecl> = x.members.flatMap((member) => {
-				if (member._tag === "TsExport") {
-					const exportDecl = member as TsExport;
+			const newMembers: IArray<TsContainerOrDecl> = x.members.flatMap(
+				(member) => {
+					if (member._tag === "TsExport") {
+						const exportDecl = member as TsExport;
 
-					// Handle tree exports
-					if (
-						exportDecl.tpe._tag === "Named" &&
-						exportDecl.exported._tag === "TsExporteeTree"
-					) {
-						const exporteeTree = exportDecl.exported as TsExporteeTree;
-						const tree = exporteeTree.decl;
+						// Handle tree exports
+						if (
+							exportDecl.tpe._tag === "Named" &&
+							exportDecl.exported._tag === "TsExporteeTree"
+						) {
+							const exporteeTree = exportDecl.exported as TsExporteeTree;
+							const tree = exporteeTree.decl;
 
-						if (isNamedDecl(tree)) {
-							const namedExport = tree as TsNamedDecl;
-							return Exports.export(
-								x.codePath.forceHasPath(),
-								(_) => x.jsLocation, // TODO: proper implementation with namedExport.name
-								scope,
-								ExportType.named(),
-								namedExport,
-								none,
-								this.loopDetector,
-							);
-						} else if (tree._tag === "TsImport") {
-							const importDecl = tree as TsImport;
-							// Handle import-then-export pattern
-							if (
-								importDecl.imported.length === 1 &&
-								importDecl.imported.get(0)._tag === "TsImportedIdent" &&
-								importDecl.from._tag === "TsImporteeLocal"
-							) {
-								const importedIdent = importDecl.imported.get(0) as TsImportedIdent;
-								const to = importedIdent.ident;
-								const from = (importDecl.from as TsImporteeLocal).qident;
-
-								const found = scope.lookupInternal(
-									Picker.ButNot(Picker.All, x),
-									from.parts,
+							if (isNamedDecl(tree)) {
+								const namedExport = tree as TsNamedDecl;
+								return Exports.export(
+									x.codePath.forceHasPath(),
+									(_) => x.jsLocation, // TODO: proper implementation with namedExport.name
+									scope,
+									ExportType.named(),
+									namedExport,
+									none,
 									this.loopDetector,
 								);
+							} else if (tree._tag === "TsImport") {
+								const importDecl = tree as TsImport;
+								// Handle import-then-export pattern
+								if (
+									importDecl.imported.length === 1 &&
+									importDecl.imported.get(0)._tag === "TsImportedIdent" &&
+									importDecl.from._tag === "TsImporteeLocal"
+								) {
+									const importedIdent = importDecl.imported.get(
+										0,
+									) as TsImportedIdent;
+									const to = importedIdent.ident;
+									const from = (importDecl.from as TsImporteeLocal).qident;
 
-								return found.map(([d, _]) => {
-									const renamed = d.withName(to);
-									return renamed; // TODO: SetCodePath.visitTsNamedDecl(x.codePath.forceHasPath())(renamed);
-								});
+									const found = scope.lookupInternal(
+										Picker.ButNot(Picker.All, x),
+										from.parts,
+										this.loopDetector,
+									);
+
+									return found.map(([d, _]) => {
+										const renamed = d.withName(to);
+										return renamed; // TODO: SetCodePath.visitTsNamedDecl(x.codePath.forceHasPath())(renamed);
+									});
+								} else {
+									scope.logger.fatal(
+										`Unexpected import pattern: ${JSON.stringify(importDecl)}`,
+									);
+									return IArray.Empty;
+								}
 							} else {
-								scope.logger.fatal(`Unexpected import pattern: ${JSON.stringify(importDecl)}`);
+								scope.logger.fatal(
+									`Unexpected export tree: ${JSON.stringify(tree)}`,
+								);
 								return IArray.Empty;
 							}
-						} else {
-							scope.logger.fatal(`Unexpected export tree: ${JSON.stringify(tree)}`);
+						}
+						// Handle empty named exports
+						else if (
+							exportDecl.comments.isEmpty &&
+							exportDecl.tpe._tag === "Named" &&
+							exportDecl.exported._tag === "TsExporteeNames"
+						) {
+							const exporteeNames = exportDecl.exported as TsExporteeNames;
+							if (
+								exporteeNames.idents.length === 0 &&
+								isNone(exporteeNames.fromOpt)
+							) {
+								return IArray.Empty;
+							}
+						}
+						// Handle other exports
+						else {
+							scope.fatalMaybe(
+								`Dropping unexpected export in namespace: ${JSON.stringify(exportDecl)}`,
+							);
 							return IArray.Empty;
 						}
-					}
-					// Handle empty named exports
-					else if (
-						exportDecl.comments.isEmpty &&
-						exportDecl.tpe._tag === "Named" &&
-						exportDecl.exported._tag === "TsExporteeNames"
-					) {
-						const exporteeNames = exportDecl.exported as TsExporteeNames;
-						if (exporteeNames.idents.length === 0 && isNone(exporteeNames.fromOpt)) {
-							return IArray.Empty;
-						}
-					}
-					// Handle other exports
-					else {
-						scope.fatalMaybe(`Dropping unexpected export in namespace: ${JSON.stringify(exportDecl)}`);
+					} else if (member._tag === "TsImport") {
+						// Remove imports
 						return IArray.Empty;
+					} else {
+						// Keep other members
+						return IArray.fromArray([member]);
 					}
-				} else if (member._tag === "TsImport") {
-					// Remove imports
-					return IArray.Empty;
-				} else {
-					// Keep other members
-					return IArray.fromArray([member]);
-				}
 
-				return IArray.Empty;
-			});
+					return IArray.Empty;
+				},
+			);
 
 			return { ...x, members: newMembers };
 		};
@@ -229,7 +236,10 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 			};
 
 			const step2 = this.ensureTypesPresent(x, step1);
-			const step3 = FlattenTrees.mergeModule(step2, { ...step2, members: IArray.Empty });
+			const step3 = FlattenTrees.mergeModule(step2, {
+				...step2,
+				members: IArray.Empty,
+			});
 
 			// Cache the result (stub for now)
 			// if (scope.root.cache) {
@@ -256,14 +266,17 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 			};
 
 			const step2 = this.ensureTypesPresent(x, step1);
-			return FlattenTrees.mergeAugmentedModule(step2, { ...step2, members: IArray.Empty });
+			return FlattenTrees.mergeAugmentedModule(step2, {
+				...step2,
+				members: IArray.Empty,
+			});
 		};
 	}
 
 	/**
 	 * Transforms a parsed file by cleaning up imports and exports
 	 */
-	override leaveTsParsedFile(scope: TsTreeScope) {
+	override leaveTsParsedFile(_scope: TsTreeScope) {
 		return (x: TsParsedFile): TsParsedFile => {
 			const newMembers = x.members.flatMap((member) => {
 				if (member._tag === "TsImport") {
@@ -287,7 +300,10 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 	/**
 	 * Ensures that types present in the original container are preserved in the new one
 	 */
-	private ensureTypesPresent<T extends TsContainer>(old: T, newContainer: T): T {
+	private ensureTypesPresent<T extends TsContainer>(
+		old: T,
+		newContainer: T,
+	): T {
 		const newTypes = new Set<TsIdent>();
 		newContainer.members.forEach((member) => {
 			if (Picker.Types.pick && isNamedDecl(member)) {
@@ -298,31 +314,37 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 			}
 		});
 
-		const missingTypes: IArray<TsContainerOrDecl> = old.members.flatMap((member) => {
-			if (member._tag === "TsExport") {
-				const exportDecl = member as TsExport;
-				if (exportDecl.exported._tag === "TsExporteeTree") {
-					const exporteeTree = exportDecl.exported as TsExporteeTree;
-					const tree = exporteeTree.decl;
-					if (Picker.Types.pick && isNamedDecl(tree)) {
-						const picked = Picker.Types.pick(tree as TsNamedDecl);
-						if (isSome(picked) && !newTypes.has(picked.value.name)) {
-							const kept = KeepTypesOnly.apply(picked.value);
-							return isSome(kept) ? IArray.fromArray([kept.value]) : IArray.Empty;
+		const missingTypes: IArray<TsContainerOrDecl> = old.members.flatMap(
+			(member) => {
+				if (member._tag === "TsExport") {
+					const exportDecl = member as TsExport;
+					if (exportDecl.exported._tag === "TsExporteeTree") {
+						const exporteeTree = exportDecl.exported as TsExporteeTree;
+						const tree = exporteeTree.decl;
+						if (Picker.Types.pick && isNamedDecl(tree)) {
+							const picked = Picker.Types.pick(tree as TsNamedDecl);
+							if (isSome(picked) && !newTypes.has(picked.value.name)) {
+								const kept = KeepTypesOnly.apply(picked.value);
+								return isSome(kept)
+									? IArray.fromArray([kept.value])
+									: IArray.Empty;
+							}
 						}
 					}
+				} else if (Picker.Types.pick && isNamedDecl(member)) {
+					const picked = Picker.Types.pick(member as TsNamedDecl);
+					if (isSome(picked) && !newTypes.has(picked.value.name)) {
+						const kept = KeepTypesOnly.apply(picked.value);
+						return isSome(kept) ? IArray.fromArray([kept.value]) : IArray.Empty;
+					}
 				}
-			} else if (Picker.Types.pick && isNamedDecl(member)) {
-				const picked = Picker.Types.pick(member as TsNamedDecl);
-				if (isSome(picked) && !newTypes.has(picked.value.name)) {
-					const kept = KeepTypesOnly.apply(picked.value);
-					return isSome(kept) ? IArray.fromArray([kept.value]) : IArray.Empty;
-				}
-			}
-			return IArray.Empty;
-		});
+				return IArray.Empty;
+			},
+		);
 
-		return newContainer.withMembers(newContainer.members.concat(missingTypes)) as T;
+		return newContainer.withMembers(
+			newContainer.members.concat(missingTypes),
+		) as T;
 	}
 
 	/**
@@ -377,7 +399,9 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 				if (exportDecl.exported._tag === "TsExporteeTree") {
 					const tree = (exportDecl.exported as TsExporteeTree).decl;
 					// Return false for interfaces and type aliases, true for others
-					return !(tree._tag === "TsDeclInterface" || tree._tag === "TsDeclTypeAlias");
+					return !(
+						tree._tag === "TsDeclInterface" || tree._tag === "TsDeclTypeAlias"
+					);
 				}
 				return true;
 			});
@@ -397,7 +421,13 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 				}
 			}
 
-			const ret = Exports.expandExport(scope, jsLocation, exportDecl, this.loopDetector, owner);
+			const ret = Exports.expandExport(
+				scope,
+				jsLocation,
+				exportDecl,
+				this.loopDetector,
+				owner,
+			);
 
 			if (ret.length === 0 && scope.root.pedantic) {
 				// Handle empty exports
@@ -410,13 +440,29 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 						// Empty object export - this is fine
 					} else {
 						// For debugging
-						Exports.expandExport(scope, jsLocation, exportDecl, this.loopDetector, owner);
-						scope.logger.fatal(`Didn't expand to anything: ${JSON.stringify(exportDecl)}`);
+						Exports.expandExport(
+							scope,
+							jsLocation,
+							exportDecl,
+							this.loopDetector,
+							owner,
+						);
+						scope.logger.fatal(
+							`Didn't expand to anything: ${JSON.stringify(exportDecl)}`,
+						);
 					}
 				} else {
 					// For debugging
-					Exports.expandExport(scope, jsLocation, exportDecl, this.loopDetector, owner);
-					scope.logger.fatal(`Didn't expand to anything: ${JSON.stringify(exportDecl)}`);
+					Exports.expandExport(
+						scope,
+						jsLocation,
+						exportDecl,
+						this.loopDetector,
+						owner,
+					);
+					scope.logger.fatal(
+						`Didn't expand to anything: ${JSON.stringify(exportDecl)}`,
+					);
 				}
 			}
 
@@ -454,7 +500,10 @@ export class ReplaceExports extends TreeTransformationScopedChanges {
 				return IArray.Empty;
 			});
 
-			return createCanBeShadowed(false, IArray.fromArray([{ ...globalDecl, members: ret } as any])); // TODO: fix type
+			return createCanBeShadowed(
+				false,
+				IArray.fromArray([{ ...globalDecl, members: ret } as any]),
+			); // TODO: fix type
 		} else if (decl._tag === "TsDeclModule") {
 			return createCanBeShadowed(false, IArray.fromArray([decl]));
 		} else if (decl._tag === "TsAugmentedModule") {

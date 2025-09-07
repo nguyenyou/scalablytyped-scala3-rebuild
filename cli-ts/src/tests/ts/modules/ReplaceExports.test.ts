@@ -3,7 +3,7 @@
  * Tests for ReplaceExports.ts - starting with basic functionality
  */
 
-import { none, some } from "fp-ts/Option";
+import { none } from "fp-ts/Option";
 import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
@@ -11,14 +11,16 @@ import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { CachedReplaceExports, ReplaceExports } from "@/internal/ts/modules/ReplaceExports.js";
+import {
+	CachedReplaceExports,
+	ReplaceExports,
+} from "@/internal/ts/modules/ReplaceExports.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
 	TsDeclInterface,
 	TsDeclModule,
 	TsDeclNamespace,
 	TsExport,
-	TsExportee,
 	TsExporteeTree,
 	TsIdent,
 	TsParsedFile,
@@ -78,18 +80,22 @@ function createMockNamespace(
 
 function createMockExport(
 	exportType: ExportType = ExportType.named(),
-	exportee: any = TsExporteeTree.create(createMockInterface("DefaultInterface", IArray.Empty, createHasPath("DefaultInterface"))),
+	exportee: any = TsExporteeTree.create(
+		createMockInterface(
+			"DefaultInterface",
+			IArray.Empty,
+			createHasPath("DefaultInterface"),
+		),
+	),
 ): TsExport {
-	return TsExport.create(
-		Comments.empty(),
-		false,
-		exportType,
-		exportee,
-	);
+	return TsExport.create(Comments.empty(), false, exportType, exportee);
 }
 
 function createHasPath(name: string): CodePath {
-	return CodePath.hasPath(createSimpleIdent(name), TsQIdent.of(createSimpleIdent(name)));
+	return CodePath.hasPath(
+		createSimpleIdent(name),
+		TsQIdent.of(createSimpleIdent(name)),
+	);
 }
 
 function createMockScope(members: any = IArray.Empty): TsTreeScope {
@@ -100,7 +106,12 @@ function createMockScope(members: any = IArray.Empty): TsTreeScope {
 		CodePath.noPath(),
 	);
 	const deps = new Map();
-	const scope = TsTreeScope.create(TsIdent.librarySimple("test"), false, deps, Logger.DevNull());
+	const scope = TsTreeScope.create(
+		TsIdent.librarySimple("test"),
+		false,
+		deps,
+		Logger.DevNull(),
+	);
 	return scope["/"](parsedFile);
 }
 
@@ -157,7 +168,11 @@ describe("ReplaceExports", () => {
 		});
 
 		test("processes namespace with members", () => {
-			const interface1 = createMockInterface("TestInterface", IArray.Empty, createHasPath("TestInterface"));
+			const interface1 = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				createHasPath("TestInterface"),
+			);
 			const namespace = createMockNamespace(
 				"TestNamespace",
 				IArray.fromArray([interface1 as any]),
@@ -228,7 +243,11 @@ describe("ReplaceExports", () => {
 		});
 
 		test("handles files with only type declarations", () => {
-			const interface1 = createMockInterface("TestInterface", IArray.Empty, createHasPath("TestInterface"));
+			const interface1 = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				createHasPath("TestInterface"),
+			);
 			const parsedFile = TsParsedFile.create(
 				Comments.empty(),
 				IArray.Empty,
@@ -248,7 +267,11 @@ describe("ReplaceExports", () => {
 
 	describe("Edge Cases", () => {
 		test("handles namespace with mixed content", () => {
-			const interface1 = createMockInterface("TestInterface", IArray.Empty, createHasPath("TestInterface"));
+			const interface1 = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				createHasPath("TestInterface"),
+			);
 			const namespace = createMockNamespace(
 				"TestNamespace",
 				IArray.fromArray([interface1 as any]),

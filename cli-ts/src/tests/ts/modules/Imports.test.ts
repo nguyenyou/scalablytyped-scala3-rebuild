@@ -3,12 +3,17 @@
  * Tests for Imports.ts - starting with basic functionality
  */
 
-import { isNone, isSome, none } from "fp-ts/Option";
+import { isNone, none } from "fp-ts/Option";
 import { describe, expect, test } from "vitest";
 import { IArray } from "@/internal/IArray.js";
 import { ExpandedMod } from "@/internal/ts/modules/ExpandedMod.js";
 import { Imports } from "@/internal/ts/modules/Imports.js";
-import { TsIdent, TsImport, TsImportedIdent, TsImporteeFrom } from "@/internal/ts/trees.js";
+import {
+	TsIdent,
+	TsImport,
+	TsImportedIdent,
+	TsImporteeFrom,
+} from "@/internal/ts/trees.js";
 
 describe("Imports", () => {
 	describe("validImport Function - Basic Tests", () => {
@@ -16,7 +21,9 @@ describe("Imports", () => {
 			const wanted = IArray.Empty;
 			const importStmt = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("React")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("React")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["react"])),
 			);
 
@@ -41,7 +48,9 @@ describe("Imports", () => {
 			const wanted = IArray.fromArray([TsIdent.simple("React") as any]);
 			const importStmt = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("React")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("React")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["react"])),
 			);
 
@@ -56,7 +65,9 @@ describe("Imports", () => {
 			const wanted = IArray.fromArray([TsIdent.simple("Vue") as any]);
 			const importStmt = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("React")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("React")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["react"])),
 			);
 
@@ -74,13 +85,21 @@ describe("Imports", () => {
 				fatalMaybe: () => {},
 			} as any;
 			const mockLoopDetector = {} as any;
-			const importee = TsImporteeFrom.create(TsIdent.module(none, ["test-module"]));
+			const importee = TsImporteeFrom.create(
+				TsIdent.module(none, ["test-module"]),
+			);
 
-			const result = Imports.expandImportee(importee, mockScope, mockLoopDetector);
+			const result = Imports.expandImportee(
+				importee,
+				mockScope,
+				mockLoopDetector,
+			);
 
 			// Should return a valid ExpandedMod (likely empty in mock scenario)
 			expect(result).toBeDefined();
-			expect(ExpandedMod.isPicked(result) || ExpandedMod.isWhole(result)).toBe(true);
+			expect(ExpandedMod.isPicked(result) || ExpandedMod.isWhole(result)).toBe(
+				true,
+			);
 		});
 	});
 
@@ -109,7 +128,9 @@ describe("Imports", () => {
 			const imports = IArray.fromArray([
 				TsImport.create(
 					false,
-					IArray.fromArray([TsImportedIdent.create(TsIdent.simple("TestType")) as any]),
+					IArray.fromArray([
+						TsImportedIdent.create(TsIdent.simple("TestType")) as any,
+					]),
 					TsImporteeFrom.create(TsIdent.module(none, ["test-module"])),
 				),
 			]);
@@ -166,7 +187,9 @@ describe("Imports", () => {
 			const wanted = IArray.fromArray([TsIdent.simple("TypeDef") as any]);
 			const importStmt = TsImport.create(
 				true, // typeOnly
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("TypeDef")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("TypeDef")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["types-module"])),
 			);
 
@@ -178,7 +201,9 @@ describe("Imports", () => {
 			const wanted = IArray.fromArray([TsIdent.simple("Component") as any]);
 			const importStmt = TsImport.create(
 				false, // typeOnly
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("Component")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("Component")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["component-module"])),
 			);
 
@@ -192,13 +217,17 @@ describe("Imports", () => {
 			// Create imports with different names
 			const matchingImport = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("TargetExport")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("TargetExport")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["target-module"])),
 			);
 
 			const nonMatchingImport = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedIdent.create(TsIdent.simple("OtherExport")) as any]),
+				IArray.fromArray([
+					TsImportedIdent.create(TsIdent.simple("OtherExport")) as any,
+				]),
 				TsImporteeFrom.create(TsIdent.module(none, ["other-module"])),
 			);
 
@@ -215,12 +244,16 @@ describe("Imports", () => {
 			const imports = IArray.fromArray([
 				TsImport.create(
 					false,
-					IArray.fromArray([TsImportedIdent.create(TsIdent.simple("Component")) as any]),
+					IArray.fromArray([
+						TsImportedIdent.create(TsIdent.simple("Component")) as any,
+					]),
 					TsImporteeFrom.create(TsIdent.module(none, ["react"])),
 				),
 				TsImport.create(
 					false,
-					IArray.fromArray([TsImportedIdent.create(TsIdent.simple("Component")) as any]),
+					IArray.fromArray([
+						TsImportedIdent.create(TsIdent.simple("Component")) as any,
+					]),
 					TsImporteeFrom.create(TsIdent.module(none, ["vue"])),
 				),
 			]);
@@ -228,7 +261,7 @@ describe("Imports", () => {
 			// Test that we can process multiple imports
 			const results = imports.map((imp) => Imports.validImport(wanted)(imp));
 			expect(results.length).toBe(2);
-			results.forEach(result => expect(result).toBeDefined());
+			results.forEach((result) => expect(result).toBeDefined());
 		});
 	});
 });
