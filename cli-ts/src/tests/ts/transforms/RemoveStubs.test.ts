@@ -2,42 +2,45 @@
  * Tests for RemoveStubs transformation
  */
 
+import { none, some } from "fp-ts/Option";
 import { describe, expect, it } from "vitest";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import { NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
+import { JsLocation } from "../../../internal/ts/JsLocation.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
 import { RemoveStubs } from "../../../internal/ts/transforms/RemoveStubs.js";
 import {
+	type TsContainerOrDecl,
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclNamespace,
 	TsGlobal,
 	TsIdent,
-	TsIdentStd,
 	TsIdentNode,
+	TsIdentStd,
 	TsMemberProperty,
 	TsParsedFile,
 	TsProtectionLevel,
-	TsQIdent,
+	type TsQIdent,
 	TsTypeRef,
-	type TsContainerOrDecl,
 } from "../../../internal/ts/trees.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { none, some } from "fp-ts/Option";
 
 describe("RemoveStubs", () => {
 	// Helper functions for creating test objects
 	function createQIdent(...parts: string[]): TsQIdent {
 		return {
 			_tag: "TsQIdent",
-			parts: IArray.fromArray(parts.map(p => TsIdent.simple(p) as TsIdent)),
-			asString: `TsQIdent(${parts.join(".")})`
+			parts: IArray.fromArray(parts.map((p) => TsIdent.simple(p) as TsIdent)),
+			asString: `TsQIdent(${parts.join(".")})`,
 		};
 	}
 
-	function createMockInterface(name: string, members: IArray<any> = IArray.Empty): TsDeclInterface {
+	function createMockInterface(
+		name: string,
+		members: IArray<any> = IArray.Empty,
+	): TsDeclInterface {
 		return TsDeclInterface.create(
 			NoComments.instance,
 			false,
@@ -45,7 +48,10 @@ describe("RemoveStubs", () => {
 			IArray.Empty,
 			IArray.Empty,
 			members,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -60,18 +66,27 @@ describe("RemoveStubs", () => {
 			IArray.Empty,
 			IArray.Empty,
 			JsLocation.zero(),
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
-	function createMockNamespace(name: string, members: IArray<TsContainerOrDecl> = IArray.Empty): TsDeclNamespace {
+	function createMockNamespace(
+		name: string,
+		members: IArray<TsContainerOrDecl> = IArray.Empty,
+	): TsDeclNamespace {
 		return TsDeclNamespace.create(
 			NoComments.instance,
 			false,
 			TsIdent.simple(name),
 			members,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name)),
-			JsLocation.zero()
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
+			JsLocation.zero(),
 		);
 	}
 
@@ -83,16 +98,21 @@ describe("RemoveStubs", () => {
 			some(TsTypeRef.string),
 			none,
 			false,
-			false
+			false,
 		);
 	}
 
-	function createMockParsedFile(members: IArray<TsContainerOrDecl>): TsParsedFile {
+	function createMockParsedFile(
+		members: IArray<TsContainerOrDecl>,
+	): TsParsedFile {
 		return TsParsedFile.create(
 			NoComments.instance,
 			IArray.Empty,
 			members,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "index"))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", "index"),
+			),
 		);
 	}
 
@@ -101,7 +121,10 @@ describe("RemoveStubs", () => {
 			NoComments.instance,
 			false,
 			members,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "global"))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", "global"),
+			),
 		);
 	}
 
@@ -110,7 +133,7 @@ describe("RemoveStubs", () => {
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 		return root;
 	}
@@ -121,7 +144,7 @@ describe("RemoveStubs", () => {
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 
 		// Mock the lookupType method to return non-empty results for std types
@@ -130,8 +153,10 @@ describe("RemoveStubs", () => {
 			// Check if this is a std or node type we want to simulate
 			if (qname.parts.length === 2) {
 				const [lib, typeName] = qname.parts.toArray();
-				if ((lib === TsIdentStd || lib === TsIdentNode) && 
-					typeNames.includes(typeName.value)) {
+				if (
+					(lib === TsIdentStd || lib === TsIdentNode) &&
+					typeNames.includes(typeName.value)
+				) {
 					// Return a mock interface to simulate the type exists
 					return IArray.apply(createMockInterface(typeName.value) as any);
 				}
@@ -190,7 +215,9 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
 			const clazz = createMockClass("TestClass");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(clazz));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(clazz),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -202,7 +229,9 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
 			const namespace = createMockNamespace("TestNamespace");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(namespace));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(namespace),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -215,7 +244,9 @@ describe("RemoveStubs", () => {
 			const scope = createMockScope();
 			const clazz = createMockClass("TestClass");
 			const namespace = createMockNamespace("TestNamespace");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(clazz, namespace));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(clazz, namespace),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -228,8 +259,13 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
 			const property = createMockProperty("testProp");
-			const iface = createMockInterface("TestInterface", IArray.apply(property as any));
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(iface));
+			const iface = createMockInterface(
+				"TestInterface",
+				IArray.apply(property as any),
+			);
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(iface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -242,8 +278,13 @@ describe("RemoveStubs", () => {
 			const scope = createMockScope();
 			const prop1 = createMockProperty("prop1");
 			const prop2 = createMockProperty("prop2");
-			const iface = createMockInterface("TestInterface", IArray.apply(prop1 as any, prop2 as any));
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(iface));
+			const iface = createMockInterface(
+				"TestInterface",
+				IArray.apply(prop1 as any, prop2 as any),
+			);
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(iface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -257,7 +298,9 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
 			const iface = createMockInterface("CustomInterface");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(iface));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(iface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -269,7 +312,9 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScopeWithStdTypes("Array");
 			const iface = createMockInterface("Array");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(iface));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(iface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -280,7 +325,9 @@ describe("RemoveStubs", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScopeWithStdTypes("Buffer");
 			const iface = createMockInterface("Buffer");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(iface));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(iface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -292,14 +339,21 @@ describe("RemoveStubs", () => {
 			const scope = createMockScopeWithStdTypes("Array");
 			const stubInterface = createMockInterface("Array"); // Empty, exists in std
 			const property = createMockProperty("testProp");
-			const validInterface = createMockInterface("ValidInterface", IArray.apply(property as any));
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(stubInterface, validInterface));
+			const validInterface = createMockInterface(
+				"ValidInterface",
+				IArray.apply(property as any),
+			);
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(stubInterface, validInterface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
 			expect(result.members.length).toBe(1);
 			expect(result.members.apply(0)._tag).toBe("TsDeclInterface");
-			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe("ValidInterface");
+			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe(
+				"ValidInterface",
+			);
 		});
 	});
 
@@ -309,7 +363,9 @@ describe("RemoveStubs", () => {
 			const scope = createMockScopeWithStdTypes("Array");
 			const stubInterface = createMockInterface("Array");
 			const clazz = createMockClass("TestClass");
-			const global = createMockGlobal(IArray.apply<TsContainerOrDecl>(stubInterface, clazz));
+			const global = createMockGlobal(
+				IArray.apply<TsContainerOrDecl>(stubInterface, clazz),
+			);
 
 			const result = visitor.enterTsGlobal(scope)(global);
 
@@ -344,12 +400,14 @@ describe("RemoveStubs", () => {
 		it("handles large numbers of declarations", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
-			
+
 			// Create many declarations
-			const declarations = Array.from({ length: 100 }, (_, i) => 
-				createMockClass(`TestClass${i}`)
+			const declarations = Array.from({ length: 100 }, (_, i) =>
+				createMockClass(`TestClass${i}`),
 			);
-			const parsedFile = createMockParsedFile(IArray.fromArray<TsContainerOrDecl>(declarations));
+			const parsedFile = createMockParsedFile(
+				IArray.fromArray<TsContainerOrDecl>(declarations),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -359,32 +417,43 @@ describe("RemoveStubs", () => {
 		it("handles mixed stub and non-stub interfaces", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScopeWithStdTypes("Array", "Object");
-			
+
 			const stubArray = createMockInterface("Array");
 			const stubObject = createMockInterface("Object");
 			const customInterface = createMockInterface("CustomInterface");
 			const property = createMockProperty("prop");
-			const interfaceWithMembers = createMockInterface("InterfaceWithMembers", IArray.apply(property as any));
-			
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(
-				stubArray, 
-				customInterface, 
-				stubObject, 
-				interfaceWithMembers
-			));
+			const interfaceWithMembers = createMockInterface(
+				"InterfaceWithMembers",
+				IArray.apply(property as any),
+			);
+
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(
+					stubArray,
+					customInterface,
+					stubObject,
+					interfaceWithMembers,
+				),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
 			expect(result.members.length).toBe(2);
-			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe("CustomInterface");
-			expect((result.members.apply(1) as TsDeclInterface).name.value).toBe("InterfaceWithMembers");
+			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe(
+				"CustomInterface",
+			);
+			expect((result.members.apply(1) as TsDeclInterface).name.value).toBe(
+				"InterfaceWithMembers",
+			);
 		});
 
 		it("preserves file metadata during transformation", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
 			const clazz = createMockClass("TestClass");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(clazz));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(clazz),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -397,10 +466,15 @@ describe("RemoveStubs", () => {
 		it("handles nested namespace with stub interfaces", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScopeWithStdTypes("Array");
-			
+
 			const stubInterface = createMockInterface("Array");
-			const namespace = createMockNamespace("TestNamespace", IArray.apply<TsContainerOrDecl>(stubInterface));
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(namespace));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.apply<TsContainerOrDecl>(stubInterface),
+			);
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(namespace),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -411,12 +485,19 @@ describe("RemoveStubs", () => {
 
 		it("handles multiple std library conflicts", () => {
 			const visitor = RemoveStubs.apply();
-			const scope = createMockScopeWithStdTypes("Array", "Object", "Function", "String");
-			
-			const stubs = ["Array", "Object", "Function", "String"].map(name => 
-				createMockInterface(name)
+			const scope = createMockScopeWithStdTypes(
+				"Array",
+				"Object",
+				"Function",
+				"String",
 			);
-			const parsedFile = createMockParsedFile(IArray.fromArray<TsContainerOrDecl>(stubs));
+
+			const stubs = ["Array", "Object", "Function", "String"].map((name) =>
+				createMockInterface(name),
+			);
+			const parsedFile = createMockParsedFile(
+				IArray.fromArray<TsContainerOrDecl>(stubs),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -426,19 +507,21 @@ describe("RemoveStubs", () => {
 		it("performance test with many stub interfaces", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScopeWithStdTypes("Array");
-			
+
 			const startTime = Date.now();
-			
+
 			// Create many stub interfaces
-			const stubs = Array.from({ length: 1000 }, () => 
-				createMockInterface("Array")
+			const stubs = Array.from({ length: 1000 }, () =>
+				createMockInterface("Array"),
 			);
-			const parsedFile = createMockParsedFile(IArray.fromArray<TsContainerOrDecl>(stubs));
+			const parsedFile = createMockParsedFile(
+				IArray.fromArray<TsContainerOrDecl>(stubs),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
-			
+
 			const endTime = Date.now();
-			
+
 			expect(result.members.length).toBe(0);
 			expect(endTime - startTime).toBeLessThan(1000); // Should complete in under 1 second
 		});
@@ -448,13 +531,13 @@ describe("RemoveStubs", () => {
 		it("works correctly with visitor pattern", () => {
 			const visitor = RemoveStubs.apply();
 			const scope = createMockScope();
-			
+
 			expect(typeof visitor.enterTsParsedFile).toBe("function");
 			expect(typeof visitor.enterTsGlobal).toBe("function");
-			
+
 			const parsedFile = createMockParsedFile(IArray.Empty);
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
-			
+
 			expect(result).toBeDefined();
 			expect(result._tag).toBe("TsParsedFile");
 		});
@@ -462,7 +545,7 @@ describe("RemoveStubs", () => {
 		it("singleton instance works correctly", () => {
 			const visitor1 = RemoveStubs.apply();
 			const visitor2 = RemoveStubs.apply();
-			
+
 			// Should create separate instances
 			expect(visitor1).toBeDefined();
 			expect(visitor2).toBeDefined();
@@ -474,7 +557,9 @@ describe("RemoveStubs", () => {
 
 			// Test that the transformation can be chained
 			const clazz = createMockClass("TestClass");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(clazz));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(clazz),
+			);
 
 			const result1 = visitor.enterTsParsedFile(scope)(parsedFile);
 			const result2 = visitor.enterTsParsedFile(scope)(result1);
@@ -491,14 +576,16 @@ describe("RemoveStubs", () => {
 			const nodeStub = createMockInterface("Buffer");
 			const validInterface = createMockInterface("CustomInterface");
 
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(
-				stdStub, nodeStub, validInterface
-			));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(stdStub, nodeStub, validInterface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
 			expect(result.members.length).toBe(1);
-			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe("CustomInterface");
+			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe(
+				"CustomInterface",
+			);
 		});
 
 		it("preserves interfaces with inheritance", () => {
@@ -513,10 +600,15 @@ describe("RemoveStubs", () => {
 				IArray.Empty,
 				IArray.apply<TsTypeRef>(TsTypeRef.string), // has inheritance
 				IArray.Empty,
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "Array"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("test-lib", "Array"),
+				),
 			);
 
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(inheritanceInterface));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(inheritanceInterface),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
@@ -529,13 +621,17 @@ describe("RemoveStubs", () => {
 
 			// Create a scope that throws errors on lookup
 			const errorScope = createMockScope();
-			const originalLookupType = errorScope.root.lookupType.bind(errorScope.root);
+			const _originalLookupType = errorScope.root.lookupType.bind(
+				errorScope.root,
+			);
 			errorScope.root.lookupType = () => {
 				throw new Error("Lookup failed");
 			};
 
 			const emptyInterface = createMockInterface("TestInterface");
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(emptyInterface));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(emptyInterface),
+			);
 
 			// Should not throw and should preserve the interface
 			const result = visitor.enterTsParsedFile(errorScope)(parsedFile);
@@ -549,18 +645,25 @@ describe("RemoveStubs", () => {
 			// Test exact conditions for stub removal
 			const emptyStub = createMockInterface("Array"); // Empty + exists in std = remove
 			const property = createMockProperty("prop");
-			const nonEmptyStub = createMockInterface("Array", IArray.apply<any>(property)); // Not empty = keep
+			const nonEmptyStub = createMockInterface(
+				"Array",
+				IArray.apply<any>(property),
+			); // Not empty = keep
 			const emptyNonStub = createMockInterface("CustomType"); // Empty but not in std = keep
 
-			const parsedFile = createMockParsedFile(IArray.apply<TsContainerOrDecl>(
-				emptyStub, nonEmptyStub, emptyNonStub
-			));
+			const parsedFile = createMockParsedFile(
+				IArray.apply<TsContainerOrDecl>(emptyStub, nonEmptyStub, emptyNonStub),
+			);
 
 			const result = visitor.enterTsParsedFile(scope)(parsedFile);
 
 			expect(result.members.length).toBe(2);
-			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe("Array"); // non-empty version
-			expect((result.members.apply(1) as TsDeclInterface).name.value).toBe("CustomType");
+			expect((result.members.apply(0) as TsDeclInterface).name.value).toBe(
+				"Array",
+			); // non-empty version
+			expect((result.members.apply(1) as TsDeclInterface).name.value).toBe(
+				"CustomType",
+			);
 		});
 	});
 });

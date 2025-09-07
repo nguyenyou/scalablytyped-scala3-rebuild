@@ -1,29 +1,28 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.RemoveStubs
- * 
+ *
  * Some libraries add their own version of interfaces declared in std.
- * 
+ *
  * This is for two reasons:
  * 1) define an empty type so you can compile and use the lib without say the DOM definitions
  * 2) extend the definitions because the library has monkey patched global functionality
- * 
+ *
  * This takes care of 1) by removing them (will be fine with and without DOM definitions)
  * 2) is mostly a stupid idea anyway.
  */
 
-import { IArray } from "../../IArray.js";
-import { TsTreeScope } from "../TsTreeScope.js";
+import type { IArray } from "../../IArray.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
+import type { TsTreeScope } from "../TsTreeScope.js";
 
 import {
-	TsDeclInterface,
+	type TsContainerOrDecl,
+	type TsDeclInterface,
 	TsGlobal,
-	TsIdent,
 	TsIdentNode,
 	TsIdentStd,
 	TsParsedFile,
 	TsQIdent,
-	type TsContainerOrDecl,
 } from "../trees.js";
 
 /**
@@ -45,14 +44,16 @@ class RemoveStubsVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Transform parsed files by cleaning their members
 	 */
-	override enterTsParsedFile(scope: TsTreeScope): (x: TsParsedFile) => TsParsedFile {
+	override enterTsParsedFile(
+		scope: TsTreeScope,
+	): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => {
 			const cleanedMembers = this.clean(scope, x.members);
 			return TsParsedFile.create(
 				x.comments,
 				x.directives,
 				cleanedMembers,
-				x.codePath
+				x.codePath,
 			);
 		};
 	}
@@ -67,7 +68,7 @@ class RemoveStubsVisitor extends TreeTransformationScopedChanges {
 				x.comments,
 				x.declared,
 				cleanedMembers,
-				x.codePath
+				x.codePath,
 			);
 		};
 	}
@@ -75,8 +76,11 @@ class RemoveStubsVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Clean a list of container or declaration members by filtering out stub interfaces
 	 */
-	private clean(scope: TsTreeScope, members: IArray<TsContainerOrDecl>): IArray<TsContainerOrDecl> {
-		return members.filter(member => {
+	private clean(
+		scope: TsTreeScope,
+		members: IArray<TsContainerOrDecl>,
+	): IArray<TsContainerOrDecl> {
+		return members.filter((member) => {
 			// Check if this is an empty interface that might be a stub
 			if (member._tag === "TsDeclInterface") {
 				const iface = member as TsDeclInterface;
@@ -96,7 +100,7 @@ class RemoveStubsVisitor extends TreeTransformationScopedChanges {
 						if (!stdLookup.isEmpty || !nodeLookup.isEmpty) {
 							return false; // Filter out (remove) this stub interface
 						}
-					} catch (error) {
+					} catch (_error) {
 						// If lookup fails, be conservative and keep the interface
 						return true;
 					}
