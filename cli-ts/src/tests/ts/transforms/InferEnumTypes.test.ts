@@ -420,4 +420,105 @@ describe("InferEnumTypes", () => {
 			}
 		});
 	});
+
+	describe("Integration Scenarios", () => {
+		test("complex enum with mixed patterns", () => {
+			const inferEnumTypes = new InferEnumTypes();
+			const scope = createMockScope();
+			const member1 = createEnumMember("FIRST"); // Should get 0
+			const member2 = createEnumMember("SECOND", some(createLiteralExpr("explicit"))); // Explicit string
+			const member3 = createEnumMember("THIRD"); // Should get 1
+			const member4 = createEnumMember("FOURTH", some(createRefExpr("FIRST"))); // Reference to FIRST
+			const member5 = createEnumMember("FIFTH", some(createRefExpr("SECOND"))); // Reference to SECOND
+			const testEnum = createMockEnum("ComplexEnum", IArray.fromArray([member1, member2, member3, member4, member5]));
+
+			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
+
+			expect(result.members.length).toBe(5);
+
+			const firstExpr = result.members.apply(0).expr;
+			const secondExpr = result.members.apply(1).expr;
+			const thirdExpr = result.members.apply(2).expr;
+			const fourthExpr = result.members.apply(3).expr;
+			const fifthExpr = result.members.apply(4).expr;
+
+			// FIRST gets 0
+			if (firstExpr._tag === "Some") {
+				expect(firstExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+
+			// SECOND keeps explicit value
+			if (secondExpr._tag === "Some") {
+				expect(secondExpr.value).toEqual(createLiteralExpr("explicit"));
+			}
+
+			// THIRD gets 1
+			if (thirdExpr._tag === "Some") {
+				expect(thirdExpr.value).toEqual(createNumLiteralExpr("1"));
+			}
+
+			// FOURTH gets FIRST's value (0)
+			if (fourthExpr._tag === "Some") {
+				expect(fourthExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+
+			// FIFTH gets SECOND's value (explicit)
+			if (fifthExpr._tag === "Some") {
+				expect(fifthExpr.value).toEqual(createLiteralExpr("explicit"));
+			}
+		});
+
+		test("handles const enum", () => {
+			const inferEnumTypes = new InferEnumTypes();
+			const scope = createMockScope();
+			const member1 = createEnumMember("A");
+			const member2 = createEnumMember("B", some(createRefExpr("A")));
+			const testEnum = createMockEnum("ConstEnum", IArray.fromArray([member1, member2]), true);
+
+			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
+
+			expect(result.isConst).toBe(true);
+			expect(result.members.length).toBe(2);
+
+			const firstExpr = result.members.apply(0).expr;
+			const secondExpr = result.members.apply(1).expr;
+
+			if (firstExpr._tag === "Some") {
+				expect(firstExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+			if (secondExpr._tag === "Some") {
+				expect(secondExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+		});
+
+		test("preserves member comments", () => {
+			const inferEnumTypes = new InferEnumTypes();
+			const scope = createMockScope();
+			const memberComments = Comments.create("Member comment");
+			const member1 = TsEnumMember.create(
+				memberComments,
+				createSimpleIdent("A"),
+				none,
+			);
+			const member2 = createEnumMember("B", some(createRefExpr("A")));
+			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+
+			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
+
+			expect(result.members.length).toBe(2);
+
+			// Should preserve member comments
+			expect(result.members.apply(0).comments).toEqual(memberComments);
+
+			const firstExpr = result.members.apply(0).expr;
+			const secondExpr = result.members.apply(1).expr;
+
+			if (firstExpr._tag === "Some") {
+				expect(firstExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+			if (secondExpr._tag === "Some") {
+				expect(secondExpr.value).toEqual(createNumLiteralExpr("0"));
+			}
+		});
+	});
 });
