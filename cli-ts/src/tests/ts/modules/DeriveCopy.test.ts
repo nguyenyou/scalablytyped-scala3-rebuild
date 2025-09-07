@@ -16,13 +16,12 @@ import {
 	TsDeclFunction,
 	TsDeclInterface,
 	TsDeclModule,
-	TsDeclTypeAlias,
+	type TsDeclTypeAlias,
+	TsFunSig,
 	TsIdent,
-	type TsIdentModule,
 	type TsIdentSimple,
 	type TsMember,
 	TsMemberProperty,
-	TsFunSig,
 	TsProtectionLevel,
 	TsQIdent,
 	type TsType,
@@ -41,9 +40,10 @@ function createHasPath(...parts: string[]): CodePath {
 	}
 	const [library, ...pathParts] = parts;
 	const libraryIdent = TsIdent.simple(library);
-	const qident = pathParts.length > 0
-		? TsQIdent.ofStrings(...pathParts)
-		: TsQIdent.of(libraryIdent);
+	const qident =
+		pathParts.length > 0
+			? TsQIdent.ofStrings(...pathParts)
+			: TsQIdent.of(libraryIdent);
 	return CodePath.hasPath(libraryIdent, qident);
 }
 
@@ -132,14 +132,22 @@ function createMockProperty(name: string, tpe: TsType): TsMemberProperty {
 describe("DeriveCopy", () => {
 	describe("Basic Functionality", () => {
 		test("apply method exists and can be called", () => {
-			const interface_ = createMockInterface("TestInterface", IArray.Empty, createHasPath("test", "TestInterface"));
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				createHasPath("test", "TestInterface"),
+			);
 			const ownerCp = createHasPath("owner");
 			const result = DeriveCopy.apply(interface_, ownerCp, none);
 			expect(result.nonEmpty).toBe(true);
 		});
 
 		test("transforms interface to type alias", () => {
-			const interface_ = createMockInterface("TestInterface", IArray.Empty, createHasPath("test", "TestInterface"));
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				createHasPath("test", "TestInterface"),
+			);
 			const ownerCp = createHasPath("owner");
 			const result = DeriveCopy.apply(interface_, ownerCp, none);
 
@@ -154,7 +162,11 @@ describe("DeriveCopy", () => {
 		test("creates type alias with updated path", () => {
 			const ownerCp = createHasPath("owner");
 			const childCp = createHasPath("owner", "TestInterface");
-			const interface_ = createMockInterface("TestInterface", IArray.Empty, childCp);
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				childCp,
+			);
 
 			const result = DeriveCopy.apply(interface_, ownerCp, none);
 
@@ -174,7 +186,11 @@ describe("DeriveCopy", () => {
 		test("creates type alias when paths don't match", () => {
 			const ownerCp = createHasPath("different");
 			const childCp = createHasPath("owner", "TestInterface");
-			const interface_ = createMockInterface("TestInterface", IArray.Empty, childCp);
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.Empty,
+				childCp,
+			);
 
 			const result = DeriveCopy.apply(interface_, ownerCp, none);
 
@@ -186,7 +202,11 @@ describe("DeriveCopy", () => {
 
 	describe("Renaming", () => {
 		test("renames interface when rename provided", () => {
-			const interface_ = createMockInterface("OriginalName", IArray.Empty, createHasPath("test", "OriginalName"));
+			const interface_ = createMockInterface(
+				"OriginalName",
+				IArray.Empty,
+				createHasPath("test", "OriginalName"),
+			);
 			const ownerCp = createHasPath("owner");
 			const newName = createSimpleIdent("NewName");
 
@@ -198,7 +218,11 @@ describe("DeriveCopy", () => {
 		});
 
 		test("skips rename when new name equals original name", () => {
-			const interface_ = createMockInterface("SameName", IArray.Empty, createHasPath("test", "SameName"));
+			const interface_ = createMockInterface(
+				"SameName",
+				IArray.Empty,
+				createHasPath("test", "SameName"),
+			);
 			const ownerCp = createHasPath("owner");
 			const sameName = createSimpleIdent("SameName");
 
@@ -212,7 +236,11 @@ describe("DeriveCopy", () => {
 
 	describe("Different Declaration Types", () => {
 		test("handles class declarations", () => {
-			const clazz = createMockClass("TestClass", IArray.Empty, createHasPath("test", "TestClass"));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.Empty,
+				createHasPath("test", "TestClass"),
+			);
 			const ownerCp = createHasPath("owner");
 
 			const result = DeriveCopy.apply(clazz, ownerCp, none);
@@ -232,7 +260,10 @@ describe("DeriveCopy", () => {
 		});
 
 		test("handles function declarations", () => {
-			const func = createMockFunction("testFunc", createHasPath("test", "testFunc"));
+			const func = createMockFunction(
+				"testFunc",
+				createHasPath("test", "testFunc"),
+			);
 			const ownerCp = createHasPath("owner");
 
 			const result = DeriveCopy.apply(func, ownerCp, none);
@@ -252,7 +283,11 @@ describe("DeriveCopy", () => {
 		});
 
 		test("handles module declarations", () => {
-			const module = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const module = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const ownerCp = createHasPath("owner");
 
 			const result = DeriveCopy.apply(module, ownerCp, none);
@@ -294,7 +329,7 @@ describe("DeriveCopy", () => {
 			const interface_ = createMockInterface(
 				"TestInterface",
 				IArray.Empty,
-				createHasPath("deep", "nested", "path", "TestInterface")
+				createHasPath("deep", "nested", "path", "TestInterface"),
 			);
 			const ownerCp = createHasPath("owner", "sub");
 

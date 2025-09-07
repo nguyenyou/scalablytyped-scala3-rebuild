@@ -18,21 +18,26 @@
  * This maintains 100% behavioral parity with the Scala implementation.
  */
 
-import type { TsContainer, TsContainerOrDecl, TsIdentSimple, TsImported } from "../trees.js";
+import { none, type Option, some } from "fp-ts/Option";
+import { IArray } from "../../IArray.js";
+import { TransformMembers } from "../TreeTransformations.js";
+import type { TsTreeScope } from "../TsTreeScope.js";
+import type {
+	TsContainer,
+	TsContainerOrDecl,
+	TsIdentSimple,
+	TsImported,
+} from "../trees.js";
 import {
 	TsExport,
-	TsExporteeStar,
 	TsExporteeNames,
+	type TsExporteeStar,
+	TsIdent,
 	TsImport,
 	TsImportedStar,
 	TsImporteeFrom,
 	TsQIdent,
-	TsIdent,
 } from "../trees.js";
-import { TransformMembers } from "../TreeTransformations.js";
-import type { TsTreeScope } from "../TsTreeScope.js";
-import { IArray } from "../../IArray.js";
-import { none, some, type Option } from "fp-ts/Option";
 
 /**
  * Transform that rewrites `export * as namespace` statements to import/export combinations.
@@ -60,52 +65,56 @@ export class RewriteExportStarAs extends TransformMembers {
 	 * @param x The container whose members should be transformed
 	 * @returns Array of transformed container members
 	 */
-	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
-		return x.members.flatMap((member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
-			// Check if this is an export declaration
-			if (member._tag === "TsExport") {
-				const exportDecl = member as TsExport;
-				
-				// Check if this is an export star with namespace alias
-				if (exportDecl.exported._tag === "TsExporteeStar") {
-					const starExport = exportDecl.exported as TsExporteeStar;
-					
-					// Only transform if there's a namespace alias (as clause)
-					if (starExport.as._tag === "Some") {
-						const alias = starExport.as.value;
-						
-						// Create the equivalent import statement
-						const newImport = TsImport.create(
-							exportDecl.typeOnly,
-							IArray.fromArray<TsImported>([TsImportedStar.create(some(alias))]),
-							TsImporteeFrom.create(starExport.from)
-						);
+	newMembers(_scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
+		return x.members.flatMap(
+			(member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
+				// Check if this is an export declaration
+				if (member._tag === "TsExport") {
+					const exportDecl = member as TsExport;
 
-						// Create the equivalent export statement
-						const newExport = TsExport.create(
-							exportDecl.comments,
-							exportDecl.typeOnly,
-							exportDecl.tpe,
-							TsExporteeNames.create(
-								IArray.fromArray([
-									[
-										TsQIdent.of(TsIdent.simple(alias.value)),
-										none
-									] as [TsQIdent, Option<TsIdentSimple>]
+					// Check if this is an export star with namespace alias
+					if (exportDecl.exported._tag === "TsExporteeStar") {
+						const starExport = exportDecl.exported as TsExporteeStar;
+
+						// Only transform if there's a namespace alias (as clause)
+						if (starExport.as._tag === "Some") {
+							const alias = starExport.as.value;
+
+							// Create the equivalent import statement
+							const newImport = TsImport.create(
+								exportDecl.typeOnly,
+								IArray.fromArray<TsImported>([
+									TsImportedStar.create(some(alias)),
 								]),
-								none
-							)
-						);
+								TsImporteeFrom.create(starExport.from),
+							);
 
-						// Return both the import and export
-						return IArray.fromArray([newImport, newExport] as any[]);
+							// Create the equivalent export statement
+							const newExport = TsExport.create(
+								exportDecl.comments,
+								exportDecl.typeOnly,
+								exportDecl.tpe,
+								TsExporteeNames.create(
+									IArray.fromArray([
+										[TsQIdent.of(TsIdent.simple(alias.value)), none] as [
+											TsQIdent,
+											Option<TsIdentSimple>,
+										],
+									]),
+									none,
+								),
+							);
+
+							// Return both the import and export
+							return IArray.fromArray([newImport, newExport] as any[]);
+						}
 					}
 				}
-			}
-			
-			// For all other members, return unchanged
-			return IArray.fromArray([member]);
-		});
+
+				// For all other members, return unchanged
+				return IArray.fromArray([member]);
+			},
+		);
 	}
 }
 

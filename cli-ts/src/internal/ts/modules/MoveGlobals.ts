@@ -26,22 +26,21 @@
  * ```
  */
 
-import { none, type Option, some } from "fp-ts/Option";
-import { IArray, partialFunction } from "../../IArray.js";
+import { none } from "fp-ts/Option";
 import { Comments } from "../../Comments.js";
-import { CodePath } from "../CodePath.js";
-import { JsLocation } from "../JsLocation.js";
+import { type IArray, partialFunction } from "../../IArray.js";
 import { FlattenTrees } from "../FlattenTrees.js";
+import { JsLocation } from "../JsLocation.js";
 import {
 	type TsContainerOrDecl,
-	TsDeclNamespace,
 	type TsDeclModuleLike,
-	type TsNamedValueDecl,
+	TsDeclNamespace,
 	TsIdentGlobal,
+	type TsNamedValueDecl,
 	type TsParsedFile,
 } from "../trees.js";
-import { KeepTypesOnly } from "./KeepTypesOnly.js";
 import { DeriveCopy } from "./DeriveCopy.js";
+import { KeepTypesOnly } from "./KeepTypesOnly.js";
 
 /**
  * MoveGlobals utility object providing the main apply function.
@@ -50,7 +49,7 @@ import { DeriveCopy } from "./DeriveCopy.js";
 export const MoveGlobals = {
 	/**
 	 * Moves global declarations into their own namespace.
-	 * 
+	 *
 	 * @param file The parsed TypeScript file to transform
 	 * @returns The transformed file with globals moved to a namespace
 	 */
@@ -60,7 +59,7 @@ export const MoveGlobals = {
 			// Collect existing global namespaces
 			partialFunction(
 				(x: TsContainerOrDecl): x is TsDeclNamespace =>
-					x._tag === "TsDeclNamespace" && 
+					x._tag === "TsDeclNamespace" &&
 					(x as TsDeclNamespace).name.value === TsIdentGlobal.value,
 				(x: TsContainerOrDecl) => x as TsDeclNamespace,
 			),
@@ -85,10 +84,12 @@ export const MoveGlobals = {
 		const globalCp = file.codePath.forceHasPath().add(TsIdentGlobal);
 
 		// Keep type-only versions at top level
-		const keepToplevel = named.mapNotNoneOption(m => KeepTypesOnly.apply(m));
+		const keepToplevel = named.mapNotNoneOption((m) => KeepTypesOnly.apply(m));
 
 		// Create copies for global namespace
-		const globalMembers = named.flatMap(x => DeriveCopy.apply(x, globalCp, none));
+		const globalMembers = named.flatMap((x) =>
+			DeriveCopy.apply(x, globalCp, none),
+		);
 
 		// If no global members, return original file
 		if (globalMembers.isEmpty) {
@@ -101,7 +102,7 @@ export const MoveGlobals = {
 				Comments.empty(),
 				false, // declared = false
 				TsIdentGlobal,
-				globalMembers.map(m => m as TsContainerOrDecl),
+				globalMembers.map((m) => m as TsContainerOrDecl),
 				globalCp,
 				JsLocation.zero(),
 			),

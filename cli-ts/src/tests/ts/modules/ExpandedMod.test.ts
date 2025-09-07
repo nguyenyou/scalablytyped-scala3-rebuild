@@ -25,7 +25,6 @@ import {
 	type TsIdentSimple,
 	type TsMember,
 	type TsNamedDecl,
-	TsParsedFile,
 	TsQIdent,
 	TsTypeRef,
 } from "@/internal/ts/trees.js";
@@ -36,7 +35,7 @@ function createSimpleIdent(name: string): TsIdentSimple {
 	return TsIdent.simple(name);
 }
 
-function createQIdent(...parts: string[]): TsQIdent {
+function _createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdent.ofStrings(...parts);
 }
 
@@ -160,9 +159,10 @@ function createHasPath(...parts: string[]): CodePath {
 	}
 	const [library, ...pathParts] = parts;
 	const libraryIdent = TsIdent.simple(library);
-	const qident = pathParts.length > 0
-		? TsQIdent.ofStrings(...pathParts)
-		: TsQIdent.of(libraryIdent);
+	const qident =
+		pathParts.length > 0
+			? TsQIdent.ofStrings(...pathParts)
+			: TsQIdent.of(libraryIdent);
 	return CodePath.hasPath(libraryIdent, qident);
 }
 
@@ -170,7 +170,12 @@ describe("ExpandedMod", () => {
 	describe("ExpandedMod.Whole - Basic Functionality", () => {
 		test("creates Whole with all empty arrays", () => {
 			const scope = createScopedScope(createMockNamespace("TestScope"));
-			const whole = ExpandedMod.Whole(IArray.Empty, IArray.Empty, IArray.Empty, scope);
+			const whole = ExpandedMod.Whole(
+				IArray.Empty,
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
 
 			expect(whole.defaults.isEmpty).toBe(true);
 			expect(whole.namespaced.isEmpty).toBe(true);
@@ -269,9 +274,15 @@ describe("ExpandedMod", () => {
 		});
 
 		test("creates Whole with large arrays", () => {
-			const interfaces = Array.from({ length: 10 }, (_, i) => createMockInterface(`Interface${i + 1}`));
-			const namespaces = Array.from({ length: 5 }, (_, i) => createMockNamespace(`Namespace${i + 1}`));
-			const vars = Array.from({ length: 15 }, (_, i) => createMockVar(`var${i + 1}`));
+			const interfaces = Array.from({ length: 10 }, (_, i) =>
+				createMockInterface(`Interface${i + 1}`),
+			);
+			const namespaces = Array.from({ length: 5 }, (_, i) =>
+				createMockNamespace(`Namespace${i + 1}`),
+			);
+			const vars = Array.from({ length: 15 }, (_, i) =>
+				createMockVar(`var${i + 1}`),
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const whole = ExpandedMod.Whole(
 				IArray.fromArray(interfaces as TsNamedDecl[]),
@@ -298,7 +309,9 @@ describe("ExpandedMod", () => {
 		test("creates Picked with single thing", () => {
 			const interface1 = createMockInterface("Interface1");
 			const scope = createScopedScope(createMockNamespace("TestScope"));
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]));
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(picked.things.length).toBe(1);
 			expect(picked.things.get(0)[0]).toBe(interface1);
@@ -311,7 +324,12 @@ describe("ExpandedMod", () => {
 			const class1 = createMockClass("Class1");
 			const scope1 = createScopedScope(createMockNamespace("TestScope1"));
 			const scope2 = createScopedScope(createMockNamespace("TestScope2"));
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope1], [class1, scope2]] as [TsNamedDecl, TsTreeScope][]));
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([
+					[interface1, scope1],
+					[class1, scope2],
+				] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(picked.things.length).toBe(2);
 			expect(picked.things.get(0)[0]).toBe(interface1);
@@ -398,7 +416,12 @@ describe("ExpandedMod", () => {
 			const interface2 = createMockInterface("Interface2");
 			const scope1 = createScopedScope(createMockNamespace("TestScope1"));
 			const scope2 = createScopedScope(createMockNamespace("TestScope2"));
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope1], [interface2, scope2]] as [TsNamedDecl, TsTreeScope][]));
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([
+					[interface1, scope1],
+					[interface2, scope2],
+				] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(picked.things.length).toBe(2);
 			expect(picked.things.get(0)[1]).toBe(scope1);
@@ -407,9 +430,13 @@ describe("ExpandedMod", () => {
 		});
 
 		test("creates Picked with large number of things", () => {
-			const declarations = Array.from({ length: 20 }, (_, i) => createMockInterface(`Interface${i + 1}`));
+			const declarations = Array.from({ length: 20 }, (_, i) =>
+				createMockInterface(`Interface${i + 1}`),
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
-			const things = declarations.map(decl => [decl, scope] as [TsNamedDecl, TsTreeScope]);
+			const things = declarations.map(
+				(decl) => [decl, scope] as [TsNamedDecl, TsTreeScope],
+			);
 			const picked = ExpandedMod.Picked(IArray.fromArray(things));
 
 			expect(picked.things.length).toBe(20);
@@ -428,7 +455,12 @@ describe("ExpandedMod", () => {
 			const interface1 = createMockInterface("Interface1");
 			const scope1 = createScopedScope(createMockNamespace("TestScope1"));
 			const scope2 = createScopedScope(createMockNamespace("TestScope2"));
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope1], [interface1, scope2]] as [TsNamedDecl, TsTreeScope][]));
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([
+					[interface1, scope1],
+					[interface1, scope2],
+				] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(picked.things.length).toBe(2);
 			expect(picked.things.get(0)[0]).toBe(interface1);
@@ -442,7 +474,12 @@ describe("ExpandedMod", () => {
 			const interface1 = createMockInterface("Interface1");
 			const interface2 = createMockInterface("Interface2");
 			const scope = createScopedScope(createMockNamespace("TestScope"));
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope], [interface2, scope]] as [TsNamedDecl, TsTreeScope][]));
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([
+					[interface1, scope],
+					[interface2, scope],
+				] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(picked.things.length).toBe(2);
 			expect(picked.things.get(0)[0]).toBe(interface1);
@@ -456,7 +493,12 @@ describe("ExpandedMod", () => {
 	describe("ExpandedMod - Polymorphic Behavior", () => {
 		test("Whole and Picked both extend ExpandedMod", () => {
 			const scope = createScopedScope(createMockNamespace("TestScope"));
-			const whole: ExpandedMod = ExpandedMod.Whole(IArray.Empty, IArray.Empty, IArray.Empty, scope);
+			const whole: ExpandedMod = ExpandedMod.Whole(
+				IArray.Empty,
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
 			const picked: ExpandedMod = ExpandedMod.Picked(IArray.Empty);
 
 			expect(ExpandedMod.isWhole(whole)).toBe(true);
@@ -469,10 +511,22 @@ describe("ExpandedMod", () => {
 			const interface1 = createMockInterface("Interface1");
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 
-			const wholeEmpty: ExpandedMod = ExpandedMod.Whole(IArray.Empty, IArray.Empty, IArray.Empty, scope);
-			const wholeNonEmpty: ExpandedMod = ExpandedMod.Whole(IArray.fromArray([interface1] as TsNamedDecl[]), IArray.Empty, IArray.Empty, scope);
+			const wholeEmpty: ExpandedMod = ExpandedMod.Whole(
+				IArray.Empty,
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
+			const wholeNonEmpty: ExpandedMod = ExpandedMod.Whole(
+				IArray.fromArray([interface1] as TsNamedDecl[]),
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
 			const pickedEmpty: ExpandedMod = ExpandedMod.Picked(IArray.Empty);
-			const pickedNonEmpty: ExpandedMod = ExpandedMod.Picked(IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]));
+			const pickedNonEmpty: ExpandedMod = ExpandedMod.Picked(
+				IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(wholeEmpty.nonEmpty).toBe(false);
 			expect(wholeNonEmpty.nonEmpty).toBe(true);
@@ -483,12 +537,28 @@ describe("ExpandedMod", () => {
 
 	describe("ExpandedMod - Boundary Conditions", () => {
 		test("handles declarations with complex CodePaths", () => {
-			const complexPath = createHasPath("deeply", "nested", "module", "Interface1");
-			const interface1 = createMockInterface("Interface1", IArray.Empty, complexPath);
+			const complexPath = createHasPath(
+				"deeply",
+				"nested",
+				"module",
+				"Interface1",
+			);
+			const interface1 = createMockInterface(
+				"Interface1",
+				IArray.Empty,
+				complexPath,
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 
-			const whole = ExpandedMod.Whole(IArray.fromArray([interface1] as TsNamedDecl[]), IArray.Empty, IArray.Empty, scope);
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]));
+			const whole = ExpandedMod.Whole(
+				IArray.fromArray([interface1] as TsNamedDecl[]),
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(whole.nonEmpty).toBe(true);
 			expect(picked.nonEmpty).toBe(true);
@@ -497,11 +567,22 @@ describe("ExpandedMod", () => {
 		});
 
 		test("handles declarations with no CodePath", () => {
-			const interface1 = createMockInterface("Interface1", IArray.Empty, CodePath.noPath());
+			const interface1 = createMockInterface(
+				"Interface1",
+				IArray.Empty,
+				CodePath.noPath(),
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 
-			const whole = ExpandedMod.Whole(IArray.fromArray([interface1] as TsNamedDecl[]), IArray.Empty, IArray.Empty, scope);
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]));
+			const whole = ExpandedMod.Whole(
+				IArray.fromArray([interface1] as TsNamedDecl[]),
+				IArray.Empty,
+				IArray.Empty,
+				scope,
+			);
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([[interface1, scope]] as [TsNamedDecl, TsTreeScope][]),
+			);
 
 			expect(whole.nonEmpty).toBe(true);
 			expect(picked.nonEmpty).toBe(true);
@@ -520,8 +601,18 @@ describe("ExpandedMod", () => {
 			const outerScope = rootScope["/"](outerNamespace);
 			const innerScope = outerScope["/"](innerNamespace);
 
-			const whole = ExpandedMod.Whole(IArray.fromArray([interface1] as TsNamedDecl[]), IArray.Empty, IArray.Empty, innerScope);
-			const picked = ExpandedMod.Picked(IArray.fromArray([[interface1, innerScope]] as [TsNamedDecl, TsTreeScope][]));
+			const whole = ExpandedMod.Whole(
+				IArray.fromArray([interface1] as TsNamedDecl[]),
+				IArray.Empty,
+				IArray.Empty,
+				innerScope,
+			);
+			const picked = ExpandedMod.Picked(
+				IArray.fromArray([[interface1, innerScope]] as [
+					TsNamedDecl,
+					TsTreeScope,
+				][]),
+			);
 
 			expect(whole.nonEmpty).toBe(true);
 			expect(picked.nonEmpty).toBe(true);
@@ -542,7 +633,11 @@ describe("ExpandedMod", () => {
 			const expandedMod = ExpandedMod.Whole(
 				IArray.fromArray([defaultClass] as TsNamedDecl[]),
 				IArray.fromArray([utilNamespace] as TsNamedDecl[]),
-				IArray.fromArray([helperFunction, constantVar, typeAlias] as TsNamedDecl[]),
+				IArray.fromArray([
+					helperFunction,
+					constantVar,
+					typeAlias,
+				] as TsNamedDecl[]),
 				moduleScope,
 			);
 

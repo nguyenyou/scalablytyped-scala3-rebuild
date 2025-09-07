@@ -6,29 +6,21 @@
  * Classes are transformed to interfaces to preserve only their type information.
  */
 
-import { isNone, isSome, none, type Option, some } from "fp-ts/Option";
-import { Comments } from "@/internal/Comments.js";
+import { isSome, none, type Option, some } from "fp-ts/Option";
 import { IArray } from "@/internal/IArray.js";
 import {
 	type TsAugmentedModule,
 	type TsContainerOrDecl,
-	TsDeclClass,
-	TsDeclEnum,
-	TsDeclFunction,
+	type TsDeclClass,
+	type TsDeclEnum,
 	TsDeclInterface,
 	TsDeclNamespace,
-	TsDeclVar,
 	type TsExport,
-	type TsExportee,
 	TsExporteeTree,
-	type TsIdent,
-	TsIdentConstructor,
 	type TsMember,
-	type TsMemberCtor,
 	type TsMemberFunction,
 	type TsMemberProperty,
 	type TsNamedDecl,
-	TsTypeRef,
 } from "../trees.js";
 
 /**
@@ -38,7 +30,7 @@ import {
 export const KeepTypesOnly = {
 	/**
 	 * Filters a TypeScript container or declaration to keep only type-related elements.
-	 * 
+	 *
 	 * @param x The container or declaration to filter
 	 * @returns The filtered element, or none if it should be removed
 	 */
@@ -49,7 +41,7 @@ export const KeepTypesOnly = {
 			if (exportDecl.exported._tag === "TsExporteeTree") {
 				const treeExportee = exportDecl.exported as TsExporteeTree;
 				const filteredDecl = KeepTypesOnly.apply(treeExportee.decl);
-				
+
 				if (isSome(filteredDecl)) {
 					const filtered = filteredDecl.value;
 					if (isNamedDecl(filtered)) {
@@ -79,7 +71,7 @@ export const KeepTypesOnly = {
 
 	/**
 	 * Filters a named TypeScript declaration to keep only type-related elements.
-	 * 
+	 *
 	 * @param x The named declaration to filter
 	 * @returns The filtered declaration, or none if it should be removed
 	 */
@@ -93,27 +85,31 @@ export const KeepTypesOnly = {
 			// Transform classes to interfaces
 			case "TsDeclClass": {
 				const clazz = x as TsDeclClass;
-				
+
 				// Filter members to keep only non-static, non-constructor members
-				const nonStatics = clazz.members.filter((member): member is TsMember => {
-					switch (member._tag) {
-						case "TsMemberCtor":
-							return false;
-						case "TsMemberProperty": {
-							const prop = member as TsMemberProperty;
-							return !prop.isStatic;
+				const nonStatics = clazz.members.filter(
+					(member): member is TsMember => {
+						switch (member._tag) {
+							case "TsMemberCtor":
+								return false;
+							case "TsMemberProperty": {
+								const prop = member as TsMemberProperty;
+								return !prop.isStatic;
+							}
+							case "TsMemberFunction": {
+								const func = member as TsMemberFunction;
+								return !func.isStatic && func.name.value !== "constructor";
+							}
+							default:
+								return true;
 						}
-						case "TsMemberFunction": {
-							const func = member as TsMemberFunction;
-							return !func.isStatic && func.name.value !== "constructor";
-						}
-						default:
-							return true;
-					}
-				});
+					},
+				);
 
 				// Create inheritance array from parent and implements
-				const parentArray = isSome(clazz.parent) ? IArray.fromArray([clazz.parent.value]) : IArray.Empty;
+				const parentArray = isSome(clazz.parent)
+					? IArray.fromArray([clazz.parent.value])
+					: IArray.Empty;
 				const inheritance = parentArray.concat(clazz.implementsInterfaces);
 
 				// Transform class to interface
@@ -133,22 +129,28 @@ export const KeepTypesOnly = {
 			// Handle namespace - recursively filter members
 			case "TsDeclNamespace": {
 				const namespace = x as TsDeclNamespace;
-				const filteredMembers = namespace.members.mapNotNoneOption(KeepTypesOnly.apply);
+				const filteredMembers = namespace.members.mapNotNoneOption(
+					KeepTypesOnly.apply,
+				);
 
-				return some(TsDeclNamespace.create(
-					namespace.comments,
-					namespace.declared,
-					namespace.name,
-					filteredMembers,
-					namespace.codePath,
-					namespace.jsLocation,
-				) as TsNamedDecl);
+				return some(
+					TsDeclNamespace.create(
+						namespace.comments,
+						namespace.declared,
+						namespace.name,
+						filteredMembers,
+						namespace.codePath,
+						namespace.jsLocation,
+					) as TsNamedDecl,
+				);
 			}
 
 			// Handle augmented module - recursively filter members
 			case "TsAugmentedModule": {
 				const augModule = x as TsAugmentedModule;
-				const filteredMembers = augModule.members.mapNotNoneOption(KeepTypesOnly.apply);
+				const filteredMembers = augModule.members.mapNotNoneOption(
+					KeepTypesOnly.apply,
+				);
 
 				return some(augModule.withMembers(filteredMembers) as TsNamedDecl);
 			}
@@ -156,7 +158,7 @@ export const KeepTypesOnly = {
 			// Handle enum - set isValue to false
 			case "TsDeclEnum": {
 				const enumDecl = x as TsDeclEnum;
-				
+
 				return some({
 					...enumDecl,
 					isValue: false,

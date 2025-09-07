@@ -118,7 +118,10 @@ function createMockEnum(name: string, codePath?: CodePath): TsDeclEnum {
 	);
 }
 
-function createMockParsedFile(members: IArray<TsContainerOrDecl>, codePath?: CodePath): TsParsedFile {
+function createMockParsedFile(
+	members: IArray<TsContainerOrDecl>,
+	codePath?: CodePath,
+): TsParsedFile {
 	return TsParsedFileConstructor.create(
 		Comments.empty(),
 		IArray.Empty, // directives
@@ -133,9 +136,10 @@ function createHasPath(...parts: string[]): CodePath {
 	}
 	const [library, ...pathParts] = parts;
 	const libraryIdent = TsIdent.simple(library);
-	const qident = pathParts.length > 0
-		? TsQIdent.ofStrings(...pathParts)
-		: TsQIdent.of(libraryIdent);
+	const qident =
+		pathParts.length > 0
+			? TsQIdent.ofStrings(...pathParts)
+			: TsQIdent.of(libraryIdent);
 	return CodePath.hasPath(libraryIdent, qident);
 }
 
@@ -152,11 +156,14 @@ describe("MoveGlobals", () => {
 			// Test that files with no global members are returned unchanged
 			const interface_ = createMockInterface("TestInterface");
 			const typeAlias = createMockTypeAlias("TestType");
-			const members = IArray.fromArray([interface_, typeAlias] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface_,
+				typeAlias,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
-			
+
 			const result = MoveGlobals.apply(file);
-			
+
 			expect(result).toBe(file); // Should return the same instance
 		});
 
@@ -166,22 +173,28 @@ describe("MoveGlobals", () => {
 			const variable = createMockVar("testVar");
 			const clazz = createMockClass("TestClass");
 			const enum_ = createMockEnum("TestEnum");
-			
-			const members = IArray.fromArray([function_, variable, clazz, enum_] as TsContainerOrDecl[]);
+
+			const members = IArray.fromArray([
+				function_,
+				variable,
+				clazz,
+				enum_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
-			
+
 			const result = MoveGlobals.apply(file);
-			
+
 			expect(result).not.toBe(file); // Should return a new instance
 			expect(result.members.length).toBeGreaterThan(0);
-			
+
 			// Should have a global namespace
-			const globalNamespace = result.members.find(member => 
-				member._tag === "TsDeclNamespace" && 
-				(member as TsDeclNamespace).name.value === TsIdentGlobal.value
+			const globalNamespace = result.members.find(
+				(member) =>
+					member._tag === "TsDeclNamespace" &&
+					(member as TsDeclNamespace).name.value === TsIdentGlobal.value,
 			);
 			expect(globalNamespace).toBeDefined();
-			
+
 			if (globalNamespace) {
 				const ns = globalNamespace as TsDeclNamespace;
 				expect(ns.members.length).toBeGreaterThan(0); // Should contain the moved declarations
@@ -196,7 +209,11 @@ describe("MoveGlobals", () => {
 			const typeAlias = createMockTypeAlias("TestType");
 			const function_ = createMockFunction("testFunction");
 
-			const members = IArray.fromArray([interface_, typeAlias, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface_,
+				typeAlias,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
@@ -204,13 +221,15 @@ describe("MoveGlobals", () => {
 			expect(result).not.toBe(file); // Should return a new instance
 
 			// Should have interface and type alias at top level
-			const topLevelInterface = result.members.find(member =>
-				member._tag === "TsDeclInterface" &&
-				(member as TsDeclInterface).name.value === "TestInterface"
+			const topLevelInterface = result.members.find(
+				(member) =>
+					member._tag === "TsDeclInterface" &&
+					(member as TsDeclInterface).name.value === "TestInterface",
 			);
-			const topLevelTypeAlias = result.members.find(member =>
-				member._tag === "TsDeclTypeAlias" &&
-				(member as TsDeclTypeAlias).name.value === "TestType"
+			const topLevelTypeAlias = result.members.find(
+				(member) =>
+					member._tag === "TsDeclTypeAlias" &&
+					(member as TsDeclTypeAlias).name.value === "TestType",
 			);
 
 			expect(topLevelInterface).toBeDefined();
@@ -222,7 +241,10 @@ describe("MoveGlobals", () => {
 			const clazz = createMockClass("TestClass");
 			const function_ = createMockFunction("testFunction");
 
-			const members = IArray.fromArray([clazz, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				clazz,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
@@ -230,9 +252,10 @@ describe("MoveGlobals", () => {
 			expect(result).not.toBe(file); // Should return a new instance
 
 			// Should have interface at top level (class transformed to interface)
-			const topLevelInterface = result.members.find(member =>
-				member._tag === "TsDeclInterface" &&
-				(member as TsDeclInterface).name.value === "TestClass"
+			const topLevelInterface = result.members.find(
+				(member) =>
+					member._tag === "TsDeclInterface" &&
+					(member as TsDeclInterface).name.value === "TestClass",
 			);
 
 			expect(topLevelInterface).toBeDefined();
@@ -243,7 +266,10 @@ describe("MoveGlobals", () => {
 			const enum_ = createMockEnum("TestEnum");
 			const function_ = createMockFunction("testFunction");
 
-			const members = IArray.fromArray([enum_, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				enum_,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
@@ -251,9 +277,10 @@ describe("MoveGlobals", () => {
 			expect(result).not.toBe(file); // Should return a new instance
 
 			// Should have enum at top level with isValue = false
-			const topLevelEnum = result.members.find(member =>
-				member._tag === "TsDeclEnum" &&
-				(member as TsDeclEnum).name.value === "TestEnum"
+			const topLevelEnum = result.members.find(
+				(member) =>
+					member._tag === "TsDeclEnum" &&
+					(member as TsDeclEnum).name.value === "TestEnum",
 			);
 
 			expect(topLevelEnum).toBeDefined();
@@ -273,9 +300,10 @@ describe("MoveGlobals", () => {
 
 			const result = MoveGlobals.apply(file);
 
-			const globalNamespace = result.members.find(member =>
-				member._tag === "TsDeclNamespace" &&
-				(member as TsDeclNamespace).name.value === TsIdentGlobal.value
+			const globalNamespace = result.members.find(
+				(member) =>
+					member._tag === "TsDeclNamespace" &&
+					(member as TsDeclNamespace).name.value === TsIdentGlobal.value,
 			);
 
 			expect(globalNamespace).toBeDefined();
@@ -291,26 +319,31 @@ describe("MoveGlobals", () => {
 			const function_ = createMockFunction("testFunction");
 			const variable = createMockVar("testVar");
 
-			const members = IArray.fromArray([function_, variable] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				function_,
+				variable,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
 
-			const globalNamespace = result.members.find(member =>
-				member._tag === "TsDeclNamespace"
+			const globalNamespace = result.members.find(
+				(member) => member._tag === "TsDeclNamespace",
 			) as TsDeclNamespace;
 
 			expect(globalNamespace).toBeDefined();
 			expect(globalNamespace.members.length).toBeGreaterThan(0);
 
 			// Should contain derived copies of the function and variable
-			const hasFunction = globalNamespace.members.exists(member =>
-				member._tag === "TsDeclFunction" &&
-				(member as TsDeclFunction).name.value === "testFunction"
+			const hasFunction = globalNamespace.members.exists(
+				(member) =>
+					member._tag === "TsDeclFunction" &&
+					(member as TsDeclFunction).name.value === "testFunction",
 			);
-			const hasVariable = globalNamespace.members.exists(member =>
-				member._tag === "TsDeclVar" &&
-				(member as TsDeclVar).name.value === "testVar"
+			const hasVariable = globalNamespace.members.exists(
+				(member) =>
+					member._tag === "TsDeclVar" &&
+					(member as TsDeclVar).name.value === "testVar",
 			);
 
 			expect(hasFunction).toBe(true);
@@ -331,14 +364,17 @@ describe("MoveGlobals", () => {
 			);
 			const function_ = createMockFunction("testFunction");
 
-			const members = IArray.fromArray([module, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				module,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
 
 			// Should preserve the module
-			const preservedModule = result.members.find(member =>
-				member._tag === "TsDeclModule"
+			const preservedModule = result.members.find(
+				(member) => member._tag === "TsDeclModule",
 			);
 
 			expect(preservedModule).toBeDefined();
@@ -356,14 +392,17 @@ describe("MoveGlobals", () => {
 			);
 			const function_ = createMockFunction("testFunction");
 
-			const members = IArray.fromArray([augmentedModule, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				augmentedModule,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
 
 			// Should preserve the augmented module
-			const preservedAugModule = result.members.find(member =>
-				member._tag === "TsAugmentedModule"
+			const preservedAugModule = result.members.find(
+				(member) => member._tag === "TsAugmentedModule",
 			);
 
 			expect(preservedAugModule).toBeDefined();
@@ -385,7 +424,10 @@ describe("MoveGlobals", () => {
 			const interface_ = createMockInterface("TestInterface");
 			const typeAlias = createMockTypeAlias("TestType");
 
-			const members = IArray.fromArray([interface_, typeAlias] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface_,
+				typeAlias,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
@@ -405,15 +447,19 @@ describe("MoveGlobals", () => {
 			);
 			const function_ = createMockFunction("newFunction");
 
-			const members = IArray.fromArray([existingGlobal, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				existingGlobal,
+				function_,
+			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
 			const result = MoveGlobals.apply(file);
 
 			// Should have a single global namespace with merged content
-			const globalNamespace = result.members.find(member =>
-				member._tag === "TsDeclNamespace" &&
-				(member as TsDeclNamespace).name.value === TsIdentGlobal.value
+			const globalNamespace = result.members.find(
+				(member) =>
+					member._tag === "TsDeclNamespace" &&
+					(member as TsDeclNamespace).name.value === TsIdentGlobal.value,
 			) as TsDeclNamespace;
 
 			expect(globalNamespace).toBeDefined();
@@ -431,7 +477,12 @@ describe("MoveGlobals", () => {
 			const typeAlias = createMockTypeAlias("TestType");
 
 			const members = IArray.fromArray([
-				interface_, clazz, function_, variable, enum_, typeAlias
+				interface_,
+				clazz,
+				function_,
+				variable,
+				enum_,
+				typeAlias,
 			] as TsContainerOrDecl[]);
 			const file = createMockParsedFile(members);
 
@@ -440,16 +491,17 @@ describe("MoveGlobals", () => {
 			expect(result).not.toBe(file); // Should return a new instance
 
 			// Should have type declarations at top level
-			const topLevelTypes = result.members.filter(member =>
-				member._tag === "TsDeclInterface" ||
-				member._tag === "TsDeclTypeAlias" ||
-				member._tag === "TsDeclEnum"
+			const topLevelTypes = result.members.filter(
+				(member) =>
+					member._tag === "TsDeclInterface" ||
+					member._tag === "TsDeclTypeAlias" ||
+					member._tag === "TsDeclEnum",
 			);
 			expect(topLevelTypes.length).toBe(4); // interface, class->interface, enum, typeAlias
 
 			// Should have a global namespace with value declarations
-			const globalNamespace = result.members.find(member =>
-				member._tag === "TsDeclNamespace"
+			const globalNamespace = result.members.find(
+				(member) => member._tag === "TsDeclNamespace",
 			) as TsDeclNamespace;
 			expect(globalNamespace).toBeDefined();
 			expect(globalNamespace.members.length).toBeGreaterThan(0);

@@ -8,10 +8,13 @@
 
 import { isNone, isSome, none, type Option, some } from "fp-ts/Option";
 import { ExpandedClass } from "@/internal/Comment.js";
-import { Comments, NoComments } from "@/internal/Comments.js";
+import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
-import { type CodePath, type CodePathHasPath, CodePath as CodePathUtils } from "../CodePath.js";
-import { JsLocation } from "../JsLocation.js";
+import {
+	type CodePath,
+	type CodePathHasPath,
+	CodePath as CodePathUtils,
+} from "../CodePath.js";
 import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
 import {
 	type TsAugmentedModule,
@@ -19,20 +22,18 @@ import {
 	type TsContainerOrDecl,
 	TsDeclClass,
 	TsDeclFunction,
-	TsDeclInterface,
-	TsDeclModule,
+	type TsDeclInterface,
+	type TsDeclModule,
 	TsDeclTypeAlias,
 	TsDeclVar,
 	TsGlobal,
 	type TsIdent,
-	TsIdentConstructor,
 	type TsIdentSimple,
 	type TsMember,
-	type TsMemberCtor,
 	type TsMemberFunction,
 	type TsMemberProperty,
 	type TsNamedDecl,
-	TsQIdent,
+	type TsQIdent,
 	type TsType,
 	TsTypeParam,
 	TsTypeRef,
@@ -57,9 +58,8 @@ export const DeriveCopy = {
 		_rename: Option<TsIdentSimple>,
 	): IArray<TsNamedDecl> => {
 		// Filter out rename if it's the same as the original name
-		const rename = isSome(_rename) && x.name.value !== _rename.value.value
-			? _rename
-			: none;
+		const rename =
+			isSome(_rename) && x.name.value !== _rename.value.value ? _rename : none;
 
 		// Helper function to get the origin code path
 		const getOrigin = (): TsQIdent => {
@@ -104,8 +104,13 @@ function matchDeclaration(
 
 		if (
 			xCp.codePath.parts.length === ownerCpHasPath.codePath.parts.length + 1 &&
-			xCp.codePath.parts.toArray().slice(0, ownerCpHasPath.codePath.parts.length)
-				.every((part, i) => part.value === ownerCpHasPath.codePath.parts.get(i).value)
+			xCp.codePath.parts
+				.toArray()
+				.slice(0, ownerCpHasPath.codePath.parts.length)
+				.every(
+					(part, i) =>
+						part.value === ownerCpHasPath.codePath.parts.get(i).value,
+				)
 		) {
 			return IArray.fromArray([x]);
 		}
@@ -116,7 +121,7 @@ function matchDeclaration(
 		const module = x as TsDeclModule;
 		if (isSome(rename)) {
 			return IArray.fromArray([
-				updatedContainer(ownerCp, module.withName(rename.value))
+				updatedContainer(ownerCp, module.withName(rename.value)),
 			]);
 		} else {
 			return IArray.fromArray([updatedContainer(ownerCp, module)]);
@@ -160,32 +165,34 @@ function handleNamedDeclaration(
 			const clazz = x as TsDeclClass;
 
 			// Check if this is a synthetic expanded class
-			if (clazz.comments.cs.some(c => c instanceof ExpandedClass)) {
+			if (clazz.comments.cs.some((c) => c instanceof ExpandedClass)) {
 				return IArray.Empty;
 			}
 
 			// Filter members to keep only constructors and static members
-			const filteredMembers = clazz.members.filter((member): member is TsMember => {
-				switch (member._tag) {
-					case "TsMemberCtor":
-						return true;
-					case "TsMemberFunction": {
-						const func = member as TsMemberFunction;
-						// Keep constructor functions or static functions
-						return func.name.value === "constructor" || func.isStatic;
+			const filteredMembers = clazz.members.filter(
+				(member): member is TsMember => {
+					switch (member._tag) {
+						case "TsMemberCtor":
+							return true;
+						case "TsMemberFunction": {
+							const func = member as TsMemberFunction;
+							// Keep constructor functions or static functions
+							return func.name.value === "constructor" || func.isStatic;
+						}
+						case "TsMemberProperty": {
+							const prop = member as TsMemberProperty;
+							return prop.isStatic;
+						}
+						default:
+							return false;
 					}
-					case "TsMemberProperty": {
-						const prop = member as TsMemberProperty;
-						return prop.isStatic;
-					}
-					default:
-						return false;
-				}
-			});
+				},
+			);
 
 			const origin = getOrigin();
 			const typeArgs = TsTypeParam.asTypeArgs(clazz.tparams);
-			const typeArgsAsTypes = typeArgs.map(ref => ref as TsType);
+			const typeArgsAsTypes = typeArgs.map((ref) => ref as TsType);
 			const newClass = TsDeclClass.create(
 				clazz.comments,
 				true, // declared = true
@@ -206,7 +213,7 @@ function handleNamedDeclaration(
 			const interface_ = x as TsDeclInterface;
 			const origin = getOrigin();
 			const typeArgs = TsTypeParam.asTypeArgs(interface_.tparams);
-			const typeArgsAsTypes = typeArgs.map(ref => ref as TsType);
+			const typeArgsAsTypes = typeArgs.map((ref) => ref as TsType);
 
 			const typeAlias = TsDeclTypeAlias.create(
 				interface_.comments,
@@ -282,7 +289,7 @@ function updatedContainer(
 		if (isNamedDecl(tree)) {
 			// Apply DeriveCopy recursively to named declarations
 			const derivedDecls = DeriveCopy.apply(tree, x.codePath, none);
-			return derivedDecls.map(decl => decl as TsContainerOrDecl);
+			return derivedDecls.map((decl) => decl as TsContainerOrDecl);
 		} else if (tree._tag === "TsGlobal") {
 			const global = tree as TsGlobal;
 			const newMembers = global.members.flatMap(go);
@@ -308,7 +315,9 @@ function updatedContainer(
 	// Apply SetCodePath if we have a HasPath
 	if (CodePathUtils.isHasPath(ownerCp)) {
 		const hasPath = ownerCp as CodePathHasPath;
-		return SetCodePathTransformFunction.enterTsDecl(hasPath)(updatedContainer as any) as TsNamedDecl;
+		return SetCodePathTransformFunction.enterTsDecl(hasPath)(
+			updatedContainer as any,
+		) as TsNamedDecl;
 	} else {
 		return updatedContainer as unknown as TsNamedDecl;
 	}

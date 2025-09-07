@@ -5,34 +5,33 @@
  * Maintains 100% behavioral parity with the Scala test implementation.
  */
 
-import { describe, it, expect } from "vitest";
+import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
+import { Comments } from "@/internal/Comments.js";
+import { IArray } from "@/internal/IArray.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
+import { ExportType } from "@/internal/ts/ExportType.js";
+import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { RewriteExportStarAs } from "@/internal/ts/modules/RewriteExportStarAs.js";
+import { TransformMembers } from "@/internal/ts/TreeTransformations.js";
+import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import {
-	TsIdentSimple,
-	TsQIdent,
-	TsIdentModule,
+	TsAugmentedModule,
 	TsDeclInterface,
 	TsDeclModule,
 	TsDeclNamespace,
 	TsExport,
-	TsExporteeStar,
 	TsExporteeNames,
+	TsExporteeStar,
+	TsGlobal,
+	TsIdent,
+	type TsIdentModule,
+	type TsIdentSimple,
 	TsImport,
 	TsImportedStar,
 	TsImporteeFrom,
-	TsParsedFile,
-	TsGlobal,
-	TsAugmentedModule,
+	TsQIdent,
 } from "@/internal/ts/trees.js";
-import { Comments } from "@/internal/Comments.js";
-import { ExportType } from "@/internal/ts/ExportType.js";
-import { CodePath } from "@/internal/ts/CodePath.js";
-import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { IArray } from "@/internal/IArray.js";
-import { none, some } from "fp-ts/Option";
-import { TransformMembers } from "@/internal/ts/TreeTransformations.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
-import { TsIdent } from "@/internal/ts/trees.js";
 
 // Helper functions for creating test data
 function createSimpleIdent(name: string): TsIdentSimple {
@@ -50,7 +49,7 @@ function createIdentModule(name: string): TsIdentModule {
 function createMockInterface(
 	name: string,
 	members: IArray<any> = IArray.Empty,
-	codePath: CodePath = CodePath.noPath()
+	codePath: CodePath = CodePath.noPath(),
 ): TsDeclInterface {
 	return TsDeclInterface.create(
 		Comments.empty(),
@@ -59,14 +58,14 @@ function createMockInterface(
 		IArray.Empty, // tparams
 		IArray.Empty, // inheritance
 		members,
-		codePath
+		codePath,
 	);
 }
 
 function createMockModule(
 	name: string,
 	members: IArray<any> = IArray.Empty,
-	codePath: CodePath = CodePath.noPath()
+	codePath: CodePath = CodePath.noPath(),
 ): TsDeclModule {
 	return TsDeclModule.create(
 		Comments.empty(),
@@ -74,14 +73,14 @@ function createMockModule(
 		createIdentModule(name),
 		members,
 		codePath,
-		JsLocation.zero()
+		JsLocation.zero(),
 	);
 }
 
 function createMockNamespace(
 	name: string,
 	members: IArray<any> = IArray.Empty,
-	codePath: CodePath = CodePath.noPath()
+	codePath: CodePath = CodePath.noPath(),
 ): TsDeclNamespace {
 	return TsDeclNamespace.create(
 		Comments.empty(),
@@ -89,13 +88,13 @@ function createMockNamespace(
 		createSimpleIdent(name),
 		members,
 		codePath,
-		JsLocation.zero()
+		JsLocation.zero(),
 	);
 }
 
 function createMockExportStar(
 	asOpt: string | null = null,
-	from: string = "module"
+	from: string = "module",
 ): TsExport {
 	return TsExport.create(
 		Comments.empty(),
@@ -103,14 +102,14 @@ function createMockExportStar(
 		ExportType.named(),
 		TsExporteeStar.create(
 			asOpt ? some(createSimpleIdent(asOpt)) : none,
-			createIdentModule(from)
-		)
+			createIdentModule(from),
+		),
 	);
 }
 
 function createMockExportStarTypeOnly(
 	asOpt: string | null = null,
-	from: string = "module"
+	from: string = "module",
 ): TsExport {
 	return TsExport.create(
 		Comments.empty(),
@@ -118,25 +117,30 @@ function createMockExportStarTypeOnly(
 		ExportType.named(),
 		TsExporteeStar.create(
 			asOpt ? some(createSimpleIdent(asOpt)) : none,
-			createIdentModule(from)
-		)
+			createIdentModule(from),
+		),
 	);
 }
 
-function createMockExportNamed(...names: Array<[string, string | null]>): TsExport {
+function createMockExportNamed(
+	...names: Array<[string, string | null]>
+): TsExport {
 	return TsExport.create(
 		Comments.empty(),
 		false, // typeOnly
 		ExportType.named(),
 		TsExporteeNames.create(
 			IArray.fromArray(
-				names.map(([name, alias]) => [
-					createQIdent(name),
-					alias ? some(createSimpleIdent(alias)) : none
-				] as [TsQIdent, any])
+				names.map(
+					([name, alias]) =>
+						[
+							createQIdent(name),
+							alias ? some(createSimpleIdent(alias)) : none,
+						] as [TsQIdent, any],
+				),
 			),
-			none
-		)
+			none,
+		),
 	);
 }
 
@@ -146,7 +150,7 @@ function createMockScope(_members: IArray<any> = IArray.Empty): TsTreeScope {
 		TsIdent.librarySimple("test"),
 		false, // pedantic
 		deps,
-		{ devNull: true } as any // Logger.DevNull equivalent
+		{ devNull: true } as any, // Logger.DevNull equivalent
 	);
 }
 
@@ -160,7 +164,10 @@ describe("RewriteExportStarAs", () => {
 		it("handles files with no export star statements", () => {
 			const interface1 = createMockInterface("TestInterface");
 			const regularExport = createMockExportNamed(["TestInterface", null]);
-			const module = createMockModule("TestModule", IArray.fromArray([interface1, regularExport]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([interface1, regularExport]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -174,7 +181,10 @@ describe("RewriteExportStarAs", () => {
 		it("handles files with only regular exports", () => {
 			const export1 = createMockExportNamed(["foo", null], ["bar", "baz"]);
 			const export2 = createMockExportNamed(["qux", null]);
-			const module = createMockModule("TestModule", IArray.fromArray([export1, export2]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([export1, export2]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -189,7 +199,10 @@ describe("RewriteExportStarAs", () => {
 	describe("Export Star Processing", () => {
 		it("basic export star statements without alias", () => {
 			const exportStar = createMockExportStar(null, "utils");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -203,7 +216,10 @@ describe("RewriteExportStarAs", () => {
 
 		it("export star as namespace statements", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -240,7 +256,10 @@ describe("RewriteExportStarAs", () => {
 
 		it("type-only export star as namespace statements", () => {
 			const exportStar = createMockExportStarTypeOnly("Types", "types");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -263,7 +282,10 @@ describe("RewriteExportStarAs", () => {
 		it("multiple export star statements with different aliases", () => {
 			const exportStar1 = createMockExportStar("Utils", "utils");
 			const exportStar2 = createMockExportStar("Helpers", "helpers");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar1, exportStar2]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar1, exportStar2]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -284,11 +306,14 @@ describe("RewriteExportStarAs", () => {
 			const exportStarWithAlias = createMockExportStar("Utils", "utils");
 			const exportStarWithoutAlias = createMockExportStar(null, "helpers");
 			const regularExport = createMockExportNamed(["foo", null]);
-			const module = createMockModule("TestModule", IArray.fromArray([
-				exportStarWithAlias,
-				exportStarWithoutAlias,
-				regularExport
-			]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([
+					exportStarWithAlias,
+					exportStarWithoutAlias,
+					regularExport,
+				]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -313,7 +338,10 @@ describe("RewriteExportStarAs", () => {
 	describe("Rewriting Logic", () => {
 		it("preserves export type in transformation", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -328,9 +356,15 @@ describe("RewriteExportStarAs", () => {
 				comments,
 				false,
 				ExportType.named(),
-				TsExporteeStar.create(some(createSimpleIdent("Utils")), createIdentModule("utils"))
+				TsExporteeStar.create(
+					some(createSimpleIdent("Utils")),
+					createIdentModule("utils"),
+				),
 			);
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -345,9 +379,10 @@ describe("RewriteExportStarAs", () => {
 			const exportStar2 = createMockExportStar("Helpers", "../helpers");
 			const exportStar3 = createMockExportStar("Shared", "../../shared");
 			const exportStar4 = createMockExportStar("External", "/usr/lib/module");
-			const module = createMockModule("TestModule", IArray.fromArray([
-				exportStar1, exportStar2, exportStar3, exportStar4
-			]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar1, exportStar2, exportStar3, exportStar4]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -355,8 +390,18 @@ describe("RewriteExportStarAs", () => {
 			expect(result.length).toBe(8); // 4 exports * 2 (import + export) each
 
 			// Verify all paths are preserved correctly
-			const imports = [result.get(0), result.get(2), result.get(4), result.get(6)] as TsImport[];
-			const expectedPaths = ["./utils", "../helpers", "../../shared", "/usr/lib/module"];
+			const imports = [
+				result.get(0),
+				result.get(2),
+				result.get(4),
+				result.get(6),
+			] as TsImport[];
+			const expectedPaths = [
+				"./utils",
+				"../helpers",
+				"../../shared",
+				"/usr/lib/module",
+			];
 
 			imports.forEach((importDecl, index) => {
 				const fromImport = importDecl.from as TsImporteeFrom;
@@ -368,7 +413,10 @@ describe("RewriteExportStarAs", () => {
 	describe("Module and Namespace Integration", () => {
 		it("works within namespace containers", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([exportStar]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, namespace);
@@ -380,7 +428,10 @@ describe("RewriteExportStarAs", () => {
 
 		it("works within module containers", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -396,7 +447,7 @@ describe("RewriteExportStarAs", () => {
 				Comments.empty(),
 				false, // declared
 				IArray.fromArray([exportStar] as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 			const scope = createMockScope();
 
@@ -414,11 +465,14 @@ describe("RewriteExportStarAs", () => {
 				createIdentModule("TestModule"),
 				IArray.fromArray([exportStar] as any),
 				CodePath.noPath(),
-				JsLocation.zero()
+				JsLocation.zero(),
 			);
 			const scope = createMockScope();
 
-			const result = RewriteExportStarAs.instance.newMembers(scope, augmentedModule);
+			const result = RewriteExportStarAs.instance.newMembers(
+				scope,
+				augmentedModule,
+			);
 
 			expect(result.length).toBe(2);
 			expect(result.get(0)._tag).toBe("TsImport");
@@ -439,7 +493,10 @@ describe("RewriteExportStarAs", () => {
 		it("handles containers with only non-export members", () => {
 			const interface1 = createMockInterface("TestInterface");
 			const interface2 = createMockInterface("AnotherInterface");
-			const module = createMockModule("TestModule", IArray.fromArray([interface1, interface2]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([interface1, interface2]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -450,8 +507,14 @@ describe("RewriteExportStarAs", () => {
 		});
 
 		it("handles complex namespace aliases", () => {
-			const exportStar = createMockExportStar("VeryLongNamespaceAlias", "some-complex-module-name");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const exportStar = createMockExportStar(
+				"VeryLongNamespaceAlias",
+				"some-complex-module-name",
+			);
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -469,9 +532,10 @@ describe("RewriteExportStarAs", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
 			const interface2 = createMockInterface("Interface2");
 			const regularExport = createMockExportNamed(["foo", null]);
-			const module = createMockModule("TestModule", IArray.fromArray([
-				interface1, exportStar, interface2, regularExport
-			]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([interface1, exportStar, interface2, regularExport]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -488,7 +552,10 @@ describe("RewriteExportStarAs", () => {
 	describe("Code Path and Metadata Preservation", () => {
 		it("preserves code paths in generated imports and exports", () => {
 			const exportStar = createMockExportStar("Utils", "utils");
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -506,9 +573,15 @@ describe("RewriteExportStarAs", () => {
 				comments,
 				false,
 				ExportType.named(),
-				TsExporteeStar.create(some(createSimpleIdent("Utils")), createIdentModule("utils"))
+				TsExporteeStar.create(
+					some(createSimpleIdent("Utils")),
+					createIdentModule("utils"),
+				),
 			);
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -523,9 +596,15 @@ describe("RewriteExportStarAs", () => {
 				Comments.empty(),
 				false,
 				ExportType.namespaced(), // Different export type
-				TsExporteeStar.create(some(createSimpleIdent("Utils")), createIdentModule("utils"))
+				TsExporteeStar.create(
+					some(createSimpleIdent("Utils")),
+					createIdentModule("utils"),
+				),
 			);
-			const module = createMockModule("TestModule", IArray.fromArray([exportStar]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -545,9 +624,16 @@ describe("RewriteExportStarAs", () => {
 			const regularExport = createMockExportNamed(["ApiInterface", null]);
 			const exportStarWithoutAlias = createMockExportStar(null, "helpers");
 
-			const module = createMockModule("TestModule", IArray.fromArray([
-				interface1, exportStar1, exportStar2, regularExport, exportStarWithoutAlias
-			]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([
+					interface1,
+					exportStar1,
+					exportStar2,
+					regularExport,
+					exportStarWithoutAlias,
+				]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -573,11 +659,17 @@ describe("RewriteExportStarAs", () => {
 
 		it("complex nested container scenario", () => {
 			const exportStar = createMockExportStar("NestedUtils", "nested/utils");
-			const innerNamespace = createMockNamespace("InnerNamespace", IArray.fromArray([exportStar]));
+			const innerNamespace = createMockNamespace(
+				"InnerNamespace",
+				IArray.fromArray([exportStar]),
+			);
 			const scope = createMockScope();
 
 			// Test transformation at the inner namespace level
-			const result = RewriteExportStarAs.instance.newMembers(scope, innerNamespace);
+			const result = RewriteExportStarAs.instance.newMembers(
+				scope,
+				innerNamespace,
+			);
 
 			expect(result.length).toBe(2);
 			expect(result.get(0)._tag).toBe("TsImport");
@@ -592,15 +684,18 @@ describe("RewriteExportStarAs", () => {
 		it("handles transformation with existing imports and exports", () => {
 			const existingImport = TsImport.create(
 				false,
-				IArray.fromArray([TsImportedStar.create(some(createSimpleIdent("Existing")))] as any),
-				TsImporteeFrom.create(createIdentModule("existing"))
+				IArray.fromArray([
+					TsImportedStar.create(some(createSimpleIdent("Existing"))),
+				] as any),
+				TsImporteeFrom.create(createIdentModule("existing")),
 			);
 			const exportStar = createMockExportStar("Utils", "utils");
 			const existingExport = createMockExportNamed(["existing", null]);
 
-			const module = createMockModule("TestModule", IArray.fromArray([
-				existingImport, exportStar, existingExport
-			]));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray([existingImport, exportStar, existingExport]),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);
@@ -615,9 +710,12 @@ describe("RewriteExportStarAs", () => {
 
 		it("performance test with many export star statements", () => {
 			const exportStars = Array.from({ length: 50 }, (_, i) =>
-				createMockExportStar(`Utils${i}`, `utils${i}`)
+				createMockExportStar(`Utils${i}`, `utils${i}`),
 			);
-			const module = createMockModule("TestModule", IArray.fromArray(exportStars));
+			const module = createMockModule(
+				"TestModule",
+				IArray.fromArray(exportStars),
+			);
 			const scope = createMockScope();
 
 			const result = RewriteExportStarAs.instance.newMembers(scope, module);

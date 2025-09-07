@@ -10,12 +10,12 @@ import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
 import { ExportType } from "@/internal/ts/ExportType.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
-import { KeepTypesOnly } from "@/internal/ts/modules/KeepTypesOnly.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
+import { KeepTypesOnly } from "@/internal/ts/modules/KeepTypesOnly.js";
 import {
 	type TsAugmentedModule,
-	type TsContainerOrDecl,
 	TsAugmentedModule as TsAugmentedModuleConstructor,
+	type TsContainerOrDecl,
 	TsDeclClass,
 	TsDeclEnum,
 	TsDeclFunction,
@@ -27,7 +27,6 @@ import {
 	TsExporteeTree,
 	TsFunSig,
 	TsIdent,
-	type TsIdentModule,
 	type TsIdentSimple,
 	type TsMember,
 	TsMemberCtor,
@@ -95,7 +94,10 @@ function createMockVar(name: string): TsDeclVar {
 	);
 }
 
-function createMockClass(name: string, members: IArray<TsMember> = IArray.Empty): TsDeclClass {
+function createMockClass(
+	name: string,
+	members: IArray<TsMember> = IArray.Empty,
+): TsDeclClass {
 	return TsDeclClass.create(
 		Comments.empty(),
 		false, // declared
@@ -153,7 +155,10 @@ function createMockMethod(name: string): TsMemberFunction {
 	);
 }
 
-function createMockNamespace(name: string, members: IArray<TsContainerOrDecl> = IArray.Empty): TsDeclNamespace {
+function createMockNamespace(
+	name: string,
+	members: IArray<TsContainerOrDecl> = IArray.Empty,
+): TsDeclNamespace {
 	return TsDeclNamespace.create(
 		Comments.empty(),
 		false, // declared
@@ -164,7 +169,10 @@ function createMockNamespace(name: string, members: IArray<TsContainerOrDecl> = 
 	);
 }
 
-function createMockAugmentedModule(name: string, members: IArray<TsContainerOrDecl> = IArray.Empty): TsAugmentedModule {
+function createMockAugmentedModule(
+	name: string,
+	members: IArray<TsContainerOrDecl> = IArray.Empty,
+): TsAugmentedModule {
 	const moduleIdent = TsIdent.module(none, [name]);
 	return TsAugmentedModuleConstructor.create(
 		Comments.empty(),
@@ -247,7 +255,10 @@ describe("KeepTypesOnly", () => {
 			const staticPropertyWithStatic = { ...staticProperty, isStatic: true };
 
 			const instanceProperty = createMockProperty("instanceProp");
-			const instancePropertyWithStatic = { ...instanceProperty, isStatic: false };
+			const instancePropertyWithStatic = {
+				...instanceProperty,
+				isStatic: false,
+			};
 
 			const constructor = TsMemberCtor.create(
 				Comments.empty(),
@@ -282,14 +293,22 @@ describe("KeepTypesOnly", () => {
 				expect(interface_.name.value).toBe("TestClass");
 				// Should only keep non-static members, excluding constructors
 				expect(interface_.members.length).toBe(2); // instanceProperty and instanceMethod
-				expect(interface_.members.exists((member) => {
-					return member._tag === "TsMemberProperty" &&
-						   (member as TsMemberProperty).name.value === "instanceProp";
-				})).toBe(true);
-				expect(interface_.members.exists((member) => {
-					return member._tag === "TsMemberFunction" &&
-						   (member as TsMemberFunction).name.value === "instanceMethod";
-				})).toBe(true);
+				expect(
+					interface_.members.exists((member) => {
+						return (
+							member._tag === "TsMemberProperty" &&
+							(member as TsMemberProperty).name.value === "instanceProp"
+						);
+					}),
+				).toBe(true);
+				expect(
+					interface_.members.exists((member) => {
+						return (
+							member._tag === "TsMemberFunction" &&
+							(member as TsMemberFunction).name.value === "instanceMethod"
+						);
+					}),
+				).toBe(true);
 			}
 		});
 	});
@@ -301,7 +320,12 @@ describe("KeepTypesOnly", () => {
 			const variable = createMockVar("AlsoRemoveMe");
 			const typeAlias = createMockTypeAlias("AlsoKeepMe");
 
-			const members = IArray.fromArray([interface_, function_, variable, typeAlias] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface_,
+				function_,
+				variable,
+				typeAlias,
+			] as TsContainerOrDecl[]);
 			const namespace = createMockNamespace("TestNamespace", members);
 			const result = KeepTypesOnly.apply(namespace);
 
@@ -311,14 +335,22 @@ describe("KeepTypesOnly", () => {
 				expect(ns._tag).toBe("TsDeclNamespace");
 				expect(ns.name.value).toBe("TestNamespace");
 				expect(ns.members.length).toBe(2); // Only interface and typeAlias should remain
-				expect(ns.members.exists((member) => {
-					return member._tag === "TsDeclInterface" &&
-						   (member as TsDeclInterface).name.value === "KeepMe";
-				})).toBe(true);
-				expect(ns.members.exists((member) => {
-					return member._tag === "TsDeclTypeAlias" &&
-						   (member as TsDeclTypeAlias).name.value === "AlsoKeepMe";
-				})).toBe(true);
+				expect(
+					ns.members.exists((member) => {
+						return (
+							member._tag === "TsDeclInterface" &&
+							(member as TsDeclInterface).name.value === "KeepMe"
+						);
+					}),
+				).toBe(true);
+				expect(
+					ns.members.exists((member) => {
+						return (
+							member._tag === "TsDeclTypeAlias" &&
+							(member as TsDeclTypeAlias).name.value === "AlsoKeepMe"
+						);
+					}),
+				).toBe(true);
 			}
 		});
 
@@ -326,7 +358,10 @@ describe("KeepTypesOnly", () => {
 			const function_ = createMockFunction("RemoveMe");
 			const variable = createMockVar("AlsoRemoveMe");
 
-			const members = IArray.fromArray([function_, variable] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				function_,
+				variable,
+			] as TsContainerOrDecl[]);
 			const namespace = createMockNamespace("EmptyNamespace", members);
 			const result = KeepTypesOnly.apply(namespace);
 
@@ -342,7 +377,10 @@ describe("KeepTypesOnly", () => {
 			const interface_ = createMockInterface("KeepMe");
 			const function_ = createMockFunction("RemoveMe");
 
-			const members = IArray.fromArray([interface_, function_] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface_,
+				function_,
+			] as TsContainerOrDecl[]);
 			const augmentedModule = createMockAugmentedModule("TestModule", members);
 			const result = KeepTypesOnly.apply(augmentedModule);
 
@@ -352,10 +390,14 @@ describe("KeepTypesOnly", () => {
 				expect(am._tag).toBe("TsAugmentedModule");
 				expect(am.name.value).toBe("TestModule");
 				expect(am.members.length).toBe(1); // Only interface should remain
-				expect(am.members.exists((member) => {
-					return member._tag === "TsDeclInterface" &&
-						   (member as TsDeclInterface).name.value === "KeepMe";
-				})).toBe(true);
+				expect(
+					am.members.exists((member) => {
+						return (
+							member._tag === "TsDeclInterface" &&
+							(member as TsDeclInterface).name.value === "KeepMe"
+						);
+					}),
+				).toBe(true);
 			}
 		});
 
@@ -363,7 +405,10 @@ describe("KeepTypesOnly", () => {
 			const function_ = createMockFunction("RemoveMe");
 			const variable = createMockVar("AlsoRemoveMe");
 
-			const members = IArray.fromArray([function_, variable] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				function_,
+				variable,
+			] as TsContainerOrDecl[]);
 			const augmentedModule = createMockAugmentedModule("EmptyModule", members);
 			const result = KeepTypesOnly.apply(augmentedModule);
 
@@ -453,11 +498,22 @@ describe("KeepTypesOnly", () => {
 		test("handles nested containers", () => {
 			const innerInterface = createMockInterface("InnerInterface");
 			const innerFunction = createMockFunction("InnerFunction");
-			const innerMembers = IArray.fromArray([innerInterface, innerFunction] as TsContainerOrDecl[]);
-			const innerNamespace = createMockNamespace("InnerNamespace", innerMembers);
+			const innerMembers = IArray.fromArray([
+				innerInterface,
+				innerFunction,
+			] as TsContainerOrDecl[]);
+			const innerNamespace = createMockNamespace(
+				"InnerNamespace",
+				innerMembers,
+			);
 
-			const outerMembers = IArray.fromArray([innerNamespace] as TsContainerOrDecl[]);
-			const outerNamespace = createMockNamespace("OuterNamespace", outerMembers);
+			const outerMembers = IArray.fromArray([
+				innerNamespace,
+			] as TsContainerOrDecl[]);
+			const outerNamespace = createMockNamespace(
+				"OuterNamespace",
+				outerMembers,
+			);
 			const result = KeepTypesOnly.apply(outerNamespace);
 
 			expect(isSome(result)).toBe(true);

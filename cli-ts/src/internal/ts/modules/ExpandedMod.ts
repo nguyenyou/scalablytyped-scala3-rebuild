@@ -5,9 +5,9 @@
  * This is a sealed trait equivalent with two case classes: Whole and Picked.
  */
 
-import { IArray } from "../../IArray.js";
-import type { TsNamedDecl } from "../trees.js";
+import type { IArray } from "../../IArray.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
+import type { TsNamedDecl } from "../trees.js";
 
 /**
  * Base interface for expanded module information.
@@ -73,7 +73,7 @@ export interface ExpandedModPicked extends ExpandedMod {
 export const ExpandedMod = {
 	/**
 	 * Creates a Whole expanded module.
-	 * 
+	 *
 	 * @param defaults Default export declarations
 	 * @param namespaced Namespaced declarations
 	 * @param rest Other declarations
@@ -96,7 +96,7 @@ export const ExpandedMod = {
 
 	/**
 	 * Creates a Picked expanded module.
-	 * 
+	 *
 	 * @param things Array of tuples containing declarations and their associated scopes
 	 * @returns A new ExpandedModPicked instance
 	 */
@@ -108,7 +108,7 @@ export const ExpandedMod = {
 
 	/**
 	 * Type guard to check if an ExpandedMod is a Whole.
-	 * 
+	 *
 	 * @param mod The ExpandedMod to check
 	 * @returns True if the mod is a Whole
 	 */
@@ -116,9 +116,10 @@ export const ExpandedMod = {
 
 	/**
 	 * Type guard to check if an ExpandedMod is a Picked.
-	 * 
+	 *
 	 * @param mod The ExpandedMod to check
 	 * @returns True if the mod is a Picked
 	 */
-	isPicked: (mod: ExpandedMod): mod is ExpandedModPicked => mod._tag === "Picked",
+	isPicked: (mod: ExpandedMod): mod is ExpandedModPicked =>
+		mod._tag === "Picked",
 };
