@@ -356,4 +356,129 @@ describe("MoveStatics", () => {
 			expect(modifiedClass.comments).toBe(originalComments); // Class comments unchanged
 		});
 	});
+
+	describe("Static Member Extraction", () => {
+		it("extracts static properties correctly", () => {
+			const staticProp1 = createStaticProperty("prop1");
+			const staticProp2 = createStaticProperty("prop2");
+			const nonStaticProp = createNonStaticProperty("instanceProp");
+			const members = IArray.fromArray<TsMember>([staticProp1, staticProp2, nonStaticProp]);
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.length).toBe(2);
+			expect(nonStatics.length).toBe(1);
+
+			// Check that static flag is removed and comment is added
+			const extractedProp1 = statics.apply(0) as TsMemberProperty;
+			expect(extractedProp1.isStatic).toBe(false);
+			expect(extractedProp1.comments.cs.some(c => c === comment)).toBe(true);
+			expect(extractedProp1.name.value).toBe("prop1");
+		});
+
+		it("extracts static functions correctly", () => {
+			const staticFunc1 = createStaticFunction("method1");
+			const staticFunc2 = createStaticFunction("method2");
+			const nonStaticFunc = createNonStaticFunction("instanceMethod");
+			const members = IArray.fromArray<TsMember>([staticFunc1, staticFunc2, nonStaticFunc]);
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.length).toBe(2);
+			expect(nonStatics.length).toBe(1);
+
+			// Check that static flag is removed and comment is added
+			const extractedFunc1 = statics.apply(0) as TsMemberFunction;
+			expect(extractedFunc1.isStatic).toBe(false);
+			expect(extractedFunc1.comments.cs.some(c => c === comment)).toBe(true);
+			expect(extractedFunc1.name.value).toBe("method1");
+		});
+
+		it("handles mixed static and non-static members", () => {
+			const staticProp = createStaticProperty("staticProp");
+			const staticFunc = createStaticFunction("staticMethod");
+			const nonStaticProp = createNonStaticProperty("instanceProp");
+			const nonStaticFunc = createNonStaticFunction("instanceMethod");
+			const members = IArray.fromArray<TsMember>([staticProp, nonStaticProp, staticFunc, nonStaticFunc]);
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.length).toBe(2);
+			expect(nonStatics.length).toBe(2);
+
+			// Verify static members are correctly processed
+			expect(statics.forall(member => {
+				if (member._tag === "TsMemberProperty") {
+					const prop = member as TsMemberProperty;
+					return !prop.isStatic && prop.comments.cs.some(c => c === comment);
+				} else if (member._tag === "TsMemberFunction") {
+					const func = member as TsMemberFunction;
+					return !func.isStatic && func.comments.cs.some(c => c === comment);
+				}
+				return false;
+			})).toBe(true);
+
+			// Verify non-static members are unchanged
+			expect(nonStatics.forall(member => {
+				if (member._tag === "TsMemberProperty") {
+					const prop = member as TsMemberProperty;
+					return !prop.isStatic && !prop.comments.cs.some(c => c === comment);
+				} else if (member._tag === "TsMemberFunction") {
+					const func = member as TsMemberFunction;
+					return !func.isStatic && !func.comments.cs.some(c => c === comment);
+				}
+				return false;
+			})).toBe(true);
+		});
+
+		it("handles empty member list", () => {
+			const members = IArray.Empty;
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.isEmpty).toBe(true);
+			expect(nonStatics.isEmpty).toBe(true);
+		});
+
+		it("handles all non-static members", () => {
+			const nonStaticProp = createNonStaticProperty("instanceProp");
+			const nonStaticFunc = createNonStaticFunction("instanceMethod");
+			const members = IArray.fromArray<TsMember>([nonStaticProp, nonStaticFunc]);
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.isEmpty).toBe(true);
+			expect(nonStatics.length).toBe(2);
+			expect(nonStatics.toArray()).toEqual(members.toArray());
+		});
+
+		it("handles all static members", () => {
+			const staticProp = createStaticProperty("staticProp");
+			const staticFunc = createStaticFunction("staticMethod");
+			const members = IArray.fromArray<TsMember>([staticProp, staticFunc]);
+			const comment = new Raw("static comment");
+
+			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+
+			expect(statics.length).toBe(2);
+			expect(nonStatics.isEmpty).toBe(true);
+
+			// All members should be converted to non-static with comments
+			expect(statics.forall(member => {
+				if (member._tag === "TsMemberProperty") {
+					const prop = member as TsMemberProperty;
+					return !prop.isStatic && prop.comments.cs.some(c => c === comment);
+				} else if (member._tag === "TsMemberFunction") {
+					const func = member as TsMemberFunction;
+					return !func.isStatic && func.comments.cs.some(c => c === comment);
+				}
+				return false;
+			})).toBe(true);
+		});
+	});
 });
