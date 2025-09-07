@@ -30,6 +30,7 @@ import type {
 	TsParsedFile,
 	TsQIdent,
 	TsType,
+	TsTypeIntersect,
 	TsTypeRef,
 	TsTypeUnion,
 } from "@/internal/ts/trees.js";
@@ -359,6 +360,93 @@ describe("LibrarySpecific", () => {
 			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
 			expect(transform).toBeDefined();
 			expect((transform as Named)?.libName?.value).toBe("semantic-ui-react");
+		});
+	});
+
+	describe("LibrarySpecific.apply - AMap Library Patches", () => {
+		test("transforms Merge type alias to intersection", () => {
+			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("amap-js-api"));
+			expect(transform).toBeDefined();
+
+			const scope = createMockScope();
+			const typeParam1 = TsTypeParamConstructor.simple(createSimpleIdent("T"));
+			const typeParam2 = TsTypeParamConstructor.simple(createSimpleIdent("U"));
+
+			const mergeAlias = createMockTypeAlias(
+				"Merge",
+				TsTypeRefConstructor.string, // dummy alias, will be replaced
+				IArray.fromArray([typeParam1, typeParam2])
+			);
+
+			const result = transform!.enterTsDeclTypeAlias!(scope)(mergeAlias);
+
+			expect(result._tag).toBe("TsDeclTypeAlias");
+			const resultAlias = result as TsDeclTypeAlias;
+			expect(resultAlias.alias._tag).toBe("TsTypeIntersect");
+		});
+
+		test("leaves other type aliases unchanged", () => {
+			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("amap-js-api"));
+			expect(transform).toBeDefined();
+
+			const scope = createMockScope();
+			const regularAlias = createMockTypeAlias("RegularAlias", TsTypeRefConstructor.string);
+
+			const result = transform!.enterTsDeclTypeAlias!(scope)(regularAlias);
+
+			expect(result).toBe(regularAlias);
+		});
+	});
+
+	describe("LibrarySpecific.apply - Semantic UI React Library Patches", () => {
+		test("removes index signatures from specific interfaces", () => {
+			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
+			expect(transform).toBeDefined();
+
+			const scope = createMockScope();
+			const indexMember = {
+				_tag: "TsMemberIndex" as const,
+				comments: Comments.empty(),
+				level: TsProtectionLevel.default(),
+				indexing: {
+					_tag: "IndexingDict" as const,
+					name: createSimpleIdent("key"),
+					tpe: TsTypeRefConstructor.string,
+					asString: "IndexingDict(key: string)"
+				},
+				valueType: TsTypeRefConstructor.any,
+				isReadOnly: false,
+				withComments: (cs: Comments) => ({ ...indexMember, comments: cs }),
+				addComment: (c: any) => ({ ...indexMember, comments: indexMember.comments.add(c) }),
+				asString: "TsMemberIndex([key: string]: any)"
+			};
+
+			const regularProp = createMemberProperty("regularProp");
+
+			const inputPropsInterface = createMockInterface(
+				"InputProps",
+				IArray.Empty,
+				IArray.fromArray([indexMember, regularProp] as TsMember[])
+			);
+
+			const result = transform!.enterTsDeclInterface!(scope)(inputPropsInterface);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.members.length).toBe(1);
+			expect(resultInterface.members.head._tag).toBe("TsMemberProperty");
+		});
+
+		test("leaves other interfaces unchanged", () => {
+			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
+			expect(transform).toBeDefined();
+
+			const scope = createMockScope();
+			const regularInterface = createMockInterface("RegularInterface");
+
+			const result = transform!.enterTsDeclInterface!(scope)(regularInterface);
+
+			expect(result).toBe(regularInterface);
 		});
 	});
 });
