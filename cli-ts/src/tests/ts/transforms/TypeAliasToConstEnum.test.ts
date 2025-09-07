@@ -2,42 +2,37 @@
  * Comprehensive test suite for TypeAliasToConstEnum transformation
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { none, some } from "fp-ts/Option";
+import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
 import { TypeAliasToConstEnum } from "@/internal/ts/transforms/TypeAliasToConstEnum.js";
 import type {
-	TsDecl,
 	TsDeclEnum,
 	TsDeclTypeAlias,
 	TsDeclVar,
-	TsEnumMember,
-	TsExpr,
 	TsType,
 	TsTypeParam,
 } from "@/internal/ts/trees.js";
 import {
-	TsDeclEnum as TsDeclEnumConstructor,
+	TsDeclNamespace,
 	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
 	TsDeclVar as TsDeclVarConstructor,
-	TsEnumMember as TsEnumMemberConstructor,
-	TsExprLiteral,
 	TsIdent,
+	TsIdentLibrary,
 	TsLiteral,
+	TsParsedFile,
 	TsQIdent,
-	TsTypeParam as TsTypeParamConstructor,
 	TsTypeLiteral,
+	TsTypeParam as TsTypeParamConstructor,
 	TsTypeRef,
 	TsTypeUnion,
 } from "@/internal/ts/trees.js";
-import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
-import { TsIdentLibrary } from "@/internal/ts/trees.js";
-import { TsParsedFile, TsDeclNamespace } from "@/internal/ts/trees.js";
-import { CodePath } from "../../../internal/ts/CodePath.js";
-import { NoComments, Comments } from "../../../internal/Comments.js";
 import { Raw } from "../../../internal/Comment.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
+import { Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
-import { none, some } from "fp-ts/Option";
 import { Logger } from "../../../internal/logging/index.js";
+import { CodePath } from "../../../internal/ts/CodePath.js";
+import { JsLocation } from "../../../internal/ts/JsLocation.js";
 
 // ============================================================================
 // Helper Functions for Creating Test Data
@@ -51,7 +46,10 @@ function createQIdent(...parts: string[]) {
 	return TsQIdent.of(...parts.map(createSimpleIdent));
 }
 
-function createTypeRef(name: string, tparams: IArray<TsType> = IArray.Empty): TsTypeRef {
+function createTypeRef(
+	name: string,
+	tparams: IArray<TsType> = IArray.Empty,
+): TsTypeRef {
 	return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 }
 
@@ -105,7 +103,12 @@ function createMockScope(
 	logger: Logger<void> = Logger.DevNull(),
 ): TsTreeScope {
 	const libName = TsIdentLibrary.construct("test-lib");
-	const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, members, CodePath.noPath());
+	const parsedFile = TsParsedFile.create(
+		NoComments.instance,
+		IArray.Empty,
+		members,
+		CodePath.noPath(),
+	);
 	const deps = new Map();
 	return TsTreeScope.create(libName, false, deps, logger)["/"](parsedFile);
 }
@@ -115,9 +118,16 @@ function createMockScopeWithContainer(
 	logger: Logger<void> = Logger.DevNull(),
 ): TsTreeScope {
 	const libName = TsIdentLibrary.construct("test-lib");
-	const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, IArray.fromArray([container]), CodePath.noPath());
+	const parsedFile = TsParsedFile.create(
+		NoComments.instance,
+		IArray.Empty,
+		IArray.fromArray([container]),
+		CodePath.noPath(),
+	);
 	const deps = new Map();
-	const rootScope = TsTreeScope.create(libName, false, deps, logger)["/"](parsedFile);
+	const rootScope = TsTreeScope.create(libName, false, deps, logger)["/"](
+		parsedFile,
+	);
 	return rootScope["/"](container);
 }
 
@@ -141,8 +151,14 @@ describe("TypeAliasToConstEnum", () => {
 		});
 
 		it("should have enterTsDecl method", () => {
-			const typeAlias = createMockTypeAlias("TestAlias", createTypeRef("string"));
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const typeAlias = createMockTypeAlias(
+				"TestAlias",
+				createTypeRef("string"),
+			);
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -153,8 +169,14 @@ describe("TypeAliasToConstEnum", () => {
 
 	describe("Type Alias Processing", () => {
 		it("should preserve non-union type aliases", () => {
-			const typeAlias = createMockTypeAlias("SimpleAlias", createTypeRef("string"));
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const typeAlias = createMockTypeAlias(
+				"SimpleAlias",
+				createTypeRef("string"),
+			);
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -176,7 +198,10 @@ describe("TypeAliasToConstEnum", () => {
 				some(createTypeRef("string")),
 				none,
 				JsLocation.zero(),
-				CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent("testVar")),
+				CodePath.hasPath(
+					createSimpleIdent("test-lib"),
+					createQIdent("testVar"),
+				),
 			);
 			const transform = new TypeAliasToConstEnum();
 
@@ -198,7 +223,11 @@ describe("TypeAliasToConstEnum", () => {
 				createLiteralType("value1"),
 				createLiteralType("value2"),
 			);
-			const typeAlias = createMockTypeAlias("GenericAlias", unionType, IArray.fromArray([tparam]));
+			const typeAlias = createMockTypeAlias(
+				"GenericAlias",
+				unionType,
+				IArray.fromArray([tparam]),
+			);
 			const transform = new TypeAliasToConstEnum();
 
 			const result = transform.enterTsDecl(scope)(typeAlias);
@@ -217,7 +246,10 @@ describe("TypeAliasToConstEnum", () => {
 			const typeAlias = createMockTypeAlias("LiteralUnion", unionType);
 
 			// Create a namespace containing the type alias to satisfy the uniqueness check
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -228,7 +260,12 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.name.value).toBe("LiteralUnion");
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(3);
-			expect(resultEnum.members.map(m => m.name.value).toArray().sort()).toEqual(["value1", "value2", "value3"]);
+			expect(
+				resultEnum.members
+					.map((m) => m.name.value)
+					.toArray()
+					.sort(),
+			).toEqual(["value1", "value2", "value3"]);
 		});
 
 		it("should convert mixed literal types to const enum", () => {
@@ -239,7 +276,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("MixedLiterals", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -251,17 +291,20 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(3);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["42", "stringValue", "true"]);
 		});
 	});
 
 	describe("Type Reference Resolution", () => {
 		it("should resolve type references in union", () => {
-			const literalAlias = createMockTypeAlias("LiteralAlias", createUnionType(
-				createLiteralType("ref1"),
-				createLiteralType("ref2"),
-			));
+			const literalAlias = createMockTypeAlias(
+				"LiteralAlias",
+				createUnionType(createLiteralType("ref1"), createLiteralType("ref2")),
+			);
 
 			const unionType = createUnionType(
 				createLiteralType("direct"),
@@ -269,7 +312,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("MixedUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([literalAlias, typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([literalAlias, typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -281,7 +327,10 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(3);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["direct", "ref1", "ref2"]);
 		});
 
@@ -292,7 +341,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("UnresolvableUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -304,7 +356,10 @@ describe("TypeAliasToConstEnum", () => {
 		});
 
 		it("should preserve type alias when reference is not literal union", () => {
-			const nonLiteralAlias = createMockTypeAlias("NonLiteralAlias", createTypeRef("string"));
+			const nonLiteralAlias = createMockTypeAlias(
+				"NonLiteralAlias",
+				createTypeRef("string"),
+			);
 
 			const unionType = createUnionType(
 				createLiteralType("direct"),
@@ -312,7 +367,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("MixedUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([nonLiteralAlias, typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([nonLiteralAlias, typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -331,9 +389,15 @@ describe("TypeAliasToConstEnum", () => {
 				createLiteralType("value2"),
 			);
 			const typeAlias1 = createMockTypeAlias("DuplicateName", unionType);
-			const typeAlias2 = createMockTypeAlias("DuplicateName", createTypeRef("string"));
+			const typeAlias2 = createMockTypeAlias(
+				"DuplicateName",
+				createTypeRef("string"),
+			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias1, typeAlias2]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias1, typeAlias2]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -358,10 +422,16 @@ describe("TypeAliasToConstEnum", () => {
 				some(createTypeRef("string")),
 				none,
 				JsLocation.zero(),
-				CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent("otherVar")),
+				CodePath.hasPath(
+					createSimpleIdent("test-lib"),
+					createQIdent("otherVar"),
+				),
 			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias, otherDecl]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias, otherDecl]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -379,7 +449,10 @@ describe("TypeAliasToConstEnum", () => {
 			const emptyUnion = createUnionType();
 			const typeAlias = createMockTypeAlias("EmptyUnion", emptyUnion);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -400,7 +473,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("MixedUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -419,7 +495,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("SortedEnum", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -429,7 +508,7 @@ describe("TypeAliasToConstEnum", () => {
 			const resultEnum = result as TsDeclEnum;
 			expect(resultEnum.members.length).toBe(3);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray();
+			const memberNames = resultEnum.members.map((m) => m.name.value).toArray();
 			// The actual sorting is by the literal's asString method
 			expect(memberNames.sort()).toEqual(["apple", "banana", "zebra"]);
 		});
@@ -448,10 +527,16 @@ describe("TypeAliasToConstEnum", () => {
 				createSimpleIdent("CommentedAlias"),
 				IArray.Empty,
 				unionType,
-				CodePath.hasPath(createSimpleIdent("test-lib"), createQIdent("CommentedAlias")),
+				CodePath.hasPath(
+					createSimpleIdent("test-lib"),
+					createQIdent("CommentedAlias"),
+				),
 			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -468,22 +553,25 @@ describe("TypeAliasToConstEnum", () => {
 
 	describe("Complex Scenarios", () => {
 		it("should handle deeply nested type references", () => {
-			const level3Alias = createMockTypeAlias("Level3", createUnionType(
-				createLiteralType("deep1"),
-				createLiteralType("deep2"),
-			));
+			const level3Alias = createMockTypeAlias(
+				"Level3",
+				createUnionType(createLiteralType("deep1"), createLiteralType("deep2")),
+			);
 
-			const level2Alias = createMockTypeAlias("Level2", createUnionType(
-				createLiteralType("mid"),
-				createTypeRef("Level3"),
-			));
+			const level2Alias = createMockTypeAlias(
+				"Level2",
+				createUnionType(createLiteralType("mid"), createTypeRef("Level3")),
+			);
 
-			const level1Alias = createMockTypeAlias("Level1", createUnionType(
-				createLiteralType("top"),
-				createTypeRef("Level2"),
-			));
+			const level1Alias = createMockTypeAlias(
+				"Level1",
+				createUnionType(createLiteralType("top"), createTypeRef("Level2")),
+			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([level3Alias, level2Alias, level1Alias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([level3Alias, level2Alias, level1Alias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -495,16 +583,24 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(4);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["deep1", "deep2", "mid", "top"]);
 		});
 
 		it("should handle large union with many literals", () => {
-			const literals = Array.from({ length: 50 }, (_, i) => createLiteralType(`value${i + 1}`));
+			const literals = Array.from({ length: 50 }, (_, i) =>
+				createLiteralType(`value${i + 1}`),
+			);
 			const unionType = createUnionType(...literals);
 			const typeAlias = createMockTypeAlias("LargeUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -518,18 +614,24 @@ describe("TypeAliasToConstEnum", () => {
 		});
 
 		it("should handle mixed type references and literals", () => {
-			const baseAlias = createMockTypeAlias("BaseValues", createUnionType(
-				createLiteralType("base1"),
-				createLiteralType("base2"),
-			));
+			const baseAlias = createMockTypeAlias(
+				"BaseValues",
+				createUnionType(createLiteralType("base1"), createLiteralType("base2")),
+			);
 
-			const extendedAlias = createMockTypeAlias("ExtendedValues", createUnionType(
-				createTypeRef("BaseValues"),
-				createLiteralType("extended1"),
-				createLiteralType("extended2"),
-			));
+			const extendedAlias = createMockTypeAlias(
+				"ExtendedValues",
+				createUnionType(
+					createTypeRef("BaseValues"),
+					createLiteralType("extended1"),
+					createLiteralType("extended2"),
+				),
+			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([baseAlias, extendedAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([baseAlias, extendedAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -541,7 +643,10 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(4);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["base1", "base2", "extended1", "extended2"]);
 		});
 	});
@@ -550,7 +655,10 @@ describe("TypeAliasToConstEnum", () => {
 		it("should handle malformed union types gracefully", () => {
 			const malformedUnion = TsTypeUnion.create(IArray.Empty); // Empty union
 			const typeAlias = createMockTypeAlias("MalformedUnion", malformedUnion);
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -565,14 +673,20 @@ describe("TypeAliasToConstEnum", () => {
 
 		it("should handle type references with type parameters", () => {
 			const stringTypeRef = createTypeRef("string") as TsType;
-			const parameterizedRef = createTypeRef("Generic", IArray.fromArray([stringTypeRef]));
+			const parameterizedRef = createTypeRef(
+				"Generic",
+				IArray.fromArray([stringTypeRef]),
+			);
 			const unionType = createUnionType(
 				createLiteralType("literal"),
 				parameterizedRef,
 			);
 			const typeAlias = createMockTypeAlias("ParameterizedUnion", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -593,7 +707,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("HttpStatusCode", statusCodes);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -605,7 +722,10 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(3);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["200", "404", "500"]);
 		});
 
@@ -619,7 +739,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("ThemeColor", colors);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -633,18 +756,24 @@ describe("TypeAliasToConstEnum", () => {
 		});
 
 		it("should handle event types pattern", () => {
-			const baseEvents = createMockTypeAlias("BaseEvents", createUnionType(
-				createLiteralType("click"),
-				createLiteralType("hover"),
-			));
+			const baseEvents = createMockTypeAlias(
+				"BaseEvents",
+				createUnionType(createLiteralType("click"), createLiteralType("hover")),
+			);
 
-			const allEvents = createMockTypeAlias("AllEvents", createUnionType(
-				createTypeRef("BaseEvents"),
-				createLiteralType("focus"),
-				createLiteralType("blur"),
-			));
+			const allEvents = createMockTypeAlias(
+				"AllEvents",
+				createUnionType(
+					createTypeRef("BaseEvents"),
+					createLiteralType("focus"),
+					createLiteralType("blur"),
+				),
+			);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([baseEvents, allEvents]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([baseEvents, allEvents]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -656,7 +785,10 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.isConst).toBe(true);
 			expect(resultEnum.members.length).toBe(4);
 
-			const memberNames = resultEnum.members.map(m => m.name.value).toArray().sort();
+			const memberNames = resultEnum.members
+				.map((m) => m.name.value)
+				.toArray()
+				.sort();
 			expect(memberNames).toEqual(["blur", "click", "focus", "hover"]);
 		});
 
@@ -668,7 +800,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("ApiEndpoint", endpoints);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -681,10 +816,18 @@ describe("TypeAliasToConstEnum", () => {
 			expect(resultEnum.members.length).toBe(3);
 
 			// Check that enum members have proper expressions
-			expect(resultEnum.members.toArray().every(m => m.expr._tag === "Some")).toBe(true);
-			expect(resultEnum.members.toArray().every(m =>
-				m.expr._tag === "Some" && (m.expr.value as any)._tag === "TsExprLiteral"
-			)).toBe(true);
+			expect(
+				resultEnum.members.toArray().every((m) => m.expr._tag === "Some"),
+			).toBe(true);
+			expect(
+				resultEnum.members
+					.toArray()
+					.every(
+						(m) =>
+							m.expr._tag === "Some" &&
+							(m.expr.value as any)._tag === "TsExprLiteral",
+					),
+			).toBe(true);
 		});
 	});
 
@@ -696,7 +839,10 @@ describe("TypeAliasToConstEnum", () => {
 			);
 			const typeAlias = createMockTypeAlias("IntegrationTest", unionType);
 
-			const namespace = createMockNamespace("TestNamespace", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"TestNamespace",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
@@ -718,7 +864,10 @@ describe("TypeAliasToConstEnum", () => {
 				createLiteralType("test1"),
 				createLiteralType("test2"),
 			);
-			const originalCodePath = CodePath.hasPath(createSimpleIdent("my-lib"), createQIdent("MyModule", "MyEnum"));
+			const originalCodePath = CodePath.hasPath(
+				createSimpleIdent("my-lib"),
+				createQIdent("MyModule", "MyEnum"),
+			);
 			const typeAlias = TsDeclTypeAliasConstructor.create(
 				NoComments.instance,
 				false,
@@ -728,7 +877,10 @@ describe("TypeAliasToConstEnum", () => {
 				originalCodePath,
 			);
 
-			const namespace = createMockNamespace("MyModule", IArray.fromArray([typeAlias]));
+			const namespace = createMockNamespace(
+				"MyModule",
+				IArray.fromArray([typeAlias]),
+			);
 			const scope = createMockScopeWithContainer(namespace);
 			const transform = new TypeAliasToConstEnum();
 
