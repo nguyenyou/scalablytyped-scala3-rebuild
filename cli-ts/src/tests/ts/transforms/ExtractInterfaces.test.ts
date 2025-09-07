@@ -29,13 +29,10 @@ import {
 	TsFunSig,
 	TsIdent,
 	type TsIdentLibrary,
-	type TsIdentSimple,
 	type TsMember,
 	TsMemberCall,
 	TsMemberIndex,
-	TsMemberProperty,
 	TsParsedFile,
-	TsQIdent,
 	type TsTree,
 	TsTypeObject,
 	TsTypeRef,
@@ -45,10 +42,7 @@ import {
 	createMockParsedFile,
 	createMockProperty,
 	createMockScope,
-	createMockVariable,
 	createSimpleIdent,
-	createTypeParam,
-	createTypeRef,
 } from "../../utils/TestUtils.js";
 
 // Helper functions for creating test data
