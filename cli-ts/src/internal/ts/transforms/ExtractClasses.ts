@@ -18,26 +18,33 @@
  * ```
  */
 
-import { chain, getOrElse, isSome, none, type Option, some } from "fp-ts/Option";
+import {
+	chain,
+	getOrElse,
+	isSome,
+	none,
+	type Option,
+	some,
+} from "fp-ts/Option";
 import { Comment, Marker } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
 import { IArray, partialFunction } from "../../IArray.js";
 import { AllMembersFor } from "../AllMembersFor.js";
-import { CodePath } from "../CodePath.js";
+import type { CodePath } from "../CodePath.js";
 import { FillInTParams } from "../FillInTParams.js";
 import { FollowAliases } from "../FollowAliases.js";
 import { JsLocation } from "../JsLocation.js";
 import type { HasClassMembers } from "../MemberCache.js";
 import { MethodType } from "../MethodType.js";
 import { TransformLeaveMembers } from "../TreeTransformations.js";
-import { LoopDetector, type TsTreeScope } from "../TsTreeScope.js";
 import { TsProtectionLevel } from "../TsProtectionLevel.js";
+import { LoopDetector, type TsTreeScope } from "../TsTreeScope.js";
 import {
 	type TsContainer,
 	type TsContainerOrDecl,
 	TsDeclClass,
-	TsDeclNamespace,
 	type TsDeclInterface,
+	TsDeclNamespace,
 	type TsDeclVar,
 	type TsFunSig,
 	TsIdent,
@@ -122,7 +129,10 @@ export class ExtractClasses extends TransformLeaveMembers {
 				!firstVar.readOnly
 			) {
 				const tpe = firstVar.tpe.value;
-				const allMembers = AllMembersFor.forType(scope, LoopDetector.initial)(tpe);
+				const allMembers = AllMembersFor.forType(
+					scope,
+					LoopDetector.initial,
+				)(tpe);
 
 				// Try to extract a class from the constructor type
 				const clsOpt = chain((analyzedCtors: AnalyzedCtors) => {
@@ -256,8 +266,8 @@ export class ExtractClasses extends TransformLeaveMembers {
 						const nameResult = findName.apply(prop.name);
 						if (nameResult._tag === "Some") {
 							const [name, wasBackup] = nameResult.value;
-							const realCtors: IArray<TsMemberFunction> = analyzedCtors.ctors.map(
-								(ctor: TsFunSig) =>
+							const realCtors: IArray<TsMemberFunction> =
+								analyzedCtors.ctors.map((ctor: TsFunSig) =>
 									TsMemberFunction.create(
 										ctor.comments,
 										prop.level,
@@ -272,7 +282,7 @@ export class ExtractClasses extends TransformLeaveMembers {
 										prop.isStatic,
 										prop.isReadOnly,
 									),
-							);
+								);
 
 							return some(
 								TsDeclClass.create(

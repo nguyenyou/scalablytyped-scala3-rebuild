@@ -16,12 +16,10 @@ import {
 	TsDeclInterface,
 	TsFunSig,
 	TsIdent,
-	TsIdentConstructor,
 	TsMemberCtor,
 	TsProtectionLevel,
 	TsTypeConstructor,
 	TsTypeFunction,
-	TsTypeIntersect,
 	TsTypeObject,
 	TsTypeRef,
 	TsTypeUnion,
@@ -320,9 +318,20 @@ describe("AnalyzedCtors", () => {
 
 		// BATCH 2: Missing "findCtors method" test cases
 		test("returns constructors from interface", () => {
-			const ctor1 = createMockCtor(IArray.Empty, IArray.Empty, some(createTypeRef("TestInterface")));
-			const ctor2 = createMockCtor(IArray.fromArray([createTypeParam("T")]), IArray.Empty, some(createTypeRef("TestInterface")));
-			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor1, ctor2]));
+			const ctor1 = createMockCtor(
+				IArray.Empty,
+				IArray.Empty,
+				some(createTypeRef("TestInterface")),
+			);
+			const ctor2 = createMockCtor(
+				IArray.fromArray([createTypeParam("T")]),
+				IArray.Empty,
+				some(createTypeRef("TestInterface")),
+			);
+			const interface1 = createMockInterface(
+				"TestInterface",
+				IArray.fromArray([ctor1, ctor2]),
+			);
 			const scope = createMockScope("test-lib", interface1);
 			const loopDetector = LoopDetector.initial;
 			const typeRef = createTypeRef("TestInterface");
@@ -336,7 +345,11 @@ describe("AnalyzedCtors", () => {
 		});
 
 		test("returns constructors from object type", () => {
-			const ctor = createMockCtor(IArray.Empty, IArray.Empty, some(createTypeRef("TestInterface")));
+			const ctor = createMockCtor(
+				IArray.Empty,
+				IArray.Empty,
+				some(createTypeRef("TestInterface")),
+			);
 			const objectType = TsTypeObject.create(
 				Comments.empty(),
 				IArray.fromArray([ctor as any]), // Cast to TsMember since TsMemberCtor extends TsMember
@@ -351,10 +364,24 @@ describe("AnalyzedCtors", () => {
 		});
 
 		test("returns constructors from intersection type", () => {
-			const ctor1 = createMockCtor(IArray.Empty, IArray.Empty, some(createTypeRef("Interface1")));
-			const ctor2 = createMockCtor(IArray.fromArray([createTypeParam("T")]), IArray.Empty, some(createTypeRef("Interface2")));
-			const interface1 = createMockInterface("Interface1", IArray.fromArray([ctor1]));
-			const interface2 = createMockInterface("Interface2", IArray.fromArray([ctor2]));
+			const ctor1 = createMockCtor(
+				IArray.Empty,
+				IArray.Empty,
+				some(createTypeRef("Interface1")),
+			);
+			const ctor2 = createMockCtor(
+				IArray.fromArray([createTypeParam("T")]),
+				IArray.Empty,
+				some(createTypeRef("Interface2")),
+			);
+			const interface1 = createMockInterface(
+				"Interface1",
+				IArray.fromArray([ctor1]),
+			);
+			const interface2 = createMockInterface(
+				"Interface2",
+				IArray.fromArray([ctor2]),
+			);
 			const scope = createMockScope("test-lib", interface1, interface2);
 			const loopDetector = LoopDetector.initial;
 			const intersectionType = createIntersectionType(
@@ -362,7 +389,10 @@ describe("AnalyzedCtors", () => {
 				createTypeRef("Interface2"),
 			);
 
-			const result = AnalyzedCtors.findCtors(scope, loopDetector)(intersectionType);
+			const result = AnalyzedCtors.findCtors(
+				scope,
+				loopDetector,
+			)(intersectionType);
 
 			expect(result.length).toBe(2);
 			expect(result.get(0)).toEqual(ctor1.signature);
@@ -376,15 +406,25 @@ describe("AnalyzedCtors", () => {
 			const scope = createMockScope();
 			const loopDetector = LoopDetector.initial;
 
-			const result = AnalyzedCtors.findCtors(scope, loopDetector)(constructorType);
+			const result = AnalyzedCtors.findCtors(
+				scope,
+				loopDetector,
+			)(constructorType);
 
 			expect(result.length).toBe(1);
 			expect(result.get(0)).toEqual(sig);
 		});
 
 		test("handles loop detection", () => {
-			const ctor = createMockCtor(IArray.Empty, IArray.Empty, some(createTypeRef("TestInterface")));
-			const interface1 = createMockInterface("TestInterface", IArray.fromArray([ctor]));
+			const ctor = createMockCtor(
+				IArray.Empty,
+				IArray.Empty,
+				some(createTypeRef("TestInterface")),
+			);
+			const interface1 = createMockInterface(
+				"TestInterface",
+				IArray.fromArray([ctor]),
+			);
 			const scope = createMockScope("test-lib", interface1);
 			const loopDetector = LoopDetector.initial;
 			const typeRef = createTypeRef("TestInterface");
@@ -396,7 +436,10 @@ describe("AnalyzedCtors", () => {
 			// Create a loop detector that already includes this type
 			const loopDetectorWithType = loopDetector.including(typeRef, scope);
 			if (loopDetectorWithType._tag === "Right") {
-				const result2 = AnalyzedCtors.findCtors(scope, loopDetectorWithType.right)(typeRef);
+				const result2 = AnalyzedCtors.findCtors(
+					scope,
+					loopDetectorWithType.right,
+				)(typeRef);
 				expect(result2.length).toBe(0); // Should return empty due to loop detection
 			}
 		});

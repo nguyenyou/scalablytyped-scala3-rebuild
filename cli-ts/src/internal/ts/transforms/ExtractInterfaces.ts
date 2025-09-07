@@ -5,7 +5,6 @@
  * and reduce code duplication in generated TypeScript definitions.
  */
 
-import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
 import { NameHint } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
@@ -14,12 +13,12 @@ import { CodePath, type CodePathHasPath } from "../CodePath.js";
 import { DeriveNonConflictingName } from "../DeriveNonConflictingName.js";
 import { JsLocation } from "../JsLocation.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
-import { TypeParamsReferencedInTree } from "../TypeParamsReferencedInTree.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
+import { TypeParamsReferencedInTree } from "../TypeParamsReferencedInTree.js";
 import {
 	type TsContainerOrDecl,
 	TsDeclClass,
-	TsDeclFunction,
+	type TsDeclFunction,
 	TsDeclInterface,
 	TsDeclModule,
 	TsDeclNamespace,
@@ -28,19 +27,15 @@ import {
 	type TsIdent,
 	type TsIdentLibrary,
 	type TsIdentSimple,
-	TsIdent as TsIdentConstructor,
 	type TsMember,
-	type TsMemberCall,
 	type TsMemberIndex,
 	TsMemberProperty,
-	type TsMemberTypeMapped,
 	type TsParsedFile,
 	TsQIdent,
 	type TsTree,
 	TsType,
 	type TsTypeObject,
 	TsTypeParam,
-	type TsTypePredicate,
 	TsTypeRef,
 } from "../trees.js";
 
@@ -93,12 +88,14 @@ export class ConflictHandlingStore {
 	 * Add an interface to the store, handling conflicts by name
 	 */
 	addInterface(
-		scope: TsTreeScope,
+		_scope: TsTreeScope,
 		prefix: string,
 		members: IArray<TsMember>,
 		referencedTparams: IArray<TsTypeParam>,
 	): (construct: (name: TsIdentSimple) => TsDeclInterface) => CodePathHasPath {
-		return (construct: (name: TsIdentSimple) => TsDeclInterface): CodePathHasPath => {
+		return (
+			construct: (name: TsIdentSimple) => TsDeclInterface,
+		): CodePathHasPath => {
 			const interfaceResult = DeriveNonConflictingName.apply(
 				prefix,
 				members,
@@ -111,18 +108,13 @@ export class ConflictHandlingStore {
 				}
 
 				const newInterface = construct(name).withCodePath(
-					CodePath.hasPath(
-						this.inLibrary,
-						TsQIdent.of(this.into, name),
-					),
+					CodePath.hasPath(this.inLibrary, TsQIdent.of(this.into, name)),
 				);
 
 				const existing = this.interfaces.get(name.value);
 				if (existing) {
 					// Check if the existing interface is compatible
-					if (
-						!this.areInterfacesCompatible(existing, newInterface)
-					) {
+					if (!this.areInterfacesCompatible(existing, newInterface)) {
 						return none; // Conflict - try another name
 					}
 					return some(existing); // Use existing compatible interface
@@ -261,7 +253,9 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Override visitTsParsedFile to manually traverse the tree and find type objects
 	 */
-	override visitTsParsedFile(scope: TsTreeScope): (file: TsParsedFile) => TsParsedFile {
+	override visitTsParsedFile(
+		scope: TsTreeScope,
+	): (file: TsParsedFile) => TsParsedFile {
 		return (file: TsParsedFile): TsParsedFile => {
 			// Create a scope for the file first
 			const fileScope = scope["/"](file);
@@ -283,7 +277,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform a container or declaration, recursively traversing its structure
 	 */
-	private transformContainerOrDecl(scope: TsTreeScope, member: TsContainerOrDecl): TsContainerOrDecl {
+	private transformContainerOrDecl(
+		scope: TsTreeScope,
+		member: TsContainerOrDecl,
+	): TsContainerOrDecl {
 		const newScope = scope["/"](member);
 
 		switch (member._tag) {
@@ -309,7 +306,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform an interface, processing its members
 	 */
-	private transformInterface(scope: TsTreeScope, iface: TsDeclInterface): TsDeclInterface {
+	private transformInterface(
+		scope: TsTreeScope,
+		iface: TsDeclInterface,
+	): TsDeclInterface {
 		const transformedMembers = iface.members.map((member) => {
 			return this.transformMember(scope, member);
 		});
@@ -384,7 +384,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform a function declaration, processing its signature
 	 */
-	private transformFunction(_scope: TsTreeScope, func: TsDeclFunction): TsDeclFunction {
+	private transformFunction(
+		_scope: TsTreeScope,
+		func: TsDeclFunction,
+	): TsDeclFunction {
 		// For now, just return the function unchanged
 		// TODO: Transform function signature types if needed
 		return func;
@@ -393,7 +396,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform a type alias, processing its type
 	 */
-	private transformTypeAlias(scope: TsTreeScope, alias: TsDeclTypeAlias): TsDeclTypeAlias {
+	private transformTypeAlias(
+		scope: TsTreeScope,
+		alias: TsDeclTypeAlias,
+	): TsDeclTypeAlias {
 		const transformedType = this.transformType(scope, alias.alias);
 		// Only create a new type alias if the type actually changed
 		if (transformedType === alias.alias) {
@@ -412,7 +418,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform a namespace, processing its members
 	 */
-	private transformNamespace(scope: TsTreeScope, ns: TsDeclNamespace): TsDeclNamespace {
+	private transformNamespace(
+		scope: TsTreeScope,
+		ns: TsDeclNamespace,
+	): TsDeclNamespace {
 		const transformedMembers = ns.members.map((member) => {
 			return this.transformContainerOrDecl(scope, member);
 		});
@@ -468,7 +477,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	/**
 	 * Transform a property member, processing its type
 	 */
-	private transformProperty(scope: TsTreeScope, prop: TsMemberProperty): TsMemberProperty {
+	private transformProperty(
+		scope: TsTreeScope,
+		prop: TsMemberProperty,
+	): TsMemberProperty {
 		if (prop.tpe._tag === "Some") {
 			const transformedType = this.transformType(scope, prop.tpe.value);
 			// Only create a new property if the type actually changed
@@ -530,14 +542,10 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 
 				// Convert type parameters to type arguments using the helper function
 				const typeArgs = TsTypeParam.asTypeArgs(referencedTparams).map(
-					(ref) => ref as TsType
+					(ref) => ref as TsType,
 				);
 
-				return TsTypeRef.create(
-					Comments.empty(),
-					codePath.codePath,
-					typeArgs,
-				);
+				return TsTypeRef.create(Comments.empty(), codePath.codePath, typeArgs);
 			}
 		}
 

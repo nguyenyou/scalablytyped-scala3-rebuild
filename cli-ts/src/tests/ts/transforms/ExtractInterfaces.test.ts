@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { none, some, type Option } from "fp-ts/Option";
+import { none, type Option, some } from "fp-ts/Option";
 import { Marker } from "../../../internal/Comment.js";
 import { Comments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
@@ -25,7 +25,6 @@ import {
 	IndexingDict,
 	type TsContainerOrDecl,
 	TsDeclInterface,
-	TsDeclNamespace,
 	TsDeclVar,
 	TsFunSig,
 	TsIdent,
@@ -56,10 +55,7 @@ function createTypeObject(members: IArray<TsMember>): TsTypeObject {
 	return TsTypeObject.create(Comments.empty(), members);
 }
 
-function createMockVar(
-	name: string,
-	tpe?: TsTypeObject,
-): TsDeclVar {
+function createMockVar(name: string, tpe?: TsTypeObject): TsDeclVar {
 	return TsDeclVar.create(
 		Comments.empty(),
 		false, // declared
@@ -175,7 +171,9 @@ describe("ExtractInterfaces", () => {
 
 			const prop1 = createMockProperty("name", some(TsTypeRef.string));
 			const prop2 = createMockProperty("age", some(TsTypeRef.number));
-			const typeObj = createTypeObject(IArray.fromArray<TsMember>([prop1, prop2]));
+			const typeObj = createTypeObject(
+				IArray.fromArray<TsMember>([prop1, prop2]),
+			);
 			const variable = createMockVar("person", typeObj);
 			const file = TsParsedFile.create(
 				Comments.empty(),
@@ -199,9 +197,12 @@ describe("ExtractInterfaces", () => {
 			// Create a call signature member
 			const call = createMockCall(some(TsTypeRef.string));
 			const typeObj = createTypeObject(IArray.fromArray<TsMember>([call]));
-			const interface_ = createMockInterface("Container", IArray.fromArray<TsMember>([
-				createMockProperty("callback", some(typeObj))
-			]));
+			const interface_ = createMockInterface(
+				"Container",
+				IArray.fromArray<TsMember>([
+					createMockProperty("callback", some(typeObj)),
+				]),
+			);
 			const file = TsParsedFile.create(
 				Comments.empty(),
 				IArray.Empty,
@@ -215,7 +216,9 @@ describe("ExtractInterfaces", () => {
 			// TODO: When extraction is fully implemented, this should extract the type object from the interface property
 			// Expected behavior: Should create a namespace with an extracted interface containing the call signature
 			expect(result.members.length).toBeGreaterThanOrEqual(1);
-			expect(result.members.exists((member) => member._tag === "TsDeclInterface")).toBe(true);
+			expect(
+				result.members.exists((member) => member._tag === "TsDeclInterface"),
+			).toBe(true);
 		});
 
 		test("handles type objects with name hints", () => {
@@ -225,7 +228,10 @@ describe("ExtractInterfaces", () => {
 
 			const prop = createMockProperty("value");
 			const nameHint = Comments.fromComment(Marker.nameHint("CustomName"));
-			const typeObj = TsTypeObject.create(nameHint, IArray.fromArray<TsMember>([prop]));
+			const typeObj = TsTypeObject.create(
+				nameHint,
+				IArray.fromArray<TsMember>([prop]),
+			);
 			const variable = createMockVar("test", typeObj);
 			const file = TsParsedFile.create(
 				Comments.empty(),
@@ -274,7 +280,9 @@ describe("ExtractInterfaces", () => {
 
 			const prop = createMockProperty("name");
 			const index = createMockIndex();
-			const typeObj = createTypeObject(IArray.fromArray<TsMember>([prop, index]));
+			const typeObj = createTypeObject(
+				IArray.fromArray<TsMember>([prop, index]),
+			);
 			const variable = createMockVar("mixed", typeObj);
 			const file = TsParsedFile.create(
 				Comments.empty(),
@@ -321,9 +329,13 @@ describe("ExtractInterfaces", () => {
 			const scope = createMockScope();
 
 			const innerProp = createMockProperty("inner");
-			const innerTypeObj = createTypeObject(IArray.fromArray<TsMember>([innerProp]));
+			const innerTypeObj = createTypeObject(
+				IArray.fromArray<TsMember>([innerProp]),
+			);
 			const outerProp = createMockProperty("nested", some(innerTypeObj));
-			const outerTypeObj = createTypeObject(IArray.fromArray<TsMember>([outerProp]));
+			const outerTypeObj = createTypeObject(
+				IArray.fromArray<TsMember>([outerProp]),
+			);
 			const variable = createMockVar("nested", outerTypeObj);
 			const file = TsParsedFile.create(
 				Comments.empty(),
@@ -370,11 +382,21 @@ describe("ExtractInterfaces", () => {
 			const into = createSimpleIdent("Anon");
 			const scope = createMockScope();
 
-			const prop = createMockProperty("value", some(TsTypeRef.create(Comments.empty(), TsQIdent.of(TsIdent.simple("T")), IArray.Empty)));
+			const prop = createMockProperty(
+				"value",
+				some(
+					TsTypeRef.create(
+						Comments.empty(),
+						TsQIdent.of(TsIdent.simple("T")),
+						IArray.Empty,
+					),
+				),
+			);
 			const typeObj = createTypeObject(IArray.fromArray<TsMember>([prop]));
-			const interface_ = createMockInterface("Container", IArray.fromArray<TsMember>([
-				createMockProperty("obj", some(typeObj))
-			]));
+			const interface_ = createMockInterface(
+				"Container",
+				IArray.fromArray<TsMember>([createMockProperty("obj", some(typeObj))]),
+			);
 			const file = TsParsedFile.create(
 				Comments.empty(),
 				IArray.Empty,
@@ -388,7 +410,9 @@ describe("ExtractInterfaces", () => {
 			// Expected behavior: Should create a namespace with an extracted interface that properly handles type parameter references
 			// For now, the implementation doesn't extract from interface properties, so we verify it handles the input gracefully
 			expect(result.members.length).toBeGreaterThanOrEqual(1);
-			expect(result.members.exists((member) => member._tag === "TsDeclInterface")).toBe(true);
+			expect(
+				result.members.exists((member) => member._tag === "TsDeclInterface"),
+			).toBe(true);
 		});
 
 		test("preserves original file structure", () => {
@@ -482,13 +506,22 @@ describe("ExtractInterfaces", () => {
 				// Create various type objects
 				const personProp1 = createMockProperty("name", some(TsTypeRef.string));
 				const personProp2 = createMockProperty("age", some(TsTypeRef.number));
-				const personObj = createTypeObject(IArray.fromArray<TsMember>([personProp1, personProp2]));
+				const personObj = createTypeObject(
+					IArray.fromArray<TsMember>([personProp1, personProp2]),
+				);
 
 				const callbackCall = createMockCall(some(TsTypeRef.void));
-				const callbackObj = createTypeObject(IArray.fromArray<TsMember>([callbackCall]));
+				const callbackObj = createTypeObject(
+					IArray.fromArray<TsMember>([callbackCall]),
+				);
 
-				const configProp = createMockProperty("enabled", some(TsTypeRef.boolean));
-				const configObj = createTypeObject(IArray.fromArray<TsMember>([configProp]));
+				const configProp = createMockProperty(
+					"enabled",
+					some(TsTypeRef.boolean),
+				);
+				const configObj = createTypeObject(
+					IArray.fromArray<TsMember>([configProp]),
+				);
 
 				const variable1 = createMockVar("person", personObj);
 				const variable2 = createMockVar("callback", callbackObj);
@@ -497,7 +530,11 @@ describe("ExtractInterfaces", () => {
 				const file = TsParsedFile.create(
 					Comments.empty(),
 					IArray.Empty,
-					IArray.fromArray<TsContainerOrDecl>([variable1, variable2, variable3]),
+					IArray.fromArray<TsContainerOrDecl>([
+						variable1,
+						variable2,
+						variable3,
+					]),
 					CodePath.noPath(),
 				);
 
