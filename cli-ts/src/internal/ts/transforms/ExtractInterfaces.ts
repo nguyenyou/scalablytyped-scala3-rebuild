@@ -7,13 +7,13 @@
 
 import { pipe } from "fp-ts/function";
 import { none, type Option, some } from "fp-ts/Option";
-import { type Comment, Marker } from "../../Comment.js";
+import { NameHint } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
 import { CodePath } from "../CodePath.js";
 import { DeriveNonConflictingName } from "../DeriveNonConflictingName.js";
 import { JsLocation } from "../JsLocation.js";
-import { AbstractTreeTransformation } from "../TreeTransformation.js";
+import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import { TypeParamsReferencedInTree } from "../TypeParamsReferencedInTree.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import {
@@ -63,7 +63,7 @@ export function extractInterfaces(
 					false, // declared
 					into,
 					interfaces,
-					CodePath.hasPath(inLibrary, TsQIdent.single(into)),
+					CodePath.hasPath(inLibrary, TsQIdent.of(into)),
 					JsLocation.zero(),
 				),
 			),
@@ -248,45 +248,15 @@ export function shouldBeExtracted(scope: TsTreeScope): boolean {
 /**
  * Tree transformation that lifts type objects into interfaces
  */
-export class LiftTypeObjects extends AbstractTreeTransformation<TsTreeScope> {
+export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	constructor(private readonly store: ConflictHandlingStore) {
 		super();
-	}
-
-	withTree(scope: TsTreeScope, tree: TsTree): TsTreeScope {
-		// Add the current tree to the scope stack
-		return {
-			...scope,
-			stack: [tree, ...scope.stack],
-		};
-	}
-
-	/**
-	 * Visit a parsed file and transform it
-	 */
-	visitTsParsedFile(scope: TsTreeScope): (file: TsParsedFile) => TsParsedFile {
-		return (file: TsParsedFile): TsParsedFile => {
-			// Transform the file by visiting all its types
-			return this.transformParsedFile(scope, file);
-		};
-	}
-
-	/**
-	 * Transform a parsed file by visiting all types
-	 */
-	private transformParsedFile(
-		_scope: TsTreeScope,
-		file: TsParsedFile,
-	): TsParsedFile {
-		// This is a simplified implementation - in practice, you would need
-		// to traverse the entire tree and transform TsTypeObject instances
-		return file;
 	}
 
 	/**
 	 * Transform a type, extracting object types into interfaces
 	 */
-	leaveTsType(scope: TsTreeScope): (type: TsType) => TsType {
+	override enterTsType(scope: TsTreeScope): (type: TsType) => TsType {
 		return (type: TsType): TsType => {
 			if (type._tag === "TsTypeObject") {
 				const obj = type as TsTypeObject;
@@ -359,8 +329,15 @@ export class LiftTypeObjects extends AbstractTreeTransformation<TsTreeScope> {
 		});
 
 		// Try to extract name hint from comments
-		const nameHint = this.extractNameHintValue(obj.comments);
-		if (nameHint) {
+		const nameHintResult = obj.comments.extract((marker) => {
+			if (marker instanceof NameHint) {
+				return marker.value;
+			}
+			throw new Error("Not a NameHint marker");
+		});
+
+		if (nameHintResult._tag === "Some") {
+			const [nameHint, _] = nameHintResult.value;
 			return nameHint.substring(0, Math.min(25, nameHint.length));
 		}
 
@@ -372,20 +349,21 @@ export class LiftTypeObjects extends AbstractTreeTransformation<TsTreeScope> {
 	}
 
 	/**
-	 * Extract name hint from comments
+	 * Extract name hint from comments, returning comments without the hint
 	 */
 	private extractNameHint(comments: Comments): Comments {
-		// This is a simplified implementation - you would need to implement
-		// the actual comment extraction logic based on Marker.NameHint
-		return comments;
-	}
+		const nameHintResult = comments.extract((marker) => {
+			if (marker instanceof NameHint) {
+				return marker.value;
+			}
+			throw new Error("Not a NameHint marker");
+		});
 
-	/**
-	 * Extract name hint value from comments
-	 */
-	private extractNameHintValue(_comments: Comments): string | undefined {
-		// This is a simplified implementation - you would need to implement
-		// the actual name hint extraction logic
-		return undefined;
+		if (nameHintResult._tag === "Some") {
+			const [_, remainingComments] = nameHintResult.value;
+			return remainingComments;
+		}
+
+		return comments;
 	}
 }
