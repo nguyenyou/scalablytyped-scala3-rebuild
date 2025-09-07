@@ -266,32 +266,44 @@ export const PreferTypeAlias = {
  * Visitor that prefers type aliases over interfaces when beneficial
  */
 class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
-	override enterTsDecl(scope: TsTreeScope): (x: TsDecl) => TsDecl {
-		return (x: TsDecl) => {
-			if (x._tag === "TsDeclInterface") {
-				const iface = x as TsDeclInterface;
-
-				// Convert interface to type alias if it meets certain criteria
-				if (this.shouldConvertToTypeAlias(scope, iface)) {
-					return this.convertInterfaceToTypeAlias(iface);
-				}
-			} else if (x._tag === "TsDeclTypeAlias") {
-				const alias = x as TsDeclTypeAlias;
-
-				// Convert type alias to interface if it represents an object type
-				if (this.shouldConvertToInterface(scope, alias)) {
-					return this.convertTypeAliasToInterface(alias);
-				}
+	override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => {
+			// Convert interface to type alias if it meets certain criteria
+			if (this.shouldConvertToTypeAlias(scope, x)) {
+				return this.convertInterfaceToTypeAlias(x) as any;
 			}
-
 			return x;
+		};
+	}
+
+	override enterTsDeclTypeAlias(scope: TsTreeScope): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+		return (x: TsDeclTypeAlias) => {
+			// Convert type alias to interface if it represents an object type
+			if (this.shouldConvertToInterface(scope, x)) {
+				return this.convertTypeAliasToInterface(x) as any;
+			}
+			return x;
+		};
+	}
+
+	protected override processParsedFileRecursively(scope: TsTreeScope, file: TsParsedFile): TsParsedFile {
+		const transformedMembers = file.members.map(member => {
+			if (this.isTsDecl(member as any)) {
+				return this.visitTsDecl(scope)(member as TsDecl) as any;
+			}
+			return member;
+		});
+
+		return {
+			...file,
+			members: transformedMembers
 		};
 	}
 
 	/**
 	 * Check if an interface should be converted to a type alias
 	 */
-	private shouldConvertToTypeAlias(scope: TsTreeScope, iface: TsDeclInterface): boolean {
+	private shouldConvertToTypeAlias(_scope: TsTreeScope, iface: TsDeclInterface): boolean {
 		// Don't convert if it has inheritance
 		if (iface.inheritance.nonEmpty) {
 			return false;
@@ -348,7 +360,7 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Check if a type alias should be converted to an interface
 	 */
-	private shouldConvertToInterface(scope: TsTreeScope, alias: TsDeclTypeAlias): boolean {
+	private shouldConvertToInterface(_scope: TsTreeScope, alias: TsDeclTypeAlias): boolean {
 		// Only convert if the alias points to an object type
 		if (alias.alias._tag !== "TsTypeObject") {
 			return false;
@@ -417,9 +429,9 @@ class AvoidCircularVisitor extends TreeTransformationScopedChanges {
 	 * Create an interface that breaks circular dependencies
 	 */
 	private createCircularBreakingInterface(
-		scope: TsTreeScope,
+		_scope: TsTreeScope,
 		typeRef: TsTypeRef,
-		rewrite: Rewrite
+		_rewrite: Rewrite
 	): TsType {
 		// For now, return the original type ref
 		// In a full implementation, this would create a new interface

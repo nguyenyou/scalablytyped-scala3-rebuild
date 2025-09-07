@@ -386,4 +386,167 @@ describe("PreferTypeAlias", () => {
 			expect(iface.declared).toBe(true);
 		});
 	});
+
+	describe("Circular Group Detection", () => {
+		it("finds empty groups for simple parsed file", () => {
+			const scope = createMockScope();
+			const parsedFile = createMockParsedFile();
+
+			const groups = PreferTypeAlias.findGroups(parsedFile, scope);
+
+			expect(groups.size).toBe(0);
+		});
+
+		it("finds groups for type aliases", () => {
+			const scope = createMockScope();
+			const stringType = createTypeRef("string");
+			const alias = createMockTypeAlias("SimpleAlias", stringType);
+			const parsedFile = createMockParsedFile(IArray.apply(alias as any));
+
+			const groups = PreferTypeAlias.findGroups(parsedFile, scope);
+
+			// Should not find circular groups for simple type aliases
+			expect(groups.size).toBe(0);
+		});
+
+		it("handles nested containers", () => {
+			const scope = createMockScope();
+			const stringType = createTypeRef("string");
+			const alias = createMockTypeAlias("NestedAlias", stringType);
+			const parsedFile = createMockParsedFile(IArray.apply(alias as any));
+
+			const groups = PreferTypeAlias.findGroups(parsedFile, scope);
+
+			expect(groups.size).toBe(0);
+		});
+	});
+
+	describe("Break Circular Groups", () => {
+		it("handles empty groups", () => {
+			const groups = new Set<any>();
+			const preferredRewrites = new Set<any>();
+
+			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+
+			expect(rewrites.length).toBe(0);
+		});
+
+		it("breaks single group with preferred rewrite", () => {
+			const typeRef1 = createTypeRef("Type1");
+			const typeRef2 = createTypeRef("Type2");
+			const group = { typeRefs: [typeRef1, typeRef2] };
+			const groups = new Set([group]);
+			const preferredRewrites = new Set([typeRef1.name]);
+
+			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+
+			expect(rewrites.length).toBe(1);
+			expect(rewrites[0].target).toBe(typeRef1.name);
+			expect(rewrites[0].circular.has(typeRef1.name)).toBe(true);
+			expect(rewrites[0].circular.has(typeRef2.name)).toBe(true);
+		});
+
+		it("breaks single group without preferred rewrite", () => {
+			const typeRef1 = createTypeRef("Type1");
+			const typeRef2 = createTypeRef("Type2");
+			const group = { typeRefs: [typeRef1, typeRef2] };
+			const groups = new Set([group]);
+			const preferredRewrites = new Set<any>();
+
+			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+
+			expect(rewrites.length).toBe(1);
+			// Should pick one of the types (most frequent or first)
+			expect(rewrites[0].circular.size).toBe(2);
+		});
+
+		it("breaks multiple groups", () => {
+			const typeRef1 = createTypeRef("Type1");
+			const typeRef2 = createTypeRef("Type2");
+			const typeRef3 = createTypeRef("Type3");
+			const typeRef4 = createTypeRef("Type4");
+
+			const group1 = { typeRefs: [typeRef1, typeRef2] };
+			const group2 = { typeRefs: [typeRef3, typeRef4] };
+			const groups = new Set([group1, group2]);
+			const preferredRewrites = new Set<any>();
+
+			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+
+			expect(rewrites.length).toBe(2);
+		});
+	});
+
+	describe("Type Arguments Conversion", () => {
+		it("converts empty type parameters", () => {
+			const tparams = IArray.Empty;
+
+			const result = PreferTypeAlias.asTypeArgs(tparams);
+
+			expect(result.length).toBe(0);
+		});
+
+		it("converts type parameters to type arguments", () => {
+			const tparam1 = { name: createSimpleIdent("T") };
+			const tparam2 = { name: createSimpleIdent("U") };
+			const tparams = IArray.apply(tparam1, tparam2);
+
+			const result = PreferTypeAlias.asTypeArgs(tparams);
+
+			expect(result.length).toBe(2);
+			expect(result.apply(0)._tag).toBe("TsTypeRef");
+			expect(result.apply(1)._tag).toBe("TsTypeRef");
+		});
+	});
+
+	describe("Integration Tests", () => {
+		it("applies full transformation pipeline", () => {
+			const scope = createMockScope();
+
+			// Create a mix of interfaces and type aliases
+			const callSig = createFunSig();
+			const callMember = createMemberCall(callSig);
+			const functionInterface = createMockInterface("FunctionInterface", IArray.apply(callMember as TsMember));
+
+			const propMember = createMemberProperty("prop", createTypeRef("string"));
+			const objectType = createTypeObject(IArray.apply(propMember as TsMember));
+			const objectAlias = createMockTypeAlias("ObjectAlias", objectType);
+
+			const parsedFile = createMockParsedFile(IArray.apply(functionInterface as any, objectAlias as any));
+
+			const result = PreferTypeAlias.apply(parsedFile, scope);
+
+			expect(result.members.length).toBe(2);
+
+			// Function interface should be converted to type alias
+			const firstMember = result.members.apply(0);
+			expect(firstMember._tag).toBe("TsDeclTypeAlias");
+
+			// Object alias should be converted to interface
+			const secondMember = result.members.apply(1);
+			expect(secondMember._tag).toBe("TsDeclInterface");
+		});
+
+		it("preserves non-convertible declarations", () => {
+			const scope = createMockScope();
+
+			// Create interface with inheritance (should not be converted)
+			const propMember = createMemberProperty("prop", createTypeRef("string"));
+			const inheritance = IArray.apply(createTypeRef("BaseInterface"));
+			const derivedInterface = createMockInterface("DerivedInterface", IArray.apply(propMember as TsMember), inheritance);
+
+			// Create non-object type alias (should not be converted)
+			const stringAlias = createMockTypeAlias("StringAlias", createTypeRef("string"));
+
+			const parsedFile = createMockParsedFile(IArray.apply(derivedInterface as any, stringAlias as any));
+
+			const result = PreferTypeAlias.apply(parsedFile, scope);
+
+			expect(result.members.length).toBe(2);
+
+			// Both should remain unchanged
+			expect(result.members.apply(0)._tag).toBe("TsDeclInterface");
+			expect(result.members.apply(1)._tag).toBe("TsDeclTypeAlias");
+		});
+	});
 });
