@@ -7,7 +7,7 @@
  * would be to duplicate all the contents.
  */
 
-import { isNone, isSome, none, type Option } from "fp-ts/Option";
+import { isNone, none, type Option } from "fp-ts/Option";
 import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
 import type { CodePath } from "../CodePath.js";
@@ -17,7 +17,7 @@ import {
 	type TsContainerOrDecl,
 	type TsDeclModule,
 	TsDeclNamespace,
-	TsExportAsNamespace,
+	type TsExportAsNamespace,
 	TsIdent,
 	type TsIdentLibrary,
 	TsIdentModule,
@@ -62,7 +62,9 @@ function findTopLevelModule(
 function copy(codePath: CodePath, decl: TsNamedDecl): IArray<TsNamedDecl> {
 	const derivedCopies = DeriveCopy.apply(decl, codePath, none);
 	return derivedCopies.map((copy) => {
-		const transformed = SetJsLocationTransformFunction.enterTsDecl(JsLocation.zero())(copy);
+		const transformed = SetJsLocationTransformFunction.enterTsDecl(
+			JsLocation.zero(),
+		)(copy);
 		return transformed as TsNamedDecl;
 	});
 }
@@ -151,9 +153,9 @@ export const ModuleAsGlobalNamespace = {
 		);
 
 		// Prepend the global namespace to the file members
-		const newMembers = IArray.fromArray([globalNamespace as TsContainerOrDecl]).concat(
-			file.members,
-		);
+		const newMembers = IArray.fromArray([
+			globalNamespace as TsContainerOrDecl,
+		]).concat(file.members);
 		return file.withMembers(newMembers) as TsParsedFile;
 	},
 };

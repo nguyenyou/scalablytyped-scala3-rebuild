@@ -48,7 +48,10 @@ function createModuleIdent(name: string) {
 function createMockInterface(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("interface")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("interface"),
+	),
 ): TsDeclInterface {
 	return TsDeclInterface.create(
 		Comments.empty(),
@@ -64,7 +67,10 @@ function createMockInterface(
 function createMockClass(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("class")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("class"),
+	),
 ): TsDeclClass {
 	return TsDeclClass.create(
 		Comments.empty(),
@@ -83,7 +89,10 @@ function createMockClass(
 function createMockModule(
 	name: string,
 	members: IArray<TsContainerOrDecl> = IArray.Empty,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("module")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("module"),
+	),
 ): TsDeclModule {
 	return TsDeclModuleConstructor.create(
 		Comments.empty(),
@@ -98,7 +107,10 @@ function createMockModule(
 function createMockNamespace(
 	name: string,
 	members: IArray<TsContainerOrDecl> = IArray.Empty,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("namespace")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("namespace"),
+	),
 ): TsDeclNamespace {
 	return TsDeclNamespaceConstructor.create(
 		Comments.empty(),
@@ -112,7 +124,10 @@ function createMockNamespace(
 
 function createMockParsedFile(
 	members: IArray<TsContainerOrDecl>,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("file")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("file"),
+	),
 ): TsParsedFile {
 	return TsParsedFileConstructor.create(
 		Comments.empty(),
@@ -128,7 +143,10 @@ function createExportAsNamespace(name: string) {
 
 function createMockFunction(
 	name: string,
-	codePath: CodePath = CodePath.hasPath(createSimpleIdent("test"), TsQIdent.ofStrings("function")),
+	codePath: CodePath = CodePath.hasPath(
+		createSimpleIdent("test"),
+		TsQIdent.ofStrings("function"),
+	),
 ): TsDeclFunction {
 	return TsDeclFunction.create(
 		Comments.empty(),
@@ -138,7 +156,13 @@ function createMockFunction(
 			Comments.empty(),
 			IArray.Empty, // tparams
 			IArray.Empty, // params
-			some(TsTypeRef.create(Comments.empty(), TsQIdent.ofStrings("void"), IArray.Empty)),
+			some(
+				TsTypeRef.create(
+					Comments.empty(),
+					TsQIdent.ofStrings("void"),
+					IArray.Empty,
+				),
+			),
 		),
 		JsLocation.zero(),
 		codePath,
@@ -150,26 +174,37 @@ describe("ModuleAsGlobalNamespace", () => {
 		test("returns original file when no top-level module exists", () => {
 			const libName = createLibraryIdent("test-lib");
 			const interface1 = createMockInterface("TestInterface");
-			const file = createMockParsedFile(IArray.fromArray([interface1] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([interface1] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
 			expect(result).toBe(file);
 			expect(result.members.length).toBe(1);
-			expect((result.members.get(0) as TsDeclInterface).name.value).toBe("TestInterface");
+			expect((result.members.get(0) as TsDeclInterface).name.value).toBe(
+				"TestInterface",
+			);
 		});
 
 		test("returns original file when top-level module has no export-as-namespace", () => {
 			const libName = createLibraryIdent("test-lib");
 			const interface1 = createMockInterface("TestInterface");
-			const topLevelModule = createMockModule("test-lib", IArray.fromArray([interface1] as TsContainerOrDecl[]));
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const topLevelModule = createMockModule(
+				"test-lib",
+				IArray.fromArray([interface1] as TsContainerOrDecl[]),
+			);
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
 			expect(result).toBe(file);
 			expect(result.members.length).toBe(1);
-			expect((result.members.get(0) as TsDeclModule).name.value).toBe("test-lib");
+			expect((result.members.get(0) as TsDeclModule).name.value).toBe(
+				"test-lib",
+			);
 		});
 	});
 
@@ -180,9 +215,14 @@ describe("ModuleAsGlobalNamespace", () => {
 			const exportAsNamespace = createExportAsNamespace("MyGlobal");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([interface1, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -203,10 +243,16 @@ describe("ModuleAsGlobalNamespace", () => {
 		test("creates global namespace when export-as-namespace is present in file", () => {
 			const libName = createLibraryIdent("test-lib");
 			const interface1 = createMockInterface("TestInterface");
-			const topLevelModule = createMockModule("test-lib", IArray.fromArray([interface1] as TsContainerOrDecl[]));
+			const topLevelModule = createMockModule(
+				"test-lib",
+				IArray.fromArray([interface1] as TsContainerOrDecl[]),
+			);
 			const exportAsNamespace = createExportAsNamespace("MyGlobal");
 			const file = createMockParsedFile(
-				IArray.fromArray([topLevelModule, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					topLevelModule,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
@@ -224,14 +270,19 @@ describe("ModuleAsGlobalNamespace", () => {
 	describe("ModuleAsGlobalNamespace - Default Export Handling", () => {
 		test("creates type alias when default export exists", () => {
 			const libName = createLibraryIdent("test-lib");
-			const defaultClass = createMockClass("DefaultClass");
+			const _defaultClass = createMockClass("DefaultClass");
 			const defaultClassWithDefaultName = createMockClass("default");
 			const exportAsNamespace = createExportAsNamespace("MyGlobal");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([defaultClassWithDefaultName, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					defaultClassWithDefaultName,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -256,9 +307,15 @@ describe("ModuleAsGlobalNamespace", () => {
 			const exportAsNamespace = createExportAsNamespace("MyGlobal");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([interface1, function1, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					function1,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -285,9 +342,15 @@ describe("ModuleAsGlobalNamespace", () => {
 			const exportAsNamespace2 = createExportAsNamespace("Global2");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([interface1, exportAsNamespace1, exportAsNamespace2] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					exportAsNamespace1,
+					exportAsNamespace2,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -338,7 +401,10 @@ describe("ModuleAsGlobalNamespace", () => {
 			);
 			const otherInterface = createMockInterface("OtherInterface");
 			const file = createMockParsedFile(
-				IArray.fromArray([topLevelModule, otherInterface] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					topLevelModule,
+					otherInterface,
+				] as TsContainerOrDecl[]),
 			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
@@ -346,8 +412,12 @@ describe("ModuleAsGlobalNamespace", () => {
 			// Should return the original file unchanged
 			expect(result).toBe(file);
 			expect(result.members.length).toBe(2);
-			expect((result.members.get(0) as TsDeclModule).name.value).toBe("test-lib");
-			expect((result.members.get(1) as TsDeclInterface).name.value).toBe("OtherInterface");
+			expect((result.members.get(0) as TsDeclModule).name.value).toBe(
+				"test-lib",
+			);
+			expect((result.members.get(1) as TsDeclInterface).name.value).toBe(
+				"OtherInterface",
+			);
 		});
 	});
 
@@ -359,7 +429,9 @@ describe("ModuleAsGlobalNamespace", () => {
 				"test-lib",
 				IArray.fromArray([exportAsNamespace] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -380,9 +452,14 @@ describe("ModuleAsGlobalNamespace", () => {
 			const exportAsNamespace = createExportAsNamespace("DefaultGlobal");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([defaultClass, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					defaultClass,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -400,13 +477,21 @@ describe("ModuleAsGlobalNamespace", () => {
 		test("handles nested modules correctly", () => {
 			const libName = createLibraryIdent("test-lib");
 			const innerInterface = createMockInterface("InnerInterface");
-			const innerModule = createMockModule("inner", IArray.fromArray([innerInterface] as TsContainerOrDecl[]));
+			const innerModule = createMockModule(
+				"inner",
+				IArray.fromArray([innerInterface] as TsContainerOrDecl[]),
+			);
 			const exportAsNamespace = createExportAsNamespace("NestedGlobal");
 			const topLevelModule = createMockModule(
 				"test-lib",
-				IArray.fromArray([innerModule, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					innerModule,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -426,7 +511,10 @@ describe("ModuleAsGlobalNamespace", () => {
 			const interface1 = createMockInterface("TestInterface");
 			const exportAsNamespace = createExportAsNamespace("OrphanGlobal");
 			const file = createMockParsedFile(
-				IArray.fromArray([interface1, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
@@ -448,7 +536,12 @@ describe("ModuleAsGlobalNamespace", () => {
 			const mainExport = createExportAsNamespace("ComplexGlobal");
 			const mainModule = createMockModule(
 				"complex-lib",
-				IArray.fromArray([mainInterface, mainClass, mainFunction, mainExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					mainInterface,
+					mainClass,
+					mainFunction,
+					mainExport,
+				] as TsContainerOrDecl[]),
 			);
 
 			// Create other content
@@ -457,7 +550,12 @@ describe("ModuleAsGlobalNamespace", () => {
 			const fileExport = createExportAsNamespace("FileGlobal");
 
 			const file = createMockParsedFile(
-				IArray.fromArray([mainModule, otherInterface, otherNamespace, fileExport] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					mainModule,
+					otherInterface,
+					otherNamespace,
+					fileExport,
+				] as TsContainerOrDecl[]),
 			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
@@ -479,9 +577,14 @@ describe("ModuleAsGlobalNamespace", () => {
 			const exportAsNamespace = createExportAsNamespace("PathGlobal");
 			const topLevelModule = createMockModule(
 				"path-test-lib",
-				IArray.fromArray([interface1, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
-			const file = createMockParsedFile(IArray.fromArray([topLevelModule] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([topLevelModule] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
@@ -504,10 +607,15 @@ describe("ModuleAsGlobalNamespace", () => {
 			// Create module with comments
 			const moduleWithComments = createMockModule(
 				"comment-test-lib",
-				IArray.fromArray([interface1, exportAsNamespace] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					exportAsNamespace,
+				] as TsContainerOrDecl[]),
 			);
 
-			const file = createMockParsedFile(IArray.fromArray([moduleWithComments] as TsContainerOrDecl[]));
+			const file = createMockParsedFile(
+				IArray.fromArray([moduleWithComments] as TsContainerOrDecl[]),
+			);
 
 			const result = ModuleAsGlobalNamespace.apply(libName, file);
 
