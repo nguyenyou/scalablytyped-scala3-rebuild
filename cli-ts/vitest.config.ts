@@ -3,7 +3,9 @@ import path from 'path'
 
 export default defineConfig({
   test: {
-    // ...
+    coverage: {
+      reporter: ['html'],
+    },
   },
   resolve: {
     alias: {

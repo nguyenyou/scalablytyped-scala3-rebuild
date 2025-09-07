@@ -25,3 +25,12 @@ Or specific
 ```sh
 npm test -- src/tests/ts/FollowAliases.test.ts
 ```
+
+## Test Coverage
+
+```
+cd cli-ts
+npm run coverage
+```
+
+Right click on `coverage/index.html` and `Show preview` in VSCode
