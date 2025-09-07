@@ -4,29 +4,26 @@
 
 import { none, some } from "fp-ts/Option";
 import { describe, expect, it } from "vitest";
-import { Comment } from "../../../internal/Comment.js";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import type { Comment } from "../../../internal/Comment.js";
+import { type Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
 import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { MethodType } from "../../../internal/ts/MethodType.js";
-import { ResolveTypeQueries } from "../../../internal/ts/transforms/ResolveTypeQueries.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
-import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import type { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import { ResolveTypeQueries } from "../../../internal/ts/transforms/ResolveTypeQueries.js";
 import {
-	TsDeclClass,
+	type TsDeclClass,
 	TsDeclFunction,
-	TsDeclNamespace,
 	TsDeclVar,
+	TsFunSig,
 	TsIdent,
-	TsIdentSimple,
+	type TsIdentSimple,
 	TsMemberProperty,
 	TsQIdent,
-	TsTypeQuery,
-	TsTypeRef,
-	TsTypeObject,
-	TsFunSig,
 	type TsType,
+	type TsTypeQuery,
+	TsTypeRef,
 } from "../../../internal/ts/trees.js";
 
 describe("ResolveTypeQueries", () => {
@@ -42,7 +39,7 @@ describe("ResolveTypeQueries", () => {
 	function createCodePath(name: string): CodePath {
 		return CodePath.hasPath(
 			TsIdent.librarySimple("test"),
-			TsQIdent.of(createSimpleIdent(name))
+			TsQIdent.of(createSimpleIdent(name)),
 		);
 	}
 
@@ -57,7 +54,7 @@ describe("ResolveTypeQueries", () => {
 	function createMemberProperty(
 		name: string,
 		tpe?: TsType,
-		hasExpr: boolean = false
+		hasExpr: boolean = false,
 	): TsMemberProperty {
 		return TsMemberProperty.create(
 			NoComments.instance,
@@ -66,7 +63,7 @@ describe("ResolveTypeQueries", () => {
 			tpe ? some(tpe) : none,
 			hasExpr ? some({ _tag: "TsExprLiteral" } as any) : none,
 			false,
-			false
+			false,
 		);
 	}
 
@@ -79,7 +76,7 @@ describe("ResolveTypeQueries", () => {
 			tpe ? some(tpe) : none,
 			none,
 			JsLocation.zero(),
-			createCodePath(name)
+			createCodePath(name),
 		);
 	}
 
@@ -88,7 +85,7 @@ describe("ResolveTypeQueries", () => {
 			NoComments.instance,
 			IArray.Empty,
 			IArray.Empty,
-			some(TsTypeRef.string)
+			some(TsTypeRef.string),
 		);
 		return TsDeclFunction.create(
 			NoComments.instance,
@@ -96,7 +93,7 @@ describe("ResolveTypeQueries", () => {
 			createSimpleIdent(name),
 			signature,
 			JsLocation.zero(),
-			createCodePath(name)
+			createCodePath(name),
 		);
 	}
 
@@ -114,10 +111,10 @@ describe("ResolveTypeQueries", () => {
 			members: IArray.Empty,
 			jsLocation: JsLocation.zero(),
 			codePath: createCodePath(name),
-			withCodePath: (newCodePath: CodePath) => createDeclClass(name),
-			withJsLocation: (newLocation: JsLocation) => createDeclClass(name),
-			withComments: (cs: Comments) => createDeclClass(name),
-			addComment: (c: Comment) => createDeclClass(name),
+			withCodePath: (_newCodePath: CodePath) => createDeclClass(name),
+			withJsLocation: (_newLocation: JsLocation) => createDeclClass(name),
+			withComments: (_cs: Comments) => createDeclClass(name),
+			addComment: (_c: Comment) => createDeclClass(name),
 			asString: `TsDeclClass(${name})`,
 		} as TsDeclClass;
 	}
@@ -156,7 +153,7 @@ describe("ResolveTypeQueries", () => {
 		it("should resolve type query in property without expression", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return a variable declaration
 			const mockVar = createDeclVar("myVar", TsTypeRef.string);
 			scope.lookupInternal = () => IArray.apply([mockVar, scope] as any);
@@ -214,7 +211,7 @@ describe("ResolveTypeQueries", () => {
 		it("should handle unresolved type queries with warning", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return empty (unresolved)
 			scope.lookupInternal = () => IArray.Empty;
 
@@ -237,7 +234,7 @@ describe("ResolveTypeQueries", () => {
 		it("should resolve type query in variable declaration", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return a function declaration
 			const mockFunc = createDeclFunction("myFunc");
 			scope.lookupInternal = () => IArray.apply([mockFunc, scope] as any);
@@ -267,7 +264,7 @@ describe("ResolveTypeQueries", () => {
 				some(typeQuery),
 				some({ _tag: "TsExprLiteral" } as any), // Has expression
 				JsLocation.zero(),
-				createCodePath("myVar")
+				createCodePath("myVar"),
 			);
 			const mockTree = {
 				members: IArray.apply(variable),
@@ -283,7 +280,7 @@ describe("ResolveTypeQueries", () => {
 		it("should handle unresolved variable type queries", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return empty (unresolved)
 			scope.lookupInternal = () => IArray.Empty;
 
@@ -307,7 +304,7 @@ describe("ResolveTypeQueries", () => {
 		it("should resolve type queries in type positions", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return a class declaration
 			const mockClass = createDeclClass("MyClass");
 			scope.lookupInternal = () => IArray.apply([mockClass, scope] as any);
@@ -339,7 +336,7 @@ describe("ResolveTypeQueries", () => {
 		it("should handle unresolved type queries in type positions", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return empty (unresolved)
 			scope.lookupInternal = () => IArray.Empty;
 
@@ -356,7 +353,7 @@ describe("ResolveTypeQueries", () => {
 		it("should convert function declarations to member functions", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return a function declaration
 			const mockFunc = createDeclFunction("myFunc");
 			scope.lookupInternal = () => IArray.apply([mockFunc, scope] as any);
@@ -377,7 +374,7 @@ describe("ResolveTypeQueries", () => {
 		it("should preserve variable types in properties", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return a variable declaration
 			const mockVar = createDeclVar("myVar", TsTypeRef.number);
 			scope.lookupInternal = () => IArray.apply([mockVar, scope] as any);
@@ -448,7 +445,7 @@ describe("ResolveTypeQueries", () => {
 		it("should handle global scope fallback", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Mock lookup to return empty initially, then something on global fallback
 			let callCount = 0;
 			scope.lookupInternal = () => {
@@ -518,17 +515,17 @@ describe("ResolveTypeQueries", () => {
 		it("should handle complex nested scenarios", () => {
 			const transform = ResolveTypeQueries.apply();
 			const scope = createMockScope();
-			
+
 			// Create a complex scenario with multiple type queries
 			const typeQuery1 = createTypeQuery("var1");
 			const typeQuery2 = createTypeQuery("var2");
 			const prop1 = createMemberProperty("prop1", typeQuery1, false);
 			const prop2 = createMemberProperty("prop2", typeQuery2, false);
-			
+
 			const mockVar1 = createDeclVar("var1", TsTypeRef.string);
 			const mockVar2 = createDeclVar("var2", TsTypeRef.number);
-			
-			scope.lookupInternal = (picker, parts) => {
+
+			scope.lookupInternal = (_picker, parts) => {
 				const name = parts.apply(0).value;
 				if (name === "var1") {
 					return IArray.apply([mockVar1, scope] as any);

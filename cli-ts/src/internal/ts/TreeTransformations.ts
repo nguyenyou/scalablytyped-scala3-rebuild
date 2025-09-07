@@ -241,9 +241,7 @@ export abstract class TransformLeaveClassMembers extends TreeTransformationScope
 		});
 	}
 
-	leaveTsTypeObject(
-		scope: TsTreeScope,
-	): (x: TsTypeObject) => TsTypeObject {
+	leaveTsTypeObject(scope: TsTreeScope): (x: TsTypeObject) => TsTypeObject {
 		return (x: TsTypeObject) => ({
 			...x,
 			members: this.newClassMembersLeaving(scope, x),
