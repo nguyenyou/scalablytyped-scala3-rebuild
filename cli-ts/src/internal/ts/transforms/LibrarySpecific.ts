@@ -245,7 +245,13 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 				case "ReactFragment": {
 					if (x.alias._tag === "TsTypeUnion") {
 						const union = x.alias as TsTypeUnion;
-						const dropObject = union.types.filter(type => type !== TsTypeRefConstructor.object);
+						const dropObject = union.types.filter(type => {
+							if (type._tag === "TsTypeRef") {
+								const typeRef = type as TsTypeRef;
+								return typeRef.name.parts.last.value !== "object";
+							}
+							return true;
+						});
 						return {
 							...x,
 							alias: TsTypeUnionConstructor.simplified(dropObject)
@@ -256,7 +262,13 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 				case "ReactNode": {
 					if (x.alias._tag === "TsTypeUnion") {
 						const union = x.alias as TsTypeUnion;
-						const dropUseless = union.types.filter(type => type !== TsTypeRefConstructor.null);
+						const dropUseless = union.types.filter(type => {
+							if (type._tag === "TsTypeRef") {
+								const typeRef = type as TsTypeRef;
+								return typeRef.name.parts.last.value !== "null";
+							}
+							return true;
+						});
 						return {
 							...x,
 							alias: TsTypeUnionConstructor.simplified(dropUseless)
