@@ -20,7 +20,6 @@ import {
 	type TsDeclModule,
 	TsDeclModule as TsDeclModuleConstructor,
 	TsIdent,
-	type TsIdentModule,
 	type TsIdentSimple,
 	type TsMember,
 	type TsParsedFile,
@@ -126,7 +125,9 @@ describe("AugmentModules", () => {
 			const scope = createMockScope();
 			const result = AugmentModules.target(module, scope);
 
-			expect(result.codePath.parts.get(result.codePath.parts.length - 1).value).toBe("TestModule");
+			expect(
+				result.codePath.parts.get(result.codePath.parts.length - 1).value,
+			).toBe("TestModule");
 		});
 
 		test("handles module with empty exports", () => {
@@ -134,14 +135,18 @@ describe("AugmentModules", () => {
 			const scope = createMockScope();
 			const result = AugmentModules.target(module, scope);
 
-			expect(result.codePath.parts.get(result.codePath.parts.length - 1).value).toBe("TestModule");
+			expect(
+				result.codePath.parts.get(result.codePath.parts.length - 1).value,
+			).toBe("TestModule");
 		});
 	});
 
 	describe("AugmentModules - File Processing", () => {
 		test("processes file with no augmented modules", () => {
 			const module = createMockModule("TestModule");
-			const parsedFile = createMockParsedFile(IArray.fromArray([module] as TsContainerOrDecl[]));
+			const parsedFile = createMockParsedFile(
+				IArray.fromArray([module] as TsContainerOrDecl[]),
+			);
 			const scope = createMockScope();
 
 			const result = AugmentModules.apply(scope)(parsedFile);
@@ -209,7 +214,11 @@ describe("AugmentModules", () => {
 			const augmentedModule = createMockAugmentedModule("OtherModule");
 
 			const parsedFile = createMockParsedFile(
-				IArray.fromArray([module, interface_, augmentedModule] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					module,
+					interface_,
+					augmentedModule,
+				] as TsContainerOrDecl[]),
 			);
 			const scope = createMockScope();
 
@@ -224,7 +233,10 @@ describe("AugmentModules", () => {
 			const augmentedModule2 = createMockAugmentedModule("Module2");
 
 			const parsedFile = createMockParsedFile(
-				IArray.fromArray([augmentedModule1, augmentedModule2] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					augmentedModule1,
+					augmentedModule2,
+				] as TsContainerOrDecl[]),
 			);
 			const scope = createMockScope();
 

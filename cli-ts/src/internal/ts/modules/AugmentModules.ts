@@ -7,22 +7,19 @@
 
 import { isSome, none, type Option } from "fp-ts/Option";
 import { IArray, IArrayBuilder } from "../../IArray.js";
-import { type CodePath, type CodePathHasPath } from "../CodePath.js";
+import type { CodePath, CodePathHasPath } from "../CodePath.js";
 import { ExportType } from "../ExportType.js";
 import { FlattenTrees } from "../FlattenTrees.js";
-import { Picker } from "../Picker.js";
 import { AbstractTreeTransformation } from "../TreeTransformation.js";
-import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
-import {
-	type TsAugmentedModule,
-	type TsContainerOrDecl,
-	type TsDeclModule,
-	type TsDeclNamespace,
-	TsExport,
+import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
+import type {
+	TsAugmentedModule,
+	TsContainerOrDecl,
+	TsDeclModule,
+	TsDeclNamespace,
 	TsExporteeNames,
-	type TsParsedFile,
-	type TsQIdent,
+	TsParsedFile,
 } from "../trees.js";
 import { KeepTypesOnly } from "./KeepTypesOnly.js";
 
@@ -105,15 +102,17 @@ export const AugmentModules = {
 
 			// First transformation: Merge augmented modules into their targets
 			class MergeTransformation extends AbstractTreeTransformation<void> {
-				withTree(_t: void, _tree: any): void {
+				withTree(_t: undefined, _tree: any) {
 					return undefined;
 				}
 
-				override enterTsDeclNamespace(_t: void): (x: TsDeclNamespace) => TsDeclNamespace {
+				override enterTsDeclNamespace(
+					_t: undefined,
+				): (x: TsDeclNamespace) => TsDeclNamespace {
 					return (x: TsDeclNamespace) => {
 						const targetPath = x.codePath.forceHasPath();
 						const auxes = targetToAux.get(targetPath.asString);
-						if (auxes && auxes.nonEmpty) {
+						if (auxes?.nonEmpty) {
 							// Collect all members from augmented modules
 							const auxMembers: IArray<TsContainerOrDecl> = auxes.flatMap(
 								(aux) => aux.members,
@@ -121,10 +120,13 @@ export const AugmentModules = {
 
 							// Update code paths for the augmented members
 							const updatedAuxMembers = auxMembers.map((am) => {
-								if (am._tag === "TsDeclNamespace" || am._tag === "TsDeclModule") {
-									return SetCodePathTransformFunction.enterTsContainer(targetPath)(
-										am as any,
-									) as TsContainerOrDecl;
+								if (
+									am._tag === "TsDeclNamespace" ||
+									am._tag === "TsDeclModule"
+								) {
+									return SetCodePathTransformFunction.enterTsContainer(
+										targetPath,
+									)(am as any) as TsContainerOrDecl;
 								} else {
 									return SetCodePathTransformFunction.enterTsDecl(targetPath)(
 										am as any,
@@ -148,11 +150,13 @@ export const AugmentModules = {
 					};
 				}
 
-				override enterTsDeclModule(_t: void): (x: TsDeclModule) => TsDeclModule {
+				override enterTsDeclModule(
+					_t: undefined,
+				): (x: TsDeclModule) => TsDeclModule {
 					return (x: TsDeclModule) => {
 						const targetPath = x.codePath.forceHasPath();
 						const auxes = targetToAux.get(targetPath.asString);
-						if (auxes && auxes.nonEmpty) {
+						if (auxes?.nonEmpty) {
 							// Collect all members from augmented modules
 							const auxMembers: IArray<TsContainerOrDecl> = auxes.flatMap(
 								(aux) => aux.members,
@@ -160,10 +164,13 @@ export const AugmentModules = {
 
 							// Update code paths for the augmented members
 							const updatedAuxMembers = auxMembers.map((am) => {
-								if (am._tag === "TsDeclNamespace" || am._tag === "TsDeclModule") {
-									return SetCodePathTransformFunction.enterTsContainer(targetPath)(
-										am as any,
-									) as TsContainerOrDecl;
+								if (
+									am._tag === "TsDeclNamespace" ||
+									am._tag === "TsDeclModule"
+								) {
+									return SetCodePathTransformFunction.enterTsContainer(
+										targetPath,
+									)(am as any) as TsContainerOrDecl;
 								} else {
 									return SetCodePathTransformFunction.enterTsDecl(targetPath)(
 										am as any,
@@ -190,11 +197,13 @@ export const AugmentModules = {
 
 			// Second transformation: Remove processed augmented modules
 			class RemoveTransformation extends AbstractTreeTransformation<void> {
-				withTree(_t: void, _tree: any): void {
+				withTree(_t: undefined, _tree: any) {
 					return undefined;
 				}
 
-				override leaveTsParsedFile(_t: void): (x: TsParsedFile) => TsParsedFile {
+				override leaveTsParsedFile(
+					_t: undefined,
+				): (x: TsParsedFile) => TsParsedFile {
 					return (x: TsParsedFile) => {
 						const newMembers = x.members.filter((member) => {
 							if (member._tag === "TsAugmentedModule") {
@@ -207,7 +216,9 @@ export const AugmentModules = {
 					};
 				}
 
-				override leaveTsDeclModule(_t: void): (x: TsDeclModule) => TsDeclModule {
+				override leaveTsDeclModule(
+					_t: undefined,
+				): (x: TsDeclModule) => TsDeclModule {
 					return (x: TsDeclModule) => {
 						const newMembersBuilder = IArrayBuilder.empty<TsContainerOrDecl>();
 						x.members.forEach((member) => {
@@ -236,6 +247,8 @@ export const AugmentModules = {
 			const removeTransform = new RemoveTransformation();
 			const combinedTransform = mergeTransform[">>"](removeTransform);
 
-			return combinedTransform.visitTsParsedFile(undefined)(file) as TsParsedFile;
+			return combinedTransform.visitTsParsedFile(undefined)(
+				file,
+			) as TsParsedFile;
 		},
 };
