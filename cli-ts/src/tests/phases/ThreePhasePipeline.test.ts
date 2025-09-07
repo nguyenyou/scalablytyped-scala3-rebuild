@@ -3,7 +3,7 @@
  * Verifies that Phase1ReadTypescript → Phase2ToScalaJs → PhaseFlavour works correctly
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { right } from "fp-ts/Either";
 import { none } from "fp-ts/Option";
 import { LibTsSource } from "../../internal/importer/LibTsSource";

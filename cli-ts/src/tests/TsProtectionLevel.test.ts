@@ -2,7 +2,7 @@
  * Tests for TsProtectionLevel.ts - TypeScript port of org.scalablytyped.converter.internal.ts.TsProtectionLevel
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { isNone, isSome } from "fp-ts/Option";
 import {
 	DefaultInstance,

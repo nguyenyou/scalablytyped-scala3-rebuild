@@ -3,7 +3,7 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.DropPropertiesTests
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { IArray } from "@/internal/IArray.js";
 import {
 	DropProperties,

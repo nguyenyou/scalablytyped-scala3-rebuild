@@ -3,7 +3,7 @@
  * Comprehensive test suite ported from Scala OptionalTypeTests.scala to ensure behavioral parity
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import {

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { IArray } from "@/internal/IArray.js";
 import { Json, PackageJson } from "@/internal/ts/PackageJson.js";
 import { TsIdentLibrary } from "@/internal/ts/trees.js";

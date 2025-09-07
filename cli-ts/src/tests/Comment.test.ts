@@ -2,7 +2,7 @@
  * Tests for Comment.ts - TypeScript port of org.scalablytyped.converter.internal.Comment
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import * as O from "fp-ts/Option";
 import {
 	BooleanLit,

@@ -6,7 +6,7 @@
  * transformation composition, and edge cases.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import {
 	TreeTransformationScopedChanges,
 	TreeTransformations,

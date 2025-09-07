@@ -4,7 +4,7 @@
  * Comprehensive test suite for FlattenTrees functionality
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments";
 import { IArray } from "@/internal/IArray";

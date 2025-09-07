@@ -5,7 +5,7 @@
  * by looking at parent class/interface implementations with the same signature.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

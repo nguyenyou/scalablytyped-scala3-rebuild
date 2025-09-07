@@ -5,7 +5,7 @@
  * for properties and variables that have expressions but no explicit type annotations.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

@@ -3,7 +3,7 @@
  * Comprehensive test suite ported from Scala DeriveNonConflictingNameTests.scala to ensure behavioral parity
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.ts";
 import { IArray } from "@/internal/IArray.ts";

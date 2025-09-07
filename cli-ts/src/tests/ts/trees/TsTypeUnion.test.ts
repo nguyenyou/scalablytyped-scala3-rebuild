@@ -5,7 +5,7 @@
  * between the Scala and TypeScript implementations of TsTypeUnion.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

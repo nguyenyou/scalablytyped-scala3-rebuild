@@ -2,7 +2,7 @@
  * Tests for MemberCache.ts - TypeScript port of org.scalablytyped.converter.internal.ts.MemberCacheTests
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { IArray } from "@/internal/IArray.js";
 import { HasClassMembers, MemberCache } from "@/internal/ts/MemberCache.js";
 import type { TsIdent, TsIdentSimple } from "@/internal/ts/trees.js";

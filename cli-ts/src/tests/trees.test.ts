@@ -4,7 +4,7 @@
  * Phase 2: Core Declaration Traits
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import type * as O from "fp-ts/Option";
 import { isSome, none, some } from "fp-ts/Option";
 import { Comment, Raw } from "../internal/Comment.js";
@@ -474,7 +474,6 @@ describe("trees - Phase 2: Core Declaration Traits", () => {
 					codePath,
 				);
 				const newMembers = IArray.fromArray<TsContainerOrDecl>([]);
-				it("should ", () => {});
 				const newParsedFile = parsedFile.withMembers(
 					newMembers,
 				) as TsParsedFile;

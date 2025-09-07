@@ -2,7 +2,7 @@
  * Tests for FillInTParams.ts - TypeScript port of org.scalablytyped.converter.internal.ts.FillInTParamsTests
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.ts";
 import { IArray } from "@/internal/IArray.ts";

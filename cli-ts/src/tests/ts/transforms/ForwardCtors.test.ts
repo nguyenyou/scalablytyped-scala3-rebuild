@@ -4,7 +4,7 @@
  * Tests for the ForwardCtors transformation functionality
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { IArray } from "../../../internal/IArray.js";
 import { TreeTransformationScopedChanges } from "../../../internal/ts/TreeTransformations.js";
 import { ForwardCtors } from "../../../internal/ts/transforms/ForwardCtors.js";

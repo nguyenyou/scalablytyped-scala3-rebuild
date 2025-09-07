@@ -6,7 +6,7 @@
  * conflict handling, and edge cases.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { Marker } from "../../../internal/Comment.js";
 import { Comments } from "../../../internal/Comments.js";

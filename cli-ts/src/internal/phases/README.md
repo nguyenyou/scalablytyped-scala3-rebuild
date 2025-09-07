@@ -339,7 +339,7 @@ const functionalPhase: Phase<string, string, ProcessedData> =
 ### Unit Testing Phases
 
 ```typescript
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 
 describe('upperCasePhase', () => {
   test('should transform input to uppercase', () => {

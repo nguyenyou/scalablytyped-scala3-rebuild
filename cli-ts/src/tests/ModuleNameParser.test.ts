@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import * as O from "fp-ts/Option";
 import { ModuleNameParser } from "@/internal/ts/ModuleNameParser";
 

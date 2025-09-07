@@ -3,7 +3,7 @@
  * Comprehensive test suite ported from Scala ModuleSpecTests.scala to ensure behavioral parity
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { IArray } from "@/internal/IArray.js";
 import {

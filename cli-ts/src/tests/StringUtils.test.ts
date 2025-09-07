@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import {
 	encodeURIComponent,
 	escapeNestedComments,
@@ -12,7 +12,7 @@ import {
 } from "@/internal/StringUtils";
 
 describe("StringUtils Tests", () => {
-	test("Quote and QuoteStr Constants", () => {
+	describe("Quote and QuoteStr Constants", () => {
 		test("Quote constant should be double quote character", () => {
 			expect(Quote).toBe('"');
 		});
@@ -23,7 +23,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("quote method", () => {
+	describe("quote method", () => {
 		test("quote empty string", () => {
 			const result = quote("");
 			expect(result).toBe('""');
@@ -56,7 +56,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("escapeNestedComments method", () => {
+	describe("escapeNestedComments method", () => {
 		test("string without comments should remain unchanged", () => {
 			const input = "regular string without comments";
 			const result = escapeNestedComments(input);
@@ -96,7 +96,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("formatComment method", () => {
+	describe("formatComment method", () => {
 		test("empty string should remain empty", () => {
 			const result = formatComment("");
 			expect(result).toBe("");
@@ -145,7 +145,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("escapeUnicodeEscapes method", () => {
+	describe("escapeUnicodeEscapes method", () => {
 		test("string without unicode escapes should remain unchanged", () => {
 			const input = "regular string";
 			const result = escapeUnicodeEscapes(input);
@@ -170,7 +170,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("joinCamelCase method", () => {
+	describe("joinCamelCase method", () => {
 		test("empty list should return empty string", () => {
 			const result = joinCamelCase([]);
 			expect(result).toBe("");
@@ -197,7 +197,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("toCamelCase method", () => {
+	describe("toCamelCase method", () => {
 		test("string without separators should remain unchanged", () => {
 			const result = toCamelCase("hello");
 			expect(result).toBe("hello");
@@ -224,7 +224,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("encodeURIComponent method", () => {
+	describe("encodeURIComponent method", () => {
 		test("empty string should return empty string", () => {
 			const result = encodeURIComponent("");
 			expect(result).toBe("");
@@ -251,7 +251,7 @@ describe("StringUtils Tests", () => {
 		});
 	});
 
-	test("Edge Cases and Boundary Conditions", () => {
+	describe("Edge Cases and Boundary Conditions", () => {
 		test("quote method with null-like characters", () => {
 			const result = quote("\u0000\u0001");
 			expect(result.startsWith('"')).toBe(true);

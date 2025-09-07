@@ -4,7 +4,7 @@
  * Tests for the AddComments transformation functionality
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { NameHint, Raw } from "@/internal/Comment.js";
 import { Comments } from "@/internal/Comments.js";

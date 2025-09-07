@@ -2,7 +2,7 @@
  * Tests for Comments.ts - TypeScript port of org.scalablytyped.converter.internal.Comments
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import * as O from "fp-ts/Option";
 import { IsTrivial, type Marker, NameHint, Raw } from "../internal/Comment.js";
 import {

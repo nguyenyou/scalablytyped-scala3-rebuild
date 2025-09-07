@@ -6,7 +6,7 @@
  * edge cases, and JSON serialization.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import {
 	AllExcept,
 	And,

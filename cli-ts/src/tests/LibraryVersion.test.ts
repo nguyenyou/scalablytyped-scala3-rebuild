@@ -4,7 +4,7 @@
  * Comprehensive unit tests for LibraryVersion and InGit classes
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { pipe } from "fp-ts/function";
 import { getOrElse, isNone, isSome } from "fp-ts/Option";
 import { Digest } from "../internal/Digest.js";

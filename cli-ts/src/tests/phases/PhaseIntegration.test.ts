@@ -3,7 +3,7 @@
  * End-to-end tests for the complete phases framework
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { right } from "fp-ts/Either";
 import { SortedSet } from "../../internal/collections";
 import { Logger } from "../../internal/logging";

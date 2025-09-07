@@ -2,7 +2,7 @@
  * Tests for the TypeScript port of Annotation.scala
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import * as O from "fp-ts/Option";
 import { IArray } from "../internal/IArray.js";
 import {

@@ -5,7 +5,7 @@
  * by following chains of type references to their final targets.
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { Comment, IsTrivial } from "@/internal/Comment.js";
 import { Comments, NoComments } from "@/internal/Comments.js";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { isLeft, isRight } from "fp-ts/Either";
 import { Comments } from "../../internal/Comments.ts";
 import { IArray } from "../../internal/IArray.ts";

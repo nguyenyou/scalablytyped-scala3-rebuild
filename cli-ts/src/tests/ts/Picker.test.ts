@@ -2,7 +2,7 @@
  * Tests for Picker.ts - TypeScript port of org.scalablytyped.converter.internal.ts.PickerTests
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { none } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

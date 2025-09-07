@@ -4,7 +4,7 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.RewriteTypeThisTests
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { IArray } from "@/internal/IArray.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import { RewriteTypeThisTransform } from "@/internal/ts/transforms/RewriteTypeThis.js";

@@ -3,7 +3,7 @@
  * Tests for CodePath.ts - comprehensive test coverage matching the original Scala implementation
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { isNone, isSome, none, some } from "fp-ts/Option";
 import { Comments } from "../internal/Comments.js";
 import { IArray } from "../internal/IArray.js";

@@ -1,8 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { java, javaScript } from "@/internal/EscapeStrings";
 
 describe("EscapeStrings Tests", () => {
-	test("java() method", () => {
+	describe("java() method", () => {
 		test("empty string should remain empty", () => {
 			const result = java("");
 			expect(result).toBe("");
@@ -69,7 +69,7 @@ describe("EscapeStrings Tests", () => {
 		});
 	});
 
-	test("javaScript() method", () => {
+	describe("javaScript() method", () => {
 		test("empty string should remain empty", () => {
 			const result = javaScript("");
 			expect(result).toBe("");
@@ -111,7 +111,7 @@ describe("EscapeStrings Tests", () => {
 		});
 	});
 
-	test("Edge cases", () => {
+	describe("Edge cases", () => {
 		test("null character should be escaped", () => {
 			const result = java("\u0000");
 			expect(result).toBe("\\u0000");

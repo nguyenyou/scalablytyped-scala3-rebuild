@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

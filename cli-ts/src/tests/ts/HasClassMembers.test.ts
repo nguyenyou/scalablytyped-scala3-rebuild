@@ -5,7 +5,7 @@
  * maintaining 100% behavioral parity with the Scala implementation.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";

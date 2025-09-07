@@ -10,15 +10,14 @@
 	"scripts": {
 		"build": "bun build src/main.ts --outdir dist --target node --format esm",
 		"dev": "bun --watch src/main.ts convert",
-		"test": "bun test",
-		"test:watch": "bun test --watch",
+		"test": "vitest --run",
 		"format": "biome format --write",
 		"lint": "biome check --write src",
-    "lint:fix": "bunx biome check --write --unsafe src",
+		"lint:fix": "bunx biome check --write --unsafe src",
 		"clean": "rm -rf dist",
 		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json",
-    "tc": "bun typecheck",
-    "check": "bun typecheck && bun test"
+		"tc": "bun typecheck",
+		"check": "bun typecheck && vitest --run"
 	},
 	"dependencies": {
 		"@types/tabulator-tables": "6.2.10",
@@ -40,6 +39,7 @@
 		"prettier": "^3.2.5",
 		"ts-pattern": "5.8.0",
 		"typescript": "5.9.2",
+		"vitest": "3.2.4",
 		"xxhash-wasm": "^1.0.2"
 	},
 	"engines": {

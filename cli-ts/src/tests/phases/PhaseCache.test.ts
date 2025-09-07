@@ -3,7 +3,7 @@
  * Ensures identical behavior to the Scala implementation
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { PhaseCache, PhaseRes } from "@/internal/phases";
 
 // Test helper types

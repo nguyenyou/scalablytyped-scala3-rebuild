@@ -7,10 +7,9 @@
     "generate": "rm -rf generated-sources && ./mill cli.runMain org.scalablytyped.converter.cli.Tracing",
     "cli:fix": "./mill cli.fix",
     "cli:fmt": "./mill mill.scalalib.scalafmt.ScalafmtModule/ cli.sources",
-    "test:ts": "bun test",
+    "test:ts": "vitest --run",
     "test:scala": "./mill cli.test",
     "coverage:scala": "./mill cli.scoverage.htmlReport && bunx --bun serve@latest out/cli/scoverage/htmlReport.dest",
-    "coverage:ts": "bun test --coverage",
     "test:all": "concurrently \"npm run test:ts\" \"npm run test:scala\""
   },
   "devDependencies": {
