@@ -24,9 +24,8 @@ object Versions {
   val scoverage              = "2.1.1"
 }
 
-trait BaseModule extends ScalaModule, ScalafixModule, ScoverageModule {
+trait BaseModule extends ScalaModule, ScalafixModule {
   def scalaVersion = Versions.scala3
-  def scoverageVersion = Versions.scoverage
 
   def mvnDeps = Seq(
     // Core Libraries
@@ -43,7 +42,7 @@ trait BaseModule extends ScalaModule, ScalafixModule, ScoverageModule {
     mvn"io.circe::circe-parser::${Versions.circe}"
   )
 
-  object test extends ScalaTests, ScoverageTests {
+  object test extends ScalaTests {
     def mvnDeps       = Seq(mvn"com.lihaoyi::utest:${Versions.utest}")
     def testFramework = "utest.runner.Framework"
   }
