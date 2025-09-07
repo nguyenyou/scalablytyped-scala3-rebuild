@@ -87,7 +87,7 @@ const NodeModules = new Set<string>([
 function inferFromPrefixes(file: TsParsedFile): Set<TsIdentLibrary> {
 	// Collect all qualified identifiers and extract their first part (prefix)
 	const prefixes = new Set<string>();
-	
+
 	const qidents = TsTreeTraverse.collect(file, (tree) => {
 		if (tree._tag === "TsQIdent") {
 			const qident = tree as TsQIdent;
@@ -127,7 +127,9 @@ function inferFromPrefixes(file: TsParsedFile): Set<TsIdentLibrary> {
  * @param nonResolvedModules Set of module identifiers that couldn't be resolved
  * @returns Node library dependency if any node modules are found, empty set otherwise
  */
-function inferNode(nonResolvedModules: Set<TsIdentModule>): Set<TsIdentLibrary> {
+function inferNode(
+	nonResolvedModules: Set<TsIdentModule>,
+): Set<TsIdentLibrary> {
 	const hasNodeModules = Array.from(nonResolvedModules).some((module) =>
 		NodeModules.has(module.value),
 	);
@@ -211,7 +213,9 @@ export const InferredDependency = {
 				.map((lib) => lib.value)
 				.sort()
 				.join(", ");
-			logger.info(`Inferred dependencies [${inferredNames}] for ${libName.value}`);
+			logger.info(
+				`Inferred dependencies [${inferredNames}] for ${libName.value}`,
+			);
 		}
 
 		return filteredInferred;

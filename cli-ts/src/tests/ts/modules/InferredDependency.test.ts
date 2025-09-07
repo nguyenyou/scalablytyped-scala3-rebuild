@@ -9,8 +9,8 @@ import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
-import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import { InferredDependency } from "@/internal/ts/modules/InferredDependency.js";
+import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import {
 	type TsContainerOrDecl,
 	TsDeclInterface,
@@ -105,14 +105,19 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(result.size).toBe(0);
 		});
 
 		test("excludes the library itself from inferred dependencies", () => {
 			const libName = createLibraryIdent("react");
-			const reactInterface = createMockInterface("Component");
+			const _reactInterface = createMockInterface("Component");
 			const reactProperty = createMockProperty(
 				"Component",
 				createMockTypeRef(createQIdent("React", "Component")),
@@ -127,9 +132,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === libName.value)).toBe(false);
+			expect(
+				Array.from(result).some((lib) => lib.value === libName.value),
+			).toBe(false);
 		});
 	});
 
@@ -144,7 +156,12 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 			expect(result.size).toBe(1);
@@ -160,9 +177,16 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(false);
+			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(
+				false,
+			);
 		});
 
 		test("infers node dependency with mixed modules", () => {
@@ -175,7 +199,12 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 		});
@@ -198,9 +227,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
 		});
 
 		test("infers Angular dependency from ng prefix", () => {
@@ -219,9 +255,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "angular")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "angular")).toBe(
+				true,
+			);
 		});
 
 		test("infers Angular dependency from angular prefix", () => {
@@ -240,9 +283,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "angular")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "angular")).toBe(
+				true,
+			);
 		});
 
 		test("infers Node dependency from NodeJS prefix", () => {
@@ -261,7 +311,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 		});
@@ -282,7 +337,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 		});
@@ -303,7 +363,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 		});
@@ -326,9 +391,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(
+				true,
+			);
 		});
 
 		test("infers backbone dependency from Backbone prefix", () => {
@@ -347,9 +419,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "backbone")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "backbone")).toBe(
+				true,
+			);
 		});
 
 		test("infers leaflet dependency from Leaflet prefix", () => {
@@ -368,9 +447,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "leaflet")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "leaflet")).toBe(
+				true,
+			);
 		});
 
 		test("infers plotly.js dependency from Plotly prefix", () => {
@@ -389,9 +475,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "plotly.js")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "plotly.js")).toBe(
+				true,
+			);
 		});
 	});
 
@@ -415,10 +508,17 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
 			expect(result.size).toBe(2);
 		});
 
@@ -442,10 +542,19 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
-			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
+			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(
+				true,
+			);
 			expect(result.size).toBe(2);
 		});
 
@@ -469,9 +578,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
 			expect(result.size).toBe(1); // Should not duplicate react dependency
 		});
 	});
@@ -483,7 +599,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(result.size).toBe(0);
 		});
@@ -504,7 +625,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(result.size).toBe(0);
 		});
@@ -525,7 +651,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(result.size).toBe(0);
 		});
@@ -546,7 +677,12 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			expect(result.size).toBe(0);
 		});
@@ -556,46 +692,53 @@ describe("InferredDependency", () => {
 		test("recognizes all core node modules", () => {
 			const libName = createLibraryIdent("test-lib");
 			const file = createMockParsedFile(IArray.Empty);
-			const coreNodeModules = new Set([
-				"buffer",
-				"querystring",
-				"events",
-				"http",
-				"cluster",
-				"zlib",
-				"os",
-				"https",
-				"punycode",
-				"repl",
-				"readline",
-				"vm",
-				"child_process",
-				"url",
-				"dns",
-				"net",
-				"dgram",
-				"fs",
-				"path",
-				"string_decoder",
-				"tls",
-				"crypto",
-				"stream",
-				"util",
-				"assert",
-				"tty",
-				"domain",
-				"constants",
-				"module",
-				"process",
-				"v8",
-				"timers",
-				"console",
-				"async_hooks",
-				"http2",
-			].map(createModuleIdent));
+			const coreNodeModules = new Set(
+				[
+					"buffer",
+					"querystring",
+					"events",
+					"http",
+					"cluster",
+					"zlib",
+					"os",
+					"https",
+					"punycode",
+					"repl",
+					"readline",
+					"vm",
+					"child_process",
+					"url",
+					"dns",
+					"net",
+					"dgram",
+					"fs",
+					"path",
+					"string_decoder",
+					"tls",
+					"crypto",
+					"stream",
+					"util",
+					"assert",
+					"tty",
+					"domain",
+					"constants",
+					"module",
+					"process",
+					"v8",
+					"timers",
+					"console",
+					"async_hooks",
+					"http2",
+				].map(createModuleIdent),
+			);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, coreNodeModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				coreNodeModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 			expect(result.size).toBe(1);
@@ -611,7 +754,12 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, someNodeModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				someNodeModules,
+				logger,
+			);
 
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
 			expect(result.size).toBe(1);
@@ -628,9 +776,16 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonNodeModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonNodeModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(false);
+			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(
+				false,
+			);
 			expect(result.size).toBe(0);
 		});
 	});
@@ -652,9 +807,16 @@ describe("InferredDependency", () => {
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
 		});
 
 		test("handles multiple interfaces with different dependencies", () => {
@@ -686,16 +848,31 @@ describe("InferredDependency", () => {
 			);
 
 			const file = createMockParsedFile(
-				IArray.fromArray([interface1, interface2, interface3] as TsContainerOrDecl[]),
+				IArray.fromArray([
+					interface1,
+					interface2,
+					interface3,
+				] as TsContainerOrDecl[]),
 			);
 			const nonResolvedModules = new Set<TsIdentModule>();
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
-			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(true);
-			expect(Array.from(result).some((lib) => lib.value === "backbone")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
+			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(
+				true,
+			);
+			expect(Array.from(result).some((lib) => lib.value === "backbone")).toBe(
+				true,
+			);
 			expect(result.size).toBe(3);
 		});
 
@@ -722,7 +899,12 @@ describe("InferredDependency", () => {
 
 			const interface1 = createMockInterface(
 				"ComplexInterface",
-				IArray.fromArray([reactProperty, nodeProperty, bufferProperty, momentProperty] as TsMember[]),
+				IArray.fromArray([
+					reactProperty,
+					nodeProperty,
+					bufferProperty,
+					momentProperty,
+				] as TsMember[]),
 			);
 			const file = createMockParsedFile(
 				IArray.fromArray([interface1] as TsContainerOrDecl[]),
@@ -736,13 +918,22 @@ describe("InferredDependency", () => {
 			]);
 			const logger = createMockLogger();
 
-			const result = InferredDependency.apply(libName, file, nonResolvedModules, logger);
+			const result = InferredDependency.apply(
+				libName,
+				file,
+				nonResolvedModules,
+				logger,
+			);
 
 			// Should infer: react, node (from both prefix and modules), moment
 			// Note: node should only appear once despite being inferred from multiple sources
-			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "react")).toBe(
+				true,
+			);
 			expect(Array.from(result).some((lib) => lib.value === "node")).toBe(true);
-			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(true);
+			expect(Array.from(result).some((lib) => lib.value === "moment")).toBe(
+				true,
+			);
 			expect(result.size).toBe(3); // Should not duplicate node dependency
 		});
 	});
