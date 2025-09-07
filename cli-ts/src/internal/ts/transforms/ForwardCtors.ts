@@ -15,7 +15,7 @@ import { FillInTParams } from "../FillInTParams.js";
 import type { HasClassMembers } from "../MemberCache.js";
 import { Picker } from "../Picker.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
-import type { TsDeclClass, TsMember, TsNamedDecl, TsTypeRef } from "../trees.js";
+import type { TsDeclClass, TsDeclInterface, TsMember, TsNamedDecl, TsTypeRef } from "../trees.js";
 import { TsIdentConstructor } from "../trees.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import { LoopDetector } from "../TsTreeScope.js";
@@ -32,22 +32,33 @@ export class ForwardCtors extends TreeTransformationScopedChanges {
 	 *
 	 * @param scope The current tree scope for lookups
 	 * @param loopDetector Loop detector to prevent infinite recursion
+	 * @param visited Set of visited class names to prevent circular inheritance
 	 * @param parentRef The type reference to the parent class
 	 * @returns Option containing the array of constructor members, or None if not found
 	 */
 	private parentWithCtor(
 		scope: TsTreeScope,
 		loopDetector: LoopDetector,
+		visited: Set<string> = new Set(),
 	): (parentRef: TsTypeRef) => Option<IArray<TsMember>> {
 		return (parentRef: TsTypeRef): Option<IArray<TsMember>> => {
+			// Check for circular inheritance using simple string-based detection
+			const parentName = parentRef.name.parts.toArray().map(p => p.value).join(".");
+			if (visited.has(parentName)) {
+				return none;
+			}
+
+			const newVisited = new Set(visited);
+			newVisited.add(parentName);
+
 			const loopResult = loopDetector.including(parentRef, scope);
-			
+
 			if (loopResult._tag === "Left") {
 				return none;
 			}
-			
+
 			const newLd = loopResult.right;
-			
+
 			// Look up the parent class using the HasClassMemberss picker
 			const lookupResults = scope.lookupInternal(Picker.HasClassMemberss, parentRef.name.parts, newLd);
 
@@ -71,12 +82,24 @@ export class ForwardCtors extends TreeTransformationScopedChanges {
 						parentRewritten.parent,
 						fold(
 							() => none,
-							(grandParentRef) => this.parentWithCtor(newScope, newLd)(grandParentRef)
+							(grandParentRef) => this.parentWithCtor(newScope, newLd, newVisited)(grandParentRef)
 						)
 					);
 
 					if (grandParentResult._tag === "Some") {
 						return grandParentResult.value;
+					}
+				} else if (parent._tag === "TsDeclInterface") {
+					const parentInterface = parent as TsDeclInterface;
+
+					// Fill in type parameters from the parent reference
+					const parentRewritten = FillInTParams.apply(parentInterface, parentRef.tparams);
+
+					// Check if the parent has constructors
+					const ctors = parentRewritten.membersByName.get(TsIdentConstructor);
+
+					if (ctors && !ctors.isEmpty) {
+						return ctors;
 					}
 				}
 
@@ -108,7 +131,7 @@ export class ForwardCtors extends TreeTransformationScopedChanges {
 			
 			// Try to find constructors in the parent class
 			const parentRef = x.parent.value;
-			const ctors = this.parentWithCtor(scope, LoopDetector.initial)(parentRef);
+			const ctors = this.parentWithCtor(scope, LoopDetector.initial, new Set())(parentRef);
 			
 			return pipe(
 				ctors,

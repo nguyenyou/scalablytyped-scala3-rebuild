@@ -1,5 +1,8 @@
 //| mill-version: 1.0.3
-//| mvnDeps: ["com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION", "com.goyeau::mill-scalafix::0.6.0"]
+//| mvnDeps: 
+//| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
+//| - com.goyeau::mill-scalafix::0.6.0
+//| - com.lihaoyi::mill-contrib-scoverage:$MILL_VERSION
 
 import mill.*, scalalib.*
 import os.*
@@ -7,6 +10,7 @@ import mill.contrib.buildinfo.BuildInfo
 import mill.scalajslib.*
 import mill.scalajslib.api.*
 import com.goyeau.mill.scalafix.ScalafixModule
+import mill.contrib.scoverage.ScoverageModule
 
 object Versions {
   val scala3                 = "3.7.2"
@@ -17,10 +21,13 @@ object Versions {
   val circe                  = "0.14.14"
   val osLib                  = "0.9.3"
   val utest                  = "0.9.1"
+  val scoverage              = "2.1.1"
 }
 
-trait BaseModule extends ScalaModule, ScalafixModule {
+trait BaseModule extends ScalaModule, ScalafixModule, ScoverageModule {
   def scalaVersion = Versions.scala3
+  def scoverageVersion = Versions.scoverage
+
   def mvnDeps = Seq(
     // Core Libraries
     mvn"com.lihaoyi::os-lib:${Versions.osLib}",
@@ -36,13 +43,14 @@ trait BaseModule extends ScalaModule, ScalafixModule {
     mvn"io.circe::circe-parser::${Versions.circe}"
   )
 
-  object test extends ScalaTests {
+  object test extends ScalaTests, ScoverageTests {
     def mvnDeps       = Seq(mvn"com.lihaoyi::utest:${Versions.utest}")
     def testFramework = "utest.runner.Framework"
   }
 }
 
-object cli extends BaseModule, BuildInfo, ScalafixModule {
+object cli extends BaseModule, BuildInfo {
+
   val buildInfoPackageName = "org.scalablytyped.converter.internal"
 
   def buildInfoMembers = Seq(
