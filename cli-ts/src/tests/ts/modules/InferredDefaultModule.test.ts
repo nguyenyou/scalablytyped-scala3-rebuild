@@ -44,7 +44,7 @@ function createSimpleIdent(name: string): TsIdentSimple {
 	return TsIdent.simple(name);
 }
 
-function createQIdent(...parts: string[]): TsQIdent {
+function _createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdent.ofStrings(...parts);
 }
 
@@ -167,7 +167,9 @@ function createMockAugmentedModule(
 }
 
 function createMockImport(
-	imported: IArray<TsImported> = IArray.fromArray([TsImportedIdent.create(createSimpleIdent("React"))] as TsImported[]),
+	imported: IArray<TsImported> = IArray.fromArray([
+		TsImportedIdent.create(createSimpleIdent("React")),
+	] as TsImported[]),
 	from: TsImportee = TsImporteeFrom.create(createModuleIdent("react")),
 ): TsImport {
 	return TsImport.create(
@@ -210,7 +212,10 @@ describe("InferredDefaultModule", () => {
 		test("creates module for regular module file with content", () => {
 			const interface1 = createMockInterface("Interface1");
 			const function1 = createMockFunction("function1");
-			const members = IArray.fromArray([interface1, function1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				interface1,
+				function1,
+			] as TsContainerOrDecl[]);
 			const file = createModuleFile(members);
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -248,7 +253,13 @@ describe("InferredDefaultModule", () => {
 			const module = createMockModule("some-module");
 			const typeAlias = createMockTypeAlias("TypeAlias");
 			const interface1 = createMockInterface("Interface1");
-			const members = IArray.fromArray([import1, augmentedModule, module, typeAlias, interface1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				augmentedModule,
+				module,
+				typeAlias,
+				interface1,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Already has import1
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -263,7 +274,11 @@ describe("InferredDefaultModule", () => {
 			const import1 = createMockImport();
 			const augmentedModule = createMockAugmentedModule("existing-module");
 			const function1 = createMockFunction("function1"); // This makes it non-augment-only
-			const members = IArray.fromArray([import1, augmentedModule, function1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				augmentedModule,
+				function1,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Already has import1
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -284,7 +299,11 @@ describe("InferredDefaultModule", () => {
 			const existingModule = createMockModule("test-module");
 			const interface1 = createMockInterface("Interface1");
 			const import1 = createMockImport();
-			const members = IArray.fromArray([import1, existingModule, interface1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				existingModule,
+				interface1,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Don't add extra import
 			const logger = createMockLogger();
 
@@ -299,7 +318,10 @@ describe("InferredDefaultModule", () => {
 			const moduleName = createModuleIdent("test-module");
 			const existingModule = createMockModule("different-module");
 			const interface1 = createMockInterface("Interface1");
-			const members = IArray.fromArray([existingModule, interface1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				existingModule,
+				interface1,
+			] as TsContainerOrDecl[]);
 			const file = createModuleFile(members);
 			const logger = createMockLogger();
 
@@ -329,10 +351,15 @@ describe("InferredDefaultModule", () => {
 		test("handles file with only imports", () => {
 			const import1 = createMockImport();
 			const import2 = createMockImport(
-				IArray.fromArray([TsImportedIdent.create(createSimpleIdent("Vue"))] as TsImported[]),
+				IArray.fromArray([
+					TsImportedIdent.create(createSimpleIdent("Vue")),
+				] as TsImported[]),
 				TsImporteeFrom.create(createModuleIdent("vue")),
 			);
-			const members = IArray.fromArray([import1, import2] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				import2,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Already has imports
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -347,7 +374,10 @@ describe("InferredDefaultModule", () => {
 			const interface1 = createMockInterface("Interface1");
 			const members = IArray.fromArray([interface1] as TsContainerOrDecl[]);
 			const file = createModuleFile(members);
-			const moduleName = TsIdent.module(some("@scope"), ["package", "submodule"]);
+			const moduleName = TsIdent.module(some("@scope"), [
+				"package",
+				"submodule",
+			]);
 			const logger = createMockLogger();
 
 			const result = InferredDefaultModule.apply(file, moduleName, logger);
@@ -362,7 +392,9 @@ describe("InferredDefaultModule", () => {
 		test("correctly identifies augment-only content with all allowed types", () => {
 			const import1 = createMockImport();
 			const import2 = createMockImport(
-				IArray.fromArray([TsImportedIdent.create(createSimpleIdent("All"))] as TsImported[]),
+				IArray.fromArray([
+					TsImportedIdent.create(createSimpleIdent("All")),
+				] as TsImported[]),
 				TsImporteeFrom.create(createModuleIdent("everything")),
 			);
 			const augmentedModule1 = createMockAugmentedModule("module1");
@@ -398,7 +430,11 @@ describe("InferredDefaultModule", () => {
 			const import1 = createMockImport();
 			const typeAlias = createMockTypeAlias("TypeAlias");
 			const function1 = createMockFunction("myFunction");
-			const members = IArray.fromArray([import1, typeAlias, function1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				typeAlias,
+				function1,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Already has import1
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -415,7 +451,11 @@ describe("InferredDefaultModule", () => {
 			const import1 = createMockImport();
 			const interface1 = createMockInterface("Interface1");
 			const variable1 = createMockVar("myVariable");
-			const members = IArray.fromArray([import1, interface1, variable1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				import1,
+				interface1,
+				variable1,
+			] as TsContainerOrDecl[]);
 			const file = createNonModuleFile(members); // Already has import1
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();
@@ -432,7 +472,11 @@ describe("InferredDefaultModule", () => {
 			const augmentedModule = createMockAugmentedModule("existing-module");
 			const typeAlias = createMockTypeAlias("TypeAlias");
 			const class1 = createMockClass("MyClass");
-			const members = IArray.fromArray([augmentedModule, typeAlias, class1] as TsContainerOrDecl[]);
+			const members = IArray.fromArray([
+				augmentedModule,
+				typeAlias,
+				class1,
+			] as TsContainerOrDecl[]);
 			const file = createModuleFile(members);
 			const moduleName = createModuleIdent("test-module");
 			const logger = createMockLogger();

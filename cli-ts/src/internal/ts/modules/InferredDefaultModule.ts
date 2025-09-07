@@ -13,20 +13,16 @@ import { CodePath } from "../CodePath.js";
 import { JsLocation } from "../JsLocation.js";
 import { ModuleSpec } from "../ModuleSpec.js";
 import {
-	type TsAugmentedModule,
 	type TsContainerOrDecl,
-	TsDeclInterface,
 	TsDeclModule,
-	TsDeclTypeAlias,
 	type TsIdentModule,
-	TsImport,
 	type TsParsedFile,
 } from "../trees.js";
 
 /**
  * Checks if a parsed file contains only "augment" types of declarations.
  * Augment types are: TsImport, TsAugmentedModule, TsDeclModule, TsDeclTypeAlias, TsDeclInterface
- * 
+ *
  * @param file The parsed file to check
  * @returns True if the file contains only augment declarations
  */
@@ -47,7 +43,7 @@ function onlyAugments(file: TsParsedFile): boolean {
 
 /**
  * Checks if a module with the given name already exists in the file.
- * 
+ *
  * @param file The parsed file to check
  * @param moduleName The module name to look for
  * @returns True if a module with the given name already exists
@@ -79,12 +75,12 @@ export const InferredDefaultModule = {
 
 	/**
 	 * Apply the inferred default module transformation to a parsed file.
-	 * 
+	 *
 	 * Creates a module wrapper around the file's contents if:
 	 * 1. The file is a module (contains imports/exports)
 	 * 2. The file doesn't contain only augment declarations
 	 * 3. A module with the given name doesn't already exist
-	 * 
+	 *
 	 * @param file The parsed file to transform
 	 * @param moduleName The name for the inferred module
 	 * @param logger Logger for reporting the transformation
@@ -97,9 +93,7 @@ export const InferredDefaultModule = {
 	): TsParsedFile => {
 		// Check if we should create an inferred module
 		const shouldCreateModule =
-			file.isModule &&
-			!onlyAugments(file) &&
-			!alreadyExists(file, moduleName);
+			file.isModule && !onlyAugments(file) && !alreadyExists(file, moduleName);
 
 		if (shouldCreateModule) {
 			// Create the inferred module containing all file members
@@ -116,7 +110,9 @@ export const InferredDefaultModule = {
 			logger.info(`Inferred module ${moduleName.value}`);
 
 			// Return a new file with just the module
-			return file.withMembers(IArray.fromArray([module] as TsContainerOrDecl[])) as TsParsedFile;
+			return file.withMembers(
+				IArray.fromArray([module] as TsContainerOrDecl[]),
+			) as TsParsedFile;
 		}
 
 		// Return the original file unchanged
