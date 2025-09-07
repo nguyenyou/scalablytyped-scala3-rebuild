@@ -4,8 +4,8 @@
  * Comprehensive test suite for TypeParamsReferencedInTree functionality
  */
 
-import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments";
 import { IArray } from "@/internal/IArray";
 import { CodePath } from "@/internal/ts/CodePath";

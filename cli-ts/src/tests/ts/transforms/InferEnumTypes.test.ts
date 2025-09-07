@@ -5,8 +5,8 @@
  * unspecified members and replacing references to other enum members.
  */
 
-import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
@@ -37,7 +37,10 @@ function createSimpleIdent(name: string): TsIdentSimple {
 	return TsIdent.simple(name);
 }
 
-function createEnumMember(name: string, expr: Option<TsExpr> = none): TsEnumMember {
+function createEnumMember(
+	name: string,
+	expr: Option<TsExpr> = none,
+): TsEnumMember {
 	return TsEnumMember.create(
 		NoComments.instance,
 		createSimpleIdent(name),
@@ -115,7 +118,10 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A", some(createLiteralExpr("valueA")));
 			const member2 = createEnumMember("B", some(createLiteralExpr("valueB")));
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -141,7 +147,10 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A"); // No expression
 			const member2 = createEnumMember("B"); // No expression
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -167,9 +176,15 @@ describe("InferEnumTypes", () => {
 			const inferEnumTypes = new InferEnumTypes();
 			const scope = createMockScope();
 			const member1 = createEnumMember("A"); // No expression - should get 0
-			const member2 = createEnumMember("B", some(createLiteralExpr("explicit"))); // Explicit value
+			const member2 = createEnumMember(
+				"B",
+				some(createLiteralExpr("explicit")),
+			); // Explicit value
 			const member3 = createEnumMember("C"); // No expression - should get 1
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2, member3]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2, member3]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -205,7 +220,10 @@ describe("InferEnumTypes", () => {
 			const member2 = createEnumMember("B"); // Should get 1
 			const member3 = createEnumMember("C"); // Should get 2
 			const member4 = createEnumMember("D"); // Should get 3
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2, member3, member4]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2, member3, member4]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -227,7 +245,10 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A", some(createLiteralExpr("valueA")));
 			const member2 = createEnumMember("B", some(createRefExpr("A"))); // References A
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -253,7 +274,10 @@ describe("InferEnumTypes", () => {
 			const member1 = createEnumMember("A", some(createLiteralExpr("valueA")));
 			const member2 = createEnumMember("B", some(createRefExpr("A"))); // References A
 			const member3 = createEnumMember("C", some(createRefExpr("A"))); // Also references A
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2, member3]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2, member3]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -281,7 +305,10 @@ describe("InferEnumTypes", () => {
 			const member1 = createEnumMember("A", some(createLiteralExpr("valueA")));
 			const member2 = createEnumMember("B", some(createRefExpr("A"))); // References A
 			const member3 = createEnumMember("C", some(createRefExpr("B"))); // References B
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2, member3]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2, member3]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -313,7 +340,10 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A"); // Will get 0
 			const member2 = createEnumMember("B", some(createRefExpr("A"))); // References A
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -367,7 +397,10 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A", some(createLiteralExpr("valueA")));
 			const member2 = createEnumMember("B", some(createRefExpr("NonExistent"))); // References non-existent member
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -399,7 +432,13 @@ describe("InferEnumTypes", () => {
 				createSimpleIdent("TestEnum"),
 				IArray.fromArray([member]),
 				false, // isValue
-				some(TsTypeRef.create(NoComments.instance, TsQIdent.of(createSimpleIdent("module")), IArray.Empty)),
+				some(
+					TsTypeRef.create(
+						NoComments.instance,
+						TsQIdent.of(createSimpleIdent("module")),
+						IArray.Empty,
+					),
+				),
 				JsLocation.zero(),
 				CodePath.noPath(),
 			);
@@ -426,11 +465,17 @@ describe("InferEnumTypes", () => {
 			const inferEnumTypes = new InferEnumTypes();
 			const scope = createMockScope();
 			const member1 = createEnumMember("FIRST"); // Should get 0
-			const member2 = createEnumMember("SECOND", some(createLiteralExpr("explicit"))); // Explicit string
+			const member2 = createEnumMember(
+				"SECOND",
+				some(createLiteralExpr("explicit")),
+			); // Explicit string
 			const member3 = createEnumMember("THIRD"); // Should get 1
 			const member4 = createEnumMember("FOURTH", some(createRefExpr("FIRST"))); // Reference to FIRST
 			const member5 = createEnumMember("FIFTH", some(createRefExpr("SECOND"))); // Reference to SECOND
-			const testEnum = createMockEnum("ComplexEnum", IArray.fromArray([member1, member2, member3, member4, member5]));
+			const testEnum = createMockEnum(
+				"ComplexEnum",
+				IArray.fromArray([member1, member2, member3, member4, member5]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -473,7 +518,11 @@ describe("InferEnumTypes", () => {
 			const scope = createMockScope();
 			const member1 = createEnumMember("A");
 			const member2 = createEnumMember("B", some(createRefExpr("A")));
-			const testEnum = createMockEnum("ConstEnum", IArray.fromArray([member1, member2]), true);
+			const testEnum = createMockEnum(
+				"ConstEnum",
+				IArray.fromArray([member1, member2]),
+				true,
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 
@@ -501,7 +550,10 @@ describe("InferEnumTypes", () => {
 				none,
 			);
 			const member2 = createEnumMember("B", some(createRefExpr("A")));
-			const testEnum = createMockEnum("TestEnum", IArray.fromArray([member1, member2]));
+			const testEnum = createMockEnum(
+				"TestEnum",
+				IArray.fromArray([member1, member2]),
+			);
 
 			const result = inferEnumTypes.enterTsDeclEnum(scope)(testEnum);
 

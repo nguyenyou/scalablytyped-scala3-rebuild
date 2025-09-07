@@ -2,8 +2,8 @@
  * Tests for QualifiedName TypeScript port
  */
 
-import { describe, expect, test } from "vitest";
 import * as O from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Name } from "../internal/scalajs/Name.js";
 import { QualifiedName, StdNames } from "../internal/scalajs/QualifiedName.js";
 

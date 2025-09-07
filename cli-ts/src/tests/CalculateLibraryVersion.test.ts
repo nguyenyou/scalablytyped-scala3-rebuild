@@ -2,8 +2,8 @@
  * Tests for CalculateLibraryVersion TypeScript port
  */
 
-import { describe, expect, test } from "vitest";
 import * as O from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments } from "../internal/Comments.js";
 import { InFolder } from "../internal/files.js";
 import {

@@ -5,8 +5,8 @@
  * maintaining 100% behavioral parity with the Scala implementation.
  */
 
-import { describe, expect, it } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";
 import { HasClassMembers } from "../../internal/ts/MemberCache.js";

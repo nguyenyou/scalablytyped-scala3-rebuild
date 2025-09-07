@@ -5,9 +5,9 @@
  * equivalence with the Scala implementation.
  */
 
-import { describe, expect, test } from "vitest";
 import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import {
 	arrayFormatter,
 	eitherFormatter,

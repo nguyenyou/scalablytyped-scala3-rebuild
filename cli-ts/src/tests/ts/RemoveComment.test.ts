@@ -2,8 +2,8 @@
  * Tests for RemoveComment.ts - TypeScript port of org.scalablytyped.converter.internal.ts.RemoveCommentTests
  */
 
-import { describe, expect, it } from "vitest";
 import { some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Raw } from "../../internal/Comment.js";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";

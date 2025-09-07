@@ -2,8 +2,8 @@
  * Tests for MethodType.ts - TypeScript port of org.scalablytyped.converter.internal.ts.MethodType
  */
 
-import { describe, expect, it } from "vitest";
 import { isNone, isSome } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import {
 	GetterInstance,
 	MethodType,

@@ -4,8 +4,8 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.InlineConstEnumTests
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";

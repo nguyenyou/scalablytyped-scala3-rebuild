@@ -4,25 +4,32 @@
  * Tests for the ForwardCtors transformation functionality
  */
 
+import { none, type Option, some } from "fp-ts/Option";
 import { describe, expect, test } from "vitest";
+import { Comment } from "../../../internal/Comment.js";
+import { Comments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
+import { CodePath } from "../../../internal/ts/CodePath.js";
+import { JsLocation } from "../../../internal/ts/JsLocation.js";
 import { TreeTransformationScopedChanges } from "../../../internal/ts/TreeTransformations.js";
+import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
 import { ForwardCtors } from "../../../internal/ts/transforms/ForwardCtors.js";
-
 import {
+	TsDeclClass,
+	TsFunParam,
+	TsFunSig,
+	TsIdent,
+	TsMemberCtor,
+	TsTypeParam,
+	TsTypeRef,
+} from "../../../internal/ts/trees.js";
+import {
+	createMockFunSig,
 	createMockMemberCtor,
 	createMockProperty,
 	createMockScope,
 	createTypeRef,
-	createMockFunSig,
 } from "../../utils/TestUtils.js";
-import { TsDeclClass, TsFunParam, TsFunSig, TsIdent, TsMemberCtor, TsTypeParam, TsTypeRef } from "../../../internal/ts/trees.js";
-import { Comments } from "../../../internal/Comments.js";
-import { Comment } from "../../../internal/Comment.js";
-import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { CodePath } from "../../../internal/ts/CodePath.js";
-import { some, none, type Option } from "fp-ts/Option";
 
 // Helper function to create a proper mock class with membersByName populated
 function createMockClass(
@@ -86,10 +93,10 @@ describe("ForwardCtors", () => {
 			const scope = createMockScope();
 			const ctor = createMockMemberCtor();
 			const clazz = createMockClass("TestClass", IArray.fromArray([ctor]));
-			
+
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(clazz);
-			
+
 			expect(result).toBe(clazz); // Should be unchanged
 			expect(result.members.length).toBe(1);
 			expect(result.members.apply(0)._tag).toBe("TsMemberCtor");
@@ -99,10 +106,10 @@ describe("ForwardCtors", () => {
 			const scope = createMockScope();
 			const prop = createMockProperty("value");
 			const clazz = createMockClass("TestClass", IArray.fromArray([prop]));
-			
+
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(clazz);
-			
+
 			expect(result).toBe(clazz); // Should be unchanged
 			expect(result.members.length).toBe(1);
 			expect(result.members.apply(0)._tag).toBe("TsMemberProperty");
@@ -112,10 +119,16 @@ describe("ForwardCtors", () => {
 	describe("Constructor Forwarding", () => {
 		test("forwards constructors from parent class", () => {
 			const parentCtor = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentCtor]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentCtor]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -128,10 +141,16 @@ describe("ForwardCtors", () => {
 		test("forwards multiple constructors from parent", () => {
 			const ctor1 = createMockMemberCtor();
 			const ctor2 = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([ctor1, ctor2]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([ctor1, ctor2]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -144,29 +163,50 @@ describe("ForwardCtors", () => {
 
 		test("preserves existing members when forwarding constructors", () => {
 			const parentCtor = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentCtor]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentCtor]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
 			const existingMethod = createMockProperty("method");
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"), IArray.Empty, IArray.fromArray([existingMethod]));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+				IArray.Empty,
+				IArray.fromArray([existingMethod]),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
 
 			// Should have both existing method and forwarded constructor
 			expect(result.members.length).toBe(2);
-			expect(result.members.toArray().some(m => m._tag === "TsMemberProperty")).toBe(true);
-			expect(result.members.toArray().some(m => m._tag === "TsMemberCtor")).toBe(true);
+			expect(
+				result.members.toArray().some((m) => m._tag === "TsMemberProperty"),
+			).toBe(true);
+			expect(
+				result.members.toArray().some((m) => m._tag === "TsMemberCtor"),
+			).toBe(true);
 		});
 
 		test("handles inheritance chain", () => {
 			const grandparentCtor = createMockMemberCtor();
-			const grandparentClass = createMockClass("GrandparentClass", IArray.fromArray([grandparentCtor]));
+			const grandparentClass = createMockClass(
+				"GrandparentClass",
+				IArray.fromArray([grandparentCtor]),
+			);
 
-			const parentClass = createMockClass("ParentClass", createTypeRef("GrandparentClass"));
+			const parentClass = createMockClass(
+				"ParentClass",
+				createTypeRef("GrandparentClass"),
+			);
 			const scope = createMockScope("test-lib", grandparentClass, parentClass);
 
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -180,11 +220,17 @@ describe("ForwardCtors", () => {
 	describe("Type Parameter Handling", () => {
 		test("handles parent with type parameters", () => {
 			const parentCtor = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentCtor]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentCtor]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
 			// Create a child class that extends ParentClass<string>
-			const parentTypeRef = createTypeRef("ParentClass", IArray.fromArray([TsTypeRef.string]));
+			const parentTypeRef = createTypeRef(
+				"ParentClass",
+				IArray.fromArray([TsTypeRef.string]),
+			);
 			const childClass = createMockClass("ChildClass", parentTypeRef);
 
 			const forwardCtors = new ForwardCtors();
@@ -197,7 +243,10 @@ describe("ForwardCtors", () => {
 
 		test("handles child with type parameters", () => {
 			const parentCtor = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentCtor]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentCtor]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
 			// Create a child class with type parameters that extends ParentClass
@@ -234,7 +283,10 @@ describe("ForwardCtors", () => {
 		test("handles non-existent parent class", () => {
 			const scope = createMockScope("test-lib");
 
-			const childClass = createMockClass("ChildClass", createTypeRef("NonExistentParent"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("NonExistentParent"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -246,10 +298,16 @@ describe("ForwardCtors", () => {
 
 		test("handles parent without constructors", () => {
 			const parentProperty = createMockProperty("value");
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentProperty]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentProperty]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -274,7 +332,10 @@ describe("ForwardCtors", () => {
 		});
 
 		test("handles self-referencing inheritance", () => {
-			const selfRefClass = createMockClass("SelfRefClass", createTypeRef("SelfRefClass"));
+			const selfRefClass = createMockClass(
+				"SelfRefClass",
+				createTypeRef("SelfRefClass"),
+			);
 			const scope = createMockScope("test-lib", selfRefClass);
 
 			const forwardCtors = new ForwardCtors();
@@ -291,10 +352,16 @@ describe("ForwardCtors", () => {
 				TsProtectionLevel.default(),
 				createMockFunSig(),
 			);
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([ctorWithComments]));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([ctorWithComments]),
+			);
 			const scope = createMockScope("test-lib", parentClass);
 
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -311,12 +378,26 @@ describe("ForwardCtors", () => {
 		test("handles complex inheritance hierarchy", () => {
 			// Create a complex inheritance chain: GrandParent -> Parent -> Child
 			const grandParentCtor = createMockMemberCtor();
-			const grandParentClass = createMockClass("GrandParentClass", IArray.fromArray([grandParentCtor]));
+			const grandParentClass = createMockClass(
+				"GrandParentClass",
+				IArray.fromArray([grandParentCtor]),
+			);
 
-			const parentClass = createMockClass("ParentClass", createTypeRef("GrandParentClass"));
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const parentClass = createMockClass(
+				"ParentClass",
+				createTypeRef("GrandParentClass"),
+			);
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
-			const scope = createMockScope("test-lib", grandParentClass, parentClass, childClass);
+			const scope = createMockScope(
+				"test-lib",
+				grandParentClass,
+				parentClass,
+				childClass,
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(childClass);
@@ -330,15 +411,31 @@ describe("ForwardCtors", () => {
 			// Create a hierarchy where some classes have constructors and others don't
 			const baseCtor1 = createMockMemberCtor();
 			const baseCtor2 = createMockMemberCtor();
-			const baseClass = createMockClass("BaseClass", IArray.fromArray([baseCtor1, baseCtor2]));
+			const baseClass = createMockClass(
+				"BaseClass",
+				IArray.fromArray([baseCtor1, baseCtor2]),
+			);
 
 			// Middle class has no constructors
 			const middleProperty = createMockProperty("middleProp");
-			const middleClass = createMockClass("MiddleClass", createTypeRef("BaseClass"), IArray.Empty, IArray.fromArray([middleProperty]));
+			const middleClass = createMockClass(
+				"MiddleClass",
+				createTypeRef("BaseClass"),
+				IArray.Empty,
+				IArray.fromArray([middleProperty]),
+			);
 
-			const topClass = createMockClass("TopClass", createTypeRef("MiddleClass"));
+			const topClass = createMockClass(
+				"TopClass",
+				createTypeRef("MiddleClass"),
+			);
 
-			const scope = createMockScope("test-lib", baseClass, middleClass, topClass);
+			const scope = createMockScope(
+				"test-lib",
+				baseClass,
+				middleClass,
+				topClass,
+			);
 
 			const forwardCtors = new ForwardCtors();
 			const result = forwardCtors.enterTsDeclClass(scope)(topClass);
@@ -375,8 +472,14 @@ describe("ForwardCtors", () => {
 				),
 			);
 
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([complexCtor]));
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([complexCtor]),
+			);
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const scope = createMockScope("test-lib", parentClass, childClass);
 
@@ -394,8 +497,14 @@ describe("ForwardCtors", () => {
 		test("integration with other transforms", () => {
 			// Test that ForwardCtors works well with other transformations
 			const parentCtor = createMockMemberCtor();
-			const parentClass = createMockClass("ParentClass", IArray.fromArray([parentCtor]));
-			const childClass = createMockClass("ChildClass", createTypeRef("ParentClass"));
+			const parentClass = createMockClass(
+				"ParentClass",
+				IArray.fromArray([parentCtor]),
+			);
+			const childClass = createMockClass(
+				"ChildClass",
+				createTypeRef("ParentClass"),
+			);
 
 			const scope = createMockScope("test-lib", parentClass, childClass);
 
@@ -410,7 +519,12 @@ describe("ForwardCtors", () => {
 			// The forwarded constructor should be a proper TsMemberCtor
 			const forwardedCtor = result.members.apply(0) as TsMemberCtor;
 			expect(forwardedCtor._tag).toBe("TsMemberCtor");
-			expect(TsProtectionLevel.equals(forwardedCtor.level, TsProtectionLevel.default())).toBe(true);
+			expect(
+				TsProtectionLevel.equals(
+					forwardedCtor.level,
+					TsProtectionLevel.default(),
+				),
+			).toBe(true);
 		});
 	});
 });

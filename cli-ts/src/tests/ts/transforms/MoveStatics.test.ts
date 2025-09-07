@@ -2,31 +2,31 @@
  * Tests for MoveStatics.ts - TypeScript port of MoveStaticsTests.scala
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../../internal/Comment.js";
+import { describe, expect, it } from "vitest";
+import { Raw } from "../../../internal/Comment.js";
 import { Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
 import { JsLocation } from "../../../internal/ts/JsLocation.js";
 import { MethodType } from "../../../internal/ts/MethodType.js";
-import { MoveStatics } from "../../../internal/ts/transforms/MoveStatics.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import { MoveStatics } from "../../../internal/ts/transforms/MoveStatics.js";
 import {
 	TsDeclClass,
 	TsDeclInterface,
-	TsDeclNamespace,
+	type TsDeclNamespace,
 	TsFunSig,
 	TsIdent,
+	type TsIdentSimple,
+	type TsMember,
 	TsMemberFunction,
 	TsMemberProperty,
 	TsParsedFile,
 	TsQIdent,
 	TsTypeRef,
-	type TsIdentSimple,
-	type TsMember,
 } from "../../../internal/ts/trees.js";
 
 // Helper methods for creating test data
@@ -38,14 +38,17 @@ function createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdent.of(...parts.map(createSimpleIdent));
 }
 
-function createTypeRef(name: string, tparams: IArray<any> = IArray.Empty): TsTypeRef {
+function createTypeRef(
+	name: string,
+	tparams: IArray<any> = IArray.Empty,
+): TsTypeRef {
 	return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 }
 
 function createMockInterface(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
-	declared: boolean = false
+	declared: boolean = false,
 ): TsDeclInterface {
 	return TsDeclInterface.create(
 		NoComments.instance,
@@ -54,14 +57,14 @@ function createMockInterface(
 		IArray.Empty, // tparams
 		IArray.Empty, // inheritance
 		members,
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
 function createMockClass(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
-	declared: boolean = false
+	declared: boolean = false,
 ): TsDeclClass {
 	return TsDeclClass.create(
 		NoComments.instance,
@@ -73,7 +76,7 @@ function createMockClass(
 		IArray.Empty, // implements
 		members,
 		JsLocation.zero(),
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
@@ -83,7 +86,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 		NoComments.instance,
 		IArray.Empty, // directives
 		IArray.fromArray(declarations),
-		CodePath.noPath()
+		CodePath.noPath(),
 	);
 	const deps = new Map();
 	const logger = Logger.DevNull();
@@ -100,7 +103,7 @@ function createStaticProperty(name: string): TsMemberProperty {
 		some(createTypeRef("string")),
 		none, // expr
 		true, // isStatic
-		false // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -112,7 +115,7 @@ function createNonStaticProperty(name: string): TsMemberProperty {
 		some(createTypeRef("string")),
 		none, // expr
 		false, // isStatic
-		false // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -126,10 +129,10 @@ function createStaticFunction(name: string): TsMemberFunction {
 			NoComments.instance,
 			IArray.Empty, // tparams
 			IArray.Empty, // params
-			some(createTypeRef("void"))
+			some(createTypeRef("void")),
 		),
 		true, // isStatic
-		false // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -143,10 +146,10 @@ function createNonStaticFunction(name: string): TsMemberFunction {
 			NoComments.instance,
 			IArray.Empty, // tparams
 			IArray.Empty, // params
-			some(createTypeRef("void"))
+			some(createTypeRef("void")),
 		),
 		false, // isStatic
-		false // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -162,7 +165,7 @@ describe("MoveStatics", () => {
 				NoComments.instance,
 				IArray.Empty,
 				IArray.Empty,
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
 			expect(result).toBeDefined();
@@ -175,12 +178,19 @@ describe("MoveStatics", () => {
 			const members = IArray.fromArray<TsMember>([staticProp, nonStaticProp]);
 			const comment = new Raw("test comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.length).toBe(1);
 			expect(nonStatics.length).toBe(1);
-			expect((statics.apply(0) as TsMemberProperty).name.value).toBe("staticProp");
-			expect((nonStatics.apply(0) as TsMemberProperty).name.value).toBe("nonStaticProp");
+			expect((statics.apply(0) as TsMemberProperty).name.value).toBe(
+				"staticProp",
+			);
+			expect((nonStatics.apply(0) as TsMemberProperty).name.value).toBe(
+				"nonStaticProp",
+			);
 		});
 	});
 
@@ -189,12 +199,18 @@ describe("MoveStatics", () => {
 			const scope = createMockScope();
 			const nonStaticProp = createNonStaticProperty("instanceProp");
 			const nonStaticFunc = createNonStaticFunction("instanceMethod");
-			const interface_ = createMockInterface("TestInterface", IArray.fromArray([nonStaticProp as TsMember, nonStaticFunc as TsMember]));
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.fromArray([
+					nonStaticProp as TsMember,
+					nonStaticFunc as TsMember,
+				]),
+			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(interface_ as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -208,12 +224,19 @@ describe("MoveStatics", () => {
 			const staticProp = createStaticProperty("staticProp");
 			const staticFunc = createStaticFunction("staticMethod");
 			const nonStaticProp = createNonStaticProperty("instanceProp");
-			const interface_ = createMockInterface("TestInterface", IArray.fromArray([staticProp as TsMember, staticFunc as TsMember, nonStaticProp as TsMember]));
+			const interface_ = createMockInterface(
+				"TestInterface",
+				IArray.fromArray([
+					staticProp as TsMember,
+					staticFunc as TsMember,
+					nonStaticProp as TsMember,
+				]),
+			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(interface_ as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -225,15 +248,19 @@ describe("MoveStatics", () => {
 			expect(modifiedInterface._tag).toBe("TsDeclInterface");
 			expect(modifiedInterface.name.value).toBe("TestInterface");
 			expect(modifiedInterface.members.length).toBe(1);
-			expect((modifiedInterface.members.apply(0) as TsMemberProperty).name.value).toBe("instanceProp");
+			expect(
+				(modifiedInterface.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("instanceProp");
 
 			// Check that the interface has the warning comment
-			const hasWarningComment = modifiedInterface.comments.cs.some(comment => {
-				if (comment instanceof Raw) {
-					return comment.raw.includes("Note: this doesnt actually exist!");
-				}
-				return false;
-			});
+			const hasWarningComment = modifiedInterface.comments.cs.some(
+				(comment) => {
+					if (comment instanceof Raw) {
+						return comment.raw.includes("Note: this doesnt actually exist!");
+					}
+					return false;
+				},
+			);
 			expect(hasWarningComment).toBe(true);
 
 			// Second should be the namespace with static members
@@ -245,7 +272,9 @@ describe("MoveStatics", () => {
 
 		it("preserves interface metadata when extracting statics", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original interface comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original interface comment"),
+			]);
 			const staticProp = createStaticProperty("staticProp");
 			const interface_ = TsDeclInterface.create(
 				originalComments,
@@ -254,13 +283,16 @@ describe("MoveStatics", () => {
 				IArray.Empty, // tparams
 				IArray.Empty, // inheritance
 				IArray.apply(staticProp as TsMember),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("TestInterface"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("TestInterface"),
+				),
 			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(interface_ as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -277,12 +309,18 @@ describe("MoveStatics", () => {
 			const scope = createMockScope();
 			const nonStaticProp = createNonStaticProperty("instanceProp");
 			const nonStaticFunc = createNonStaticFunction("instanceMethod");
-			const clazz = createMockClass("TestClass", IArray.fromArray([nonStaticProp as TsMember, nonStaticFunc as TsMember]));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.fromArray([
+					nonStaticProp as TsMember,
+					nonStaticFunc as TsMember,
+				]),
+			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(clazz as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -296,12 +334,19 @@ describe("MoveStatics", () => {
 			const staticProp = createStaticProperty("staticProp");
 			const staticFunc = createStaticFunction("staticMethod");
 			const nonStaticProp = createNonStaticProperty("instanceProp");
-			const clazz = createMockClass("TestClass", IArray.fromArray([staticProp as TsMember, staticFunc as TsMember, nonStaticProp as TsMember]));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.fromArray([
+					staticProp as TsMember,
+					staticFunc as TsMember,
+					nonStaticProp as TsMember,
+				]),
+			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(clazz as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -313,7 +358,9 @@ describe("MoveStatics", () => {
 			expect(modifiedClass._tag).toBe("TsDeclClass");
 			expect(modifiedClass.name.value).toBe("TestClass");
 			expect(modifiedClass.members.length).toBe(1);
-			expect((modifiedClass.members.apply(0) as TsMemberProperty).name.value).toBe("instanceProp");
+			expect(
+				(modifiedClass.members.apply(0) as TsMemberProperty).name.value,
+			).toBe("instanceProp");
 
 			// Second should be the namespace with static members
 			const namespace = result.apply(1) as TsDeclNamespace;
@@ -324,7 +371,9 @@ describe("MoveStatics", () => {
 
 		it("preserves class metadata when extracting statics", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original class comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original class comment"),
+			]);
 			const staticProp = createStaticProperty("staticProp");
 			const clazz = TsDeclClass.create(
 				originalComments,
@@ -336,13 +385,16 @@ describe("MoveStatics", () => {
 				IArray.apply(createTypeRef("Interface1")), // implements
 				IArray.apply(staticProp as TsMember),
 				JsLocation.zero(),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("TestClass"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("TestClass"),
+				),
 			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(clazz as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = MoveStatics.instance.newMembers(scope, parsedFile);
@@ -362,10 +414,17 @@ describe("MoveStatics", () => {
 			const staticProp1 = createStaticProperty("prop1");
 			const staticProp2 = createStaticProperty("prop2");
 			const nonStaticProp = createNonStaticProperty("instanceProp");
-			const members = IArray.fromArray<TsMember>([staticProp1, staticProp2, nonStaticProp]);
+			const members = IArray.fromArray<TsMember>([
+				staticProp1,
+				staticProp2,
+				nonStaticProp,
+			]);
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.length).toBe(2);
 			expect(nonStatics.length).toBe(1);
@@ -373,7 +432,7 @@ describe("MoveStatics", () => {
 			// Check that static flag is removed and comment is added
 			const extractedProp1 = statics.apply(0) as TsMemberProperty;
 			expect(extractedProp1.isStatic).toBe(false);
-			expect(extractedProp1.comments.cs.some(c => c === comment)).toBe(true);
+			expect(extractedProp1.comments.cs.some((c) => c === comment)).toBe(true);
 			expect(extractedProp1.name.value).toBe("prop1");
 		});
 
@@ -381,10 +440,17 @@ describe("MoveStatics", () => {
 			const staticFunc1 = createStaticFunction("method1");
 			const staticFunc2 = createStaticFunction("method2");
 			const nonStaticFunc = createNonStaticFunction("instanceMethod");
-			const members = IArray.fromArray<TsMember>([staticFunc1, staticFunc2, nonStaticFunc]);
+			const members = IArray.fromArray<TsMember>([
+				staticFunc1,
+				staticFunc2,
+				nonStaticFunc,
+			]);
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.length).toBe(2);
 			expect(nonStatics.length).toBe(1);
@@ -392,7 +458,7 @@ describe("MoveStatics", () => {
 			// Check that static flag is removed and comment is added
 			const extractedFunc1 = statics.apply(0) as TsMemberFunction;
 			expect(extractedFunc1.isStatic).toBe(false);
-			expect(extractedFunc1.comments.cs.some(c => c === comment)).toBe(true);
+			expect(extractedFunc1.comments.cs.some((c) => c === comment)).toBe(true);
 			expect(extractedFunc1.name.value).toBe("method1");
 		});
 
@@ -401,44 +467,67 @@ describe("MoveStatics", () => {
 			const staticFunc = createStaticFunction("staticMethod");
 			const nonStaticProp = createNonStaticProperty("instanceProp");
 			const nonStaticFunc = createNonStaticFunction("instanceMethod");
-			const members = IArray.fromArray<TsMember>([staticProp, nonStaticProp, staticFunc, nonStaticFunc]);
+			const members = IArray.fromArray<TsMember>([
+				staticProp,
+				nonStaticProp,
+				staticFunc,
+				nonStaticFunc,
+			]);
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.length).toBe(2);
 			expect(nonStatics.length).toBe(2);
 
 			// Verify static members are correctly processed
-			expect(statics.forall(member => {
-				if (member._tag === "TsMemberProperty") {
-					const prop = member as TsMemberProperty;
-					return !prop.isStatic && prop.comments.cs.some(c => c === comment);
-				} else if (member._tag === "TsMemberFunction") {
-					const func = member as TsMemberFunction;
-					return !func.isStatic && func.comments.cs.some(c => c === comment);
-				}
-				return false;
-			})).toBe(true);
+			expect(
+				statics.forall((member) => {
+					if (member._tag === "TsMemberProperty") {
+						const prop = member as TsMemberProperty;
+						return (
+							!prop.isStatic && prop.comments.cs.some((c) => c === comment)
+						);
+					} else if (member._tag === "TsMemberFunction") {
+						const func = member as TsMemberFunction;
+						return (
+							!func.isStatic && func.comments.cs.some((c) => c === comment)
+						);
+					}
+					return false;
+				}),
+			).toBe(true);
 
 			// Verify non-static members are unchanged
-			expect(nonStatics.forall(member => {
-				if (member._tag === "TsMemberProperty") {
-					const prop = member as TsMemberProperty;
-					return !prop.isStatic && !prop.comments.cs.some(c => c === comment);
-				} else if (member._tag === "TsMemberFunction") {
-					const func = member as TsMemberFunction;
-					return !func.isStatic && !func.comments.cs.some(c => c === comment);
-				}
-				return false;
-			})).toBe(true);
+			expect(
+				nonStatics.forall((member) => {
+					if (member._tag === "TsMemberProperty") {
+						const prop = member as TsMemberProperty;
+						return (
+							!prop.isStatic && !prop.comments.cs.some((c) => c === comment)
+						);
+					} else if (member._tag === "TsMemberFunction") {
+						const func = member as TsMemberFunction;
+						return (
+							!func.isStatic && !func.comments.cs.some((c) => c === comment)
+						);
+					}
+					return false;
+				}),
+			).toBe(true);
 		});
 
 		it("handles empty member list", () => {
 			const members = IArray.Empty;
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.isEmpty).toBe(true);
 			expect(nonStatics.isEmpty).toBe(true);
@@ -447,10 +536,16 @@ describe("MoveStatics", () => {
 		it("handles all non-static members", () => {
 			const nonStaticProp = createNonStaticProperty("instanceProp");
 			const nonStaticFunc = createNonStaticFunction("instanceMethod");
-			const members = IArray.fromArray<TsMember>([nonStaticProp, nonStaticFunc]);
+			const members = IArray.fromArray<TsMember>([
+				nonStaticProp,
+				nonStaticFunc,
+			]);
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.isEmpty).toBe(true);
 			expect(nonStatics.length).toBe(2);
@@ -463,22 +558,31 @@ describe("MoveStatics", () => {
 			const members = IArray.fromArray<TsMember>([staticProp, staticFunc]);
 			const comment = new Raw("static comment");
 
-			const [statics, nonStatics] = MoveStatics.extractStatics(members, comment);
+			const [statics, nonStatics] = MoveStatics.extractStatics(
+				members,
+				comment,
+			);
 
 			expect(statics.length).toBe(2);
 			expect(nonStatics.isEmpty).toBe(true);
 
 			// All members should be converted to non-static with comments
-			expect(statics.forall(member => {
-				if (member._tag === "TsMemberProperty") {
-					const prop = member as TsMemberProperty;
-					return !prop.isStatic && prop.comments.cs.some(c => c === comment);
-				} else if (member._tag === "TsMemberFunction") {
-					const func = member as TsMemberFunction;
-					return !func.isStatic && func.comments.cs.some(c => c === comment);
-				}
-				return false;
-			})).toBe(true);
+			expect(
+				statics.forall((member) => {
+					if (member._tag === "TsMemberProperty") {
+						const prop = member as TsMemberProperty;
+						return (
+							!prop.isStatic && prop.comments.cs.some((c) => c === comment)
+						);
+					} else if (member._tag === "TsMemberFunction") {
+						const func = member as TsMemberFunction;
+						return (
+							!func.isStatic && func.comments.cs.some((c) => c === comment)
+						);
+					}
+					return false;
+				}),
+			).toBe(true);
 		});
 	});
 });

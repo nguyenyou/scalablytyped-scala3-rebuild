@@ -2,8 +2,8 @@
  * Tests for AllMembersFor.ts - TypeScript port of org.scalablytyped.converter.internal.ts.AllMembersForTests
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { AllMembersFor } from "@/internal/ts/AllMembersFor.js";

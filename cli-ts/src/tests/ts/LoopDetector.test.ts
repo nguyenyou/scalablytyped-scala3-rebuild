@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { isLeft, isRight } from "fp-ts/Either";
+import { describe, expect, it } from "vitest";
 import { Comments } from "../../internal/Comments.ts";
 import { IArray } from "../../internal/IArray.ts";
 import { LoopDetector, TsTreeScope } from "../../internal/ts/TsTreeScope.ts";

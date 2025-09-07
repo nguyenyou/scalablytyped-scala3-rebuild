@@ -4,8 +4,8 @@
  * Tests for the DefaultedTypeArguments transformation functionality
  */
 
-import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comment } from "@/internal/Comment.js";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

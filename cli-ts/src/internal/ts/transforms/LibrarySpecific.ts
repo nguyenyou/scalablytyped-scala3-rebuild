@@ -7,43 +7,34 @@
 
 import { none, some } from "fp-ts/Option";
 import { Comments } from "../../Comments.js";
-import { Comment } from "../../Comment.js";
 import { IArray } from "../../IArray.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
-import { TypeRewriter } from "./TypeRewriter.js";
 import type {
 	TsDecl,
 	TsDeclInterface,
 	TsDeclModule,
 	TsDeclTypeAlias,
-	TsIdent,
 	TsIdentLibrary,
-	TsIdentLibrarySimple,
-	TsIdentModule,
-	TsIdentSimple,
-	TsMember,
 	TsMemberFunction,
-	TsMemberIndex,
 	TsMemberProperty,
 	TsParsedFile,
-	TsQIdent,
 	TsType,
 	TsTypeIntersect,
-	TsTypeParam,
 	TsTypeRef,
 	TsTypeUnion,
 } from "../trees.js";
 import {
 	TsIdent as TsIdentConstructor,
-	TsQIdent as TsQIdentConstructor,
-	TsTypeRef as TsTypeRefConstructor,
-	TsTypeParam as TsTypeParamConstructor,
-	TsTypeIntersect as TsTypeIntersectConstructor,
-	TsTypeUnion as TsTypeUnionConstructor,
 	TsMemberProperty as TsMemberPropertyConstructor,
-	TsProtectionLevel
+	TsProtectionLevel,
+	TsQIdent as TsQIdentConstructor,
+	TsTypeIntersect as TsTypeIntersectConstructor,
+	TsTypeParam as TsTypeParamConstructor,
+	TsTypeRef as TsTypeRefConstructor,
+	TsTypeUnion as TsTypeUnionConstructor,
 } from "../trees.js";
+import { TypeRewriter } from "./TypeRewriter.js";
 
 /**
  * Base interface for named library-specific transformations.
@@ -59,7 +50,7 @@ export interface Named extends TreeTransformationScopedChanges {
 class StdTransform extends TreeTransformationScopedChanges implements Named {
 	readonly libName = TsIdentConstructor.librarySimple("std");
 
-	override enterTsDecl(scope: TsTreeScope): (x: TsDecl) => TsDecl {
+	override enterTsDecl(_scope: TsTreeScope): (x: TsDecl) => TsDecl {
 		return (x: TsDecl) => {
 			if (x._tag === "TsDeclInterface") {
 				const iface = x as TsDeclInterface;
@@ -78,14 +69,20 @@ class StdTransform extends TreeTransformationScopedChanges implements Named {
 /**
  * Styled Components library patches
  */
-class StyledComponentsTransform extends TreeTransformationScopedChanges implements Named {
+class StyledComponentsTransform
+	extends TreeTransformationScopedChanges
+	implements Named
+{
 	readonly libName = TsIdentConstructor.librarySimple("styled-components");
 
-	override enterTsDecl(scope: TsTreeScope): (x: TsDecl) => TsDecl {
+	override enterTsDecl(_scope: TsTreeScope): (x: TsDecl) => TsDecl {
 		return (x: TsDecl) => {
 			if (x._tag === "TsDeclTypeAlias") {
 				const ta = x as TsDeclTypeAlias;
-				if (ta.name.value === "WithOptionalTheme" && ta.alias._tag === "TsTypeIntersect") {
+				if (
+					ta.name.value === "WithOptionalTheme" &&
+					ta.alias._tag === "TsTypeIntersect"
+				) {
 					const intersect = ta.alias as TsTypeIntersect;
 					if (intersect.types.length > 0) {
 						const omit = intersect.types.head;
@@ -93,7 +90,10 @@ class StyledComponentsTransform extends TreeTransformationScopedChanges implemen
 						if (omit._tag === "TsTypeRef") {
 							const omitRef = omit as TsTypeRef;
 							if (omitRef.name.parts.last.value === "Omit") {
-								const newTypes = IArray.fromArray([omitRef.tparams.head, ...rest.toArray()]);
+								const newTypes = IArray.fromArray([
+									omitRef.tparams.head,
+									...rest.toArray(),
+								]);
 								return {
 									...ta,
 									alias: TsTypeIntersectConstructor.create(newTypes),
@@ -114,7 +114,9 @@ class StyledComponentsTransform extends TreeTransformationScopedChanges implemen
 class AMapTransform extends TreeTransformationScopedChanges implements Named {
 	readonly libName = TsIdentConstructor.librarySimple("amap-js-api");
 
-	override enterTsDeclTypeAlias(scope: TsTreeScope): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	override enterTsDeclTypeAlias(
+		_scope: TsTreeScope,
+	): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => {
 			if (x.name.value === "Merge") {
 				// Avoid insane definition of `Merge`
@@ -134,7 +136,10 @@ class AMapTransform extends TreeTransformationScopedChanges implements Named {
 /**
  * Semantic UI React library patches
  */
-class SemanticUiReactTransform extends TreeTransformationScopedChanges implements Named {
+class SemanticUiReactTransform
+	extends TreeTransformationScopedChanges
+	implements Named
+{
 	readonly libName = TsIdentConstructor.librarySimple("semantic-ui-react");
 
 	private readonly removeIndex = new Set<string>([
@@ -142,31 +147,37 @@ class SemanticUiReactTransform extends TreeTransformationScopedChanges implement
 		"TextAreaProps",
 		"FormProps",
 		"ButtonProps",
-		"TableCellProps"
+		"TableCellProps",
 	]);
 
-	override enterTsParsedFile(scope: TsTreeScope): (x: TsParsedFile) => TsParsedFile {
+	override enterTsParsedFile(
+		_scope: TsTreeScope,
+	): (x: TsParsedFile) => TsParsedFile {
 		return (x: TsParsedFile) => ({
 			...x,
-			members: x.members.filter(member => {
+			members: x.members.filter((member) => {
 				if (member._tag === "TsDeclModule") {
 					const module = member as TsDeclModule;
 					return !module.name.fragments.includes("src");
 				}
 				return true;
-			})
+			}),
 		});
 	}
 
-	override enterTsDeclInterface(_scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+	override enterTsDeclInterface(
+		_scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => {
 			const shouldRemoveIndex = this.removeIndex.has(x.name.value);
 
 			if (shouldRemoveIndex) {
-				const newMembers = x.members.filter(member => member._tag !== "TsMemberIndex");
+				const newMembers = x.members.filter(
+					(member) => member._tag !== "TsMemberIndex",
+				);
 				return {
 					...x,
-					members: newMembers
+					members: newMembers,
 				};
 			}
 			return x;
@@ -180,21 +191,22 @@ class SemanticUiReactTransform extends TreeTransformationScopedChanges implement
 class ReactTransform extends TreeTransformationScopedChanges implements Named {
 	static readonly libName = TsIdentConstructor.librarySimple("react");
 	readonly libName = ReactTransform.libName;
+	readonly Readonly = TsQIdentConstructor.of(
+		TsIdentConstructor.simple("Readonly"),
+	);
 
-	private readonly DOMAttributes = TsIdentConstructor.simple("DOMAttributes");
-	private readonly ReactElement = TsIdentConstructor.simple("ReactElement");
-	private readonly ReactFragment = TsIdentConstructor.simple("ReactFragment");
-	private readonly ReactNode = TsIdentConstructor.simple("ReactNode");
-	private readonly CSSProperties = TsIdentConstructor.simple("CSSProperties");
-	readonly Readonly = TsQIdentConstructor.of(TsIdentConstructor.simple("Readonly"));
-
-	override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+	override enterTsDeclInterface(
+		_scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => {
 			switch (x.name.value) {
 				case "CSSProperties": {
 					// Restore compatibility with old CSSProperties syntax
 					const unionType = TsTypeUnionConstructor.create(
-						IArray.fromArray([TsTypeRefConstructor.any, TsTypeRefConstructor.undefined] as TsType[])
+						IArray.fromArray([
+							TsTypeRefConstructor.any,
+							TsTypeRefConstructor.undefined,
+						] as TsType[]),
 					);
 					const hack = TsMemberPropertyConstructor.create(
 						Comments.create("/* fake member to keep old syntax */"),
@@ -203,24 +215,31 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 						some(unionType),
 						none,
 						false, // isStatic
-						false  // isReadOnly
+						false, // isReadOnly
 					);
 					return {
 						...x,
-						members: x.members.append(hack)
+						members: x.members.append(hack),
 					};
 				}
 				case "ReactElement": {
 					// Drop useless type parameters
 					const newX = { ...x, tparams: IArray.Empty };
 					const replacements = new Map<TsType, TsType>(
-						x.tparams.toArray().map(tp => [TsTypeRefConstructor.fromIdent(tp.name), TsTypeRefConstructor.any])
+						x.tparams
+							.toArray()
+							.map((tp) => [
+								TsTypeRefConstructor.fromIdent(tp.name),
+								TsTypeRefConstructor.any,
+							]),
 					);
-					return new TypeRewriter(newX).visitTsDeclInterface(replacements)(newX);
+					return new TypeRewriter(newX).visitTsDeclInterface(replacements)(
+						newX,
+					);
 				}
 				case "DOMAttributes": {
 					// Filter out *Capture props to avoid parameter limit issues
-					const newMembers = x.members.filter(member => {
+					const newMembers = x.members.filter((member) => {
 						if (member._tag === "TsMemberFunction") {
 							const func = member as TsMemberFunction;
 							return !func.name.value.endsWith("Capture");
@@ -239,13 +258,15 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 		};
 	}
 
-	override enterTsDeclTypeAlias(scope: TsTreeScope): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	override enterTsDeclTypeAlias(
+		_scope: TsTreeScope,
+	): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => {
 			switch (x.name.value) {
 				case "ReactFragment": {
 					if (x.alias._tag === "TsTypeUnion") {
 						const union = x.alias as TsTypeUnion;
-						const dropObject = union.types.filter(type => {
+						const dropObject = union.types.filter((type) => {
 							if (type._tag === "TsTypeRef") {
 								const typeRef = type as TsTypeRef;
 								return typeRef.name.parts.last.value !== "object";
@@ -254,7 +275,7 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 						});
 						return {
 							...x,
-							alias: TsTypeUnionConstructor.simplified(dropObject)
+							alias: TsTypeUnionConstructor.simplified(dropObject),
 						};
 					}
 					return x;
@@ -262,7 +283,7 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 				case "ReactNode": {
 					if (x.alias._tag === "TsTypeUnion") {
 						const union = x.alias as TsTypeUnion;
-						const dropUseless = union.types.filter(type => {
+						const dropUseless = union.types.filter((type) => {
 							if (type._tag === "TsTypeRef") {
 								const typeRef = type as TsTypeRef;
 								return typeRef.name.parts.last.value !== "null";
@@ -271,7 +292,7 @@ class ReactTransform extends TreeTransformationScopedChanges implements Named {
 						});
 						return {
 							...x,
-							alias: TsTypeUnionConstructor.simplified(dropUseless)
+							alias: TsTypeUnionConstructor.simplified(dropUseless),
 						};
 					}
 					return x;
@@ -318,7 +339,9 @@ export const LibrarySpecific = {
 	 * @param libName The library identifier
 	 * @returns The transformation if available, undefined otherwise
 	 */
-	apply: (libName: TsIdentLibrary): TreeTransformationScopedChanges | undefined => {
+	apply: (
+		libName: TsIdentLibrary,
+	): TreeTransformationScopedChanges | undefined => {
 		return patches.get(libName.value);
 	},
 };

@@ -4,8 +4,8 @@
  * Tests for the ExpandTypeParams transform that expands type parameters in function signatures.
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { type Comments, NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";

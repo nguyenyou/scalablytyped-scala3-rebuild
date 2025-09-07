@@ -2,8 +2,8 @@
  * Tests for ExpandCallables.ts - TypeScript port of ExpandCallablesTests.scala
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { ExpandedCallables } from "@/internal/Comment.js";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";

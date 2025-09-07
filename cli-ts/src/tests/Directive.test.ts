@@ -2,8 +2,8 @@
  * Tests for Directive.ts - TypeScript port of org.scalablytyped.converter.internal.ts.Directive
  */
 
-import { describe, expect, it } from "vitest";
 import { isNone, isSome } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import {
 	type AmdModule,
 	Directive,

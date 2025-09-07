@@ -5,18 +5,21 @@
  * with the original Scala implementation.
  */
 
-import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";
 import { CodePath } from "@/internal/ts/CodePath.js";
-import { Directive } from "@/internal/ts/Directive.js";
+import type { Directive } from "@/internal/ts/Directive.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { MethodType } from "@/internal/ts/MethodType.js";
 import { TsProtectionLevel } from "@/internal/ts/TsProtectionLevel.js";
 import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
-import { LibrarySpecific, Named } from "@/internal/ts/transforms/LibrarySpecific.js";
+import {
+	LibrarySpecific,
+	type Named,
+} from "@/internal/ts/transforms/LibrarySpecific.js";
 import type {
 	TsContainerOrDecl,
 	TsDeclInterface,
@@ -27,28 +30,24 @@ import type {
 	TsMember,
 	TsMemberFunction,
 	TsMemberProperty,
-	TsParsedFile,
 	TsQIdent,
 	TsType,
-	TsTypeIntersect,
 	TsTypeRef,
-	TsTypeUnion,
 } from "@/internal/ts/trees.js";
 import {
+	TsDeclInterface as TsDeclInterfaceConstructor,
+	TsDeclModule as TsDeclModuleConstructor,
+	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
+	TsFunSig,
 	TsIdent,
 	TsIdentLibrary,
+	TsMemberFunction as TsMemberFunctionConstructor,
+	TsMemberProperty as TsMemberPropertyConstructor,
+	TsParsedFile as TsParsedFileConstructor,
 	TsQIdent as TsQIdentConstructor,
+	TsTypeParam as TsTypeParamConstructor,
 	TsTypeRef as TsTypeRefConstructor,
 	TsTypeUnion as TsTypeUnionConstructor,
-	TsDeclInterface as TsDeclInterfaceConstructor,
-	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
-	TsDeclModule as TsDeclModuleConstructor,
-	TsMemberProperty as TsMemberPropertyConstructor,
-	TsMemberFunction as TsMemberFunctionConstructor,
-	TsParsedFile as TsParsedFileConstructor,
-	TsTypeParam as TsTypeParamConstructor,
-	TsFunSig,
-	TsFunParam,
 } from "@/internal/ts/trees.js";
 
 // Helper methods for creating test data
@@ -60,14 +59,21 @@ function createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdentConstructor.ofStrings(...parts);
 }
 
-function createTypeRef(name: string, tparams: IArray<TsType> = IArray.Empty): TsTypeRef {
-	return TsTypeRefConstructor.create(Comments.empty(), createQIdent(name), tparams);
+function createTypeRef(
+	name: string,
+	tparams: IArray<TsType> = IArray.Empty,
+): TsTypeRef {
+	return TsTypeRefConstructor.create(
+		Comments.empty(),
+		createQIdent(name),
+		tparams,
+	);
 }
 
 function createMockInterface(
 	name: string,
 	inheritance: IArray<TsTypeRef> = IArray.Empty,
-	members: IArray<TsMember> = IArray.Empty
+	members: IArray<TsMember> = IArray.Empty,
 ): TsDeclInterface {
 	return TsDeclInterfaceConstructor.create(
 		Comments.empty(),
@@ -76,14 +82,14 @@ function createMockInterface(
 		IArray.Empty, // tparams
 		inheritance,
 		members,
-		CodePath.hasPath(TsIdentLibrary.construct("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdentLibrary.construct("test-lib"), createQIdent(name)),
 	);
 }
 
 function createMockTypeAlias(
 	name: string,
 	alias: TsType,
-	tparams: IArray<any> = IArray.Empty
+	tparams: IArray<any> = IArray.Empty,
 ): TsDeclTypeAlias {
 	return TsDeclTypeAliasConstructor.create(
 		Comments.empty(),
@@ -91,21 +97,24 @@ function createMockTypeAlias(
 		createSimpleIdent(name),
 		tparams,
 		alias,
-		CodePath.hasPath(TsIdentLibrary.construct("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdentLibrary.construct("test-lib"), createQIdent(name)),
 	);
 }
 
-function createMockModule(
+function _createMockModule(
 	name: TsIdentModule,
-	members: IArray<TsContainerOrDecl> = IArray.Empty
+	members: IArray<TsContainerOrDecl> = IArray.Empty,
 ): TsDeclModule {
 	return TsDeclModuleConstructor.create(
 		Comments.empty(),
 		false, // declared
 		name,
 		members,
-		CodePath.hasPath(TsIdentLibrary.construct("test-lib"), createQIdent(name.value)),
-		JsLocation.zero()
+		CodePath.hasPath(
+			TsIdentLibrary.construct("test-lib"),
+			createQIdent(name.value),
+		),
+		JsLocation.zero(),
 	);
 }
 
@@ -114,14 +123,14 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 		Comments.empty(),
 		IArray.Empty as IArray<Directive>,
 		IArray.fromArray(declarations),
-		CodePath.noPath()
+		CodePath.noPath(),
 	);
 
 	const root = TsTreeScope.create(
 		TsIdentLibrary.construct("test-lib"),
 		false, // pedantic
 		new Map(), // deps
-		Logger.DevNull()
+		Logger.DevNull(),
 	);
 
 	return root["/"](parsedFile);
@@ -135,7 +144,7 @@ function createMemberProperty(name: string): TsMemberProperty {
 		some(TsTypeRefConstructor.string),
 		none,
 		false, // isStatic
-		false  // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -148,7 +157,7 @@ function createMemberFunction(name: string): TsMemberFunction {
 		MethodType.normal(),
 		signature,
 		false, // isStatic
-		false  // isReadOnly
+		false, // isReadOnly
 	);
 }
 
@@ -161,17 +170,25 @@ describe("LibrarySpecific", () => {
 		});
 
 		test("apply method returns correct transforms", () => {
-			const stdTransform = LibrarySpecific.apply(TsIdentLibrary.construct("std"));
-			const reactTransform = LibrarySpecific.apply(TsIdentLibrary.construct("react"));
-			const unknownTransform = LibrarySpecific.apply(TsIdentLibrary.construct("unknown-lib"));
-			
+			const stdTransform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("std"),
+			);
+			const reactTransform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("react"),
+			);
+			const unknownTransform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("unknown-lib"),
+			);
+
 			expect(stdTransform).toBeDefined();
 			expect(reactTransform).toBeDefined();
 			expect(unknownTransform).toBeUndefined();
 		});
 
 		test("apply method returns undefined for unknown libraries", () => {
-			const result = LibrarySpecific.apply(TsIdentLibrary.construct("non-existent-library"));
+			const result = LibrarySpecific.apply(
+				TsIdentLibrary.construct("non-existent-library"),
+			);
 			expect(result).toBeUndefined();
 		});
 	});
@@ -185,11 +202,13 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const htmlCollectionInterface = createMockInterface(
 				"HTMLCollectionOf",
-				IArray.fromArray([createTypeRef("SomeParent")])
+				IArray.fromArray([createTypeRef("SomeParent")]),
 			);
-			
-			const result = LibrarySpecific.std.enterTsDecl(scope)(htmlCollectionInterface);
-			
+
+			const result = LibrarySpecific.std.enterTsDecl(scope)(
+				htmlCollectionInterface,
+			);
+
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.inheritance.length).toBe(0);
@@ -199,20 +218,23 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const regularInterface = createMockInterface(
 				"RegularInterface",
-				IArray.fromArray([createTypeRef("SomeParent")])
+				IArray.fromArray([createTypeRef("SomeParent")]),
 			);
-			
+
 			const result = LibrarySpecific.std.enterTsDecl(scope)(regularInterface);
-			
+
 			expect(result).toBe(regularInterface);
 		});
 
 		test("leaves non-interface declarations unchanged", () => {
 			const scope = createMockScope();
-			const typeAlias = createMockTypeAlias("TestAlias", createTypeRef("string"));
-			
+			const typeAlias = createMockTypeAlias(
+				"TestAlias",
+				createTypeRef("string"),
+			);
+
 			const result = LibrarySpecific.std.enterTsDecl(scope)(typeAlias);
-			
+
 			expect(result).toBe(typeAlias);
 		});
 	});
@@ -226,7 +248,8 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const cssPropsInterface = createMockInterface("CSSProperties");
 
-			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(cssPropsInterface);
+			const result =
+				LibrarySpecific.react.enterTsDeclInterface(scope)(cssPropsInterface);
 
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
@@ -245,14 +268,16 @@ describe("LibrarySpecific", () => {
 			const reactElementInterface = createMockInterface(
 				"ReactElement",
 				IArray.Empty,
-				IArray.Empty
+				IArray.Empty,
 			);
 			const interfaceWithTypeParams = {
 				...reactElementInterface,
-				tparams: IArray.fromArray([typeParam])
+				tparams: IArray.fromArray([typeParam]),
 			} as TsDeclInterface;
 
-			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(interfaceWithTypeParams);
+			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(
+				interfaceWithTypeParams,
+			);
 
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
@@ -269,18 +294,27 @@ describe("LibrarySpecific", () => {
 			const domAttributesInterface = createMockInterface(
 				"DOMAttributes",
 				IArray.Empty,
-				IArray.fromArray([regularProp, captureProp, regularFunc, captureFunc] as TsMember[])
+				IArray.fromArray([
+					regularProp,
+					captureProp,
+					regularFunc,
+					captureFunc,
+				] as TsMember[]),
 			);
 
-			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(domAttributesInterface);
+			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(
+				domAttributesInterface,
+			);
 
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
 			expect(resultInterface.members.length).toBe(2);
 
-			const memberNames = resultInterface.members.toArray().map(m => {
-				if (m._tag === "TsMemberProperty") return (m as TsMemberProperty).name.value;
-				if (m._tag === "TsMemberFunction") return (m as TsMemberFunction).name.value;
+			const memberNames = resultInterface.members.toArray().map((m) => {
+				if (m._tag === "TsMemberProperty")
+					return (m as TsMemberProperty).name.value;
+				if (m._tag === "TsMemberFunction")
+					return (m as TsMemberFunction).name.value;
 				return "";
 			});
 
@@ -294,7 +328,8 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const regularInterface = createMockInterface("RegularInterface");
 
-			const result = LibrarySpecific.react.enterTsDeclInterface(scope)(regularInterface);
+			const result =
+				LibrarySpecific.react.enterTsDeclInterface(scope)(regularInterface);
 
 			expect(result).toBe(regularInterface);
 		});
@@ -303,11 +338,17 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const objectType = TsTypeRefConstructor.object;
 			const stringType = TsTypeRefConstructor.string;
-			const unionType = TsTypeUnionConstructor.create(IArray.fromArray([objectType, stringType] as TsType[]));
+			const unionType = TsTypeUnionConstructor.create(
+				IArray.fromArray([objectType, stringType] as TsType[]),
+			);
 
-			const reactFragmentAlias = createMockTypeAlias("ReactFragment", unionType);
+			const reactFragmentAlias = createMockTypeAlias(
+				"ReactFragment",
+				unionType,
+			);
 
-			const result = LibrarySpecific.react.enterTsDeclTypeAlias(scope)(reactFragmentAlias);
+			const result =
+				LibrarySpecific.react.enterTsDeclTypeAlias(scope)(reactFragmentAlias);
 
 			expect(result._tag).toBe("TsDeclTypeAlias");
 			const resultAlias = result as TsDeclTypeAlias;
@@ -320,11 +361,14 @@ describe("LibrarySpecific", () => {
 			const scope = createMockScope();
 			const nullType = TsTypeRefConstructor.null;
 			const stringType = TsTypeRefConstructor.string;
-			const unionType = TsTypeUnionConstructor.create(IArray.fromArray([nullType, stringType] as TsType[]));
+			const unionType = TsTypeUnionConstructor.create(
+				IArray.fromArray([nullType, stringType] as TsType[]),
+			);
 
 			const reactNodeAlias = createMockTypeAlias("ReactNode", unionType);
 
-			const result = LibrarySpecific.react.enterTsDeclTypeAlias(scope)(reactNodeAlias);
+			const result =
+				LibrarySpecific.react.enterTsDeclTypeAlias(scope)(reactNodeAlias);
 
 			expect(result._tag).toBe("TsDeclTypeAlias");
 			const resultAlias = result as TsDeclTypeAlias;
@@ -335,9 +379,13 @@ describe("LibrarySpecific", () => {
 
 		test("leaves other type aliases unchanged", () => {
 			const scope = createMockScope();
-			const regularAlias = createMockTypeAlias("RegularAlias", TsTypeRefConstructor.string);
+			const regularAlias = createMockTypeAlias(
+				"RegularAlias",
+				TsTypeRefConstructor.string,
+			);
 
-			const result = LibrarySpecific.react.enterTsDeclTypeAlias(scope)(regularAlias);
+			const result =
+				LibrarySpecific.react.enterTsDeclTypeAlias(scope)(regularAlias);
 
 			expect(result).toBe(regularAlias);
 		});
@@ -345,19 +393,25 @@ describe("LibrarySpecific", () => {
 
 	describe("LibrarySpecific.apply - Other Libraries", () => {
 		test("styled-components transform is available", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("styled-components"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("styled-components"),
+			);
 			expect(transform).toBeDefined();
 			expect((transform as Named)?.libName?.value).toBe("styled-components");
 		});
 
 		test("amap-js-api transform is available", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("amap-js-api"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("amap-js-api"),
+			);
 			expect(transform).toBeDefined();
 			expect((transform as Named)?.libName?.value).toBe("amap-js-api");
 		});
 
 		test("semantic-ui-react transform is available", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("semantic-ui-react"),
+			);
 			expect(transform).toBeDefined();
 			expect((transform as Named)?.libName?.value).toBe("semantic-ui-react");
 		});
@@ -365,7 +419,9 @@ describe("LibrarySpecific", () => {
 
 	describe("LibrarySpecific.apply - AMap Library Patches", () => {
 		test("transforms Merge type alias to intersection", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("amap-js-api"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("amap-js-api"),
+			);
 			expect(transform).toBeDefined();
 
 			const scope = createMockScope();
@@ -375,7 +431,7 @@ describe("LibrarySpecific", () => {
 			const mergeAlias = createMockTypeAlias(
 				"Merge",
 				TsTypeRefConstructor.string, // dummy alias, will be replaced
-				IArray.fromArray([typeParam1, typeParam2])
+				IArray.fromArray([typeParam1, typeParam2]),
 			);
 
 			const result = transform!.enterTsDeclTypeAlias!(scope)(mergeAlias);
@@ -386,11 +442,16 @@ describe("LibrarySpecific", () => {
 		});
 
 		test("leaves other type aliases unchanged", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("amap-js-api"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("amap-js-api"),
+			);
 			expect(transform).toBeDefined();
 
 			const scope = createMockScope();
-			const regularAlias = createMockTypeAlias("RegularAlias", TsTypeRefConstructor.string);
+			const regularAlias = createMockTypeAlias(
+				"RegularAlias",
+				TsTypeRefConstructor.string,
+			);
 
 			const result = transform!.enterTsDeclTypeAlias!(scope)(regularAlias);
 
@@ -400,7 +461,9 @@ describe("LibrarySpecific", () => {
 
 	describe("LibrarySpecific.apply - Semantic UI React Library Patches", () => {
 		test("removes index signatures from specific interfaces", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("semantic-ui-react"),
+			);
 			expect(transform).toBeDefined();
 
 			const scope = createMockScope();
@@ -412,13 +475,16 @@ describe("LibrarySpecific", () => {
 					_tag: "IndexingDict" as const,
 					name: createSimpleIdent("key"),
 					tpe: TsTypeRefConstructor.string,
-					asString: "IndexingDict(key: string)"
+					asString: "IndexingDict(key: string)",
 				},
 				valueType: TsTypeRefConstructor.any,
 				isReadOnly: false,
 				withComments: (cs: Comments) => ({ ...indexMember, comments: cs }),
-				addComment: (c: any) => ({ ...indexMember, comments: indexMember.comments.add(c) }),
-				asString: "TsMemberIndex([key: string]: any)"
+				addComment: (c: any) => ({
+					...indexMember,
+					comments: indexMember.comments.add(c),
+				}),
+				asString: "TsMemberIndex([key: string]: any)",
 			};
 
 			const regularProp = createMemberProperty("regularProp");
@@ -426,10 +492,11 @@ describe("LibrarySpecific", () => {
 			const inputPropsInterface = createMockInterface(
 				"InputProps",
 				IArray.Empty,
-				IArray.fromArray([indexMember, regularProp] as TsMember[])
+				IArray.fromArray([indexMember, regularProp] as TsMember[]),
 			);
 
-			const result = transform!.enterTsDeclInterface!(scope)(inputPropsInterface);
+			const result =
+				transform!.enterTsDeclInterface!(scope)(inputPropsInterface);
 
 			expect(result._tag).toBe("TsDeclInterface");
 			const resultInterface = result as TsDeclInterface;
@@ -438,7 +505,9 @@ describe("LibrarySpecific", () => {
 		});
 
 		test("leaves other interfaces unchanged", () => {
-			const transform = LibrarySpecific.apply(TsIdentLibrary.construct("semantic-ui-react"));
+			const transform = LibrarySpecific.apply(
+				TsIdentLibrary.construct("semantic-ui-react"),
+			);
 			expect(transform).toBeDefined();
 
 			const scope = createMockScope();

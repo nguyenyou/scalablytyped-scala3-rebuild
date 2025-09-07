@@ -5,8 +5,8 @@
  * for transforming TypeScript AST trees by replacing types according to a replacement map.
  */
 
-import { describe, expect, test } from "vitest";
 import { none, type Option } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { CodePath } from "@/internal/ts/CodePath.js";

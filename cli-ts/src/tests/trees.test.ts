@@ -4,9 +4,9 @@
  * Phase 2: Core Declaration Traits
  */
 
-import { describe, expect, it } from "vitest";
 import type * as O from "fp-ts/Option";
 import { isSome, none, some } from "fp-ts/Option";
+import { describe, expect, it } from "vitest";
 import { Comment, Raw } from "../internal/Comment.js";
 import { Comments } from "../internal/Comments.js";
 import { IArray } from "../internal/IArray.js";

@@ -6,27 +6,26 @@
  * Freely create duplicate namespaces, since they will be combined right after
  */
 
-import { none, type Option } from "fp-ts/Option";
-import { Comment, Raw } from "../../Comment.js";
-import { IArray, type PartialFunction, partialFunction } from "../../IArray.js";
+import { type Comment, Raw } from "../../Comment.js";
+import { IArray, partialFunction } from "../../IArray.js";
 import { Hoisting } from "../Hoisting.js";
 import { JsLocation } from "../JsLocation.js";
 import { TransformMembers } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import {
+	type TsContainer,
+	type TsContainerOrDecl,
 	TsDeclClass,
 	TsDeclInterface,
 	TsDeclNamespace,
+	type TsMember,
 	TsMemberFunction,
 	TsMemberProperty,
-	type TsContainer,
-	type TsContainerOrDecl,
-	type TsMember,
 } from "../trees.js";
 
 /**
  * Transform that extracts static members from classes and interfaces into namespaces.
- * 
+ *
  * This transform extends TransformMembers to process container members and extract
  * static properties and methods into separate namespace declarations.
  */
@@ -36,18 +35,21 @@ export class MoveStatics extends TransformMembers {
 	/**
 	 * Process container members, extracting static members from classes and interfaces.
 	 */
-	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
+	newMembers(_scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
 		return x.members.flatMap((member): IArray<TsContainerOrDecl> => {
 			if (TsDeclInterface.isInterface(member)) {
 				const int = member as TsDeclInterface;
 				const comment = new Raw(
-					`/* Note: this doesnt actually exist! a class implementing ${int.name.value} should have this defined on it's companion object */\n`
+					`/* Note: this doesnt actually exist! a class implementing ${int.name.value} should have this defined on it's companion object */\n`,
 				);
 
-				const [statics, nonStatics] = MoveStatics.extractStatics(int.members, comment);
+				const [statics, nonStatics] = MoveStatics.extractStatics(
+					int.members,
+					comment,
+				);
 
 				const staticDecls = statics.mapNotNoneOption(
-					Hoisting.memberToDecl(int.codePath, JsLocation.zero())
+					Hoisting.memberToDecl(int.codePath, JsLocation.zero()),
 				);
 
 				if (staticDecls.isEmpty) {
@@ -59,7 +61,7 @@ export class MoveStatics extends TransformMembers {
 						int.name,
 						staticDecls as unknown as IArray<TsContainerOrDecl>,
 						int.codePath,
-						JsLocation.zero()
+						JsLocation.zero(),
 					);
 					const modifiedInterface = TsDeclInterface.create(
 						int.comments.add(comment),
@@ -68,18 +70,24 @@ export class MoveStatics extends TransformMembers {
 						int.tparams,
 						int.inheritance,
 						nonStatics,
-						int.codePath
+						int.codePath,
 					);
-					return IArray.apply(modifiedInterface as TsContainerOrDecl, ns as TsContainerOrDecl);
+					return IArray.apply(
+						modifiedInterface as TsContainerOrDecl,
+						ns as TsContainerOrDecl,
+					);
 				}
 			} else if (TsDeclClass.isClass(member)) {
 				const cls = member as TsDeclClass;
 				const comment = new Raw("/* static member */\n");
 
-				const [statics, nonStatics] = MoveStatics.extractStatics(cls.members, comment);
+				const [statics, nonStatics] = MoveStatics.extractStatics(
+					cls.members,
+					comment,
+				);
 
 				const staticDecls = statics.mapNotNoneOption(
-					Hoisting.memberToDecl(cls.codePath, cls.jsLocation)
+					Hoisting.memberToDecl(cls.codePath, cls.jsLocation),
 				);
 
 				if (staticDecls.isEmpty) {
@@ -91,7 +99,7 @@ export class MoveStatics extends TransformMembers {
 						cls.name,
 						staticDecls as unknown as IArray<TsContainerOrDecl>,
 						cls.codePath,
-						cls.jsLocation
+						cls.jsLocation,
 					);
 					const modifiedClass = TsDeclClass.create(
 						cls.comments,
@@ -103,9 +111,12 @@ export class MoveStatics extends TransformMembers {
 						cls.implementsInterfaces,
 						nonStatics,
 						cls.jsLocation,
-						cls.codePath
+						cls.codePath,
 					);
-					return IArray.apply(modifiedClass as TsContainerOrDecl, ns as TsContainerOrDecl);
+					return IArray.apply(
+						modifiedClass as TsContainerOrDecl,
+						ns as TsContainerOrDecl,
+					);
 				}
 			} else {
 				return IArray.apply(member);
@@ -116,14 +127,14 @@ export class MoveStatics extends TransformMembers {
 	/**
 	 * Extract static members from a list of members, returning both static and non-static members.
 	 * Static members have their isStatic flag removed and the provided comment added.
-	 * 
+	 *
 	 * @param members - The array of members to process
 	 * @param comment - The comment to add to extracted static members
 	 * @returns A tuple of [static members, non-static members]
 	 */
 	static extractStatics(
 		members: IArray<TsMember>,
-		comment: Comment
+		comment: Comment,
 	): [IArray<TsMember>, IArray<TsMember>] {
 		return members.partitionCollect(
 			partialFunction(
@@ -152,7 +163,7 @@ export class MoveStatics extends TransformMembers {
 								prop.tpe,
 								prop.expr,
 								false, // isStatic = false
-								prop.isReadOnly
+								prop.isReadOnly,
 							);
 						}
 						case "TsMemberFunction": {
@@ -164,15 +175,15 @@ export class MoveStatics extends TransformMembers {
 								func.methodType,
 								func.signature,
 								false, // isStatic = false
-								func.isReadOnly
+								func.isReadOnly,
 							);
 						}
 						default:
 							// This should never happen due to the guard above
 							return member;
 					}
-				}
-			)
+				},
+			),
 		);
 	}
 }

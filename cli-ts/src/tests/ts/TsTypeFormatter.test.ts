@@ -5,8 +5,8 @@
  * equivalence with the Scala implementation.
  */
 
-import { describe, expect, test } from "vitest";
 import * as O from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments } from "@/internal/Comments.ts";
 import { IArray } from "@/internal/IArray.ts";
 import { MethodType } from "@/internal/ts/MethodType.ts";

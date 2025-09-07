@@ -3,8 +3,8 @@
  * End-to-end tests for the complete phases framework
  */
 
-import { describe, expect, test } from "vitest";
 import { right } from "fp-ts/Either";
+import { describe, expect, test } from "vitest";
 import { SortedSet } from "../../internal/collections";
 import { Logger } from "../../internal/logging";
 import { CollectingPhaseListener } from "../../internal/phases/PhaseListener";

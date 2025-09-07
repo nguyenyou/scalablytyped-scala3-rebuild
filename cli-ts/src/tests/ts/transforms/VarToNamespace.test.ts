@@ -5,8 +5,8 @@
  * with object types into namespace declarations.
  */
 
-import { describe, expect, test } from "vitest";
 import { none, type Option, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { NoComments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.js";
 import { Logger } from "@/internal/logging/index.js";

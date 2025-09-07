@@ -6,8 +6,8 @@
  * constructor analysis, and edge cases.
  */
 
-import { describe, expect, test } from "vitest";
 import { none, some } from "fp-ts/Option";
+import { describe, expect, test } from "vitest";
 import { Comments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import {
