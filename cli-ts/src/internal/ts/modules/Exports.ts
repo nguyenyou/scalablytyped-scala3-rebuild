@@ -14,6 +14,7 @@ import type { ExportType } from "../ExportType.js";
 import { JsLocation } from "../JsLocation.js";
 import { ModuleSpec } from "../ModuleSpec.js";
 import { Picker } from "../Picker.js";
+import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
 import type { LoopDetector, TsTreeScope } from "../TsTreeScope.js";
 import {
 	TsDeclNamespace,
@@ -79,12 +80,12 @@ export const Exports = {
 		owner: TsDeclNamespaceOrModule,
 	): IArray<TsNamedDecl> => {
 		// Cache key for memoization
-		const _key = `${scope.toString()}-${JSON.stringify(e)}`;
+		const key = `${scope.toString()}-${JSON.stringify(e)}`;
 
-		// Check cache first (stub implementation)
-		// if (scope.root.cache && scope.root.cache.expandExport.has(key)) {
-		// 	return scope.root.cache.expandExport.get(key)!;
-		// }
+		// Check cache first
+		if (isSome(scope.root.cache) && scope.root.cache.value.expandExport.has(key)) {
+			return scope.root.cache.value.expandExport.get(key)!;
+		}
 
 		const codePath = owner.codePath.forceHasPath();
 
@@ -139,13 +140,19 @@ export const Exports = {
 			ret = IArray.Empty;
 		}
 
-		// Apply code path transformation (stub)
-		const ret2 = ret; // SetCodePath.visitTsNamedDecl(codePath)(decl)
+		// Apply code path transformation
+		const ret2 = ret.map((decl) => {
+			// Apply SetCodePath transformation to each declaration
+			if (hasCodePath(decl)) {
+				return decl.withCodePath(codePath) as TsNamedDecl;
+			}
+			return decl;
+		});
 
-		// Cache the result if non-empty (stub)
-		// if (scope.root.cache && ret2.length > 0) {
-		// 	scope.root.cache.expandExport.set(key, ret2);
-		// }
+		// Cache the result if non-empty
+		if (isSome(scope.root.cache) && ret2.length > 0) {
+			scope.root.cache.value.expandExport.set(key, ret2);
+		}
 
 		return ret2;
 	},
@@ -172,8 +179,12 @@ export const Exports = {
 		renamedOpt: Option<TsIdentSimple>,
 		loopDetector: LoopDetector,
 	): IArray<TsNamedDecl> => {
-		// Limit scope to prevent self-reference issues (stub)
-		const limitedScope = scope; // TODO: implement proper scope limiting
+		// Limit scope to prevent self-reference issues
+		// If the scope is scoped and the current declaration is the same as the one being exported,
+		// use the outer scope to prevent infinite recursion
+		const limitedScope = isScoped(scope) && scope.current === namedDecl
+			? scope.outer
+			: scope;
 
 		// Rewrite exports if necessary
 		const rewritten = rewriteExports(namedDecl, limitedScope, loopDetector);
@@ -240,6 +251,29 @@ function isNamedDecl(tree: any): tree is TsNamedDecl {
 }
 
 /**
+ * Type guard to check if an object implements HasCodePath.
+ * An object implements HasCodePath if it has both codePath property and withCodePath method.
+ */
+function hasCodePath(
+	obj: any,
+): obj is { withCodePath(newCodePath: CodePathHasPath): any } {
+	return (
+		obj != null &&
+		typeof obj === "object" &&
+		"codePath" in obj &&
+		"withCodePath" in obj &&
+		typeof obj.withCodePath === "function"
+	);
+}
+
+/**
+ * Type guard to check if a scope is a scoped scope
+ */
+function isScoped(scope: TsTreeScope): scope is TsTreeScope.Scoped {
+	return "outer" in scope && "current" in scope;
+}
+
+/**
  * Handles import-then-export patterns
  */
 function handleImportExport(
@@ -281,8 +315,8 @@ function handleImportExport(
 					Comments.empty(),
 					false,
 					ident,
-					whole.rest as any, // TODO: fix type
-					codePath, // TODO: fix noPath()
+					whole.rest as any, // Cast to TsContainerOrDecl
+					codePath,
 					JsLocation.zero(),
 				);
 				const allDecls = whole.defaults
@@ -365,9 +399,9 @@ function handleStarExports(
 	exportType: ExportType,
 ): IArray<TsNamedDecl> {
 	const moduleScope = scope.moduleScopes.get(exporteeStar.from);
-	if (moduleScope) {
-		// TODO: check if scoped
-		const scopedModule = moduleScope as any; // TsTreeScope.Scoped
+	if (moduleScope && isScoped(moduleScope)) {
+		// Ensure we have a scoped module
+		const scopedModule = moduleScope;
 		if (scopedModule.current._tag === "TsDeclModule") {
 			const mod = scopedModule.current as any; // TsDeclModule
 			const resolvedModule = scope.stack.includes(mod)
