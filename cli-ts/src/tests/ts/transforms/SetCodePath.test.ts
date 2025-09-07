@@ -256,25 +256,6 @@ describe("SetCodePath", () => {
 			const lastPart = result.codePathPart.parts.toArray().slice(-1)[0];
 			expect(lastPart).toBe(TsIdentGlobal);
 		});
-
-		it.skip("preserves path for non-named trees", () => {
-			const codePath = createCodePathWithParts("test-lib", "module");
-			const typeRef = {
-				_tag: "TsTypeRef" as const,
-				comments: {} as any,
-				name: {} as any,
-				tparams: IArray.Empty,
-			};
-
-			const result = SetCodePathTransform.withTree(codePath, typeRef as any);
-
-			// For non-named trees, the path should remain unchanged
-			expect(result._tag).toBe("HasPath");
-			expect(result.inLibrary.value).toBe("test-lib");
-			expect(result.codePathPart.parts.toArray().map((p) => p.value)).toEqual([
-				"module",
-			]);
-		});
 	});
 
 	describe("Edge Cases and Error Handling", () => {
