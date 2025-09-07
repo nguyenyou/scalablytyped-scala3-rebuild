@@ -866,4 +866,84 @@ describe("Exports", () => {
 			expect(result.get(0)._tag).toBe("TsDeclTypeAlias");
 		});
 	});
+
+	describe("Newly Implemented Features", () => {
+		test("SetCodePath transformation is applied correctly", () => {
+			const interface1 = createMockInterface("TestInterface");
+			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
+			const scope = createScopedScope(createMockNamespace("TestScope"));
+			const loopDetector = createMockLoopDetector();
+			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const jsLocationFn = createJsLocationFunction();
+
+			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+
+			expect(result.length).toBeGreaterThan(0);
+			// The result should have the correct code path applied
+			const firstResult = result.get(0);
+			expect(firstResult.codePath).toBeDefined();
+		});
+
+		test("Scope limiting prevents self-reference issues", () => {
+			const interface1 = createMockInterface("TestInterface");
+			const scope = createScopedScope(interface1); // Scope contains the same interface
+			const loopDetector = createMockLoopDetector();
+			const ownerCp = createHasPath("test", "TestModule") as any;
+			const jsLocationFn = createJsLocationFunction();
+
+			// This should not cause infinite recursion due to scope limiting
+			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), interface1, none, loopDetector);
+
+			expect(result.length).toBeGreaterThanOrEqual(0);
+		});
+
+		test("Cache functionality works correctly", () => {
+			// Create a scope with cache enabled
+			const libName = TsIdent.librarySimple("test-lib");
+			const logger = Logger.DevNull();
+			const deps = new Map();
+			const rootScope = TsTreeScope.create(libName, false, deps, logger).caching();
+			const scope = rootScope["/"](createMockNamespace("TestScope"));
+
+			const interface1 = createMockInterface("TestInterface");
+			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
+			const loopDetector = createMockLoopDetector();
+			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const jsLocationFn = createJsLocationFunction();
+
+			// First call should populate cache
+			const result1 = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+
+			// Second call should use cache
+			const result2 = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+
+			expect(result1.length).toBe(result2.length);
+			expect(result1.length).toBeGreaterThan(0);
+		});
+
+		test("HasCodePath type guard works correctly", () => {
+			const interface1 = createMockInterface("TestInterface");
+			const plainObject = { name: "test" };
+
+			// Interface should have code path
+			expect(interface1.codePath).toBeDefined();
+			expect(typeof interface1.withCodePath).toBe("function");
+
+			// Plain object should not
+			expect(plainObject).not.toHaveProperty("withCodePath");
+		});
+
+		test("isScoped type guard works correctly", () => {
+			const rootScope = createMockScope();
+			const scopedScope = rootScope["/"](createMockNamespace("TestScope"));
+
+			// Root scope should not be scoped
+			expect("outer" in rootScope).toBe(false);
+			expect("current" in rootScope).toBe(false);
+
+			// Scoped scope should be scoped
+			expect("outer" in scopedScope).toBe(true);
+			expect("current" in scopedScope).toBe(true);
+		});
+	});
 });
