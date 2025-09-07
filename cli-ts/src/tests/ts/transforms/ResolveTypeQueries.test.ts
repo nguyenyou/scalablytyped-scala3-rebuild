@@ -114,13 +114,12 @@ describe("ResolveTypeQueries", () => {
 			members: IArray.Empty,
 			jsLocation: JsLocation.zero(),
 			codePath: createCodePath(name),
-			withMembers: (newMembers) => createDeclClass(name),
-			withCodePath: (newCodePath) => createDeclClass(name),
-			withJsLocation: (newLocation) => createDeclClass(name),
-			withComments: (cs) => createDeclClass(name),
-			addComment: (c) => createDeclClass(name),
+			withCodePath: (newCodePath: CodePath) => createDeclClass(name),
+			withJsLocation: (newLocation: JsLocation) => createDeclClass(name),
+			withComments: (cs: Comments) => createDeclClass(name),
+			addComment: (c: Comment) => createDeclClass(name),
 			asString: `TsDeclClass(${name})`,
-		};
+		} as TsDeclClass;
 	}
 
 	function createMockScope(): TsTreeScope {
@@ -160,7 +159,7 @@ describe("ResolveTypeQueries", () => {
 			
 			// Mock lookup to return a variable declaration
 			const mockVar = createDeclVar("myVar", TsTypeRef.string);
-			scope.lookupInternal = () => IArray.apply([mockVar, scope]);
+			scope.lookupInternal = () => IArray.apply([mockVar, scope] as any);
 
 			const typeQuery = createTypeQuery("myVar");
 			const property = createMemberProperty("prop", typeQuery, false);
@@ -241,7 +240,7 @@ describe("ResolveTypeQueries", () => {
 			
 			// Mock lookup to return a function declaration
 			const mockFunc = createDeclFunction("myFunc");
-			scope.lookupInternal = () => IArray.apply([mockFunc, scope]);
+			scope.lookupInternal = () => IArray.apply([mockFunc, scope] as any);
 
 			const typeQuery = createTypeQuery("myFunc");
 			const variable = createDeclVar("myVar", typeQuery);
@@ -311,7 +310,7 @@ describe("ResolveTypeQueries", () => {
 			
 			// Mock lookup to return a class declaration
 			const mockClass = createDeclClass("MyClass");
-			scope.lookupInternal = () => IArray.apply([mockClass, scope]);
+			scope.lookupInternal = () => IArray.apply([mockClass, scope] as any);
 
 			const typeQuery = createTypeQuery("MyClass");
 			const typeTransform = transform.leaveTsType(scope);
@@ -360,7 +359,7 @@ describe("ResolveTypeQueries", () => {
 			
 			// Mock lookup to return a function declaration
 			const mockFunc = createDeclFunction("myFunc");
-			scope.lookupInternal = () => IArray.apply([mockFunc, scope]);
+			scope.lookupInternal = () => IArray.apply([mockFunc, scope] as any);
 
 			const typeQuery = createTypeQuery("myFunc");
 			const property = createMemberProperty("prop", typeQuery, false);
@@ -381,7 +380,7 @@ describe("ResolveTypeQueries", () => {
 			
 			// Mock lookup to return a variable declaration
 			const mockVar = createDeclVar("myVar", TsTypeRef.number);
-			scope.lookupInternal = () => IArray.apply([mockVar, scope]);
+			scope.lookupInternal = () => IArray.apply([mockVar, scope] as any);
 
 			const typeQuery = createTypeQuery("myVar");
 			const property = createMemberProperty("prop", typeQuery, false);
@@ -433,7 +432,7 @@ describe("ResolveTypeQueries", () => {
 			const typeQuery = createTypeQuery("myVar");
 			// Create a variable that references itself
 			const circularVar = createDeclVar("myVar", typeQuery);
-			scope.lookupInternal = () => IArray.apply([circularVar, scope]);
+			scope.lookupInternal = () => IArray.apply([circularVar, scope] as any);
 
 			const property = createMemberProperty("prop", typeQuery, false);
 			const mockTree = {
@@ -459,7 +458,7 @@ describe("ResolveTypeQueries", () => {
 				} else {
 					// Second call (global fallback) succeeds
 					const mockVar = createDeclVar("globalVar", TsTypeRef.boolean);
-					return IArray.apply([mockVar, scope]);
+					return IArray.apply([mockVar, scope] as any);
 				}
 			};
 
@@ -532,9 +531,9 @@ describe("ResolveTypeQueries", () => {
 			scope.lookupInternal = (picker, parts) => {
 				const name = parts.apply(0).value;
 				if (name === "var1") {
-					return IArray.apply([mockVar1, scope]);
+					return IArray.apply([mockVar1, scope] as any);
 				} else if (name === "var2") {
-					return IArray.apply([mockVar2, scope]);
+					return IArray.apply([mockVar2, scope] as any);
 				}
 				return IArray.Empty;
 			};
