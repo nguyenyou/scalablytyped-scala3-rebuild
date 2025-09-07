@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { RewriteExportStarAs } from "../../../internal/ts/transforms/RewriteExportStarAs.js";
+import { RewriteExportStarAs } from "@/internal/ts/modules/RewriteExportStarAs.js";
 import {
 	TsIdentSimple,
 	TsQIdent,
@@ -23,16 +23,16 @@ import {
 	TsParsedFile,
 	TsGlobal,
 	TsAugmentedModule,
-} from "../../../internal/ts/trees.js";
-import { Comments } from "../../../internal/Comments.js";
-import { ExportType } from "../../../internal/ts/ExportType.js";
-import { CodePath } from "../../../internal/ts/CodePath.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { IArray } from "../../../internal/IArray.js";
+} from "@/internal/ts/trees.js";
+import { Comments } from "@/internal/Comments.js";
+import { ExportType } from "@/internal/ts/ExportType.js";
+import { CodePath } from "@/internal/ts/CodePath.js";
+import { JsLocation } from "@/internal/ts/JsLocation.js";
+import { IArray } from "@/internal/IArray.js";
 import { none, some } from "fp-ts/Option";
-import { TransformMembers } from "../../../internal/ts/TreeTransformations.js";
-import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
-import { TsIdent } from "../../../internal/ts/trees.js";
+import { TransformMembers } from "@/internal/ts/TreeTransformations.js";
+import { TsTreeScope } from "@/internal/ts/TsTreeScope.js";
+import { TsIdent } from "@/internal/ts/trees.js";
 
 // Helper functions for creating test data
 function createSimpleIdent(name: string): TsIdentSimple {
