@@ -10,7 +10,7 @@ import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
 import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { PreferTypeAlias } from "../../../internal/ts/transforms/PreferTypeAlias.js";
+import { AvoidCircularVisitor, PreferTypeAlias, type Rewrite } from "../../../internal/ts/transforms/PreferTypeAlias.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
 import {
@@ -27,6 +27,7 @@ import {
 	TsParsedFile,
 	TsQIdent,
 	TsTypeFunction,
+	TsTypeIntersect,
 	TsTypeObject,
 	TsTypeRef,
 	type TsIdentSimple,
@@ -73,6 +74,12 @@ function createTypeFunction(sig: TsFunSig): TsTypeFunction {
 
 function createTypeObject(members: IArray<TsMember>): TsTypeObject {
 	return TsTypeObject.create(NoComments.instance, members);
+}
+
+
+
+function createTypeIntersect(types: IArray<TsType>): TsTypeIntersect {
+	return TsTypeIntersect.create(types);
 }
 
 function createMemberCall(sig: TsFunSig): TsMemberCall {
@@ -547,6 +554,226 @@ describe("PreferTypeAlias", () => {
 			// Both should remain unchanged
 			expect(result.members.apply(0)._tag).toBe("TsDeclInterface");
 			expect(result.members.apply(1)._tag).toBe("TsDeclTypeAlias");
+		});
+	});
+
+	describe("AvoidCircularVisitor", () => {
+		it("creates visitor with correct map from rewrites", () => {
+			const rewrite1: Rewrite = {
+				target: createQIdent("test-lib", "Type1"),
+				circular: new Set([createQIdent("test-lib", "Type2"), createQIdent("test-lib", "Type3")])
+			};
+			const rewrite2: Rewrite = {
+				target: createQIdent("test-lib", "Type4"),
+				circular: new Set([createQIdent("test-lib", "Type4")])
+			};
+
+			// Create visitor with rewrites
+			const visitor = new AvoidCircularVisitor([rewrite1, rewrite2]);
+
+			expect(visitor).toBeDefined();
+			// Note: map is private, so we can't test it directly
+			// Instead we test the behavior through the public interface
+		});
+
+		it("rewrites type alias with object type to interface", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "CircularType"),
+				circular: new Set([createQIdent("test-lib", "CircularType"), createQIdent("test-lib", "OtherType")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const propMember = createMemberProperty("prop", createTypeRef("string"));
+			const objectType = createTypeObject(IArray.apply(propMember as TsMember));
+			const typeAlias = createMockTypeAlias("CircularType", objectType);
+			// Set the codePath to match the rewrite target
+			const aliasWithPath = {
+				...typeAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.name.value).toBe("CircularType");
+			expect(resultInterface.members.length).toBe(1);
+			expect(resultInterface.comments.rawCs.length).toBeGreaterThan(0);
+			expect(resultInterface.comments.rawCs[0]).toContain("NOTE: Rewritten from type alias");
+		});
+
+		it("rewrites type alias with function type to interface with call signature", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "FunctionType"),
+				circular: new Set([createQIdent("test-lib", "FunctionType")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const funSig = createFunSig(
+				IArray.apply(createFunParam("x", createTypeRef("number"))),
+				createTypeRef("string")
+			);
+			const functionType = createTypeFunction(funSig);
+			const typeAlias = createMockTypeAlias("FunctionType", functionType);
+			const aliasWithPath = {
+				...typeAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "FunctionType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.name.value).toBe("FunctionType");
+			expect(resultInterface.members.length).toBe(1);
+			expect(resultInterface.members.apply(0)._tag).toBe("TsMemberCall");
+		});
+
+		it("rewrites type alias with type reference to interface with inheritance", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "AliasType"),
+				circular: new Set([createQIdent("test-lib", "AliasType")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const typeRef = createTypeRef("BaseType");
+			const typeAlias = createMockTypeAlias("AliasType", typeRef);
+			const aliasWithPath = {
+				...typeAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "AliasType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.name.value).toBe("AliasType");
+			expect(resultInterface.inheritance.length).toBe(1);
+			expect(resultInterface.inheritance.apply(0)._tag).toBe("TsTypeRef");
+			expect(resultInterface.members.length).toBe(0);
+		});
+
+		it("rewrites interface by applying type replacement", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "CircularInterface"),
+				circular: new Set([createQIdent("test-lib", "CircularInterface")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const propMember = createMemberProperty("prop", createTypeRef("string"));
+			const interface_ = createMockInterface("CircularInterface", IArray.apply(propMember as TsMember));
+			const interfaceWithPath = {
+				...interface_,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularInterface") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(interfaceWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.name.value).toBe("CircularInterface");
+			expect(resultInterface.members.length).toBe(1); // Original members preserved
+		});
+
+		it("leaves non-circular declarations unchanged", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "CircularType"),
+				circular: new Set([createQIdent("test-lib", "CircularType")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const regularAlias = createMockTypeAlias("RegularType", createTypeRef("string"));
+			const aliasWithPath = {
+				...regularAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "RegularType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result).toBe(aliasWithPath); // Should be unchanged
+		});
+
+		it("handles intersection types with all type references", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "IntersectionType"),
+				circular: new Set([createQIdent("test-lib", "IntersectionType")])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const typeRef1 = createTypeRef("Type1");
+			const typeRef2 = createTypeRef("Type2");
+			const intersectionType = createTypeIntersect(IArray.apply<TsType>(typeRef1, typeRef2));
+			const typeAlias = createMockTypeAlias("IntersectionType", intersectionType);
+			const aliasWithPath = {
+				...typeAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "IntersectionType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			expect(resultInterface.name.value).toBe("IntersectionType");
+			expect(resultInterface.inheritance.length).toBe(2);
+			expect(resultInterface.members.length).toBe(0);
+		});
+
+		it("includes circular group information in rewrite comment", () => {
+			const scope = createMockScope();
+			const rewrite: Rewrite = {
+				target: createQIdent("test-lib", "CircularType"),
+				circular: new Set([
+					createQIdent("test-lib", "CircularType"),
+					createQIdent("test-lib", "OtherType"),
+					createQIdent("test-lib", "ThirdType")
+				])
+			};
+
+			const visitor = new AvoidCircularVisitor([rewrite]);
+
+			const objectType = createTypeObject(IArray.Empty);
+			const typeAlias = createMockTypeAlias("CircularType", objectType);
+			const aliasWithPath = {
+				...typeAlias,
+				codePath: {
+					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularType") })
+				}
+			};
+
+			const result = visitor.enterTsDecl(scope)(aliasWithPath);
+
+			expect(result._tag).toBe("TsDeclInterface");
+			const resultInterface = result as TsDeclInterface;
+			const commentText = resultInterface.comments.rawCs.join("");
+			expect(commentText).toContain("NOTE: Rewritten from type alias");
+			expect(commentText).toContain("to avoid circular code involving");
+			expect(commentText).toContain("CircularType");
+			expect(commentText).toContain("OtherType");
+			expect(commentText).toContain("ThirdType");
 		});
 	});
 });

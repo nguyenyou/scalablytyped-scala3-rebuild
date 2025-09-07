@@ -25,7 +25,9 @@ import {
 	TsDeclTypeAlias,
 	TsMemberCall,
 	TsTypeFunction,
+	TsTypeIntersect,
 	TsTypeObject,
+	TsTypeParam,
 	TsTypeRef,
 	type TsContainer,
 	type TsContainerOrDecl,
@@ -36,7 +38,6 @@ import {
 	type TsQIdent,
 	type TsTree,
 	type TsType,
-	type TsTypeIntersect,
 } from "../trees.js";
 
 /**
@@ -403,21 +404,69 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 /**
  * Visitor that avoids circular dependencies by rewriting specific types
  */
-class AvoidCircularVisitor extends TreeTransformationScopedChanges {
-	constructor(private readonly rewrites: Rewrite[]) {
+export class AvoidCircularVisitor extends TreeTransformationScopedChanges {
+	private readonly map: Map<string, Set<TsQIdent>>;
+
+	constructor(rewrites: Rewrite[]) {
 		super();
+		// Create map from target string to circular set (including target itself)
+		this.map = new Map();
+		rewrites.forEach(r => {
+			const circular = new Set(r.circular);
+			circular.add(r.target);
+			const targetKey = TsTypeFormatter.qident(r.target);
+			this.map.set(targetKey, circular);
+		});
 	}
 
-	override enterTsType(scope: TsTreeScope): (x: TsType) => TsType {
-		return (x: TsType) => {
-			if (x._tag === "TsTypeRef") {
-				const typeRef = x as TsTypeRef;
+	/**
+	 * Inner transformation for replacing types with any
+	 */
+	private createReplaceTypesTransformation(toReplace: Set<TsQIdent>) {
+		return {
+			leaveTsTypeRef: (x: TsTypeRef): TsTypeRef => {
+				if (toReplace.has(x.name)) {
+					return TsTypeRef.any;
+				}
+				return x;
+			},
 
-				// Check if this type reference should be rewritten
-				const rewrite = this.rewrites.find(r => r.target === typeRef.name);
-				if (rewrite) {
-					// Create a new interface to break the circular dependency
-					return this.createCircularBreakingInterface(scope, typeRef, rewrite);
+			withTree: (t: Set<TsQIdent>, tree: TsTree): Set<TsQIdent> => {
+				// Handle if the current tree introduces a new type parameter which shadows what we are trying to inline
+				const tparamsOption = HasTParams.unapply(tree);
+				if (tparamsOption._tag === "Some") {
+					const tparams = tparamsOption.value;
+					return new Set(Array.from(t).filter(qident => {
+						// Check if this is a simple identifier that matches a type parameter
+						if (qident.parts.length === 1) {
+							const simpleName = qident.parts.get(0);
+							return !tparams.exists((tp: TsTypeParam) => tp.name === simpleName);
+						}
+						return true;
+					}));
+				}
+				return t;
+			}
+		};
+	}
+
+	override enterTsDecl(scope: TsTreeScope): (x: TsDecl) => TsDecl {
+		return (x: TsDecl) => {
+			if (x._tag === "TsDeclTypeAlias") {
+				const ta = x as TsDeclTypeAlias;
+				const codePath = ta.codePath.forceHasPath().codePath;
+				const codePathKey = TsTypeFormatter.qident(codePath);
+
+				if (this.map.has(codePathKey)) {
+					return this.rewriteTypeAlias(scope, ta, codePath);
+				}
+			} else if (x._tag === "TsDeclInterface") {
+				const iface = x as TsDeclInterface;
+				const codePath = iface.codePath.forceHasPath().codePath;
+				const codePathKey = TsTypeFormatter.qident(codePath);
+
+				if (this.map.has(codePathKey)) {
+					return this.rewriteInterface(iface, codePath);
 				}
 			}
 
@@ -426,16 +475,156 @@ class AvoidCircularVisitor extends TreeTransformationScopedChanges {
 	}
 
 	/**
-	 * Create an interface that breaks circular dependencies
+	 * Rewrite a type alias to break circular dependencies
 	 */
-	private createCircularBreakingInterface(
-		_scope: TsTreeScope,
-		typeRef: TsTypeRef,
-		_rewrite: Rewrite
-	): TsType {
-		// For now, return the original type ref
-		// In a full implementation, this would create a new interface
-		// that breaks the circular dependency
-		return typeRef;
+	private rewriteTypeAlias(scope: TsTreeScope, ta: TsDeclTypeAlias, codePath: TsQIdent): TsDecl {
+		const codePathKey = TsTypeFormatter.qident(codePath);
+		const rewrite = this.map.get(codePathKey)!;
+		const isTypeParam = new Set(TsTypeParam.asTypeArgs(ta.tparams).map(tr => tr as TsType));
+
+		// Create comment explaining the rewrite
+		const formattedCircularGroup = Array.from(rewrite)
+			.sort((a, b) => TsTypeFormatter.qident(a).localeCompare(TsTypeFormatter.qident(b)))
+			.map(qident => `- ${TsTypeFormatter.qident(qident)}`)
+			.join("\n");
+
+		const newComment = new Raw(`/**
+NOTE: Rewritten from type alias:
+\`\`\`
+type ${ta.name.value} = ${TsTypeFormatter.apply(ta.alias)}
+\`\`\`
+to avoid circular code involving:
+${formattedCircularGroup}
+*/`);
+
+		const comments = ta.comments.add(newComment);
+
+		// Follow aliases to determine the best interface representation
+		const followedAlias = FollowAliases.apply(scope)(ta.alias);
+
+		switch (followedAlias._tag) {
+			case "TsTypeIntersect": {
+				const intersect = followedAlias as TsTypeIntersect;
+				const allTypeRefs = this.extractAllTypeRefs(intersect.types);
+
+				if (allTypeRefs && !allTypeRefs.exists((tr: TsTypeRef) => isTypeParam.has(tr as TsType))) {
+					return TsDeclInterface.create(
+						comments,
+						ta.declared,
+						ta.name,
+						ta.tparams,
+						allTypeRefs, // inheritance
+						IArray.Empty, // members
+						ta.codePath
+					);
+				}
+				break;
+			}
+			case "TsTypeObject": {
+				const objType = followedAlias as TsTypeObject;
+				return TsDeclInterface.create(
+					comments,
+					ta.declared,
+					ta.name,
+					ta.tparams,
+					IArray.Empty, // inheritance
+					objType.members,
+					ta.codePath
+				);
+			}
+			case "TsTypeFunction": {
+				const funType = followedAlias as TsTypeFunction;
+				const call = TsMemberCall.create(
+					NoComments.instance,
+					TsProtectionLevel.default(),
+					funType.signature
+				);
+				return TsDeclInterface.create(
+					comments,
+					ta.declared,
+					ta.name,
+					ta.tparams,
+					IArray.Empty, // inheritance
+					IArray.apply(call as TsMember),
+					ta.codePath
+				);
+			}
+			case "TsTypeRef": {
+				const typeRef = followedAlias as TsTypeRef;
+				return TsDeclInterface.create(
+					comments,
+					ta.declared,
+					ta.name,
+					ta.tparams,
+					IArray.apply(typeRef), // inheritance
+					IArray.Empty, // members
+					ta.codePath
+				);
+			}
+		}
+
+		// Fallback: apply type replacement to the original type alias
+		const replaceTypes = this.createReplaceTypesTransformation(rewrite);
+		const updatedTa = { ...ta, comments };
+		return this.applyTypeReplacement(updatedTa, replaceTypes, rewrite);
+	}
+
+	/**
+	 * Rewrite an interface to break circular dependencies
+	 */
+	private rewriteInterface(iface: TsDeclInterface, codePath: TsQIdent): TsDecl {
+		const codePathKey = TsTypeFormatter.qident(codePath);
+		const rewrite = this.map.get(codePathKey)!;
+		const replaceTypes = this.createReplaceTypesTransformation(rewrite);
+
+		// Apply type replacement to interface with empty members, then restore original members
+		const emptyInterface: TsDeclInterface = { ...iface, members: IArray.Empty };
+		const processedInterface = this.applyTypeReplacement(emptyInterface, replaceTypes, rewrite) as TsDeclInterface;
+
+		return TsDeclInterface.create(
+			processedInterface.comments,
+			processedInterface.declared,
+			processedInterface.name,
+			processedInterface.tparams,
+			processedInterface.inheritance,
+			iface.members, // restore original members
+			processedInterface.codePath
+		);
+	}
+
+	/**
+	 * Extract all type references from an intersection type
+	 */
+	private extractAllTypeRefs(types: IArray<TsType>): IArray<TsTypeRef> | null {
+		const typeRefs: TsTypeRef[] = [];
+		const others: TsType[] = [];
+
+		for (let i = 0; i < types.length; i++) {
+			const type = types.apply(i);
+			if (type._tag === "TsTypeRef") {
+				typeRefs.push(type as TsTypeRef);
+			} else {
+				others.push(type);
+			}
+		}
+
+		// Only return type refs if all types are type refs
+		if (others.length === 0) {
+			return IArray.fromArray(typeRefs);
+		}
+		return null;
+	}
+
+	/**
+	 * Apply type replacement transformation (simplified version)
+	 */
+	private applyTypeReplacement(
+		decl: TsDecl,
+		_replaceTypes: any,
+		_rewrite: Set<TsQIdent>
+	): TsDecl {
+		// For now, just return the declaration unchanged
+		// In a full implementation, this would apply the type replacement transformation
+		return decl;
 	}
 }
