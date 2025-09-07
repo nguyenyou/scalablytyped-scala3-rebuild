@@ -10,7 +10,7 @@
 	"scripts": {
 		"build": "bun build src/main.ts --outdir dist --target node --format esm",
 		"dev": "bun --watch src/main.ts convert",
-		"test": "vitest --run",
+		"test": "bun test",
 		"coverage": "vitest run --coverage",
 		"format": "biome format --write",
 		"lint": "biome check --write src",
@@ -18,7 +18,7 @@
 		"clean": "rm -rf dist",
 		"typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json",
 		"tc": "bun typecheck",
-		"check": "bun typecheck && vitest --run"
+		"check": "bun typecheck && bun test"
 	},
 	"dependencies": {
 		"@types/tabulator-tables": "6.2.10",
