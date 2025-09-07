@@ -1378,6 +1378,20 @@ export interface TsExport extends TsContainerOrDecl {
 	readonly exported: TsExportee;
 }
 
+/**
+ * Represents a TypeScript export-as-namespace declaration.
+ * In TypeScript: `export as namespace MyLibrary`
+ * Used in UMD modules to specify the global variable name.
+ */
+export interface TsExportAsNamespace extends TsDecl {
+	readonly _tag: "TsExportAsNamespace";
+
+	/**
+	 * The identifier for the global namespace
+	 */
+	readonly ident: TsIdentSimple;
+}
+
 // Forward declarations for member types
 export interface TsMemberCall extends TsMember {
 	readonly _tag: "TsMemberCall";
@@ -2297,6 +2311,13 @@ export const TsIdent = {
 	 * Returns the namespaced identifier
 	 */
 	namespaced: (): TsIdentSimple => TsIdentNamespaced,
+
+	/**
+	 * Returns the global identifier
+	 */
+	get Global(): TsIdentSimple {
+		return TsIdentGlobal;
+	},
 
 	/**
 	 * Checks if an identifier is the default export identifier
@@ -5307,6 +5328,28 @@ export const TsExport = {
 	 * Type guard
 	 */
 	isExport: (tree: TsTree): tree is TsExport => tree._tag === "TsExport",
+};
+
+/**
+ * Constructor functions and utilities for TsExportAsNamespace
+ */
+export const TsExportAsNamespace = {
+	/**
+	 * Creates an export-as-namespace declaration
+	 */
+	create: (ident: TsIdentSimple): TsExportAsNamespace => {
+		return {
+			_tag: "TsExportAsNamespace",
+			ident,
+			asString: `TsExportAsNamespace(${ident.value})`,
+		};
+	},
+
+	/**
+	 * Type guard
+	 */
+	isExportAsNamespace: (tree: TsTree): tree is TsExportAsNamespace =>
+		tree._tag === "TsExportAsNamespace",
 };
 
 /**

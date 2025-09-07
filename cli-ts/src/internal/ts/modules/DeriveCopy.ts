@@ -24,6 +24,7 @@ import {
 	TsDeclFunction,
 	type TsDeclInterface,
 	type TsDeclModule,
+	type TsDeclNamespace,
 	TsDeclTypeAlias,
 	TsDeclVar,
 	TsGlobal,
@@ -135,6 +136,18 @@ function matchDeclaration(
 			return IArray.fromArray([updatedContainer(ownerCp, augModule)]);
 		} else {
 			return IArray.Empty;
+		}
+	}
+
+	// Handle TsDeclNamespace
+	if (x._tag === "TsDeclNamespace") {
+		const namespace = x as TsDeclNamespace;
+		if (isSome(rename)) {
+			return IArray.fromArray([
+				updatedContainer(ownerCp, namespace.withName(rename.value)),
+			]);
+		} else {
+			return IArray.fromArray([updatedContainer(ownerCp, namespace)]);
 		}
 	}
 
