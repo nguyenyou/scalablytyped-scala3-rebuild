@@ -211,6 +211,47 @@ export abstract class TransformClassMembers extends TreeTransformationScopedChan
 }
 
 /**
+ * Abstract class for transformations that modify class members on leave.
+ * Equivalent to the Scala TransformLeaveClassMembers trait.
+ */
+export abstract class TransformLeaveClassMembers extends TreeTransformationScopedChanges {
+	/**
+	 * Override this method to define how class members should be transformed when leaving.
+	 */
+	abstract newClassMembersLeaving(
+		scope: TsTreeScope,
+		x: HasClassMembers,
+	): IArray<TsMember>;
+
+	override leaveTsDeclClass(
+		scope: TsTreeScope,
+	): (x: TsDeclClass) => TsDeclClass {
+		return (x: TsDeclClass) => ({
+			...x,
+			members: this.newClassMembersLeaving(scope, x),
+		});
+	}
+
+	override leaveTsDeclInterface(
+		scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => ({
+			...x,
+			members: this.newClassMembersLeaving(scope, x),
+		});
+	}
+
+	leaveTsTypeObject(
+		scope: TsTreeScope,
+	): (x: TsTypeObject) => TsTypeObject {
+		return (x: TsTypeObject) => ({
+			...x,
+			members: this.newClassMembersLeaving(scope, x),
+		});
+	}
+}
+
+/**
  * Utility functions for working with tree transformations.
  */
 export namespace TreeTransformations {
