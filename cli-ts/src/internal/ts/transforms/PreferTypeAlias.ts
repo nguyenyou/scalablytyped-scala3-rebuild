@@ -8,37 +8,34 @@
  * 4. Handling dictionary patterns and single inheritance cases
  */
 
-import { none, type Option, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../Comment.js";
-import { Comments, NoComments } from "../../Comments.js";
-import { IArray, IArrayPatterns, partialFunction } from "../../IArray.js";
+import { Raw } from "../../Comment.js";
+import { NoComments } from "../../Comments.js";
+import { IArray } from "../../IArray.js";
 import { FollowAliases } from "../FollowAliases.js";
-import { FillInTParams } from "../FillInTParams.js";
 import { HasTParams } from "../HasTParams.js";
-import { TsProtectionLevel } from "../TsProtectionLevel.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
+import { TsProtectionLevel } from "../TsProtectionLevel.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import { TsTypeFormatter } from "../TsTypeFormatter.js";
-import { isDictionary } from "./ExtractInterfaces.js";
 import {
-	TsDeclInterface,
-	TsDeclTypeAlias,
-	TsMemberCall,
-	TsTypeFunction,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeParam,
-	TsTypeRef,
 	type TsContainer,
 	type TsContainerOrDecl,
 	type TsDecl,
-	type TsFunSig,
+	TsDeclInterface,
+	TsDeclTypeAlias,
 	type TsMember,
+	TsMemberCall,
 	type TsParsedFile,
 	type TsQIdent,
 	type TsTree,
 	type TsType,
+	type TsTypeFunction,
+	type TsTypeIntersect,
+	TsTypeObject,
+	TsTypeParam,
+	TsTypeRef,
 } from "../trees.js";
+import { isDictionary } from "./ExtractInterfaces.js";
 
 /**
  * Represents a rewrite operation to break circular dependencies
@@ -70,17 +67,19 @@ export const PreferTypeAlias = {
 		const groups = PreferTypeAlias.findGroups(withTypeAliasPreferred, scope);
 
 		const allNamesInGroup = new Set<TsQIdent>();
-		groups.forEach(group => {
-			group.typeRefs.forEach(typeRef => {
+		groups.forEach((group) => {
+			group.typeRefs.forEach((typeRef) => {
 				allNamesInGroup.add(typeRef.name);
 			});
 		});
 
 		// prefer these since they give good results when translating to a circular-safe interface
 		const preferredRewrites = new Set<TsQIdent>();
-		allNamesInGroup.forEach(name => {
-			const followed = FollowAliases.apply(scope)(TsTypeRef.create(NoComments.instance, name, IArray.Empty));
-			
+		allNamesInGroup.forEach((name) => {
+			const followed = FollowAliases.apply(scope)(
+				TsTypeRef.create(NoComments.instance, name, IArray.Empty),
+			);
+
 			if (followed._tag === "TsTypeRef") {
 				const typeRef = followed as TsTypeRef;
 				if (typeRef.name.parts.last.value !== "Array") {
@@ -96,16 +95,25 @@ export const PreferTypeAlias = {
 			}
 		});
 
-		const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+		const rewrites = PreferTypeAlias.breakCircularGroups(
+			groups,
+			preferredRewrites,
+		);
 
-		rewrites.forEach(r => {
-			const circularNames = Array.from(r.circular).map(qident => TsTypeFormatter.qident(qident));
+		rewrites.forEach((r) => {
+			const circularNames = Array.from(r.circular).map((qident) =>
+				TsTypeFormatter.qident(qident),
+			);
 			scope.logger
 				.withContext("circular", circularNames)
-				.info(`Rewriting: ${TsTypeFormatter.qident(r.target)} to break circular graph`);
+				.info(
+					`Rewriting: ${TsTypeFormatter.qident(r.target)} to break circular graph`,
+				);
 		});
 
-		return new AvoidCircularVisitor(rewrites).visitTsParsedFile(rootScope)(withTypeAliasPreferred);
+		return new AvoidCircularVisitor(rewrites).visitTsParsedFile(rootScope)(
+			withTypeAliasPreferred,
+		);
 	},
 
 	/**
@@ -116,7 +124,7 @@ export const PreferTypeAlias = {
 		const libPrefix = lib.codePath.forceHasPath().codePath;
 
 		const look = (container: TsContainer): void => {
-			container.members.forEach(member => {
+			container.members.forEach((member) => {
 				if (member._tag === "TsDeclTypeAlias") {
 					const ta = member as TsDeclTypeAlias;
 					// Skip trivial type aliases (equivalent to !ta.comments.has[Marker.IsTrivial.type])
@@ -124,19 +132,19 @@ export const PreferTypeAlias = {
 						const ref = TsTypeRef.create(
 							NoComments.instance,
 							ta.codePath.forceHasPath().codePath,
-							PreferTypeAlias.asTypeArgs(ta.tparams)
+							PreferTypeAlias.asTypeArgs(ta.tparams),
 						);
 
 						const groups = PreferTypeAlias.isInRecursiveGroup(
 							scope["/"](ta),
 							[ref],
 							ta.alias,
-							IArray.Empty
+							IArray.Empty,
 						);
 
-						groups.forEach(rawGroup => {
-							const filteredRefs = rawGroup.typeRefs.filter(typeRef =>
-								typeRef.name.parts.startsWith(libPrefix.parts)
+						groups.forEach((rawGroup) => {
+							const filteredRefs = rawGroup.typeRefs.filter((typeRef) =>
+								typeRef.name.parts.startsWith(libPrefix.parts),
 							);
 							if (filteredRefs.length > 0) {
 								found.add({ typeRefs: filteredRefs });
@@ -157,24 +165,28 @@ export const PreferTypeAlias = {
 	 * Check if a declaration is a container
 	 */
 	isContainer: (decl: TsContainerOrDecl): boolean => {
-		return decl._tag === "TsDeclNamespace" || 
-			   decl._tag === "TsDeclModule" || 
-			   decl._tag === "TsGlobal" ||
-			   decl._tag === "TsParsedFile";
+		return (
+			decl._tag === "TsDeclNamespace" ||
+			decl._tag === "TsDeclModule" ||
+			decl._tag === "TsGlobal" ||
+			decl._tag === "TsParsedFile"
+		);
 	},
 
 	/**
 	 * Check if members represent a type mapping
 	 */
 	isTypeMapping: (members: IArray<TsMember>): boolean => {
-		return members.length === 1 && members.get(0)?._tag === "TsMemberTypeMapped";
+		return (
+			members.length === 1 && members.get(0)?._tag === "TsMemberTypeMapped"
+		);
 	},
 
 	/**
 	 * Convert type parameters to type arguments
 	 */
 	asTypeArgs: (tparams: IArray<any>): IArray<TsType> => {
-		return tparams.map(tp => TsTypeRef.fromIdent(tp.name) as TsType);
+		return tparams.map((tp) => TsTypeRef.fromIdent(tp.name) as TsType);
 	},
 
 	/**
@@ -186,10 +198,10 @@ export const PreferTypeAlias = {
 	 * Check if a type is in a recursive group
 	 */
 	isInRecursiveGroup: (
-		scope: TsTreeScope,
-		acc: TsTypeRef[],
-		current: TsType,
-		lastTypeArgs: IArray<TsType>
+		_scope: TsTreeScope,
+		_acc: TsTypeRef[],
+		_current: TsType,
+		_lastTypeArgs: IArray<TsType>,
 	): CircularGroup[] => {
 		// Implementation will be added in the next part due to complexity
 		return [];
@@ -198,14 +210,17 @@ export const PreferTypeAlias = {
 	/**
 	 * Break circular groups by selecting types to rewrite
 	 */
-	breakCircularGroups: (groups: Set<CircularGroup>, preferredRewrites: Set<TsQIdent>): Rewrite[] => {
+	breakCircularGroups: (
+		groups: Set<CircularGroup>,
+		preferredRewrites: Set<TsQIdent>,
+	): Rewrite[] => {
 		const result: Rewrite[] = [];
 		let currentGroups = new Set(groups);
 
 		while (currentGroups.size > 0) {
 			// Try to find a preferred rewrite first
 			let chosen: TsQIdent | undefined;
-			
+
 			for (const group of currentGroups) {
 				for (const typeRef of group.typeRefs) {
 					if (preferredRewrites.has(typeRef.name)) {
@@ -219,8 +234,8 @@ export const PreferTypeAlias = {
 			// If no preferred rewrite found, pick the most frequent one
 			if (!chosen) {
 				const occurrences = new Map<TsQIdent, number>();
-				currentGroups.forEach(group => {
-					group.typeRefs.forEach(typeRef => {
+				currentGroups.forEach((group) => {
+					group.typeRefs.forEach((typeRef) => {
 						const current = occurrences.get(typeRef.name) || 0;
 						occurrences.set(typeRef.name, current + 1);
 					});
@@ -239,8 +254,8 @@ export const PreferTypeAlias = {
 				const intersectsChosen = new Set<CircularGroup>();
 				const notIntersects = new Set<CircularGroup>();
 
-				currentGroups.forEach(group => {
-					if (group.typeRefs.some(tr => tr.name === chosen)) {
+				currentGroups.forEach((group) => {
+					if (group.typeRefs.some((tr) => tr.name === chosen)) {
 						intersectsChosen.add(group);
 					} else {
 						notIntersects.add(group);
@@ -248,8 +263,8 @@ export const PreferTypeAlias = {
 				});
 
 				const circular = new Set<TsQIdent>();
-				intersectsChosen.forEach(group => {
-					group.typeRefs.forEach(tr => circular.add(tr.name));
+				intersectsChosen.forEach((group) => {
+					group.typeRefs.forEach((tr) => circular.add(tr.name));
 				});
 
 				result.push({ target: chosen, circular });
@@ -260,14 +275,16 @@ export const PreferTypeAlias = {
 		}
 
 		return result;
-	}
+	},
 };
 
 /**
  * Visitor that prefers type aliases over interfaces when beneficial
  */
 class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
-	override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+	override enterTsDeclInterface(
+		scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
 		return (x: TsDeclInterface) => {
 			// Convert interface to type alias if it meets certain criteria
 			if (this.shouldConvertToTypeAlias(scope, x)) {
@@ -277,7 +294,9 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 		};
 	}
 
-	override enterTsDeclTypeAlias(scope: TsTreeScope): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+	override enterTsDeclTypeAlias(
+		scope: TsTreeScope,
+	): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
 		return (x: TsDeclTypeAlias) => {
 			// Convert type alias to interface if it represents an object type
 			if (this.shouldConvertToInterface(scope, x)) {
@@ -287,8 +306,11 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 		};
 	}
 
-	protected override processParsedFileRecursively(scope: TsTreeScope, file: TsParsedFile): TsParsedFile {
-		const transformedMembers = file.members.map(member => {
+	protected override processParsedFileRecursively(
+		scope: TsTreeScope,
+		file: TsParsedFile,
+	): TsParsedFile {
+		const transformedMembers = file.members.map((member) => {
 			if (this.isTsDecl(member as any)) {
 				return this.visitTsDecl(scope)(member as TsDecl) as any;
 			}
@@ -297,14 +319,17 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 
 		return {
 			...file,
-			members: transformedMembers
+			members: transformedMembers,
 		};
 	}
 
 	/**
 	 * Check if an interface should be converted to a type alias
 	 */
-	private shouldConvertToTypeAlias(_scope: TsTreeScope, iface: TsDeclInterface): boolean {
+	private shouldConvertToTypeAlias(
+		_scope: TsTreeScope,
+		iface: TsDeclInterface,
+	): boolean {
 		// Don't convert if it has inheritance
 		if (iface.inheritance.nonEmpty) {
 			return false;
@@ -328,17 +353,21 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 	 * Check if an interface has only call signatures
 	 */
 	private isCallSignatureOnly(members: IArray<TsMember>): boolean {
-		return members.nonEmpty && members.forall(member => member._tag === "TsMemberCall");
+		return (
+			members.nonEmpty &&
+			members.forall((member) => member._tag === "TsMemberCall")
+		);
 	}
 
 	/**
 	 * Check if members represent a simple object type
 	 */
 	private isSimpleObjectType(members: IArray<TsMember>): boolean {
-		return members.forall(member =>
-			member._tag === "TsMemberProperty" ||
-			member._tag === "TsMemberFunction" ||
-			member._tag === "TsMemberCall"
+		return members.forall(
+			(member) =>
+				member._tag === "TsMemberProperty" ||
+				member._tag === "TsMemberFunction" ||
+				member._tag === "TsMemberCall",
 		);
 	}
 
@@ -354,14 +383,17 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 			iface.name,
 			iface.tparams,
 			objectType,
-			iface.codePath
+			iface.codePath,
 		);
 	}
 
 	/**
 	 * Check if a type alias should be converted to an interface
 	 */
-	private shouldConvertToInterface(_scope: TsTreeScope, alias: TsDeclTypeAlias): boolean {
+	private shouldConvertToInterface(
+		_scope: TsTreeScope,
+		alias: TsDeclTypeAlias,
+	): boolean {
 		// Only convert if the alias points to an object type
 		if (alias.alias._tag !== "TsTypeObject") {
 			return false;
@@ -396,7 +428,7 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 			alias.tparams,
 			IArray.Empty, // inheritance
 			objType.members,
-			alias.codePath
+			alias.codePath,
 		);
 	}
 }
@@ -411,7 +443,7 @@ export class AvoidCircularVisitor extends TreeTransformationScopedChanges {
 		super();
 		// Create map from target string to circular set (including target itself)
 		this.map = new Map();
-		rewrites.forEach(r => {
+		rewrites.forEach((r) => {
 			const circular = new Set(r.circular);
 			circular.add(r.target);
 			const targetKey = TsTypeFormatter.qident(r.target);
@@ -436,17 +468,21 @@ export class AvoidCircularVisitor extends TreeTransformationScopedChanges {
 				const tparamsOption = HasTParams.unapply(tree);
 				if (tparamsOption._tag === "Some") {
 					const tparams = tparamsOption.value;
-					return new Set(Array.from(t).filter(qident => {
-						// Check if this is a simple identifier that matches a type parameter
-						if (qident.parts.length === 1) {
-							const simpleName = qident.parts.get(0);
-							return !tparams.exists((tp: TsTypeParam) => tp.name === simpleName);
-						}
-						return true;
-					}));
+					return new Set(
+						Array.from(t).filter((qident) => {
+							// Check if this is a simple identifier that matches a type parameter
+							if (qident.parts.length === 1) {
+								const simpleName = qident.parts.get(0);
+								return !tparams.exists(
+									(tp: TsTypeParam) => tp.name === simpleName,
+								);
+							}
+							return true;
+						}),
+					);
 				}
 				return t;
-			}
+			},
 		};
 	}
 
@@ -477,15 +513,23 @@ export class AvoidCircularVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Rewrite a type alias to break circular dependencies
 	 */
-	private rewriteTypeAlias(scope: TsTreeScope, ta: TsDeclTypeAlias, codePath: TsQIdent): TsDecl {
+	private rewriteTypeAlias(
+		scope: TsTreeScope,
+		ta: TsDeclTypeAlias,
+		codePath: TsQIdent,
+	): TsDecl {
 		const codePathKey = TsTypeFormatter.qident(codePath);
 		const rewrite = this.map.get(codePathKey)!;
-		const isTypeParam = new Set(TsTypeParam.asTypeArgs(ta.tparams).map(tr => tr as TsType));
+		const isTypeParam = new Set(
+			TsTypeParam.asTypeArgs(ta.tparams).map((tr) => tr as TsType),
+		);
 
 		// Create comment explaining the rewrite
 		const formattedCircularGroup = Array.from(rewrite)
-			.sort((a, b) => TsTypeFormatter.qident(a).localeCompare(TsTypeFormatter.qident(b)))
-			.map(qident => `- ${TsTypeFormatter.qident(qident)}`)
+			.sort((a, b) =>
+				TsTypeFormatter.qident(a).localeCompare(TsTypeFormatter.qident(b)),
+			)
+			.map((qident) => `- ${TsTypeFormatter.qident(qident)}`)
 			.join("\n");
 
 		const newComment = new Raw(`/**
@@ -507,7 +551,10 @@ ${formattedCircularGroup}
 				const intersect = followedAlias as TsTypeIntersect;
 				const allTypeRefs = this.extractAllTypeRefs(intersect.types);
 
-				if (allTypeRefs && !allTypeRefs.exists((tr: TsTypeRef) => isTypeParam.has(tr as TsType))) {
+				if (
+					allTypeRefs &&
+					!allTypeRefs.exists((tr: TsTypeRef) => isTypeParam.has(tr as TsType))
+				) {
 					return TsDeclInterface.create(
 						comments,
 						ta.declared,
@@ -515,7 +562,7 @@ ${formattedCircularGroup}
 						ta.tparams,
 						allTypeRefs, // inheritance
 						IArray.Empty, // members
-						ta.codePath
+						ta.codePath,
 					);
 				}
 				break;
@@ -529,7 +576,7 @@ ${formattedCircularGroup}
 					ta.tparams,
 					IArray.Empty, // inheritance
 					objType.members,
-					ta.codePath
+					ta.codePath,
 				);
 			}
 			case "TsTypeFunction": {
@@ -537,7 +584,7 @@ ${formattedCircularGroup}
 				const call = TsMemberCall.create(
 					NoComments.instance,
 					TsProtectionLevel.default(),
-					funType.signature
+					funType.signature,
 				);
 				return TsDeclInterface.create(
 					comments,
@@ -546,7 +593,7 @@ ${formattedCircularGroup}
 					ta.tparams,
 					IArray.Empty, // inheritance
 					IArray.apply(call as TsMember),
-					ta.codePath
+					ta.codePath,
 				);
 			}
 			case "TsTypeRef": {
@@ -558,7 +605,7 @@ ${formattedCircularGroup}
 					ta.tparams,
 					IArray.apply(typeRef), // inheritance
 					IArray.Empty, // members
-					ta.codePath
+					ta.codePath,
 				);
 			}
 		}
@@ -579,7 +626,11 @@ ${formattedCircularGroup}
 
 		// Apply type replacement to interface with empty members, then restore original members
 		const emptyInterface: TsDeclInterface = { ...iface, members: IArray.Empty };
-		const processedInterface = this.applyTypeReplacement(emptyInterface, replaceTypes, rewrite) as TsDeclInterface;
+		const processedInterface = this.applyTypeReplacement(
+			emptyInterface,
+			replaceTypes,
+			rewrite,
+		) as TsDeclInterface;
 
 		return TsDeclInterface.create(
 			processedInterface.comments,
@@ -588,7 +639,7 @@ ${formattedCircularGroup}
 			processedInterface.tparams,
 			processedInterface.inheritance,
 			iface.members, // restore original members
-			processedInterface.codePath
+			processedInterface.codePath,
 		);
 	}
 
@@ -621,7 +672,7 @@ ${formattedCircularGroup}
 	private applyTypeReplacement(
 		decl: TsDecl,
 		_replaceTypes: any,
-		_rewrite: Set<TsQIdent>
+		_rewrite: Set<TsQIdent>,
 	): TsDecl {
 		// For now, just return the declaration unchanged
 		// In a full implementation, this would apply the type replacement transformation

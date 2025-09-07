@@ -21,7 +21,8 @@
 				"noShadowRestrictedNames": "off",
 				"noApproximativeNumericConstant": "off",
 				"useIterableCallbackReturn": "off",
-				"useAdjacentOverloadSignatures": "off"
+				"useAdjacentOverloadSignatures": "off",
+        "noFallthroughSwitchClause": "off"
 			},
 			"style": {
 				"noNonNullAssertion": "off"

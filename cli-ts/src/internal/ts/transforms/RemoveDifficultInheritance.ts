@@ -1,13 +1,13 @@
 /**
  * TypeScript port of org.scalablytyped.converter.internal.ts.transforms.RemoveDifficultInheritance
- * 
+ *
  * In typescript we can inherit from type references pointing to a pretty much arbitrary shape.
- * 
+ *
  * Scala naturally is much more constrained here, so we... drop all the difficult things. Some information (like from
  * intersections of type objects, for instance) is retrieved ("lifted", in this code)
- * 
+ *
  * We also inline all type aliases in parents.
- * 
+ *
  * We'll do better eventually, this is the fallback to make things compile
  */
 
@@ -16,21 +16,20 @@ import { Comment } from "../../Comment.js";
 import { IArray, IArrayPatterns } from "../../IArray.js";
 import { FillInTParams } from "../FillInTParams.js";
 import { FlattenTrees } from "../FlattenTrees.js";
-import { TsTreeScope } from "../TsTreeScope.js";
-import { createTsTypeFormatter } from "../TsTypeFormatter.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
-import { isDictionary } from "./ExtractInterfaces.js";
-
+import type { TsTreeScope } from "../TsTreeScope.js";
+import { createTsTypeFormatter } from "../TsTypeFormatter.js";
 import {
 	TsDeclClass,
 	TsDeclInterface,
-	TsDeclTypeAlias,
-	TsType,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeRef,
+	type TsDeclTypeAlias,
 	type TsMember,
+	TsType,
+	type TsTypeIntersect,
+	type TsTypeObject,
+	type TsTypeRef,
 } from "../trees.js";
+import { isDictionary } from "./ExtractInterfaces.js";
 
 /**
  * Result type for combining inheritance processing results
@@ -112,21 +111,33 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 	/**
 	 * Transform class declarations by cleaning parent and implements references
 	 */
-	override enterTsDeclClass(scope: TsTreeScope): (x: TsDeclClass) => TsDeclClass {
+	override enterTsDeclClass(
+		scope: TsTreeScope,
+	): (x: TsDeclClass) => TsDeclClass {
 		return (s: TsDeclClass) => {
 			// Combine parent and implements into a single array for processing
-			const allParents = s.parent._tag === "Some" 
-				? s.implementsInterfaces.prepend(s.parent.value)
-				: s.implementsInterfaces;
+			const allParents =
+				s.parent._tag === "Some"
+					? s.implementsInterfaces.prepend(s.parent.value)
+					: s.implementsInterfaces;
 
-			const cleaned = allParents.map(typeRef => this.cleanParentRef(scope, typeRef));
+			const cleaned = allParents.map((typeRef) =>
+				this.cleanParentRef(scope, typeRef),
+			);
 			const combined = Res.combine(cleaned);
 
 			// Extract results
-			const newParent = combined.keep.length > 0 ? some(combined.keep.apply(0)) : none;
-			const newImplements = combined.keep.length > 1 ? combined.keep.drop(1) : IArray.Empty;
-			const summaryComment = this.summarizeChanges(combined.drop, combined.lift);
-			const newComments = summaryComment ? s.comments.add(summaryComment) : s.comments;
+			const newParent =
+				combined.keep.length > 0 ? some(combined.keep.apply(0)) : none;
+			const newImplements =
+				combined.keep.length > 1 ? combined.keep.drop(1) : IArray.Empty;
+			const summaryComment = this.summarizeChanges(
+				combined.drop,
+				combined.lift,
+			);
+			const newComments = summaryComment
+				? s.comments.add(summaryComment)
+				: s.comments;
 			const liftedMembers = this.flatMapLiftedMembers(combined.lift);
 			const newMembers = FlattenTrees.newClassMembers(s.members, liftedMembers);
 
@@ -140,7 +151,7 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 				newImplements,
 				newMembers,
 				s.jsLocation,
-				s.codePath
+				s.codePath,
 			);
 		};
 	}
@@ -148,13 +159,22 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 	/**
 	 * Transform interface declarations by cleaning inheritance references
 	 */
-	override enterTsDeclInterface(scope: TsTreeScope): (x: TsDeclInterface) => TsDeclInterface {
+	override enterTsDeclInterface(
+		scope: TsTreeScope,
+	): (x: TsDeclInterface) => TsDeclInterface {
 		return (s: TsDeclInterface) => {
-			const cleaned = s.inheritance.map(typeRef => this.cleanParentRef(scope, typeRef));
+			const cleaned = s.inheritance.map((typeRef) =>
+				this.cleanParentRef(scope, typeRef),
+			);
 			const combined = Res.combine(cleaned);
 
-			const summaryComment = this.summarizeChanges(combined.drop, combined.lift);
-			const newComments = summaryComment ? s.comments.add(summaryComment) : s.comments;
+			const summaryComment = this.summarizeChanges(
+				combined.drop,
+				combined.lift,
+			);
+			const newComments = summaryComment
+				? s.comments.add(summaryComment)
+				: s.comments;
 			const liftedMembers = this.flatMapLiftedMembers(combined.lift);
 			const newMembers = FlattenTrees.newClassMembers(s.members, liftedMembers);
 
@@ -165,7 +185,7 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 				s.tparams,
 				combined.keep,
 				newMembers,
-				s.codePath
+				s.codePath,
 			);
 		};
 	}
@@ -181,7 +201,7 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 
 		// Look up the type reference in scope
 		const lookupResults = scope.lookupTypeIncludeScope(tpe.name);
-		
+
 		for (let i = 0; i < lookupResults.length; i++) {
 			const [decl, newScope] = lookupResults.apply(i);
 
@@ -211,16 +231,20 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 	/**
 	 * Process the target type of a type alias
 	 */
-	private processTypeAliasTarget(scope: TsTreeScope, originalRef: TsTypeRef, aliasTarget: TsType): Res {
+	private processTypeAliasTarget(
+		scope: TsTreeScope,
+		originalRef: TsTypeRef,
+		aliasTarget: TsType,
+	): Res {
 		switch (aliasTarget._tag) {
 			case "TsTypeRef":
 				// Recursively clean the aliased type reference
 				return this.cleanParentRef(scope, aliasTarget as TsTypeRef);
 
-			case "TsTypeIntersect":
+			case "TsTypeIntersect": {
 				// Flatten intersection types by processing each member
 				const intersect = aliasTarget as TsTypeIntersect;
-				const results = intersect.types.map(type => {
+				const results = intersect.types.map((type) => {
 					if (type._tag === "TsTypeRef") {
 						return this.cleanParentRef(scope, type as TsTypeRef);
 					} else if (type._tag === "TsTypeObject") {
@@ -232,6 +256,7 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 					return Res.drop(IArray.apply(type));
 				});
 				return Res.combine(results);
+			}
 
 			case "TsTypeUnion":
 				// Drop union types as they can't be extended in Scala
@@ -241,7 +266,7 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 				// Keep function types as they can be extended
 				return Res.keep(IArray.apply(originalRef));
 
-			case "TsTypeObject":
+			case "TsTypeObject": {
 				const obj = aliasTarget as TsTypeObject;
 				if (isDictionary(obj.members)) {
 					// Keep dictionary types
@@ -250,7 +275,8 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 					// Lift object type members
 					return Res.lift(originalRef, obj.members);
 				}
-				// Fall through to drop
+			}
+			// Fall through to drop
 
 			default:
 				// Drop unknown or unsupported types
@@ -270,7 +296,9 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 	/**
 	 * Flatten lifted members from the lift map
 	 */
-	private flatMapLiftedMembers(lift: Map<TsTypeRef, IArray<TsMember>>): IArray<TsMember> {
+	private flatMapLiftedMembers(
+		lift: Map<TsTypeRef, IArray<TsMember>>,
+	): IArray<TsMember> {
 		const allMembers: TsMember[] = [];
 		for (const [_, members] of lift.entries()) {
 			allMembers.push(...members.toArray());
@@ -281,15 +309,27 @@ class RemoveDifficultInheritanceVisitor extends TreeTransformationScopedChanges 
 	/**
 	 * Create a summary comment for dropped and lifted types
 	 */
-	private summarizeChanges(drop: IArray<TsType>, lift: Map<TsTypeRef, IArray<TsMember>>): Comment | undefined {
+	private summarizeChanges(
+		drop: IArray<TsType>,
+		lift: Map<TsTypeRef, IArray<TsMember>>,
+	): Comment | undefined {
 		const formatter = createTsTypeFormatter(false);
-		const droppedMessages = drop.map(d => `- Dropped ${formatter.apply(d)}`);
+		const droppedMessages = drop.map((d) => `- Dropped ${formatter.apply(d)}`);
 
-		const liftedMessage = lift.size > 0
-			? [`- Lifted ${Array.from(lift.values()).reduce((sum, members) => sum + members.length, 0)} members from ${Array.from(lift.keys()).map(k => formatter.apply(k)).join(", ")}`]
-			: [];
+		const liftedMessage =
+			lift.size > 0
+				? [
+						`- Lifted ${Array.from(lift.values()).reduce((sum, members) => sum + members.length, 0)} members from ${Array.from(
+							lift.keys(),
+						)
+							.map((k) => formatter.apply(k))
+							.join(", ")}`,
+					]
+				: [];
 
-		const allMessages = droppedMessages.appendedAll(IArray.fromArray(liftedMessage));
+		const allMessages = droppedMessages.appendedAll(
+			IArray.fromArray(liftedMessage),
+		);
 
 		if (allMessages.isEmpty) {
 			return undefined;

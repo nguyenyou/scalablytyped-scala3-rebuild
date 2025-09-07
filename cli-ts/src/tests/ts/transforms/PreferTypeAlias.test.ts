@@ -2,37 +2,38 @@
  * Tests for PreferTypeAlias.ts - TypeScript port of PreferTypeAliasTests.scala
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../../internal/Comment.js";
+import { describe, expect, it } from "vitest";
+import { Raw } from "../../../internal/Comment.js";
 import { Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
-import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { AvoidCircularVisitor, PreferTypeAlias, type Rewrite } from "../../../internal/ts/transforms/PreferTypeAlias.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
 import {
-	TsDeclClass,
+	AvoidCircularVisitor,
+	PreferTypeAlias,
+	type Rewrite,
+} from "../../../internal/ts/transforms/PreferTypeAlias.js";
+import {
 	TsDeclInterface,
 	TsDeclTypeAlias,
-	TsExprLiteral,
 	TsFunParam,
 	TsFunSig,
 	TsIdent,
+	type TsIdentSimple,
+	type TsMember,
 	TsMemberCall,
 	TsMemberFunction,
 	TsMemberProperty,
 	TsParsedFile,
 	TsQIdent,
+	type TsType,
 	TsTypeFunction,
 	TsTypeIntersect,
 	TsTypeObject,
 	TsTypeRef,
-	type TsIdentSimple,
-	type TsMember,
-	type TsType,
 } from "../../../internal/ts/trees.js";
 
 // Helper methods for creating test data
@@ -44,27 +45,33 @@ function createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdent.of(...parts.map(createSimpleIdent));
 }
 
-function createTypeRef(name: string, tparams: IArray<TsType> = IArray.Empty): TsTypeRef {
+function createTypeRef(
+	name: string,
+	tparams: IArray<TsType> = IArray.Empty,
+): TsTypeRef {
 	return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 }
 
 function createFunSig(
 	params: IArray<TsFunParam> = IArray.Empty,
-	resultType: TsTypeRef = createTypeRef("void")
+	resultType: TsTypeRef = createTypeRef("void"),
 ): TsFunSig {
 	return TsFunSig.create(
 		NoComments.instance,
 		IArray.Empty, // tparams
 		params,
-		some(resultType)
+		some(resultType),
 	);
 }
 
-function createFunParam(name: string, tpe: TsTypeRef = createTypeRef("any")): TsFunParam {
+function createFunParam(
+	name: string,
+	tpe: TsTypeRef = createTypeRef("any"),
+): TsFunParam {
 	return TsFunParam.create(
 		NoComments.instance,
 		createSimpleIdent(name),
-		some(tpe)
+		some(tpe),
 	);
 }
 
@@ -76,8 +83,6 @@ function createTypeObject(members: IArray<TsMember>): TsTypeObject {
 	return TsTypeObject.create(NoComments.instance, members);
 }
 
-
-
 function createTypeIntersect(types: IArray<TsType>): TsTypeIntersect {
 	return TsTypeIntersect.create(types);
 }
@@ -86,7 +91,7 @@ function createMemberCall(sig: TsFunSig): TsMemberCall {
 	return TsMemberCall.create(
 		NoComments.instance,
 		TsProtectionLevel.default(),
-		sig
+		sig,
 	);
 }
 
@@ -94,7 +99,7 @@ function createMemberProperty(
 	name: string,
 	tpe?: TsType,
 	isStatic: boolean = false,
-	isReadOnly: boolean = false
+	isReadOnly: boolean = false,
 ): TsMemberProperty {
 	return TsMemberProperty.create(
 		NoComments.instance,
@@ -103,14 +108,14 @@ function createMemberProperty(
 		tpe ? some(tpe) : none,
 		none, // expr
 		isStatic,
-		isReadOnly
+		isReadOnly,
 	);
 }
 
 function createMemberFunction(
 	name: string,
 	sig: TsFunSig,
-	isStatic: boolean = false
+	isStatic: boolean = false,
 ): TsMemberFunction {
 	return TsMemberFunction.create(
 		NoComments.instance,
@@ -119,14 +124,14 @@ function createMemberFunction(
 		{ _tag: "Normal" }, // MethodType.normal()
 		sig,
 		isStatic,
-		false // isReadOnly
+		false, // isReadOnly
 	);
 }
 
 function createMockInterface(
 	name: string,
 	members: IArray<TsMember> = IArray.Empty,
-	inheritance: IArray<TsTypeRef> = IArray.Empty
+	inheritance: IArray<TsTypeRef> = IArray.Empty,
 ): TsDeclInterface {
 	return TsDeclInterface.create(
 		NoComments.instance,
@@ -135,32 +140,29 @@ function createMockInterface(
 		IArray.Empty, // tparams
 		inheritance,
 		members,
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
-function createMockTypeAlias(
-	name: string,
-	alias: TsType
-): TsDeclTypeAlias {
+function createMockTypeAlias(name: string, alias: TsType): TsDeclTypeAlias {
 	return TsDeclTypeAlias.create(
 		NoComments.instance,
 		false, // declared
 		createSimpleIdent(name),
 		IArray.Empty, // tparams
 		alias,
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
 function createMockParsedFile(
-	declarations: IArray<any> = IArray.Empty
+	declarations: IArray<any> = IArray.Empty,
 ): TsParsedFile {
 	return TsParsedFile.create(
 		NoComments.instance,
 		IArray.Empty, // directives
 		declarations,
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("index"))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("index")),
 	);
 }
 
@@ -249,7 +251,10 @@ describe("PreferTypeAlias", () => {
 		it("does not identify multiple members as type mapping", () => {
 			const mappedMember = { _tag: "TsMemberTypeMapped" };
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
-			const members = IArray.apply(mappedMember as TsMember, propMember as TsMember);
+			const members = IArray.apply(
+				mappedMember as TsMember,
+				propMember as TsMember,
+			);
 			expect(PreferTypeAlias.isTypeMapping(members)).toBe(false);
 		});
 
@@ -270,10 +275,13 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const callMember = createMemberCall(sig);
-			const iface = createMockInterface("FunctionInterface", IArray.apply(callMember as TsMember));
+			const iface = createMockInterface(
+				"FunctionInterface",
+				IArray.apply(callMember as TsMember),
+			);
 			const parsedFile = createMockParsedFile(IArray.apply(iface as any));
 
 			const result = PreferTypeAlias.apply(parsedFile, scope);
@@ -289,7 +297,10 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
 			const funcMember = createMemberFunction("method", createFunSig());
-			const iface = createMockInterface("SimpleInterface", IArray.apply(propMember as TsMember, funcMember as TsMember));
+			const iface = createMockInterface(
+				"SimpleInterface",
+				IArray.apply(propMember as TsMember, funcMember as TsMember),
+			);
 			const parsedFile = createMockParsedFile(IArray.apply(iface as any));
 
 			const result = PreferTypeAlias.apply(parsedFile, scope);
@@ -305,7 +316,11 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
 			const inheritance = IArray.apply(createTypeRef("BaseInterface"));
-			const iface = createMockInterface("DerivedInterface", IArray.apply(propMember as TsMember), inheritance);
+			const iface = createMockInterface(
+				"DerivedInterface",
+				IArray.apply(propMember as TsMember),
+				inheritance,
+			);
 			const parsedFile = createMockParsedFile(IArray.apply(iface as any));
 
 			const result = PreferTypeAlias.apply(parsedFile, scope);
@@ -348,7 +363,9 @@ describe("PreferTypeAlias", () => {
 
 		it("preserves metadata when converting interface to type alias", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original interface comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original interface comment"),
+			]);
 			const sig = createFunSig();
 			const callMember = createMemberCall(sig);
 			const iface = TsDeclInterface.create(
@@ -358,7 +375,10 @@ describe("PreferTypeAlias", () => {
 				IArray.Empty, // tparams
 				IArray.Empty, // inheritance
 				IArray.apply(callMember as TsMember),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("TestInterface"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("TestInterface"),
+				),
 			);
 			const parsedFile = createMockParsedFile(IArray.apply(iface as any));
 
@@ -372,7 +392,9 @@ describe("PreferTypeAlias", () => {
 
 		it("preserves metadata when converting type alias to interface", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original alias comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original alias comment"),
+			]);
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
 			const objType = createTypeObject(IArray.apply(propMember as TsMember));
 			const alias = TsDeclTypeAlias.create(
@@ -381,7 +403,10 @@ describe("PreferTypeAlias", () => {
 				createSimpleIdent("TestAlias"),
 				IArray.Empty, // tparams
 				objType,
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("TestAlias"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("TestAlias"),
+				),
 			);
 			const parsedFile = createMockParsedFile(IArray.apply(alias as any));
 
@@ -433,7 +458,10 @@ describe("PreferTypeAlias", () => {
 			const groups = new Set<any>();
 			const preferredRewrites = new Set<any>();
 
-			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+			const rewrites = PreferTypeAlias.breakCircularGroups(
+				groups,
+				preferredRewrites,
+			);
 
 			expect(rewrites.length).toBe(0);
 		});
@@ -445,7 +473,10 @@ describe("PreferTypeAlias", () => {
 			const groups = new Set([group]);
 			const preferredRewrites = new Set([typeRef1.name]);
 
-			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+			const rewrites = PreferTypeAlias.breakCircularGroups(
+				groups,
+				preferredRewrites,
+			);
 
 			expect(rewrites.length).toBe(1);
 			expect(rewrites[0].target).toBe(typeRef1.name);
@@ -460,7 +491,10 @@ describe("PreferTypeAlias", () => {
 			const groups = new Set([group]);
 			const preferredRewrites = new Set<any>();
 
-			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+			const rewrites = PreferTypeAlias.breakCircularGroups(
+				groups,
+				preferredRewrites,
+			);
 
 			expect(rewrites.length).toBe(1);
 			// Should pick one of the types (most frequent or first)
@@ -478,7 +512,10 @@ describe("PreferTypeAlias", () => {
 			const groups = new Set([group1, group2]);
 			const preferredRewrites = new Set<any>();
 
-			const rewrites = PreferTypeAlias.breakCircularGroups(groups, preferredRewrites);
+			const rewrites = PreferTypeAlias.breakCircularGroups(
+				groups,
+				preferredRewrites,
+			);
 
 			expect(rewrites.length).toBe(2);
 		});
@@ -513,13 +550,18 @@ describe("PreferTypeAlias", () => {
 			// Create a mix of interfaces and type aliases
 			const callSig = createFunSig();
 			const callMember = createMemberCall(callSig);
-			const functionInterface = createMockInterface("FunctionInterface", IArray.apply(callMember as TsMember));
+			const functionInterface = createMockInterface(
+				"FunctionInterface",
+				IArray.apply(callMember as TsMember),
+			);
 
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
 			const objectType = createTypeObject(IArray.apply(propMember as TsMember));
 			const objectAlias = createMockTypeAlias("ObjectAlias", objectType);
 
-			const parsedFile = createMockParsedFile(IArray.apply(functionInterface as any, objectAlias as any));
+			const parsedFile = createMockParsedFile(
+				IArray.apply(functionInterface as any, objectAlias as any),
+			);
 
 			const result = PreferTypeAlias.apply(parsedFile, scope);
 
@@ -540,12 +582,21 @@ describe("PreferTypeAlias", () => {
 			// Create interface with inheritance (should not be converted)
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
 			const inheritance = IArray.apply(createTypeRef("BaseInterface"));
-			const derivedInterface = createMockInterface("DerivedInterface", IArray.apply(propMember as TsMember), inheritance);
+			const derivedInterface = createMockInterface(
+				"DerivedInterface",
+				IArray.apply(propMember as TsMember),
+				inheritance,
+			);
 
 			// Create non-object type alias (should not be converted)
-			const stringAlias = createMockTypeAlias("StringAlias", createTypeRef("string"));
+			const stringAlias = createMockTypeAlias(
+				"StringAlias",
+				createTypeRef("string"),
+			);
 
-			const parsedFile = createMockParsedFile(IArray.apply(derivedInterface as any, stringAlias as any));
+			const parsedFile = createMockParsedFile(
+				IArray.apply(derivedInterface as any, stringAlias as any),
+			);
 
 			const result = PreferTypeAlias.apply(parsedFile, scope);
 
@@ -561,11 +612,14 @@ describe("PreferTypeAlias", () => {
 		it("creates visitor with correct map from rewrites", () => {
 			const rewrite1: Rewrite = {
 				target: createQIdent("test-lib", "Type1"),
-				circular: new Set([createQIdent("test-lib", "Type2"), createQIdent("test-lib", "Type3")])
+				circular: new Set([
+					createQIdent("test-lib", "Type2"),
+					createQIdent("test-lib", "Type3"),
+				]),
 			};
 			const rewrite2: Rewrite = {
 				target: createQIdent("test-lib", "Type4"),
-				circular: new Set([createQIdent("test-lib", "Type4")])
+				circular: new Set([createQIdent("test-lib", "Type4")]),
 			};
 
 			// Create visitor with rewrites
@@ -580,7 +634,10 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "CircularType"),
-				circular: new Set([createQIdent("test-lib", "CircularType"), createQIdent("test-lib", "OtherType")])
+				circular: new Set([
+					createQIdent("test-lib", "CircularType"),
+					createQIdent("test-lib", "OtherType"),
+				]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
@@ -592,8 +649,10 @@ describe("PreferTypeAlias", () => {
 			const aliasWithPath = {
 				...typeAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "CircularType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);
@@ -603,29 +662,33 @@ describe("PreferTypeAlias", () => {
 			expect(resultInterface.name.value).toBe("CircularType");
 			expect(resultInterface.members.length).toBe(1);
 			expect(resultInterface.comments.rawCs.length).toBeGreaterThan(0);
-			expect(resultInterface.comments.rawCs[0]).toContain("NOTE: Rewritten from type alias");
+			expect(resultInterface.comments.rawCs[0]).toContain(
+				"NOTE: Rewritten from type alias",
+			);
 		});
 
 		it("rewrites type alias with function type to interface with call signature", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "FunctionType"),
-				circular: new Set([createQIdent("test-lib", "FunctionType")])
+				circular: new Set([createQIdent("test-lib", "FunctionType")]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
 
 			const funSig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const functionType = createTypeFunction(funSig);
 			const typeAlias = createMockTypeAlias("FunctionType", functionType);
 			const aliasWithPath = {
 				...typeAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "FunctionType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "FunctionType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);
@@ -641,7 +704,7 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "AliasType"),
-				circular: new Set([createQIdent("test-lib", "AliasType")])
+				circular: new Set([createQIdent("test-lib", "AliasType")]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
@@ -651,8 +714,10 @@ describe("PreferTypeAlias", () => {
 			const aliasWithPath = {
 				...typeAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "AliasType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "AliasType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);
@@ -669,18 +734,23 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "CircularInterface"),
-				circular: new Set([createQIdent("test-lib", "CircularInterface")])
+				circular: new Set([createQIdent("test-lib", "CircularInterface")]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
 
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
-			const interface_ = createMockInterface("CircularInterface", IArray.apply(propMember as TsMember));
+			const interface_ = createMockInterface(
+				"CircularInterface",
+				IArray.apply(propMember as TsMember),
+			);
 			const interfaceWithPath = {
 				...interface_,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularInterface") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "CircularInterface"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(interfaceWithPath);
@@ -695,17 +765,22 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "CircularType"),
-				circular: new Set([createQIdent("test-lib", "CircularType")])
+				circular: new Set([createQIdent("test-lib", "CircularType")]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
 
-			const regularAlias = createMockTypeAlias("RegularType", createTypeRef("string"));
+			const regularAlias = createMockTypeAlias(
+				"RegularType",
+				createTypeRef("string"),
+			);
 			const aliasWithPath = {
 				...regularAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "RegularType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "RegularType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);
@@ -717,20 +792,27 @@ describe("PreferTypeAlias", () => {
 			const scope = createMockScope();
 			const rewrite: Rewrite = {
 				target: createQIdent("test-lib", "IntersectionType"),
-				circular: new Set([createQIdent("test-lib", "IntersectionType")])
+				circular: new Set([createQIdent("test-lib", "IntersectionType")]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
 
 			const typeRef1 = createTypeRef("Type1");
 			const typeRef2 = createTypeRef("Type2");
-			const intersectionType = createTypeIntersect(IArray.apply<TsType>(typeRef1, typeRef2));
-			const typeAlias = createMockTypeAlias("IntersectionType", intersectionType);
+			const intersectionType = createTypeIntersect(
+				IArray.apply<TsType>(typeRef1, typeRef2),
+			);
+			const typeAlias = createMockTypeAlias(
+				"IntersectionType",
+				intersectionType,
+			);
 			const aliasWithPath = {
 				...typeAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "IntersectionType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "IntersectionType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);
@@ -749,8 +831,8 @@ describe("PreferTypeAlias", () => {
 				circular: new Set([
 					createQIdent("test-lib", "CircularType"),
 					createQIdent("test-lib", "OtherType"),
-					createQIdent("test-lib", "ThirdType")
-				])
+					createQIdent("test-lib", "ThirdType"),
+				]),
 			};
 
 			const visitor = new AvoidCircularVisitor([rewrite]);
@@ -760,8 +842,10 @@ describe("PreferTypeAlias", () => {
 			const aliasWithPath = {
 				...typeAlias,
 				codePath: {
-					forceHasPath: () => ({ codePath: createQIdent("test-lib", "CircularType") })
-				}
+					forceHasPath: () => ({
+						codePath: createQIdent("test-lib", "CircularType"),
+					}),
+				},
 			};
 
 			const result = visitor.enterTsDecl(scope)(aliasWithPath);

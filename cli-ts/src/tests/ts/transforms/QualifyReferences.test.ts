@@ -2,10 +2,9 @@
  * Tests for QualifyReferences transformation
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { Comment } from "../../../internal/Comment.js";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import { describe, expect, it } from "vitest";
+import { NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
@@ -17,11 +16,10 @@ import {
 	TsDeclInterface,
 	TsDeclTypeAlias,
 	TsIdent,
-	TsIdentLibrarySimple,
 	TsParsedFile,
-	TsTypeRef,
 	type TsQIdent,
 	type TsType,
+	TsTypeRef,
 } from "../../../internal/ts/trees.js";
 
 describe("QualifyReferences", () => {
@@ -29,25 +27,26 @@ describe("QualifyReferences", () => {
 	function createQIdent(...parts: string[]): TsQIdent {
 		return {
 			_tag: "TsQIdent",
-			parts: IArray.fromArray(parts.map(p => TsIdent.simple(p) as TsIdent)),
-			asString: `TsQIdent(${parts.join(".")})`
+			parts: IArray.fromArray(parts.map((p) => TsIdent.simple(p) as TsIdent)),
+			asString: `TsQIdent(${parts.join(".")})`,
 		};
 	}
 
 	function createLibraryQIdent(library: string, ...parts: string[]): TsQIdent {
 		const libraryIdent = TsIdent.librarySimple(library);
-		const otherParts = parts.map(p => TsIdent.simple(p) as TsIdent);
+		const otherParts = parts.map((p) => TsIdent.simple(p) as TsIdent);
 		return {
 			_tag: "TsQIdent",
 			parts: IArray.fromArray([libraryIdent, ...otherParts]),
-			asString: `TsQIdent(${library}.${parts.join(".")})`
+			asString: `TsQIdent(${library}.${parts.join(".")})`,
 		};
 	}
 
 	function createTypeRef(name: string, ...nameParts: string[]): TsTypeRef {
-		const qident = nameParts.length > 0 
-			? createQIdent(name, ...nameParts)
-			: createQIdent(name);
+		const qident =
+			nameParts.length > 0
+				? createQIdent(name, ...nameParts)
+				: createQIdent(name);
 		return TsTypeRef.create(NoComments.instance, qident, IArray.Empty);
 	}
 
@@ -59,7 +58,10 @@ describe("QualifyReferences", () => {
 			IArray.Empty,
 			IArray.Empty,
 			IArray.Empty,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -70,14 +72,17 @@ describe("QualifyReferences", () => {
 			TsIdent.simple(name),
 			IArray.Empty,
 			alias,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
 	function createMockClass(
-		name: string, 
-		parent?: TsTypeRef, 
-		implementsInterfaces: IArray<TsTypeRef> = IArray.Empty
+		name: string,
+		parent?: TsTypeRef,
+		implementsInterfaces: IArray<TsTypeRef> = IArray.Empty,
 	): TsDeclClass {
 		return TsDeclClass.create(
 			NoComments.instance,
@@ -89,7 +94,10 @@ describe("QualifyReferences", () => {
 			implementsInterfaces,
 			IArray.Empty,
 			JsLocation.zero(),
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -98,14 +106,17 @@ describe("QualifyReferences", () => {
 			NoComments.instance,
 			IArray.Empty,
 			IArray.fromArray(declarations),
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "index"))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", "index"),
+			),
 		);
 
 		const root = TsTreeScope.create(
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 
 		return root["/"](parsedFile);
@@ -186,7 +197,11 @@ describe("QualifyReferences", () => {
 			const visitor = QualifyReferences.apply(false);
 			const scope = createMockScope();
 			const libraryQIdent = createLibraryQIdent("std", "Array");
-			const libraryRef = TsTypeRef.create(NoComments.instance, libraryQIdent, IArray.Empty);
+			const libraryRef = TsTypeRef.create(
+				NoComments.instance,
+				libraryQIdent,
+				IArray.Empty,
+			);
 
 			const result = visitor.enterTsTypeRef(scope)(libraryRef);
 
@@ -247,7 +262,11 @@ describe("QualifyReferences", () => {
 		it("leaves non-type-reference aliases unchanged", () => {
 			const visitor = QualifyReferences.apply(false);
 			const scope = createMockScope();
-			const stringLiteral = { _tag: "TsTypeLiteral" as const, literal: { _tag: "TsLiteralStr" as const, value: "test" }, asString: "test" };
+			const stringLiteral = {
+				_tag: "TsTypeLiteral" as const,
+				literal: { _tag: "TsLiteralStr" as const, value: "test" },
+				asString: "test",
+			};
 			const alias = createMockTypeAlias("StringAlias", stringLiteral);
 
 			const result = visitor.enterTsDeclTypeAlias(scope)(alias);
@@ -262,7 +281,10 @@ describe("QualifyReferences", () => {
 			const visitor = QualifyReferences.apply(false);
 			const baseClass = createMockClass("BaseClass");
 			const scope = createMockScope(baseClass);
-			const derivedClass = createMockClass("DerivedClass", createTypeRef("BaseClass"));
+			const derivedClass = createMockClass(
+				"DerivedClass",
+				createTypeRef("BaseClass"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(derivedClass);
 
@@ -279,17 +301,21 @@ describe("QualifyReferences", () => {
 			const interface2 = createMockInterface("Interface2");
 			const scope = createMockScope(interface1, interface2);
 			const clazz = createMockClass(
-				"TestClass", 
-				undefined, 
-				IArray.apply(createTypeRef("Interface1"), createTypeRef("Interface2"))
+				"TestClass",
+				undefined,
+				IArray.apply(createTypeRef("Interface1"), createTypeRef("Interface2")),
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
 			expect(result.name.value).toBe("TestClass");
 			expect(result.implementsInterfaces.length).toBe(2);
-			expect(result.implementsInterfaces.apply(0).name.parts.length).toBeGreaterThan(1);
-			expect(result.implementsInterfaces.apply(1).name.parts.length).toBeGreaterThan(1);
+			expect(
+				result.implementsInterfaces.apply(0).name.parts.length,
+			).toBeGreaterThan(1);
+			expect(
+				result.implementsInterfaces.apply(1).name.parts.length,
+			).toBeGreaterThan(1);
 		});
 
 		it("filters out self-referencing inheritance", () => {
@@ -309,9 +335,9 @@ describe("QualifyReferences", () => {
 			const interface1 = createMockInterface("Interface1");
 			const scope = createMockScope(baseClass, interface1);
 			const clazz = createMockClass(
-				"TestClass", 
-				createTypeRef("BaseClass"), 
-				IArray.apply(createTypeRef("Interface1"))
+				"TestClass",
+				createTypeRef("BaseClass"),
+				IArray.apply(createTypeRef("Interface1")),
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
@@ -350,11 +376,21 @@ describe("QualifyReferences", () => {
 
 	describe("Primitive Type Detection", () => {
 		const primitiveTypes = [
-			"any", "boolean", "number", "string", "symbol", "object",
-			"undefined", "null", "void", "never", "unknown", "bigint"
+			"any",
+			"boolean",
+			"number",
+			"string",
+			"symbol",
+			"object",
+			"undefined",
+			"null",
+			"void",
+			"never",
+			"unknown",
+			"bigint",
 		];
 
-		primitiveTypes.forEach(primitiveType => {
+		primitiveTypes.forEach((primitiveType) => {
 			it(`leaves ${primitiveType} primitive type unchanged`, () => {
 				const visitor = QualifyReferences.apply(false);
 				const scope = createMockScope();
@@ -374,7 +410,11 @@ describe("QualifyReferences", () => {
 			const visitor = QualifyReferences.apply(false);
 			const scope = createMockScope();
 			const libraryQIdent = createLibraryQIdent("@types/node", "Buffer");
-			const libraryRef = TsTypeRef.create(NoComments.instance, libraryQIdent, IArray.Empty);
+			const libraryRef = TsTypeRef.create(
+				NoComments.instance,
+				libraryQIdent,
+				IArray.Empty,
+			);
 
 			const result = visitor.enterTsTypeRef(scope)(libraryRef);
 
@@ -386,7 +426,11 @@ describe("QualifyReferences", () => {
 			const visitor = QualifyReferences.apply(false);
 			const scope = createMockScope();
 			const libraryQIdent = createLibraryQIdent("react", "Component", "Props");
-			const libraryRef = TsTypeRef.create(NoComments.instance, libraryQIdent, IArray.Empty);
+			const libraryRef = TsTypeRef.create(
+				NoComments.instance,
+				libraryQIdent,
+				IArray.Empty,
+			);
 
 			const result = visitor.enterTsTypeRef(scope)(libraryRef);
 
@@ -404,15 +448,26 @@ describe("QualifyReferences", () => {
 			const baseInterface = createMockInterface("BaseInterface");
 			const derivedInterface = createMockInterface("DerivedInterface");
 			const baseClass = createMockClass("BaseClass");
-			const targetType = createMockTypeAlias("TargetType", createTypeRef("string"));
+			const targetType = createMockTypeAlias(
+				"TargetType",
+				createTypeRef("string"),
+			);
 
-			const scope = createMockScope(baseInterface, derivedInterface, baseClass, targetType);
+			const scope = createMockScope(
+				baseInterface,
+				derivedInterface,
+				baseClass,
+				targetType,
+			);
 
 			// Create a class that inherits from BaseClass and implements both interfaces
 			const complexClass = createMockClass(
 				"ComplexClass",
 				createTypeRef("BaseClass"),
-				IArray.apply(createTypeRef("BaseInterface"), createTypeRef("DerivedInterface"))
+				IArray.apply(
+					createTypeRef("BaseInterface"),
+					createTypeRef("DerivedInterface"),
+				),
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(complexClass);
@@ -423,8 +478,12 @@ describe("QualifyReferences", () => {
 				expect(result.parent.value.name.parts.length).toBeGreaterThan(1);
 			}
 			expect(result.implementsInterfaces.length).toBe(2);
-			expect(result.implementsInterfaces.apply(0).name.parts.length).toBeGreaterThan(1);
-			expect(result.implementsInterfaces.apply(1).name.parts.length).toBeGreaterThan(1);
+			expect(
+				result.implementsInterfaces.apply(0).name.parts.length,
+			).toBeGreaterThan(1);
+			expect(
+				result.implementsInterfaces.apply(1).name.parts.length,
+			).toBeGreaterThan(1);
 		});
 
 		it("handles mixed qualified and unqualified references", () => {
@@ -436,7 +495,7 @@ describe("QualifyReferences", () => {
 			const mixedClass = createMockClass(
 				"MixedClass",
 				undefined,
-				IArray.apply(createTypeRef("TargetInterface"), createTypeRef("object"))
+				IArray.apply(createTypeRef("TargetInterface"), createTypeRef("object")),
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(mixedClass);
@@ -444,10 +503,14 @@ describe("QualifyReferences", () => {
 			expect(result.name.value).toBe("MixedClass");
 			expect(result.implementsInterfaces.length).toBe(2);
 			// First should be qualified (TargetInterface)
-			expect(result.implementsInterfaces.apply(0).name.parts.length).toBeGreaterThan(1);
+			expect(
+				result.implementsInterfaces.apply(0).name.parts.length,
+			).toBeGreaterThan(1);
 			// Second should remain primitive (object)
 			expect(result.implementsInterfaces.apply(1).name.parts.length).toBe(1);
-			expect(result.implementsInterfaces.apply(1).name.parts.apply(0).value).toBe("object");
+			expect(
+				result.implementsInterfaces.apply(1).name.parts.apply(0).value,
+			).toBe("object");
 		});
 
 		it("preserves type arguments during qualification", () => {
@@ -456,8 +519,15 @@ describe("QualifyReferences", () => {
 			const scope = createMockScope(genericInterface);
 
 			// Create a type reference with type arguments
-			const typeArgs = IArray.apply(createTypeRef("string") as TsType, createTypeRef("number") as TsType);
-			const genericRef = TsTypeRef.create(NoComments.instance, createQIdent("GenericInterface"), typeArgs);
+			const typeArgs = IArray.apply(
+				createTypeRef("string") as TsType,
+				createTypeRef("number") as TsType,
+			);
+			const genericRef = TsTypeRef.create(
+				NoComments.instance,
+				createQIdent("GenericInterface"),
+				typeArgs,
+			);
 
 			const result = visitor.enterTsTypeRef(scope)(genericRef);
 

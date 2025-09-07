@@ -3,19 +3,18 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import { NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
-import { CodePath } from "../../../internal/ts/CodePath.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
 import { RejiggerIntersections } from "../../../internal/ts/transforms/RejiggerIntersections.js";
 import {
 	TsIdent,
+	type TsQIdent,
+	type TsType,
 	TsTypeIntersect,
 	TsTypeRef,
 	TsTypeUnion,
-	type TsQIdent,
-	type TsType,
 } from "../../../internal/ts/trees.js";
 
 describe("RejiggerIntersections", () => {
@@ -23,13 +22,17 @@ describe("RejiggerIntersections", () => {
 	function createQIdent(...parts: string[]): TsQIdent {
 		return {
 			_tag: "TsQIdent",
-			parts: IArray.fromArray(parts.map(p => TsIdent.simple(p) as TsIdent)),
-			asString: `TsQIdent(${parts.join(".")})`
+			parts: IArray.fromArray(parts.map((p) => TsIdent.simple(p) as TsIdent)),
+			asString: `TsQIdent(${parts.join(".")})`,
 		};
 	}
 
 	function createTypeRef(name: string): TsTypeRef {
-		return TsTypeRef.create(NoComments.instance, createQIdent(name), IArray.Empty);
+		return TsTypeRef.create(
+			NoComments.instance,
+			createQIdent(name),
+			IArray.Empty,
+		);
 	}
 
 	function createUnionType(...types: TsType[]): TsTypeUnion {
@@ -45,7 +48,7 @@ describe("RejiggerIntersections", () => {
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 	}
 
@@ -76,7 +79,10 @@ describe("RejiggerIntersections", () => {
 		it("leaves union types unchanged", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			const unionType = createUnionType(createTypeRef("string"), createTypeRef("number"));
+			const unionType = createUnionType(
+				createTypeRef("string"),
+				createTypeRef("number"),
+			);
 
 			const result = visitor.enterTsType(scope)(unionType);
 
@@ -91,7 +97,7 @@ describe("RejiggerIntersections", () => {
 			const intersectionType = createIntersectionType(
 				createTypeRef("A"),
 				createTypeRef("B"),
-				createTypeRef("C")
+				createTypeRef("C"),
 			);
 
 			const result = visitor.enterTsType(scope)(intersectionType);
@@ -107,7 +113,7 @@ describe("RejiggerIntersections", () => {
 			const intersectionType = createIntersectionType(
 				createTypeRef("A"),
 				union1,
-				union2
+				union2,
 			);
 
 			const result = visitor.enterTsType(scope)(intersectionType);
@@ -119,7 +125,7 @@ describe("RejiggerIntersections", () => {
 		it("transforms intersection with exactly one union", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (B | C) & D
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -151,7 +157,7 @@ describe("RejiggerIntersections", () => {
 		it("handles single type intersection with union", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (B | C)
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -182,7 +188,7 @@ describe("RejiggerIntersections", () => {
 		it("handles union at different positions in intersection", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create (A | B) & C & D
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -213,7 +219,7 @@ describe("RejiggerIntersections", () => {
 		it("handles union with single type", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (B) & C where (B) is a union with one element
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -237,7 +243,7 @@ describe("RejiggerIntersections", () => {
 		it("handles union with many types", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (B | C | D | E) & F
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -304,7 +310,7 @@ describe("RejiggerIntersections", () => {
 		it("handles nested intersection types", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (B & C) & (D | E)
 			const typeA = createTypeRef("A");
 			const typeB = createTypeRef("B");
@@ -313,7 +319,11 @@ describe("RejiggerIntersections", () => {
 			const typeE = createTypeRef("E");
 			const nestedIntersection = createIntersectionType(typeB, typeC);
 			const union = createUnionType(typeD, typeE);
-			const intersectionType = createIntersectionType(typeA, nestedIntersection, union);
+			const intersectionType = createIntersectionType(
+				typeA,
+				nestedIntersection,
+				union,
+			);
 
 			const result = visitor.enterTsType(scope)(intersectionType);
 
@@ -326,7 +336,7 @@ describe("RejiggerIntersections", () => {
 		it("preserves type order in transformation", () => {
 			const visitor = RejiggerIntersections.apply();
 			const scope = createMockScope();
-			
+
 			// Create A & (X | Y) & B
 			const typeA = createTypeRef("A");
 			const typeX = createTypeRef("X");
@@ -416,7 +426,11 @@ describe("RejiggerIntersections", () => {
 			// Create A & B & C & (D | E) & F & G & H
 			const types = ["A", "B", "C", "F", "G", "H"].map(createTypeRef);
 			const union = createUnionType(createTypeRef("D"), createTypeRef("E"));
-			const allTypes = [...types.slice(0, 3), union as TsType, ...types.slice(3)];
+			const allTypes = [
+				...types.slice(0, 3),
+				union as TsType,
+				...types.slice(3),
+			];
 			const intersectionType = createIntersectionType(...allTypes);
 
 			const result = visitor.enterTsType(scope)(intersectionType);
@@ -498,7 +512,9 @@ describe("RejiggerIntersections", () => {
 			// Create A & (B1 | B2 | ... | B20) & C
 			const typeA = createTypeRef("A");
 			const typeC = createTypeRef("C");
-			const unionTypes = Array.from({ length: 20 }, (_, i) => createTypeRef(`B${i + 1}`));
+			const unionTypes = Array.from({ length: 20 }, (_, i) =>
+				createTypeRef(`B${i + 1}`),
+			);
 			const largeUnion = createUnionType(...unionTypes);
 			const intersectionType = createIntersectionType(typeA, largeUnion, typeC);
 
@@ -565,7 +581,7 @@ describe("RejiggerIntersections", () => {
 				TsIdent.librarySimple("different-lib"),
 				true, // pedantic mode
 				new Map(),
-				Logger.DevNull()
+				Logger.DevNull(),
 			);
 
 			const typeA = createTypeRef("A");
@@ -579,7 +595,9 @@ describe("RejiggerIntersections", () => {
 
 			// Results should be the same regardless of scope
 			expect(result1._tag).toBe(result2._tag);
-			expect((result1 as TsTypeUnion).types.length).toBe((result2 as TsTypeUnion).types.length);
+			expect((result1 as TsTypeUnion).types.length).toBe(
+				(result2 as TsTypeUnion).types.length,
+			);
 		});
 
 		it("maintains type safety throughout transformation", () => {

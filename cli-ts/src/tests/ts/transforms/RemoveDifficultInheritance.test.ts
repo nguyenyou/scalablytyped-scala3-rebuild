@@ -2,10 +2,9 @@
  * Tests for RemoveDifficultInheritance transformation
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { Comment } from "../../../internal/Comment.js";
-import { Comments, NoComments } from "../../../internal/Comments.js";
+import { describe, expect, it } from "vitest";
+import { NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
@@ -20,12 +19,12 @@ import {
 	TsMemberProperty,
 	TsParsedFile,
 	TsProtectionLevel,
+	type TsQIdent,
+	type TsType,
 	TsTypeIntersect,
 	TsTypeObject,
 	TsTypeRef,
 	TsTypeUnion,
-	type TsQIdent,
-	type TsType,
 } from "../../../internal/ts/trees.js";
 
 describe("RemoveDifficultInheritance", () => {
@@ -33,16 +32,23 @@ describe("RemoveDifficultInheritance", () => {
 	function createQIdent(...parts: string[]): TsQIdent {
 		return {
 			_tag: "TsQIdent",
-			parts: IArray.fromArray(parts.map(p => TsIdent.simple(p) as TsIdent)),
-			asString: `TsQIdent(${parts.join(".")})`
+			parts: IArray.fromArray(parts.map((p) => TsIdent.simple(p) as TsIdent)),
+			asString: `TsQIdent(${parts.join(".")})`,
 		};
 	}
 
 	function createTypeRef(name: string): TsTypeRef {
-		return TsTypeRef.create(NoComments.instance, createQIdent(name), IArray.Empty);
+		return TsTypeRef.create(
+			NoComments.instance,
+			createQIdent(name),
+			IArray.Empty,
+		);
 	}
 
-	function createMockInterface(name: string, inheritance: IArray<TsTypeRef> = IArray.Empty): TsDeclInterface {
+	function createMockInterface(
+		name: string,
+		inheritance: IArray<TsTypeRef> = IArray.Empty,
+	): TsDeclInterface {
 		return TsDeclInterface.create(
 			NoComments.instance,
 			false,
@@ -50,14 +56,17 @@ describe("RemoveDifficultInheritance", () => {
 			IArray.Empty,
 			inheritance,
 			IArray.Empty,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
 	function createMockClass(
-		name: string, 
-		parent?: TsTypeRef, 
-		implementsInterfaces: IArray<TsTypeRef> = IArray.Empty
+		name: string,
+		parent?: TsTypeRef,
+		implementsInterfaces: IArray<TsTypeRef> = IArray.Empty,
 	): TsDeclClass {
 		return TsDeclClass.create(
 			NoComments.instance,
@@ -69,7 +78,10 @@ describe("RemoveDifficultInheritance", () => {
 			implementsInterfaces,
 			IArray.Empty,
 			JsLocation.zero(),
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -80,7 +92,10 @@ describe("RemoveDifficultInheritance", () => {
 			TsIdent.simple(name),
 			IArray.Empty,
 			alias,
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", name))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", name),
+			),
 		);
 	}
 
@@ -92,7 +107,7 @@ describe("RemoveDifficultInheritance", () => {
 			some(createTypeRef("string")),
 			none,
 			false,
-			false
+			false,
 		);
 	}
 
@@ -101,14 +116,17 @@ describe("RemoveDifficultInheritance", () => {
 			NoComments.instance,
 			IArray.Empty,
 			IArray.fromArray(declarations),
-			CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "index"))
+			CodePath.hasPath(
+				TsIdent.librarySimple("test-lib"),
+				createQIdent("test-lib", "index"),
+			),
 		);
 
 		const root = TsTreeScope.create(
 			TsIdent.librarySimple("test-lib"),
 			false,
 			new Map(),
-			Logger.DevNull()
+			Logger.DevNull(),
 		);
 
 		return root["/"](parsedFile);
@@ -201,7 +219,10 @@ describe("RemoveDifficultInheritance", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const scope = createMockScope();
 			const objectRef = createTypeRef("object");
-			const iface = createMockInterface("TestInterface", IArray.apply(objectRef));
+			const iface = createMockInterface(
+				"TestInterface",
+				IArray.apply(objectRef),
+			);
 
 			const result = visitor.enterTsDeclInterface(scope)(iface);
 
@@ -213,7 +234,11 @@ describe("RemoveDifficultInheritance", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const scope = createMockScope();
 			const objectRef = createTypeRef("object");
-			const clazz = createMockClass("TestClass", undefined, IArray.apply(objectRef));
+			const clazz = createMockClass(
+				"TestClass",
+				undefined,
+				IArray.apply(objectRef),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -226,7 +251,10 @@ describe("RemoveDifficultInheritance", () => {
 		it("inlines type alias pointing to type reference", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const targetInterface = createMockInterface("TargetInterface");
-			const alias = createMockTypeAlias("MyAlias", createTypeRef("TargetInterface"));
+			const alias = createMockTypeAlias(
+				"MyAlias",
+				createTypeRef("TargetInterface"),
+			);
 			const scope = createMockScope(targetInterface, alias);
 			const clazz = createMockClass("TestClass", createTypeRef("MyAlias"));
 
@@ -238,7 +266,12 @@ describe("RemoveDifficultInheritance", () => {
 
 		it("drops type alias pointing to union type", () => {
 			const visitor = RemoveDifficultInheritance.apply();
-			const unionType = TsTypeUnion.create(IArray.apply(createTypeRef("A") as TsType, createTypeRef("B") as TsType));
+			const unionType = TsTypeUnion.create(
+				IArray.apply(
+					createTypeRef("A") as TsType,
+					createTypeRef("B") as TsType,
+				),
+			);
 			const alias = createMockTypeAlias("UnionAlias", unionType);
 			const scope = createMockScope(alias);
 			const clazz = createMockClass("TestClass", createTypeRef("UnionAlias"));
@@ -251,10 +284,16 @@ describe("RemoveDifficultInheritance", () => {
 
 		it("keeps type alias pointing to function type", () => {
 			const visitor = RemoveDifficultInheritance.apply();
-			const functionType = { _tag: "TsTypeFunction" as const, asString: "() => void" };
+			const functionType = {
+				_tag: "TsTypeFunction" as const,
+				asString: "() => void",
+			};
 			const alias = createMockTypeAlias("FunctionAlias", functionType);
 			const scope = createMockScope(alias);
-			const clazz = createMockClass("TestClass", createTypeRef("FunctionAlias"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("FunctionAlias"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -264,7 +303,10 @@ describe("RemoveDifficultInheritance", () => {
 		it("lifts members from type alias pointing to object type", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const property = createMockProperty("liftedProp");
-			const objectType = TsTypeObject.create(NoComments.instance, IArray.apply(property as any));
+			const objectType = TsTypeObject.create(
+				NoComments.instance,
+				IArray.apply(property as any),
+			);
 			const alias = createMockTypeAlias("ObjectAlias", objectType);
 			const scope = createMockScope(alias);
 			const clazz = createMockClass("TestClass", createTypeRef("ObjectAlias"));
@@ -283,11 +325,22 @@ describe("RemoveDifficultInheritance", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const targetInterface = createMockInterface("TargetInterface");
 			const property = createMockProperty("liftedProp");
-			const objectType = TsTypeObject.create(NoComments.instance, IArray.apply(property as any));
-			const intersectionType = TsTypeIntersect.create(IArray.apply(createTypeRef("TargetInterface") as TsType, objectType as TsType));
+			const objectType = TsTypeObject.create(
+				NoComments.instance,
+				IArray.apply(property as any),
+			);
+			const intersectionType = TsTypeIntersect.create(
+				IArray.apply(
+					createTypeRef("TargetInterface") as TsType,
+					objectType as TsType,
+				),
+			);
 			const alias = createMockTypeAlias("IntersectionAlias", intersectionType);
 			const scope = createMockScope(targetInterface, alias);
-			const clazz = createMockClass("TestClass", createTypeRef("IntersectionAlias"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("IntersectionAlias"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -300,12 +353,23 @@ describe("RemoveDifficultInheritance", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const prop1 = createMockProperty("prop1");
 			const prop2 = createMockProperty("prop2");
-			const obj1 = TsTypeObject.create(NoComments.instance, IArray.apply(prop1 as any));
-			const obj2 = TsTypeObject.create(NoComments.instance, IArray.apply(prop2 as any));
-			const intersectionType = TsTypeIntersect.create(IArray.apply(obj1 as TsType, obj2 as TsType));
+			const obj1 = TsTypeObject.create(
+				NoComments.instance,
+				IArray.apply(prop1 as any),
+			);
+			const obj2 = TsTypeObject.create(
+				NoComments.instance,
+				IArray.apply(prop2 as any),
+			);
+			const intersectionType = TsTypeIntersect.create(
+				IArray.apply(obj1 as TsType, obj2 as TsType),
+			);
 			const alias = createMockTypeAlias("MultiObjectAlias", intersectionType);
 			const scope = createMockScope(alias);
-			const clazz = createMockClass("TestClass", createTypeRef("MultiObjectAlias"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("MultiObjectAlias"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -317,8 +381,15 @@ describe("RemoveDifficultInheritance", () => {
 
 		it("drops unsupported types in intersection", () => {
 			const visitor = RemoveDifficultInheritance.apply();
-			const unionType = TsTypeUnion.create(IArray.apply(createTypeRef("A") as TsType, createTypeRef("B") as TsType));
-			const intersectionType = TsTypeIntersect.create(IArray.apply(createTypeRef("ValidType") as TsType, unionType as TsType));
+			const unionType = TsTypeUnion.create(
+				IArray.apply(
+					createTypeRef("A") as TsType,
+					createTypeRef("B") as TsType,
+				),
+			);
+			const intersectionType = TsTypeIntersect.create(
+				IArray.apply(createTypeRef("ValidType") as TsType, unionType as TsType),
+			);
 			const alias = createMockTypeAlias("MixedAlias", intersectionType);
 			const scope = createMockScope(alias);
 			const clazz = createMockClass("TestClass", createTypeRef("MixedAlias"));
@@ -334,9 +405,15 @@ describe("RemoveDifficultInheritance", () => {
 		it("sees through thin interface with single parent", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const baseInterface = createMockInterface("BaseInterface");
-			const thinInterface = createMockInterface("ThinInterface", IArray.apply(createTypeRef("BaseInterface")));
+			const thinInterface = createMockInterface(
+				"ThinInterface",
+				IArray.apply(createTypeRef("BaseInterface")),
+			);
 			const scope = createMockScope(baseInterface, thinInterface);
-			const clazz = createMockClass("TestClass", createTypeRef("ThinInterface"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("ThinInterface"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -355,10 +432,16 @@ describe("RemoveDifficultInheritance", () => {
 				IArray.Empty,
 				IArray.apply(createTypeRef("BaseInterface")),
 				IArray.apply(property as any),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("test-lib", "InterfaceWithMembers"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("test-lib", "InterfaceWithMembers"),
+				),
 			);
 			const scope = createMockScope(baseInterface, interfaceWithMembers);
-			const clazz = createMockClass("TestClass", createTypeRef("InterfaceWithMembers"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("InterfaceWithMembers"),
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -373,9 +456,9 @@ describe("RemoveDifficultInheritance", () => {
 			const iface1 = createMockInterface("Interface1");
 			const scope = createMockScope(baseClass, iface1);
 			const clazz = createMockClass(
-				"TestClass", 
-				createTypeRef("BaseClass"), 
-				IArray.apply(createTypeRef("Interface1"))
+				"TestClass",
+				createTypeRef("BaseClass"),
+				IArray.apply(createTypeRef("Interface1")),
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
@@ -389,9 +472,9 @@ describe("RemoveDifficultInheritance", () => {
 			const validInterface = createMockInterface("ValidInterface");
 			const scope = createMockScope(validInterface);
 			const clazz = createMockClass(
-				"TestClass", 
+				"TestClass",
 				createTypeRef("object"), // problematic
-				IArray.apply(createTypeRef("ValidInterface")) // valid
+				IArray.apply(createTypeRef("ValidInterface")), // valid
 			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
@@ -404,8 +487,14 @@ describe("RemoveDifficultInheritance", () => {
 		it("processes multiple inheritance levels", () => {
 			const visitor = RemoveDifficultInheritance.apply();
 			const baseInterface = createMockInterface("BaseInterface");
-			const middleAlias = createMockTypeAlias("MiddleAlias", createTypeRef("BaseInterface"));
-			const topAlias = createMockTypeAlias("TopAlias", createTypeRef("MiddleAlias"));
+			const middleAlias = createMockTypeAlias(
+				"MiddleAlias",
+				createTypeRef("BaseInterface"),
+			);
+			const topAlias = createMockTypeAlias(
+				"TopAlias",
+				createTypeRef("MiddleAlias"),
+			);
 			const scope = createMockScope(baseInterface, middleAlias, topAlias);
 			const clazz = createMockClass("TestClass", createTypeRef("TopAlias"));
 
@@ -455,7 +544,10 @@ describe("RemoveDifficultInheritance", () => {
 			const scope = createMockScope();
 
 			// Test with empty scope
-			const clazz = createMockClass("TestClass", createTypeRef("NonExistentType"));
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("NonExistentType"),
+			);
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
 			expect(result.parent._tag).toBe("Some"); // Should keep unknown types
@@ -471,14 +563,16 @@ describe("RemoveDifficultInheritance", () => {
 				createTypeRef("Interface2"),
 				createTypeRef("Interface3"),
 				createTypeRef("Interface4"),
-				createTypeRef("Interface5")
+				createTypeRef("Interface5"),
 			]);
 			const clazz = createMockClass("TestClass", undefined, interfaces);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
 			// The transformation may move first interface to parent, so check total inheritance
-			const totalInheritance = (result.parent._tag === "Some" ? 1 : 0) + result.implementsInterfaces.length;
+			const totalInheritance =
+				(result.parent._tag === "Some" ? 1 : 0) +
+				result.implementsInterfaces.length;
 			expect(totalInheritance).toBe(5);
 		});
 
@@ -500,9 +594,13 @@ describe("RemoveDifficultInheritance", () => {
 			const interfaces = IArray.fromArray([
 				createTypeRef("object"),
 				createTypeRef("ValidInterface"),
-				createTypeRef("any")
+				createTypeRef("any"),
 			]);
-			const clazz = createMockClass("TestClass", createTypeRef("Object"), interfaces);
+			const clazz = createMockClass(
+				"TestClass",
+				createTypeRef("Object"),
+				interfaces,
+			);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
@@ -519,14 +617,16 @@ describe("RemoveDifficultInheritance", () => {
 
 			// Create many interfaces
 			const interfaces = IArray.fromArray(
-				Array.from({ length: 20 }, (_, i) => createTypeRef(`Interface${i}`))
+				Array.from({ length: 20 }, (_, i) => createTypeRef(`Interface${i}`)),
 			);
 			const clazz = createMockClass("TestClass", undefined, interfaces);
 
 			const result = visitor.enterTsDeclClass(scope)(clazz);
 
 			// The transformation may move first interface to parent, so check total inheritance
-			const totalInheritance = (result.parent._tag === "Some" ? 1 : 0) + result.implementsInterfaces.length;
+			const totalInheritance =
+				(result.parent._tag === "Some" ? 1 : 0) +
+				result.implementsInterfaces.length;
 			expect(totalInheritance).toBe(20);
 		});
 
@@ -537,7 +637,10 @@ describe("RemoveDifficultInheritance", () => {
 			const startTime = Date.now();
 
 			for (let i = 0; i < 100; i++) {
-				const clazz = createMockClass(`TestClass${i}`, createTypeRef(`BaseClass${i}`));
+				const clazz = createMockClass(
+					`TestClass${i}`,
+					createTypeRef(`BaseClass${i}`),
+				);
 				visitor.enterTsDeclClass(scope)(clazz);
 			}
 

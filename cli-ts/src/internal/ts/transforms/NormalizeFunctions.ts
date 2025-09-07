@@ -25,19 +25,19 @@ import { MethodType } from "../MethodType.js";
 import { TransformMembers } from "../TreeTransformations.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import {
-	TsDeclFunction,
-	TsExporteeTree,
-	TsMemberCall,
-	TsMemberFunction,
-	TsMemberProperty,
 	type HasClassMembers,
 	type TsContainer,
 	type TsContainerOrDecl,
 	type TsDecl,
+	TsDeclFunction,
 	type TsDeclVar,
+	TsExporteeTree,
 	type TsExporteeTree as TsExporteeTreeType,
 	type TsFunSig,
 	type TsMember,
+	type TsMemberCall,
+	TsMemberFunction,
+	type TsMemberProperty,
 	type TsType,
 	type TsTypeFunction,
 	type TsTypeObject,
@@ -45,7 +45,7 @@ import {
 
 /**
  * Transform that normalizes function properties to methods and function variables to function declarations.
- * 
+ *
  * This transform extends TransformMembers and manually implements TransformClassMembers functionality
  * to handle both container members and class members.
  */
@@ -68,8 +68,8 @@ export class NormalizeFunctions extends TransformMembers {
 				const [calls, rest] = objType.members.partitionCollect(
 					partialFunction(
 						(member: TsMember): boolean => member._tag === "TsMemberCall",
-						(member: TsMember): TsFunSig => (member as TsMemberCall).signature
-					)
+						(member: TsMember): TsFunSig => (member as TsMemberCall).signature,
+					),
 				);
 
 				// Only rewrite if all members are call signatures (rest is empty)
@@ -92,26 +92,31 @@ export class NormalizeFunctions extends TransformMembers {
 	 * Process class members, converting function properties to methods.
 	 * This manually implements the TransformClassMembers functionality.
 	 */
-	newClassMembers(scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
+	newClassMembers(_scope: TsTreeScope, x: HasClassMembers): IArray<TsMember> {
 		return x.members.flatMap((member: TsMember): IArray<TsMember> => {
 			if (member._tag === "TsMemberProperty") {
 				const prop = member as TsMemberProperty;
 
 				// Only process properties with types but no expressions
-				if (prop.tpe && prop.tpe._tag === "Some" && (!prop.expr || prop.expr._tag === "None")) {
+				if (
+					prop.tpe &&
+					prop.tpe._tag === "Some" &&
+					(!prop.expr || prop.expr._tag === "None")
+				) {
 					const typeOpt = NormalizeFunctions.toRewrite(prop.tpe.value);
 					if (typeOpt._tag === "Some") {
 						const signatures = typeOpt.value;
-						return signatures.map((sig: TsFunSig) =>
-							TsMemberFunction.create(
-								prop.comments,
-								prop.level,
-								prop.name,
-								MethodType.normal(),
-								sig,
-								prop.isStatic,
-								prop.isReadOnly
-							) as TsMember
+						return signatures.map(
+							(sig: TsFunSig) =>
+								TsMemberFunction.create(
+									prop.comments,
+									prop.level,
+									prop.name,
+									MethodType.normal(),
+									sig,
+									prop.isStatic,
+									prop.isReadOnly,
+								) as TsMember,
 						);
 					}
 				}
@@ -147,7 +152,7 @@ export class NormalizeFunctions extends TransformMembers {
 	/**
 	 * Process export trees, converting function variable exports to function declaration exports.
 	 */
-	enterTsExporteeTree(scope: TsTreeScope) {
+	enterTsExporteeTree(_scope: TsTreeScope) {
 		return (x: TsExporteeTreeType): TsExporteeTreeType => {
 			const rewritten = this.rewriteDecl(x.decl);
 			const exactlyOne = IArrayPatterns.exactlyOne(rewritten);
@@ -162,28 +167,32 @@ export class NormalizeFunctions extends TransformMembers {
 	/**
 	 * Process container members, converting function variable declarations to function declarations.
 	 */
-	newMembers(scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
-		return x.members.flatMap((member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
-			if (member._tag === "TsDeclVar" || 
-				member._tag === "TsDeclFunction" || 
-				member._tag === "TsDeclClass" || 
-				member._tag === "TsDeclInterface" || 
-				member._tag === "TsDeclTypeAlias" || 
-				member._tag === "TsDeclEnum" || 
-				member._tag === "TsDeclNamespace" || 
-				member._tag === "TsDeclModule" || 
-				member._tag === "TsAugmentedModule") {
-				return this.rewriteDecl(member as TsDecl);
-			} else {
-				return IArray.apply(member);
-			}
-		});
+	newMembers(_scope: TsTreeScope, x: TsContainer): IArray<TsContainerOrDecl> {
+		return x.members.flatMap(
+			(member: TsContainerOrDecl): IArray<TsContainerOrDecl> => {
+				if (
+					member._tag === "TsDeclVar" ||
+					member._tag === "TsDeclFunction" ||
+					member._tag === "TsDeclClass" ||
+					member._tag === "TsDeclInterface" ||
+					member._tag === "TsDeclTypeAlias" ||
+					member._tag === "TsDeclEnum" ||
+					member._tag === "TsDeclNamespace" ||
+					member._tag === "TsDeclModule" ||
+					member._tag === "TsAugmentedModule"
+				) {
+					return this.rewriteDecl(member as TsDecl);
+				} else {
+					return IArray.apply(member);
+				}
+			},
+		);
 	}
 
 	/**
 	 * Process types, converting object types with single call signatures to function types.
 	 */
-	override enterTsType(scope: TsTreeScope) {
+	override enterTsType(_scope: TsTreeScope) {
 		return (x: TsType): TsType => {
 			if (x._tag === "TsTypeObject") {
 				const objType = x as TsTypeObject;
@@ -209,19 +218,25 @@ export class NormalizeFunctions extends TransformMembers {
 			const varDecl = d as TsDeclVar;
 
 			// Only process readonly variables with types but no expressions
-			if (varDecl.readOnly && varDecl.tpe && varDecl.tpe._tag === "Some" && (!varDecl.expr || varDecl.expr._tag === "None")) {
+			if (
+				varDecl.readOnly &&
+				varDecl.tpe &&
+				varDecl.tpe._tag === "Some" &&
+				(!varDecl.expr || varDecl.expr._tag === "None")
+			) {
 				const typeOpt = NormalizeFunctions.toRewrite(varDecl.tpe.value);
 				if (typeOpt._tag === "Some") {
 					const signatures = typeOpt.value;
-					return signatures.map((sig: TsFunSig) =>
-						TsDeclFunction.create(
-							varDecl.comments,
-							varDecl.declared,
-							varDecl.name,
-							sig,
-							varDecl.jsLocation,
-							varDecl.codePath
-						) as TsDecl
+					return signatures.map(
+						(sig: TsFunSig) =>
+							TsDeclFunction.create(
+								varDecl.comments,
+								varDecl.declared,
+								varDecl.name,
+								sig,
+								varDecl.jsLocation,
+								varDecl.codePath,
+							) as TsDecl,
 					);
 				}
 			}

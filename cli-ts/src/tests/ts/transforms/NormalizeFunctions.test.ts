@@ -2,18 +2,17 @@
  * Tests for NormalizeFunctions.ts - TypeScript port of NormalizeFunctionsTests.scala
  */
 
-import { describe, expect, it } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { Comment, Raw } from "../../../internal/Comment.js";
+import { describe, expect, it } from "vitest";
+import { Raw } from "../../../internal/Comment.js";
 import { Comments, NoComments } from "../../../internal/Comments.js";
 import { IArray } from "../../../internal/IArray.js";
 import { Logger } from "../../../internal/logging/index.js";
 import { CodePath } from "../../../internal/ts/CodePath.js";
 import { JsLocation } from "../../../internal/ts/JsLocation.js";
-import { MethodType } from "../../../internal/ts/MethodType.js";
-import { NormalizeFunctions } from "../../../internal/ts/transforms/NormalizeFunctions.js";
 import { TsProtectionLevel } from "../../../internal/ts/TsProtectionLevel.js";
 import { TsTreeScope } from "../../../internal/ts/TsTreeScope.js";
+import { NormalizeFunctions } from "../../../internal/ts/transforms/NormalizeFunctions.js";
 import {
 	TsDeclClass,
 	TsDeclInterface,
@@ -22,17 +21,16 @@ import {
 	TsFunParam,
 	TsFunSig,
 	TsIdent,
-	TsLiteral,
+	type TsIdentSimple,
+	type TsMember,
 	TsMemberCall,
-	TsMemberFunction,
+	type TsMemberFunction,
 	TsMemberProperty,
 	TsParsedFile,
 	TsQIdent,
 	TsTypeFunction,
 	TsTypeObject,
 	TsTypeRef,
-	type TsIdentSimple,
-	type TsMember,
 } from "../../../internal/ts/trees.js";
 
 // Helper methods for creating test data
@@ -44,27 +42,33 @@ function createQIdent(...parts: string[]): TsQIdent {
 	return TsQIdent.of(...parts.map(createSimpleIdent));
 }
 
-function createTypeRef(name: string, tparams: IArray<any> = IArray.Empty): TsTypeRef {
+function createTypeRef(
+	name: string,
+	tparams: IArray<any> = IArray.Empty,
+): TsTypeRef {
 	return TsTypeRef.create(NoComments.instance, createQIdent(name), tparams);
 }
 
 function createFunSig(
 	params: IArray<TsFunParam> = IArray.Empty,
-	resultType: TsTypeRef = createTypeRef("void")
+	resultType: TsTypeRef = createTypeRef("void"),
 ): TsFunSig {
 	return TsFunSig.create(
 		NoComments.instance,
 		IArray.Empty, // tparams
 		params,
-		some(resultType)
+		some(resultType),
 	);
 }
 
-function createFunParam(name: string, tpe: TsTypeRef = createTypeRef("any")): TsFunParam {
+function createFunParam(
+	name: string,
+	tpe: TsTypeRef = createTypeRef("any"),
+): TsFunParam {
 	return TsFunParam.create(
 		NoComments.instance,
 		createSimpleIdent(name),
-		some(tpe)
+		some(tpe),
 	);
 }
 
@@ -80,7 +84,7 @@ function createMemberCall(sig: TsFunSig): TsMemberCall {
 	return TsMemberCall.create(
 		NoComments.instance,
 		TsProtectionLevel.default(),
-		sig
+		sig,
 	);
 }
 
@@ -88,7 +92,7 @@ function createMemberProperty(
 	name: string,
 	tpe?: any,
 	isStatic: boolean = false,
-	isReadOnly: boolean = false
+	isReadOnly: boolean = false,
 ): TsMemberProperty {
 	return TsMemberProperty.create(
 		NoComments.instance,
@@ -97,13 +101,13 @@ function createMemberProperty(
 		tpe ? some(tpe) : none,
 		none, // expr
 		isStatic,
-		isReadOnly
+		isReadOnly,
 	);
 }
 
 function createMockClass(
 	name: string,
-	members: IArray<TsMember> = IArray.Empty
+	members: IArray<TsMember> = IArray.Empty,
 ): TsDeclClass {
 	return TsDeclClass.create(
 		NoComments.instance,
@@ -115,13 +119,13 @@ function createMockClass(
 		IArray.Empty, // implements
 		members,
 		JsLocation.zero(),
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
-function createMockInterface(
+function _createMockInterface(
 	name: string,
-	members: IArray<TsMember> = IArray.Empty
+	members: IArray<TsMember> = IArray.Empty,
 ): TsDeclInterface {
 	return TsDeclInterface.create(
 		NoComments.instance,
@@ -130,14 +134,14 @@ function createMockInterface(
 		IArray.Empty, // tparams
 		IArray.Empty, // inheritance
 		members,
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
 function createMockVar(
 	name: string,
 	tpe?: any,
-	isReadOnly: boolean = true
+	isReadOnly: boolean = true,
 ): TsDeclVar {
 	return TsDeclVar.create(
 		NoComments.instance,
@@ -147,7 +151,7 @@ function createMockVar(
 		tpe ? some(tpe) : none,
 		none, // expr
 		JsLocation.zero(),
-		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name))
+		CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent(name)),
 	);
 }
 
@@ -157,7 +161,7 @@ function createMockScope(...declarations: any[]): TsTreeScope {
 		NoComments.instance,
 		IArray.Empty, // directives
 		IArray.fromArray(declarations),
-		CodePath.noPath()
+		CodePath.noPath(),
 	);
 	const deps = new Map();
 	const logger = Logger.DevNull();
@@ -182,7 +186,12 @@ describe("NormalizeFunctions", () => {
 
 		it("has newMembers method", () => {
 			const scope = createMockScope();
-			const parsedFile = TsParsedFile.create(NoComments.instance, IArray.Empty, IArray.Empty, CodePath.noPath());
+			const parsedFile = TsParsedFile.create(
+				NoComments.instance,
+				IArray.Empty,
+				IArray.Empty,
+				CodePath.noPath(),
+			);
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
 			expect(result).toBeDefined();
 			expect(result).toBeInstanceOf(IArray);
@@ -225,7 +234,9 @@ describe("NormalizeFunctions", () => {
 			const sig = createFunSig();
 			const callMember = createMemberCall(sig);
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
-			const objType = createTypeObject(IArray.apply(callMember as TsMember, propMember as TsMember));
+			const objType = createTypeObject(
+				IArray.apply(callMember as TsMember, propMember as TsMember),
+			);
 
 			const toRewriteResult = (NormalizeFunctions as any).toRewrite(objType);
 
@@ -246,11 +257,14 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const funType = createTypeFunction(sig);
 			const prop = createMemberProperty("myMethod", funType);
-			const clazz = createMockClass("TestClass", IArray.apply(prop as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(prop as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -266,12 +280,15 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const callMember = createMemberCall(sig);
 			const objType = createTypeObject(IArray.apply(callMember as TsMember));
 			const prop = createMemberProperty("myMethod", objType);
-			const clazz = createMockClass("TestClass", IArray.apply(prop as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(prop as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -286,22 +303,29 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig1 = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const sig2 = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("string"))),
-				createTypeRef("number")
+				createTypeRef("number"),
 			);
 			const callMember1 = createMemberCall(sig1);
 			const callMember2 = createMemberCall(sig2);
-			const objType = createTypeObject(IArray.apply(callMember1 as TsMember, callMember2 as TsMember));
+			const objType = createTypeObject(
+				IArray.apply(callMember1 as TsMember, callMember2 as TsMember),
+			);
 			const prop = createMemberProperty("overloadedMethod", objType);
-			const clazz = createMockClass("TestClass", IArray.apply(prop as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(prop as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
 			expect(result.length).toBe(2);
-			expect(result.forall(member => member._tag === "TsMemberFunction")).toBe(true);
+			expect(
+				result.forall((member) => member._tag === "TsMemberFunction"),
+			).toBe(true);
 			const func1 = result.apply(0) as TsMemberFunction;
 			const func2 = result.apply(1) as TsMemberFunction;
 			expect(func1.name.value).toBe("overloadedMethod");
@@ -312,7 +336,9 @@ describe("NormalizeFunctions", () => {
 
 		it("preserves member metadata when converting", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original property comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original property comment"),
+			]);
 			const sig = createFunSig();
 			const funType = createTypeFunction(sig);
 			const prop = TsMemberProperty.create(
@@ -322,9 +348,12 @@ describe("NormalizeFunctions", () => {
 				some(funType),
 				none, // expr
 				true, // isStatic
-				true // isReadOnly
+				true, // isReadOnly
 			);
-			const clazz = createMockClass("TestClass", IArray.apply(prop as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(prop as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -338,9 +367,18 @@ describe("NormalizeFunctions", () => {
 
 		it("leaves non-function properties unchanged", () => {
 			const scope = createMockScope();
-			const stringProp = createMemberProperty("stringProp", createTypeRef("string"));
-			const numberProp = createMemberProperty("numberProp", createTypeRef("number"));
-			const clazz = createMockClass("TestClass", IArray.apply(stringProp as TsMember, numberProp as TsMember));
+			const stringProp = createMemberProperty(
+				"stringProp",
+				createTypeRef("string"),
+			);
+			const numberProp = createMemberProperty(
+				"numberProp",
+				createTypeRef("number"),
+			);
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(stringProp as TsMember, numberProp as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -360,9 +398,12 @@ describe("NormalizeFunctions", () => {
 				some(funType),
 				some(TsExprLiteral.string("value")),
 				false, // isStatic
-				false // isReadOnly
+				false, // isReadOnly
 			);
-			const clazz = createMockClass("TestClass", IArray.apply(propWithExpr as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(propWithExpr as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -373,7 +414,10 @@ describe("NormalizeFunctions", () => {
 		it("leaves properties without types unchanged", () => {
 			const scope = createMockScope();
 			const propWithoutType = createMemberProperty("prop");
-			const clazz = createMockClass("TestClass", IArray.apply(propWithoutType as TsMember));
+			const clazz = createMockClass(
+				"TestClass",
+				IArray.apply(propWithoutType as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.newClassMembers(scope, clazz);
 
@@ -387,7 +431,7 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const funType = createTypeFunction(sig);
 			const varDecl = createMockVar("myFunction", funType, true);
@@ -395,7 +439,7 @@ describe("NormalizeFunctions", () => {
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varDecl as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -411,7 +455,7 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const callMember = createMemberCall(sig);
 			const objType = createTypeObject(IArray.apply(callMember as TsMember));
@@ -420,7 +464,7 @@ describe("NormalizeFunctions", () => {
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varDecl as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -436,27 +480,31 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig1 = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const sig2 = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("string"))),
-				createTypeRef("number")
+				createTypeRef("number"),
 			);
 			const callMember1 = createMemberCall(sig1);
 			const callMember2 = createMemberCall(sig2);
-			const objType = createTypeObject(IArray.apply(callMember1 as TsMember, callMember2 as TsMember));
+			const objType = createTypeObject(
+				IArray.apply(callMember1 as TsMember, callMember2 as TsMember),
+			);
 			const varDecl = createMockVar("overloadedFunction", objType, true);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varDecl as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
 
 			expect(result.length).toBe(2);
-			expect(result.forall(member => member._tag === "TsDeclFunction")).toBe(true);
+			expect(result.forall((member) => member._tag === "TsDeclFunction")).toBe(
+				true,
+			);
 			const funcDecl1 = result.apply(0) as any;
 			const funcDecl2 = result.apply(1) as any;
 			expect(funcDecl1.name.value).toBe("overloadedFunction");
@@ -467,7 +515,9 @@ describe("NormalizeFunctions", () => {
 
 		it("preserves variable metadata when converting", () => {
 			const scope = createMockScope();
-			const originalComments = Comments.apply([new Raw("Original variable comment")]);
+			const originalComments = Comments.apply([
+				new Raw("Original variable comment"),
+			]);
 			const sig = createFunSig();
 			const funType = createTypeFunction(sig);
 			const varDecl = TsDeclVar.create(
@@ -478,13 +528,16 @@ describe("NormalizeFunctions", () => {
 				some(funType),
 				none, // expr
 				JsLocation.zero(),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("myFunction"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("myFunction"),
+				),
 			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varDecl as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -504,7 +557,7 @@ describe("NormalizeFunctions", () => {
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varDecl as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -525,13 +578,16 @@ describe("NormalizeFunctions", () => {
 				some(funType),
 				some(TsExprLiteral.string("value")),
 				JsLocation.zero(),
-				CodePath.hasPath(TsIdent.librarySimple("test-lib"), createQIdent("myFunction"))
+				CodePath.hasPath(
+					TsIdent.librarySimple("test-lib"),
+					createQIdent("myFunction"),
+				),
 			);
 			const parsedFile = TsParsedFile.create(
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varWithExpr as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -547,7 +603,7 @@ describe("NormalizeFunctions", () => {
 				NoComments.instance,
 				IArray.Empty,
 				IArray.apply(varWithoutType as any),
-				CodePath.noPath()
+				CodePath.noPath(),
 			);
 
 			const result = NormalizeFunctions.instance.newMembers(scope, parsedFile);
@@ -562,7 +618,7 @@ describe("NormalizeFunctions", () => {
 			const scope = createMockScope();
 			const sig = createFunSig(
 				IArray.apply(createFunParam("x", createTypeRef("number"))),
-				createTypeRef("string")
+				createTypeRef("string"),
 			);
 			const callMember = createMemberCall(sig);
 			const objType = createTypeObject(IArray.apply(callMember as TsMember));
@@ -579,7 +635,9 @@ describe("NormalizeFunctions", () => {
 			const sig = createFunSig();
 			const callMember = createMemberCall(sig);
 			const propMember = createMemberProperty("prop", createTypeRef("string"));
-			const objType = createTypeObject(IArray.apply(callMember as TsMember, propMember as TsMember));
+			const objType = createTypeObject(
+				IArray.apply(callMember as TsMember, propMember as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.enterTsType(scope)(objType);
 
@@ -592,7 +650,9 @@ describe("NormalizeFunctions", () => {
 			const sig2 = createFunSig();
 			const callMember1 = createMemberCall(sig1);
 			const callMember2 = createMemberCall(sig2);
-			const objType = createTypeObject(IArray.apply(callMember1 as TsMember, callMember2 as TsMember));
+			const objType = createTypeObject(
+				IArray.apply(callMember1 as TsMember, callMember2 as TsMember),
+			);
 
 			const result = NormalizeFunctions.instance.enterTsType(scope)(objType);
 
