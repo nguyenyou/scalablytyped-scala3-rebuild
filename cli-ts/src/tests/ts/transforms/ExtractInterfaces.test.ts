@@ -25,6 +25,7 @@ import {
 	IndexingDict,
 	type TsContainerOrDecl,
 	TsDeclInterface,
+	TsDeclNamespace,
 	TsDeclVar,
 	TsFunSig,
 	TsIdent,
@@ -210,9 +211,9 @@ describe("ExtractInterfaces", () => {
 
 			const result = extractInterfaces(library, into, scope)(file);
 
+			// For now, just check that the transformation runs without error
 			// TODO: When extraction is fully implemented, this should extract the type object from the interface property
 			// Expected behavior: Should create a namespace with an extracted interface containing the call signature
-			// For now, the implementation doesn't extract from interface properties, so we verify it handles the input gracefully
 			expect(result.members.length).toBeGreaterThanOrEqual(1);
 			expect(result.members.exists((member) => member._tag === "TsDeclInterface")).toBe(true);
 		});

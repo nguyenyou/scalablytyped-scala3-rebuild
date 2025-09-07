@@ -10,7 +10,7 @@ import { none, type Option, some } from "fp-ts/Option";
 import { NameHint } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
 import { IArray } from "../../IArray.js";
-import { CodePath } from "../CodePath.js";
+import { CodePath, type CodePathHasPath } from "../CodePath.js";
 import { DeriveNonConflictingName } from "../DeriveNonConflictingName.js";
 import { JsLocation } from "../JsLocation.js";
 import { TreeTransformationScopedChanges } from "../TreeTransformations.js";
@@ -18,8 +18,13 @@ import { TypeParamsReferencedInTree } from "../TypeParamsReferencedInTree.js";
 import type { TsTreeScope } from "../TsTreeScope.js";
 import {
 	type TsContainerOrDecl,
+	TsDeclClass,
+	TsDeclFunction,
 	TsDeclInterface,
+	TsDeclModule,
 	TsDeclNamespace,
+	TsDeclTypeAlias,
+	TsDeclVar,
 	type TsIdent,
 	type TsIdentLibrary,
 	type TsIdentSimple,
@@ -27,6 +32,7 @@ import {
 	type TsMember,
 	type TsMemberCall,
 	type TsMemberIndex,
+	TsMemberProperty,
 	type TsMemberTypeMapped,
 	type TsParsedFile,
 	TsQIdent,
@@ -52,6 +58,7 @@ export function extractInterfaces(
 		const newFile = transformer.visitTsParsedFile(scope)(file);
 
 		const interfaces = store.getInterfaces();
+
 		if (interfaces.isEmpty) {
 			return newFile;
 		}
@@ -90,8 +97,8 @@ export class ConflictHandlingStore {
 		prefix: string,
 		members: IArray<TsMember>,
 		referencedTparams: IArray<TsTypeParam>,
-	): (construct: (name: TsIdentSimple) => TsDeclInterface) => CodePath {
-		return (construct: (name: TsIdentSimple) => TsDeclInterface): CodePath => {
+	): (construct: (name: TsIdentSimple) => TsDeclInterface) => CodePathHasPath {
+		return (construct: (name: TsIdentSimple) => TsDeclInterface): CodePathHasPath => {
 			const interfaceResult = DeriveNonConflictingName.apply(
 				prefix,
 				members,
@@ -125,7 +132,7 @@ export class ConflictHandlingStore {
 			}) as TsDeclInterface;
 
 			this.interfaces.set(interfaceResult.name.value, interfaceResult);
-			return interfaceResult.codePath;
+			return interfaceResult.codePath.forceHasPath();
 		};
 	}
 
@@ -222,10 +229,7 @@ export function isDictionary(members: IArray<TsMember>): boolean {
 	return members.forall((member) => {
 		if (member._tag === "TsMemberIndex") {
 			const indexMember = member as TsMemberIndex;
-			return (
-				indexMember.indexing._tag === "IndexingDict" ||
-				indexMember.indexing._tag === "IndexingSingle"
-			);
+			return indexMember.indexing._tag === "IndexingDict";
 		}
 		return false;
 	});
@@ -233,12 +237,13 @@ export function isDictionary(members: IArray<TsMember>): boolean {
 
 /**
  * Determines if a type should be extracted based on the tree scope
+ * Returns false if there's a TsDeclVar anywhere in the stack
  */
 export function shouldBeExtracted(scope: TsTreeScope): boolean {
 	const stack = scope.stack;
-	if (stack.length >= 2) {
-		const second = stack[1];
-		if (second && second._tag === "TsDeclVar") {
+	// Check if there's a TsDeclVar anywhere in the stack
+	for (let i = 0; i < stack.length; i++) {
+		if (stack[i] && stack[i]._tag === "TsDeclVar") {
 			return false;
 		}
 	}
@@ -254,70 +259,290 @@ export class LiftTypeObjects extends TreeTransformationScopedChanges {
 	}
 
 	/**
-	 * Transform a type, extracting object types into interfaces
+	 * Override visitTsParsedFile to manually traverse the tree and find type objects
 	 */
-	override enterTsType(scope: TsTreeScope): (type: TsType) => TsType {
-		return (type: TsType): TsType => {
-			if (type._tag === "TsTypeObject") {
-				const obj = type as TsTypeObject;
+	override visitTsParsedFile(scope: TsTreeScope): (file: TsParsedFile) => TsParsedFile {
+		return (file: TsParsedFile): TsParsedFile => {
+			// Create a scope for the file first
+			const fileScope = scope["/"](file);
 
-				if (
-					obj.members.nonEmpty &&
-					!isDictionary(obj.members) &&
-					!willBeErased(scope.stack, obj) &&
-					shouldBeExtracted(scope)
-				) {
-					const referencedTparams = TypeParamsReferencedInTree.apply(
-						scope.tparams,
-						obj,
-					);
+			// Transform all members recursively
+			const transformedMembers = file.members.map((member) => {
+				return this.transformContainerOrDecl(fileScope, member);
+			});
 
-					const prefix = this.determinePrefix(obj);
-
-					const codePath = this.store.addInterface(
-						scope,
-						prefix,
-						obj.members,
-						referencedTparams,
-					)((name: TsIdentSimple) => {
-						// Extract name hint from comments if available
-						const commentsWithoutHint = this.extractNameHint(obj.comments);
-
-						return TsDeclInterface.create(
-							commentsWithoutHint,
-							true, // declared
-							name,
-							referencedTparams,
-							IArray.Empty, // inheritance
-							obj.members,
-							CodePath.noPath(),
-						);
-					});
-
-					// Get the code path as TsQIdent
-					const codePathQIdent = CodePath.isHasPath(codePath)
-						? codePath.codePath
-						: TsQIdent.empty();
-
-					// Convert type parameters to type arguments
-					const typeArgs = referencedTparams.map((tparam) =>
-						TsTypeRef.create(
-							Comments.empty(),
-							TsQIdent.single(tparam.name),
-							IArray.Empty,
-						) as TsType
-					);
-
-					return TsTypeRef.create(
-						Comments.empty(),
-						codePathQIdent,
-						typeArgs,
-					);
-				}
+			// Only create a new file if members actually changed
+			if (transformedMembers.equals(file.members)) {
+				return file;
 			}
 
-			return type;
+			return file.withMembers(transformedMembers) as TsParsedFile;
 		};
+	}
+
+	/**
+	 * Transform a container or declaration, recursively traversing its structure
+	 */
+	private transformContainerOrDecl(scope: TsTreeScope, member: TsContainerOrDecl): TsContainerOrDecl {
+		const newScope = scope["/"](member);
+
+		switch (member._tag) {
+			case "TsDeclInterface":
+				return this.transformInterface(newScope, member as TsDeclInterface);
+			case "TsDeclClass":
+				return this.transformClass(newScope, member as TsDeclClass);
+			case "TsDeclVar":
+				return this.transformVar(newScope, member as TsDeclVar);
+			case "TsDeclFunction":
+				return this.transformFunction(newScope, member as TsDeclFunction);
+			case "TsDeclTypeAlias":
+				return this.transformTypeAlias(newScope, member as TsDeclTypeAlias);
+			case "TsDeclNamespace":
+				return this.transformNamespace(newScope, member as TsDeclNamespace);
+			case "TsDeclModule":
+				return this.transformModule(newScope, member as TsDeclModule);
+			default:
+				return member;
+		}
+	}
+
+	/**
+	 * Transform an interface, processing its members
+	 */
+	private transformInterface(scope: TsTreeScope, iface: TsDeclInterface): TsDeclInterface {
+		const transformedMembers = iface.members.map((member) => {
+			return this.transformMember(scope, member);
+		});
+
+		// Only create a new interface if members actually changed
+		if (transformedMembers.equals(iface.members)) {
+			return iface;
+		}
+
+		return TsDeclInterface.create(
+			iface.comments,
+			iface.declared,
+			iface.name,
+			iface.tparams,
+			iface.inheritance,
+			transformedMembers,
+			iface.codePath,
+		);
+	}
+
+	/**
+	 * Transform a class, processing its members
+	 */
+	private transformClass(scope: TsTreeScope, cls: TsDeclClass): TsDeclClass {
+		const transformedMembers = cls.members.map((member) => {
+			return this.transformMember(scope, member);
+		});
+
+		// Only create a new class if members actually changed
+		if (transformedMembers.equals(cls.members)) {
+			return cls;
+		}
+
+		return TsDeclClass.create(
+			cls.comments,
+			cls.declared,
+			cls.isAbstract,
+			cls.name,
+			cls.tparams,
+			cls.parent,
+			cls.implementsInterfaces,
+			transformedMembers,
+			cls.jsLocation,
+			cls.codePath,
+		);
+	}
+
+	/**
+	 * Transform a variable declaration, processing its type
+	 */
+	private transformVar(scope: TsTreeScope, varDecl: TsDeclVar): TsDeclVar {
+		if (varDecl.tpe._tag === "Some") {
+			const transformedType = this.transformType(scope, varDecl.tpe.value);
+			// Only create a new variable if the type actually changed
+			if (transformedType === varDecl.tpe.value) {
+				return varDecl;
+			}
+			return TsDeclVar.create(
+				varDecl.comments,
+				varDecl.declared,
+				varDecl.readOnly,
+				varDecl.name,
+				some(transformedType),
+				varDecl.expr,
+				varDecl.jsLocation,
+				varDecl.codePath,
+			);
+		}
+		return varDecl;
+	}
+
+	/**
+	 * Transform a function declaration, processing its signature
+	 */
+	private transformFunction(_scope: TsTreeScope, func: TsDeclFunction): TsDeclFunction {
+		// For now, just return the function unchanged
+		// TODO: Transform function signature types if needed
+		return func;
+	}
+
+	/**
+	 * Transform a type alias, processing its type
+	 */
+	private transformTypeAlias(scope: TsTreeScope, alias: TsDeclTypeAlias): TsDeclTypeAlias {
+		const transformedType = this.transformType(scope, alias.alias);
+		// Only create a new type alias if the type actually changed
+		if (transformedType === alias.alias) {
+			return alias;
+		}
+		return TsDeclTypeAlias.create(
+			alias.comments,
+			alias.declared,
+			alias.name,
+			alias.tparams,
+			transformedType,
+			alias.codePath,
+		);
+	}
+
+	/**
+	 * Transform a namespace, processing its members
+	 */
+	private transformNamespace(scope: TsTreeScope, ns: TsDeclNamespace): TsDeclNamespace {
+		const transformedMembers = ns.members.map((member) => {
+			return this.transformContainerOrDecl(scope, member);
+		});
+
+		return TsDeclNamespace.create(
+			ns.comments,
+			ns.declared,
+			ns.name,
+			transformedMembers,
+			ns.codePath,
+			ns.jsLocation,
+		);
+	}
+
+	/**
+	 * Transform a module, processing its members
+	 */
+	private transformModule(scope: TsTreeScope, mod: TsDeclModule): TsDeclModule {
+		const transformedMembers = mod.members.map((member) => {
+			return this.transformContainerOrDecl(scope, member);
+		});
+
+		return TsDeclModule.create(
+			mod.comments,
+			mod.declared,
+			mod.name,
+			transformedMembers,
+			mod.codePath,
+			mod.jsLocation,
+			mod.augmentedModules,
+		);
+	}
+
+	/**
+	 * Transform a member, processing its type if it has one
+	 */
+	private transformMember(scope: TsTreeScope, member: TsMember): TsMember {
+		switch (member._tag) {
+			case "TsMemberProperty":
+				return this.transformProperty(scope, member as TsMemberProperty);
+			case "TsMemberCall":
+			case "TsMemberCtor":
+			case "TsMemberFunction":
+			case "TsMemberIndex":
+				// For now, just return these unchanged
+				// TODO: Transform their types if needed
+				return member;
+			default:
+				return member;
+		}
+	}
+
+	/**
+	 * Transform a property member, processing its type
+	 */
+	private transformProperty(scope: TsTreeScope, prop: TsMemberProperty): TsMemberProperty {
+		if (prop.tpe._tag === "Some") {
+			const transformedType = this.transformType(scope, prop.tpe.value);
+			// Only create a new property if the type actually changed
+			if (transformedType === prop.tpe.value) {
+				return prop;
+			}
+			return TsMemberProperty.create(
+				prop.comments,
+				prop.level,
+				prop.name,
+				some(transformedType),
+				prop.expr,
+				prop.isStatic,
+				prop.isReadOnly,
+			);
+		}
+		return prop;
+	}
+
+	/**
+	 * Transform a type, extracting object types into interfaces
+	 */
+	private transformType(scope: TsTreeScope, type: TsType): TsType {
+		if (type._tag === "TsTypeObject") {
+			const obj = type as TsTypeObject;
+
+			if (
+				obj.members.nonEmpty &&
+				!isDictionary(obj.members) &&
+				!willBeErased(scope.stack, obj) &&
+				shouldBeExtracted(scope)
+			) {
+				const referencedTparams = TypeParamsReferencedInTree.apply(
+					scope.tparams,
+					obj,
+				);
+
+				const prefix = this.determinePrefix(obj);
+
+				const codePath = this.store.addInterface(
+					scope,
+					prefix,
+					obj.members,
+					referencedTparams,
+				)((name: TsIdentSimple) => {
+					// Extract name hint from comments if available
+					const commentsWithoutHint = this.extractNameHint(obj.comments);
+
+					return TsDeclInterface.create(
+						commentsWithoutHint,
+						true, // declared
+						name,
+						referencedTparams,
+						IArray.Empty, // inheritance
+						obj.members,
+						CodePath.noPath(),
+					);
+				});
+
+				// Convert type parameters to type arguments using the helper function
+				const typeArgs = TsTypeParam.asTypeArgs(referencedTparams).map(
+					(ref) => ref as TsType
+				);
+
+				return TsTypeRef.create(
+					Comments.empty(),
+					codePath.codePath,
+					typeArgs,
+				);
+			}
+		}
+
+		// TODO: Recursively transform other composite types like unions, intersections, etc.
+		return type;
 	}
 
 	/**
