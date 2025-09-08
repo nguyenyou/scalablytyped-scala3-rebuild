@@ -346,6 +346,13 @@ describe("TsParser", () => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
+
+		describe("Member System", () => {
+			const memberSystemTests = TestDataGenerator.generateMemberSystemTests();
+			memberSystemTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
 	});
 
 	describe("Performance Benchmarks", () => {

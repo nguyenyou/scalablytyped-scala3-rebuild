@@ -65,6 +65,13 @@ import {
 	TsTypeLiteral,
 	TsLiteral,
 	TsFunSig,
+	TsMemberProperty,
+	TsMemberFunction,
+	TsMemberCall,
+	TsMemberCtor,
+	TsMemberIndex,
+	TsProtectionLevel,
+	TsFunParam,
 	TsTypeParam as TsTypeParamConstructor,
 	TsEnumMember as TsEnumMemberConstructor,
 	TsQIdentArray,
@@ -434,6 +441,14 @@ export class TsParser {
 		switch (member.kind) {
 			case ts.SyntaxKind.PropertySignature:
 				return this.transformPropertySignature(member as ts.PropertySignature);
+			case ts.SyntaxKind.MethodSignature:
+				return this.transformMethodSignature(member as ts.MethodSignature);
+			case ts.SyntaxKind.CallSignature:
+				return this.transformCallSignature(member as ts.CallSignatureDeclaration);
+			case ts.SyntaxKind.ConstructSignature:
+				return this.transformConstructSignature(member as ts.ConstructSignatureDeclaration);
+			case ts.SyntaxKind.IndexSignature:
+				return this.transformIndexSignature(member as ts.IndexSignatureDeclaration);
 			default:
 				// For now, skip unsupported member types
 				return null;
@@ -448,19 +463,93 @@ export class TsParser {
 		const comments = Comments.empty();
 		const tpe = node.type ? some(this.transformType(node.type)) : none;
 		// TODO: Handle optional properties with node.questionToken
+		const isReadOnly = this.hasModifier(node, ts.SyntaxKind.ReadonlyKeyword);
+		const level = this.extractProtectionLevel(node.modifiers);
 
-		// Create a simple member property
-		return {
-			_tag: "TsMemberProperty",
+		return TsMemberProperty.create(
 			comments,
-			level: { _tag: "Default" }, // TsProtectionLevel.Default
+			level,
 			name,
 			tpe,
-			expr: none,
-			isStatic: false,
-			isReadOnly: false,
-			asString: `TsMemberProperty(${name.value})`,
-		} as any; // We'll fix the type later
+			none, // expr - no initializer in interface
+			false, // isStatic - not applicable in interfaces
+			isReadOnly
+		);
+	}
+
+	/**
+	 * Transform a method signature to a member function
+	 */
+	private transformMethodSignature(node: ts.MethodSignature): TsMember {
+		const name = TsIdent.simple((node.name as ts.Identifier).text);
+		const comments = Comments.empty();
+		const level = this.extractProtectionLevel(node.modifiers);
+		// TODO: Handle optional methods with node.questionToken
+		const signature = this.transformFunctionSignature(node);
+
+		return TsMemberFunction.create(
+			comments,
+			level,
+			name,
+			{ _tag: "Normal" }, // MethodType.Normal
+			signature,
+			false, // isStatic - not applicable in interfaces
+			false  // isReadOnly - not applicable for methods
+		);
+	}
+
+	/**
+	 * Transform a call signature to a member call
+	 */
+	private transformCallSignature(node: ts.CallSignatureDeclaration): TsMember {
+		const comments = Comments.empty();
+		const level = TsProtectionLevel.default();
+		const signature = this.transformFunctionSignature(node);
+
+		return TsMemberCall.create(comments, level, signature);
+	}
+
+	/**
+	 * Transform a construct signature to a member constructor
+	 */
+	private transformConstructSignature(node: ts.ConstructSignatureDeclaration): TsMember {
+		const comments = Comments.empty();
+		const level = TsProtectionLevel.default();
+		const signature = this.transformFunctionSignature(node);
+
+		return TsMemberCtor.create(comments, level, signature);
+	}
+
+	/**
+	 * Transform an index signature to a member index
+	 */
+	private transformIndexSignature(node: ts.IndexSignatureDeclaration): TsMember {
+		const comments = Comments.empty();
+		const level = this.extractProtectionLevel(node.modifiers);
+		const isReadOnly = this.hasModifier(node, ts.SyntaxKind.ReadonlyKeyword);
+
+		// Extract the index parameter
+		const indexParam = node.parameters[0];
+		const indexName = TsIdent.simple((indexParam.name as ts.Identifier).text);
+		const indexType = this.transformType(indexParam.type!);
+
+		// Create dictionary-style indexing
+		const indexing = {
+			_tag: "Dict" as const,
+			name: indexName,
+			tpe: indexType,
+			asString: `Dict(${indexName.value}: ${indexType.asString})`
+		};
+
+		const valueType = node.type ? some(this.transformType(node.type)) : none;
+
+		return TsMemberIndex.create(
+			comments,
+			isReadOnly,
+			level,
+			indexing,
+			valueType
+		);
 	}
 
 	/**
@@ -697,12 +786,9 @@ export class TsParser {
 	/**
 	 * Transform a TypeScript function type
 	 */
-	private transformFunctionType(node: ts.FunctionTypeNode): TsType {
-		// For now, create a basic function signature
-		// TODO: Implement full function type transformation
-		const params = IArray.Empty; // We'll implement parameter transformation later
-		const resultType = this.transformType(node.type);
-		const signature = TsFunSig.create(Comments.empty(), IArray.Empty, params, some(resultType));
+	private transformFunctionType(_node: ts.FunctionTypeNode): TsType {
+		// For now, create a basic function type reference
+		// TODO: Implement full function type transformation with proper signature
 
 		return TsTypeRefConstructor.create(
 			Comments.empty(),
@@ -961,6 +1047,63 @@ export class TsParser {
 			// Fallback for complex expressions
 			return TsQIdent.of(TsIdent.simple(node.getText()));
 		}
+	}
+
+	/**
+	 * Extract protection level from modifiers
+	 */
+	private extractProtectionLevel(modifiers?: ts.NodeArray<ts.ModifierLike>): TsProtectionLevel {
+		if (!modifiers) return TsProtectionLevel.default();
+
+		for (const modifier of modifiers) {
+			switch (modifier.kind) {
+				case ts.SyntaxKind.PrivateKeyword:
+					return TsProtectionLevel.private();
+				case ts.SyntaxKind.ProtectedKeyword:
+					return TsProtectionLevel.protected();
+				case ts.SyntaxKind.PublicKeyword:
+					return TsProtectionLevel.default();
+			}
+		}
+
+		return TsProtectionLevel.default();
+	}
+
+
+
+	/**
+	 * Transform a function-like signature (method, call, construct)
+	 */
+	private transformFunctionSignature(node: ts.SignatureDeclaration): TsFunSig {
+		const comments = Comments.empty();
+		const tparams = this.transformTypeParameters(node.typeParameters);
+		const params = this.transformParameters(node.parameters);
+		const resultType = node.type ? some(this.transformType(node.type)) : none;
+
+		return TsFunSig.create(comments, tparams, params, resultType);
+	}
+
+	/**
+	 * Transform function parameters
+	 */
+	private transformParameters(parameters: ts.NodeArray<ts.ParameterDeclaration>): IArray<TsFunParam> {
+		const transformedParams: any[] = [];
+
+		for (const param of parameters) {
+			const name = TsIdent.simple((param.name as ts.Identifier).text);
+			const tpe = param.type ? some(this.transformType(param.type)) : none;
+			// TODO: Handle optional parameters with param.questionToken
+
+			const funParam = TsFunParam.create(
+				Comments.empty(),
+				name,
+				tpe
+			);
+
+			transformedParams.push(funParam);
+		}
+
+		return IArray.fromArray(transformedParams);
 	}
 
 	/**

@@ -711,6 +711,129 @@ interface Test { }`,
     }
 
     /**
+     * Generate member system test cases
+     */
+    static generateMemberSystemTests(): TestCase[] {
+        return [
+            {
+                name: "interface with method signature",
+                description: "Interface with method signature",
+                input: "interface Service { process(data: string): Promise<void>; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with call signature",
+                description: "Interface with call signature",
+                input: "interface Callable { (input: string): number; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with construct signature",
+                description: "Interface with construct signature",
+                input: "interface Constructable { new (name: string): Object; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with index signature",
+                description: "Interface with index signature",
+                input: "interface Dictionary { [key: string]: any; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with readonly index signature",
+                description: "Interface with readonly index signature",
+                input: "interface ReadonlyDict { readonly [key: string]: string; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with optional method",
+                description: "Interface with optional method signature",
+                input: "interface OptionalMethods { process?(data: string): void; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with readonly property",
+                description: "Interface with readonly property",
+                input: "interface Config { readonly version: string; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with mixed members",
+                description: "Interface with property, method, and index signature",
+                input: `interface Complex {
+                    name: string;
+                    process(data: any): void;
+                    [key: string]: any;
+                }`,
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with generic method",
+                description: "Interface with generic method signature",
+                input: "interface Generic { transform<T>(input: T): T; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with overloaded methods",
+                description: "Interface with method overloads",
+                input: `interface Overloaded {
+                    process(data: string): string;
+                    process(data: number): number;
+                }`,
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with function type property",
+                description: "Interface with function type property",
+                input: "interface WithFunction { handler: (event: Event) => void; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            },
+            {
+                name: "interface with numeric index signature",
+                description: "Interface with numeric index signature",
+                input: "interface ArrayLike { [index: number]: string; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.MEMBERS
+            }
+        ];
+    }
+
+    /**
      * Generate all test cases
      */
     static generateAllTests(): TestCase[] {
@@ -726,7 +849,8 @@ interface Test { }`,
             ...this.generateModuleTests(),
             ...this.generateEnumTests(),
             ...this.generateClassTests(),
-            ...this.generateAdvancedTypeTests()
+            ...this.generateAdvancedTypeTests(),
+            ...this.generateMemberSystemTests()
         ];
     }
 }
