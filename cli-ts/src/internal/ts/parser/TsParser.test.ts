@@ -325,6 +325,20 @@ describe("TsParser", () => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
+
+		describe("Enum Declarations", () => {
+			const enumTests = TestDataGenerator.generateEnumTests();
+			enumTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Class Declarations", () => {
+			const classTests = TestDataGenerator.generateClassTests();
+			classTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
 	});
 
 	describe("Performance Benchmarks", () => {

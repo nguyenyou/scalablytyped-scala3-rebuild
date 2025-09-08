@@ -480,6 +480,121 @@ interface Test { }`,
     }
 
     /**
+     * Generate enum declaration test cases
+     */
+    static generateEnumTests(): TestCase[] {
+        return [
+            {
+                name: "simple enum",
+                description: "Basic enum declaration",
+                input: "enum Color { Red, Green, Blue }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclEnum"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "enum with values",
+                description: "Enum with explicit values",
+                input: "enum Status { Active = 1, Inactive = 0 }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclEnum"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "const enum",
+                description: "Const enum declaration",
+                input: "const enum Direction { Up, Down, Left, Right }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclEnum"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "declared enum",
+                description: "Ambient enum declaration",
+                input: "declare enum GlobalEnum { Value1, Value2 }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclEnum"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "string enum",
+                description: "Enum with string values",
+                input: 'enum Theme { Light = "light", Dark = "dark" }',
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclEnum"],
+                category: TestCategory.DECLARATIONS
+            }
+        ];
+    }
+
+    /**
+     * Generate class declaration test cases
+     */
+    static generateClassTests(): TestCase[] {
+        return [
+            {
+                name: "simple class",
+                description: "Basic class declaration",
+                input: "class MyClass { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "class with inheritance",
+                description: "Class extending another class",
+                input: "class Child extends Parent { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "class with interface implementation",
+                description: "Class implementing interfaces",
+                input: "class MyClass implements IInterface1, IInterface2 { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "abstract class",
+                description: "Abstract class declaration",
+                input: "abstract class AbstractClass { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "declared class",
+                description: "Ambient class declaration",
+                input: "declare class ExternalClass { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "generic class",
+                description: "Class with type parameters",
+                input: "class Container<T> { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclClass"],
+                category: TestCategory.DECLARATIONS
+            }
+        ];
+    }
+
+    /**
      * Generate all test cases
      */
     static generateAllTests(): TestCase[] {
@@ -492,7 +607,9 @@ interface Test { }`,
             ...this.generateShebangTests(),
             ...this.generateGenericTests(),
             ...this.generateNamespaceTests(),
-            ...this.generateModuleTests()
+            ...this.generateModuleTests(),
+            ...this.generateEnumTests(),
+            ...this.generateClassTests()
         ];
     }
 }

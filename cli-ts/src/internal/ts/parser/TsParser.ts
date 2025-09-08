@@ -366,9 +366,9 @@ export class TsParser {
 				return this.transformModuleDeclaration(statement as ts.ModuleDeclaration);
 			case ts.SyntaxKind.EnumDeclaration:
 				return this.transformEnumDeclaration(statement as ts.EnumDeclaration);
+			case ts.SyntaxKind.ClassDeclaration:
+				return this.transformClassDeclaration(statement as ts.ClassDeclaration);
 			// TODO: Implement these declaration types
-			// case ts.SyntaxKind.ClassDeclaration:
-			// 	return this.transformClassDeclaration(statement as ts.ClassDeclaration);
 			// case ts.SyntaxKind.ImportDeclaration:
 			// 	return this.transformImportDeclaration(statement as ts.ImportDeclaration);
 			// case ts.SyntaxKind.ExportDeclaration:
@@ -730,6 +730,80 @@ export class TsParser {
 			_tag: "TsExprLiteral",
 			value: node.getText()
 		};
+	}
+
+	/**
+	 * Transform a TypeScript class declaration
+	 */
+	private transformClassDeclaration(node: ts.ClassDeclaration): TsDeclClass {
+		const comments = Comments.empty();
+		const declared = this.hasModifier(node, ts.SyntaxKind.DeclareKeyword);
+		const isAbstract = this.hasModifier(node, ts.SyntaxKind.AbstractKeyword);
+		const name = node.name ? TsIdent.simple(node.name.text) : TsIdent.simple("default");
+		const tparams = this.transformTypeParameters(node.typeParameters);
+
+		// Transform extends clause
+		const parent = node.heritageClauses?.find(clause => clause.token === ts.SyntaxKind.ExtendsKeyword);
+		const parentType = parent?.types[0] ? some(this.transformHeritageClause(parent.types[0])) : none;
+
+		// Transform implements clause
+		const implementsClause = node.heritageClauses?.find(clause => clause.token === ts.SyntaxKind.ImplementsKeyword);
+		const implementsTypes = implementsClause?.types ?
+			IArray.fromArray(implementsClause.types.map(type => this.transformHeritageClause(type))) :
+			IArray.Empty;
+
+		// Transform class members
+		const members = this.transformClassMembers(node.members);
+
+		return TsDeclClassConstructor.create(
+			comments,
+			declared,
+			isAbstract,
+			name,
+			tparams,
+			parentType,
+			implementsTypes,
+			members,
+			JsLocation.zero(),
+			CodePath.noPath()
+		);
+	}
+
+	/**
+	 * Transform heritage clause (extends/implements)
+	 */
+	private transformHeritageClause(node: ts.ExpressionWithTypeArguments): TsTypeRef {
+		const name = this.extractQualifiedName(node.expression);
+		const typeArgs = node.typeArguments ?
+			IArray.fromArray(node.typeArguments.map(arg => this.transformType(arg))) :
+			IArray.Empty;
+
+		return TsTypeRefConstructor.create(Comments.empty(), name, typeArgs);
+	}
+
+	/**
+	 * Extract qualified name from expression
+	 */
+	private extractQualifiedName(node: ts.Expression): TsQIdent {
+		if (ts.isIdentifier(node)) {
+			return TsQIdent.of(TsIdent.simple(node.text));
+		} else if (ts.isPropertyAccessExpression(node)) {
+			const left = this.extractQualifiedName(node.expression);
+			const right = TsIdent.simple(node.name.text);
+			return TsQIdent.append(left, right);
+		} else {
+			// Fallback for complex expressions
+			return TsQIdent.of(TsIdent.simple(node.getText()));
+		}
+	}
+
+	/**
+	 * Transform class members (basic implementation)
+	 */
+	private transformClassMembers(members: ts.NodeArray<ts.ClassElement>): IArray<TsMember> {
+		// For now, return empty array - we'll implement member transformation later
+		// TODO: Implement full class member transformation
+		return IArray.Empty;
 	}
 
 	/**
