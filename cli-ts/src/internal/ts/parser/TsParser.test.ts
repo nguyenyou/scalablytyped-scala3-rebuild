@@ -311,6 +311,20 @@ describe("TsParser", () => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
+
+		describe("Namespace Declarations", () => {
+			const namespaceTests = TestDataGenerator.generateNamespaceTests();
+			namespaceTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Module Declarations", () => {
+			const moduleTests = TestDataGenerator.generateModuleTests();
+			moduleTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
 	});
 
 	describe("Performance Benchmarks", () => {

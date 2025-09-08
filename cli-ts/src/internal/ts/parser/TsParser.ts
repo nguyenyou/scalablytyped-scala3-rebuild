@@ -26,11 +26,20 @@ import {
 	type TsDeclTypeAlias,
 	type TsDeclVar,
 	type TsDeclFunction,
+	type TsDeclNamespace,
+	type TsDeclModule,
+	type TsGlobal,
+	type TsImport,
+	type TsExport,
+	type TsDeclEnum,
+	type TsDeclClass,
 	type TsType,
 	type TsTypeRef,
 	type TsIdentSimple,
+	type TsIdentModule,
 	type TsMember,
 	type TsTypeParam,
+	type TsEnumMember,
 	TsIdent,
 	TsQIdent,
 	TsTypeRef as TsTypeRefConstructor,
@@ -39,9 +48,17 @@ import {
 	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
 	TsDeclVar as TsDeclVarConstructor,
 	TsDeclFunction as TsDeclFunctionConstructor,
+	TsDeclNamespace as TsDeclNamespaceConstructor,
+	TsDeclModule as TsDeclModuleConstructor,
+	TsGlobal as TsGlobalConstructor,
+	TsImport as TsImportConstructor,
+	TsExport as TsExportConstructor,
+	TsDeclEnum as TsDeclEnumConstructor,
+	TsDeclClass as TsDeclClassConstructor,
 	TsTypeUnion,
 	TsFunSig,
 	TsTypeParam as TsTypeParamConstructor,
+	TsEnumMember as TsEnumMemberConstructor,
 } from "../trees.js";
 
 /**
@@ -345,6 +362,19 @@ export class TsParser {
 				return this.transformVariableStatement(statement as ts.VariableStatement);
 			case ts.SyntaxKind.FunctionDeclaration:
 				return this.transformFunctionDeclaration(statement as ts.FunctionDeclaration);
+			case ts.SyntaxKind.ModuleDeclaration:
+				return this.transformModuleDeclaration(statement as ts.ModuleDeclaration);
+			case ts.SyntaxKind.EnumDeclaration:
+				return this.transformEnumDeclaration(statement as ts.EnumDeclaration);
+			// TODO: Implement these declaration types
+			// case ts.SyntaxKind.ClassDeclaration:
+			// 	return this.transformClassDeclaration(statement as ts.ClassDeclaration);
+			// case ts.SyntaxKind.ImportDeclaration:
+			// 	return this.transformImportDeclaration(statement as ts.ImportDeclaration);
+			// case ts.SyntaxKind.ExportDeclaration:
+			// 	return this.transformExportDeclaration(statement as ts.ExportDeclaration);
+			// case ts.SyntaxKind.ExportAssignment:
+			// 	return this.transformExportAssignment(statement as ts.ExportAssignment);
 			default:
 				// For now, skip unsupported statement types
 				return null;
@@ -546,6 +576,160 @@ export class TsParser {
 			constraint,
 			defaultType
 		);
+	}
+
+	/**
+	 * Transform a TypeScript module declaration (namespace or module)
+	 */
+	private transformModuleDeclaration(node: ts.ModuleDeclaration): TsContainerOrDecl {
+		const comments = Comments.empty();
+		const declared = this.hasModifier(node, ts.SyntaxKind.DeclareKeyword);
+
+		// Check if this is a namespace or module
+		if (node.name.kind === ts.SyntaxKind.Identifier) {
+			// This is a namespace declaration
+			const name = TsIdent.simple((node.name as ts.Identifier).text);
+			const members = node.body ? this.transformModuleBody(node.body) : IArray.Empty;
+
+			return TsDeclNamespaceConstructor.create(
+				comments,
+				declared,
+				name,
+				members,
+				CodePath.noPath(),
+				JsLocation.zero()
+			);
+		} else if (node.name.kind === ts.SyntaxKind.StringLiteral) {
+			// This is a module declaration
+			const moduleText = (node.name as ts.StringLiteral).text;
+			const moduleName = this.parseModuleName(moduleText);
+			const members = node.body ? this.transformModuleBody(node.body) : IArray.Empty;
+
+			return TsDeclModuleConstructor.create(
+				comments,
+				declared,
+				moduleName,
+				members,
+				CodePath.noPath(),
+				JsLocation.zero(),
+				IArray.Empty // augmentedModules
+			);
+		} else {
+			// Fallback - treat as namespace
+			const name = TsIdent.simple("unknown");
+			return TsDeclNamespaceConstructor.create(
+				comments,
+				declared,
+				name,
+				IArray.Empty,
+				CodePath.noPath(),
+				JsLocation.zero()
+			);
+		}
+	}
+
+	/**
+	 * Transform module body (namespace or module contents)
+	 */
+	private transformModuleBody(body: ts.ModuleBody): IArray<TsContainerOrDecl> {
+		if (ts.isModuleBlock(body)) {
+			return this.transformStatements(body.statements);
+		} else if (ts.isModuleDeclaration(body)) {
+			// Nested module declaration
+			const nestedModule = this.transformModuleDeclaration(body);
+			return IArray.fromArray([nestedModule]);
+		} else {
+			return IArray.Empty;
+		}
+	}
+
+	/**
+	 * Parse module name from string literal
+	 */
+	private parseModuleName(moduleText: string): TsIdentModule {
+		// Handle scoped modules like "@types/node"
+		if (moduleText.startsWith("@")) {
+			const parts = moduleText.slice(1).split("/");
+			if (parts.length >= 2) {
+				const scope = parts[0];
+				const fragments = parts.slice(1);
+				return TsIdent.module(some(scope), fragments);
+			}
+		}
+
+		// Handle regular modules like "lodash" or "path/to/module"
+		const fragments = moduleText.split("/");
+		return TsIdent.module(none, fragments);
+	}
+
+	/**
+	 * Check if a node has a specific modifier
+	 */
+	private hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
+		return ts.canHaveModifiers(node) &&
+			   ts.getModifiers(node)?.some(modifier => modifier.kind === kind) || false;
+	}
+
+	/**
+	 * Transform a TypeScript enum declaration
+	 */
+	private transformEnumDeclaration(node: ts.EnumDeclaration): TsDeclEnum {
+		const comments = Comments.empty();
+		const declared = this.hasModifier(node, ts.SyntaxKind.DeclareKeyword);
+		const isConst = this.hasModifier(node, ts.SyntaxKind.ConstKeyword);
+		const name = TsIdent.simple(node.name.text);
+		const members = this.transformEnumMembers(node.members);
+
+		return TsDeclEnumConstructor.create(
+			comments,
+			declared,
+			isConst,
+			name,
+			members,
+			!isConst, // const enums don't create runtime values
+			none, // exportedFrom
+			JsLocation.zero(),
+			CodePath.noPath()
+		);
+	}
+
+	/**
+	 * Transform enum members
+	 */
+	private transformEnumMembers(members: ts.NodeArray<ts.EnumMember>): IArray<TsEnumMember> {
+		const transformedMembers: TsEnumMember[] = [];
+
+		for (const member of members) {
+			const transformedMember = this.transformEnumMember(member);
+			transformedMembers.push(transformedMember);
+		}
+
+		return IArray.fromArray(transformedMembers);
+	}
+
+	/**
+	 * Transform a single enum member
+	 */
+	private transformEnumMember(member: ts.EnumMember): TsEnumMember {
+		const comments = Comments.empty();
+		const name = TsIdent.simple(member.name.getText());
+
+		// Transform initializer expression if present
+		const expr = member.initializer ? some(this.transformExpression(member.initializer)) : none;
+
+		return TsEnumMemberConstructor.create(comments, name, expr);
+	}
+
+	/**
+	 * Transform a TypeScript expression (basic implementation)
+	 */
+	private transformExpression(node: ts.Expression): any {
+		// For now, return a simple representation
+		// TODO: Implement full expression transformation
+		return {
+			_tag: "TsExprLiteral",
+			value: node.getText()
+		};
 	}
 
 	/**

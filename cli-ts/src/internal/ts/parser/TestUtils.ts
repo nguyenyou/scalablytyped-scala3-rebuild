@@ -397,6 +397,89 @@ interface Test { }`,
     }
 
     /**
+     * Generate namespace declaration test cases
+     */
+    static generateNamespaceTests(): TestCase[] {
+        return [
+            {
+                name: "simple namespace",
+                description: "Basic namespace declaration",
+                input: "namespace MyNamespace { interface Test { } }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclNamespace"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "declared namespace",
+                description: "Ambient namespace declaration",
+                input: "declare namespace MyNamespace { interface Test { } }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclNamespace"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "nested namespace",
+                description: "Namespace with nested namespace",
+                input: `namespace Outer {
+                    namespace Inner {
+                        interface Test { }
+                    }
+                }`,
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclNamespace"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "empty namespace",
+                description: "Namespace with no members",
+                input: "namespace Empty { }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclNamespace"],
+                category: TestCategory.DECLARATIONS
+            }
+        ];
+    }
+
+    /**
+     * Generate module declaration test cases
+     */
+    static generateModuleTests(): TestCase[] {
+        return [
+            {
+                name: "simple module",
+                description: "Basic module declaration",
+                input: 'module "my-module" { interface Test { } }',
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclModule"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "declared module",
+                description: "Ambient module declaration",
+                input: 'declare module "my-module" { interface Test { } }',
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclModule"],
+                category: TestCategory.DECLARATIONS
+            },
+            {
+                name: "scoped module",
+                description: "Scoped module declaration",
+                input: 'declare module "@types/node" { interface Test { } }',
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclModule"],
+                category: TestCategory.DECLARATIONS
+            }
+        ];
+    }
+
+    /**
      * Generate all test cases
      */
     static generateAllTests(): TestCase[] {
@@ -407,7 +490,9 @@ interface Test { }`,
             ...this.generateErrorTests(),
             ...this.generateDirectiveTests(),
             ...this.generateShebangTests(),
-            ...this.generateGenericTests()
+            ...this.generateGenericTests(),
+            ...this.generateNamespaceTests(),
+            ...this.generateModuleTests()
         ];
     }
 }
