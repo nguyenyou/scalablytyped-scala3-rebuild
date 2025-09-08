@@ -8,7 +8,14 @@
  */
 
 import { describe, expect, test } from "vitest";
-import type { TsDeclInterface, TsDeclTypeAlias, TsDeclVar, TsImport, TsExport, TsContainerOrDecl } from "../trees.js";
+import type {
+	TsContainerOrDecl,
+	TsDeclInterface,
+	TsDeclTypeAlias,
+	TsDeclVar,
+	TsExport,
+	TsImport,
+} from "../trees.js";
 import {
 	PerformanceTester,
 	TestDataGenerator,
@@ -409,7 +416,9 @@ describe("TsParser", () => {
 	describe("Import/Export System", () => {
 		describe("Import Declarations", () => {
 			test("should parse default import", () => {
-				const result = parseAndExtractDeclarations(`import React from "react";`);
+				const result = parseAndExtractDeclarations(
+					`import React from "react";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -426,7 +435,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse named imports", () => {
-				const result = parseAndExtractDeclarations(`import { useState, useEffect } from "react";`);
+				const result = parseAndExtractDeclarations(
+					`import { useState, useEffect } from "react";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -440,7 +451,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse named imports with aliases", () => {
-				const result = parseAndExtractDeclarations(`import { useState as state, useEffect as effect } from "react";`);
+				const result = parseAndExtractDeclarations(
+					`import { useState as state, useEffect as effect } from "react";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -452,7 +465,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse star import", () => {
-				const result = parseAndExtractDeclarations(`import * as React from "react";`);
+				const result = parseAndExtractDeclarations(
+					`import * as React from "react";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -467,7 +482,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse type-only import", () => {
-				const result = parseAndExtractDeclarations(`import type { Props } from "./types";`);
+				const result = parseAndExtractDeclarations(
+					`import type { Props } from "./types";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -480,7 +497,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse mixed default and named import", () => {
-				const result = parseAndExtractDeclarations(`import React, { useState } from "react";`);
+				const result = parseAndExtractDeclarations(
+					`import React, { useState } from "react";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -510,7 +529,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse named export with aliases", () => {
-				const result = parseAndExtractDeclarations(`export { foo as bar, baz };`);
+				const result = parseAndExtractDeclarations(
+					`export { foo as bar, baz };`,
+				);
 				expect(result).toHaveLength(1);
 
 				const exportDecl = result[0] as TsExport;
@@ -520,7 +541,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse re-export", () => {
-				const result = parseAndExtractDeclarations(`export { foo } from "module";`);
+				const result = parseAndExtractDeclarations(
+					`export { foo } from "module";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const exportDecl = result[0] as TsExport;
@@ -540,7 +563,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse star export with alias", () => {
-				const result = parseAndExtractDeclarations(`export * as namespace from "module";`);
+				const result = parseAndExtractDeclarations(
+					`export * as namespace from "module";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const exportDecl = result[0] as TsExport;
@@ -598,7 +623,9 @@ describe("TsParser", () => {
 			});
 
 			test("should parse scoped module imports", () => {
-				const result = parseAndExtractDeclarations(`import { Component } from "@angular/core";`);
+				const result = parseAndExtractDeclarations(
+					`import { Component } from "@angular/core";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
@@ -609,12 +636,18 @@ describe("TsParser", () => {
 			});
 
 			test("should parse relative path imports", () => {
-				const result = parseAndExtractDeclarations(`import { utils } from "./utils/helper";`);
+				const result = parseAndExtractDeclarations(
+					`import { utils } from "./utils/helper";`,
+				);
 				expect(result).toHaveLength(1);
 
 				const importDecl = result[0] as TsImport;
 				expect(importDecl._tag).toBe("TsImport");
-				expect((importDecl.from as any).from.fragments).toEqual([".", "utils", "helper"]);
+				expect((importDecl.from as any).from.fragments).toEqual([
+					".",
+					"utils",
+					"helper",
+				]);
 			});
 		});
 	});
