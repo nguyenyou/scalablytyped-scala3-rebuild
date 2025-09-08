@@ -5,7 +5,7 @@
 
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { right } from "fp-ts/Either";
+import { left, right } from "fp-ts/Either";
 import * as fs from "fs-extra";
 import * as path from "path";
 import * as os from "os";
@@ -229,6 +229,137 @@ describe("Phase1ReadTypescript", () => {
 			if (result._tag === "Ok") {
 				expect(result.value.name.value).toBe("test-lib");
 			}
+		});
+	});
+
+	describe("Error Handling", () => {
+		test("should handle parser errors gracefully", async () => {
+			const resolver = createMockLibraryResolver();
+			const calculateVersion = new PackageJsonOnly();
+			const ignored = new Set<TsIdentLibrary>();
+			const ignoredModulePrefixes = new Set<string[]>();
+			const pedantic = false;
+
+			// Create a parser that always fails
+			const failingParser = (_file: InFile) => {
+				return left("Parse error: Invalid TypeScript syntax");
+			};
+
+			const expandTypeMappings = Selection.All<TsIdentLibrary>();
+
+			const config: Phase1Config = {
+				resolve: resolver,
+				calculateLibraryVersion: calculateVersion,
+				ignored,
+				ignoredModulePrefixes,
+				pedantic,
+				parser: failingParser,
+				expandTypeMappings,
+			};
+
+			const phase = new Phase1ReadTypescript(config);
+
+			const libDir = path.join(tempDir, "node_modules", "error-lib");
+			createTestDir(libDir);
+			createTestFile(path.join(libDir, "index.d.ts"), "invalid typescript syntax");
+
+			const source = new LibTsSource.FromFolder(
+				new InFolder(libDir),
+				TsIdentLibrary.construct("error-lib"),
+			);
+			const getDeps = createMockGetDeps();
+			const isCircular = false;
+			const logger = createMockLogger();
+
+			const result = phase.apply(source, source, getDeps, isCircular, logger);
+
+			// Should ignore when no files can be parsed
+			expect(result._tag).toBe("Ignore");
+		});
+
+		test("should handle getDeps failure", async () => {
+			const resolver = createMockLibraryResolver();
+			const calculateVersion = new PackageJsonOnly();
+			const ignored = new Set<TsIdentLibrary>();
+			const ignoredModulePrefixes = new Set<string[]>();
+			const pedantic = false;
+			const parser = createMockParser();
+			const expandTypeMappings = Selection.All<TsIdentLibrary>();
+
+			const config: Phase1Config = {
+				resolve: resolver,
+				calculateLibraryVersion: calculateVersion,
+				ignored,
+				ignoredModulePrefixes,
+				pedantic,
+				parser,
+				expandTypeMappings,
+			};
+
+			const phase = new Phase1ReadTypescript(config);
+
+			const libDir = path.join(tempDir, "node_modules", "deps-error-lib");
+			createTestDir(libDir);
+			createTestFile(path.join(libDir, "index.d.ts"), "export const test = 'value';");
+
+			const source = new LibTsSource.FromFolder(
+				new InFolder(libDir),
+				TsIdentLibrary.construct("deps-error-lib"),
+			);
+
+			// Create a getDeps function that returns failure
+			const failingGetDeps = (_deps: SortedSet<LibTsSource>) => {
+				return PhaseRes.Failure<LibTsSource, SortedMap<LibTsSource, LibTs>>(
+					new Map([[source, right("Dependency resolution failed")]])
+				);
+			};
+
+			const isCircular = false;
+			const logger = createMockLogger();
+
+			const result = phase.apply(source, source, failingGetDeps, isCircular, logger);
+
+			expect(result._tag).toBe("Failure");
+		});
+	});
+
+	describe("Edge Cases", () => {
+		test("should handle empty library name", async () => {
+			const resolver = createMockLibraryResolver();
+			const calculateVersion = new PackageJsonOnly();
+			const ignored = new Set<TsIdentLibrary>();
+			const ignoredModulePrefixes = new Set<string[]>();
+			const pedantic = false;
+			const parser = createMockParser();
+			const expandTypeMappings = Selection.All<TsIdentLibrary>();
+
+			const config: Phase1Config = {
+				resolve: resolver,
+				calculateLibraryVersion: calculateVersion,
+				ignored,
+				ignoredModulePrefixes,
+				pedantic,
+				parser,
+				expandTypeMappings,
+			};
+
+			const phase = new Phase1ReadTypescript(config);
+
+			const libDir = path.join(tempDir, "node_modules", "");
+			createTestDir(libDir);
+
+			const source = new LibTsSource.FromFolder(
+				new InFolder(libDir),
+				TsIdentLibrary.construct(""),
+			);
+			const getDeps = createMockGetDeps();
+			const isCircular = false;
+			const logger = createMockLogger();
+
+			const result = phase.apply(source, source, getDeps, isCircular, logger);
+
+			// Should handle empty library name gracefully
+			expect(result._tag).toBe("Ok");
 		});
 	});
 });
