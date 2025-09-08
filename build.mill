@@ -2,7 +2,6 @@
 //| mvnDeps: 
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 //| - com.goyeau::mill-scalafix::0.6.0
-//| - com.lihaoyi::mill-contrib-scoverage:$MILL_VERSION
 
 import mill.*, scalalib.*
 import os.*
@@ -10,7 +9,6 @@ import mill.contrib.buildinfo.BuildInfo
 import mill.scalajslib.*
 import mill.scalajslib.api.*
 import com.goyeau.mill.scalafix.ScalafixModule
-import mill.contrib.scoverage.ScoverageModule
 
 object Versions {
   val scala3                 = "3.7.2"
