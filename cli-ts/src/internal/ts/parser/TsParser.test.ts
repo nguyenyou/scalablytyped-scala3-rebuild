@@ -650,5 +650,183 @@ describe("TsParser", () => {
 				]);
 			});
 		});
+
+		describe("Advanced Type System Features", () => {
+			describe("Keyof Operator", () => {
+				test("should parse keyof type", () => {
+					const content = "type Keys = keyof MyInterface;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+						const member = file.members.apply(0);
+						expect(member._tag).toBe("TsDeclTypeAlias");
+					}
+				});
+
+				test("should parse complex keyof expression", () => {
+					const content = "type ComplexKeys = keyof (A & B);";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Indexed Access Types", () => {
+				test("should parse indexed access type", () => {
+					const content = "type Value = MyType[K];";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+					}
+				});
+
+				test("should parse nested indexed access", () => {
+					const content = "type NestedValue = MyType[K][P];";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Conditional Types", () => {
+				test("should parse simple conditional type", () => {
+					const content = "type IsString<T> = T extends string ? true : false;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+					}
+				});
+
+				test("should parse complex conditional type", () => {
+					const content = "type ReturnType<T> = T extends (...args: any[]) => infer R ? R : any;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse nested conditional types", () => {
+					const content = "type Complex<T> = T extends string ? string[] : T extends number ? number[] : never;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Infer Types", () => {
+				test("should parse infer in conditional type", () => {
+					const content = "type ElementType<T> = T extends (infer U)[] ? U : never;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse multiple infer types", () => {
+					const content = "type Parameters<T> = T extends (...args: infer P) => infer R ? P : never;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Template Literal Types", () => {
+				test("should parse simple template literal type", () => {
+					const content = "type Greeting = `Hello, ${string}!`;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+					}
+				});
+
+				test("should parse complex template literal type", () => {
+					const content = "type EventName<T> = `on${Capitalize<T>}Change`;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse multiple interpolations", () => {
+					const content = "type Path = `${string}/${string}/${string}`;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Mapped Types", () => {
+				test("should parse simple mapped type", () => {
+					const content = "type Readonly<T> = { readonly [P in keyof T]: T[P] };";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+					}
+				});
+
+				test("should parse optional mapped type", () => {
+					const content = "type Partial<T> = { [P in keyof T]?: T[P] };";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse mapped type with key remapping", () => {
+					const content = "type Getters<T> = { [K in keyof T as `get${Capitalize<string & K>}`]: () => T[K] };";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse mapped type with modifiers", () => {
+					const content = "type Required<T> = { [P in keyof T]-?: T[P] };";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Type Queries (typeof)", () => {
+				test("should parse typeof type query", () => {
+					const content = "type TypeOfValue = typeof myValue;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+					if (result._tag === "Right") {
+						const file = result.value;
+						expect(file.members.length).toBe(1);
+					}
+				});
+
+				test("should parse typeof with property access", () => {
+					const content = "type TypeOfProperty = typeof myObject.property;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+
+			describe("Advanced Type Combinations", () => {
+				test("should parse utility type combinations", () => {
+					const content = "type PickPartial<T, K extends keyof T> = Partial<Pick<T, K>>;";
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse complex type manipulation", () => {
+					const content = `
+						type DeepReadonly<T> = {
+							readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P]
+						};
+					`;
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+
+				test("should parse advanced conditional with template literals", () => {
+					const content = `
+						type EventHandlers<T> = {
+							[K in keyof T as K extends string ? \`on\${Capitalize<K>}\` : never]: (value: T[K]) => void
+						};
+					`;
+					const result = parseString(content);
+					expect(result._tag).toBe("Right");
+				});
+			});
+		});
 	});
 });

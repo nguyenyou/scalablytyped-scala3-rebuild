@@ -20,6 +20,8 @@ import { CodePath } from "../CodePath.js";
 import { Directive } from "../Directive.js";
 import { ExportType } from "../ExportType.js";
 import { JsLocation } from "../JsLocation.js";
+import { ReadonlyModifier } from "../ReadonlyModifier.js";
+import { OptionalModifier } from "../OptionalModifier.js";
 import {
 	type TsContainerOrDecl,
 	type TsDeclClass,
@@ -82,6 +84,16 @@ import {
 	TsTypeRef as TsTypeRefConstructor,
 	TsTypeTuple,
 	TsTypeUnion,
+	TsTypeKeyOf,
+	TsTypeLookup,
+	TsTypeConditional,
+	TsTypeExtends,
+	TsTypeInfer,
+	TsTypeTemplateLiteral,
+	TsTemplatePart,
+	TsTemplatePartLiteral,
+	TsTemplatePartType,
+	TsMemberTypeMapped,
 } from "../trees.js";
 
 /**
@@ -704,6 +716,20 @@ export class TsParser {
 				return this.transformArrayType(node as ts.ArrayTypeNode);
 			case ts.SyntaxKind.FunctionType:
 				return this.transformFunctionType(node as ts.FunctionTypeNode);
+			case ts.SyntaxKind.TypeOperator:
+				return this.transformTypeOperator(node as ts.TypeOperatorNode);
+			case ts.SyntaxKind.IndexedAccessType:
+				return this.transformIndexedAccessType(node as ts.IndexedAccessTypeNode);
+			case ts.SyntaxKind.ConditionalType:
+				return this.transformConditionalType(node as ts.ConditionalTypeNode);
+			case ts.SyntaxKind.InferType:
+				return this.transformInferType(node as ts.InferTypeNode);
+			case ts.SyntaxKind.TemplateLiteralType:
+				return this.transformTemplateLiteralType(node as ts.TemplateLiteralTypeNode);
+			case ts.SyntaxKind.MappedType:
+				return this.transformMappedType(node as ts.MappedTypeNode);
+			case ts.SyntaxKind.TypeQuery:
+				return this.transformTypeQuery(node as ts.TypeQueryNode);
 			default:
 				// For unsupported types, return string type with a warning comment
 				return TsTypeRefConstructor.create(
@@ -1431,6 +1457,166 @@ export class TsParser {
 		const exported = TsExporteeTree.create(mockDecl);
 
 		return TsExportConstructor.create(comments, typeOnly, exportType, exported);
+	}
+
+	/**
+	 * Transform a TypeScript type operator (keyof, readonly, unique)
+	 */
+	private transformTypeOperator(node: ts.TypeOperatorNode): TsType {
+		switch (node.operator) {
+			case ts.SyntaxKind.KeyOfKeyword:
+				return TsTypeKeyOf.create(this.transformType(node.type));
+			case ts.SyntaxKind.ReadonlyKeyword:
+				// Readonly modifier - return the inner type with readonly comment
+				const innerType = this.transformType(node.type);
+				return this.addCommentToType(innerType, "readonly");
+			case ts.SyntaxKind.UniqueKeyword:
+				// Unique symbol - return symbol type with unique comment
+				const uniqueType = this.transformType(node.type);
+				return this.addCommentToType(uniqueType, "unique");
+			default:
+				// Unsupported operator
+				return TsTypeRefConstructor.create(
+					Comments.apply([new Raw(`/* Unsupported operator: ${ts.SyntaxKind[node.operator]} */`)]),
+					TsQIdent.ofStrings("unknown"),
+					IArray.Empty,
+				);
+		}
+	}
+
+	/**
+	 * Transform a TypeScript indexed access type (T[K])
+	 */
+	private transformIndexedAccessType(node: ts.IndexedAccessTypeNode): TsType {
+		const objectType = this.transformType(node.objectType);
+		const indexType = this.transformType(node.indexType);
+		return TsTypeLookup.create(objectType, indexType);
+	}
+
+	/**
+	 * Transform a TypeScript conditional type (T extends U ? X : Y)
+	 */
+	private transformConditionalType(node: ts.ConditionalTypeNode): TsType {
+		const checkType = this.transformType(node.checkType);
+		const extendsType = this.transformType(node.extendsType);
+		const trueType = this.transformType(node.trueType);
+		const falseType = this.transformType(node.falseType);
+
+		// Create the extends predicate
+		const predicate = TsTypeExtends.create(checkType, extendsType);
+
+		return TsTypeConditional.create(predicate, trueType, falseType);
+	}
+
+	/**
+	 * Transform a TypeScript infer type (infer T)
+	 */
+	private transformInferType(node: ts.InferTypeNode): TsType {
+		const typeParam = this.transformTypeParameter(node.typeParameter);
+		return TsTypeInfer.create(typeParam);
+	}
+
+	/**
+	 * Transform a TypeScript template literal type
+	 */
+	private transformTemplateLiteralType(node: ts.TemplateLiteralTypeNode): TsType {
+		const parts: TsTemplatePart[] = [];
+
+		// Add the head (first literal part)
+		if (node.head.text) {
+			parts.push(TsTemplatePartLiteral.create(node.head.text));
+		}
+
+		// Add template spans (type + literal pairs)
+		for (const span of node.templateSpans) {
+			// Add the type interpolation
+			const spanType = this.transformType(span.type);
+			parts.push(TsTemplatePartType.create(spanType));
+
+			// Add the literal part after the interpolation
+			if (span.literal.text) {
+				parts.push(TsTemplatePartLiteral.create(span.literal.text));
+			}
+		}
+
+		return TsTypeTemplateLiteral.create(IArray.fromArray(parts));
+	}
+
+	/**
+	 * Transform a TypeScript mapped type ({ [K in keyof T]: T[K] })
+	 */
+	private transformMappedType(node: ts.MappedTypeNode): TsType {
+		// Extract the key parameter
+		const keyParam = TsIdent.simple(node.typeParameter.name.text);
+
+		// Extract the constraint (what we're mapping over)
+		const constraint = node.typeParameter.constraint
+			? this.transformType(node.typeParameter.constraint)
+			: TsTypeRefConstructor.any;
+
+		// Extract the mapped type
+		const mappedType = node.type
+			? this.transformType(node.type)
+			: TsTypeRefConstructor.any;
+
+		// Handle readonly modifier
+		const readonlyModifier = node.readonlyToken
+			? node.readonlyToken.kind === ts.SyntaxKind.ReadonlyKeyword
+				? ReadonlyModifier.yes()
+				: ReadonlyModifier.noop()
+			: ReadonlyModifier.noop();
+
+		// Handle optional modifier
+		const optionalModifier = node.questionToken
+			? OptionalModifier.optionalize()
+			: OptionalModifier.noop();
+
+		// Handle name type (as clause)
+		const nameType = node.nameType
+			? some(this.transformType(node.nameType))
+			: none;
+
+		// Create the mapped member
+		const mappedMember = TsMemberTypeMapped.create(
+			Comments.empty(),
+			TsProtectionLevel.default(),
+			readonlyModifier,
+			keyParam,
+			constraint,
+			nameType,
+			optionalModifier,
+			mappedType,
+		);
+
+		// Return as an object type with the mapped member
+		return TsTypeObject.create(
+			Comments.empty(),
+			IArray.fromArray([mappedMember as TsMember]),
+		);
+	}
+
+	/**
+	 * Helper method to add a comment to a type
+	 */
+	private addCommentToType(type: TsType, comment: string): TsType {
+		const commentObj = new Raw(`/* ${comment} */`);
+		const comments = Comments.apply([commentObj]);
+
+		if (type._tag === "TsTypeRef") {
+			const typeRef = type as TsTypeRef;
+			return TsTypeRefConstructor.create(
+				typeRef.comments.concat(comments),
+				typeRef.name,
+				typeRef.tparams,
+			);
+		}
+
+		// For other types, wrap in a type reference with comments
+		return TsTypeRefConstructor.create(
+			comments,
+			TsQIdent.ofStrings("unknown"),
+			IArray.Empty,
+		);
 	}
 }
 
