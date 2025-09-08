@@ -8,13 +8,24 @@
  */
 
 import { describe, expect, test } from "vitest";
-import type { TsDeclInterface, TsDeclTypeAlias, TsDeclVar } from "../trees.js";
+import type { TsDeclInterface, TsDeclTypeAlias, TsDeclVar, TsImport, TsExport, TsContainerOrDecl } from "../trees.js";
 import {
 	PerformanceTester,
 	TestDataGenerator,
 	TestRunner,
 } from "./TestUtils.js";
 import { parseString } from "./TsParser.js";
+
+/**
+ * Helper function to parse TypeScript code and extract declarations
+ */
+function parseAndExtractDeclarations(code: string): TsContainerOrDecl[] {
+	const result = parseString(code);
+	if (result._tag === "Left") {
+		throw new Error(`Parse error: ${result.value}`);
+	}
+	return result.value.members.toArray();
+}
 
 describe("TsParser", () => {
 	describe("Basic Parsing - Empty File", () => {
@@ -392,6 +403,219 @@ describe("TsParser", () => {
 
 			// Should parse complex declarations in reasonable time
 			expect(avgTime).toBeLessThan(20);
+		});
+	});
+
+	describe("Import/Export System", () => {
+		describe("Import Declarations", () => {
+			test("should parse default import", () => {
+				const result = parseAndExtractDeclarations(`import React from "react";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect(importDecl.typeOnly).toBe(false);
+				expect(importDecl.imported.length).toBe(1);
+
+				const imported = importDecl.imported.get(0);
+				expect(imported._tag).toBe("TsImportedIdent");
+				expect((imported as any).ident.value).toBe("React");
+
+				expect(importDecl.from._tag).toBe("TsImporteeFrom");
+				expect((importDecl.from as any).from.fragments).toEqual(["react"]);
+			});
+
+			test("should parse named imports", () => {
+				const result = parseAndExtractDeclarations(`import { useState, useEffect } from "react";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect(importDecl.typeOnly).toBe(false);
+				expect(importDecl.imported.length).toBe(1);
+
+				const imported = importDecl.imported.get(0);
+				expect(imported._tag).toBe("TsImportedDestructured");
+				expect((imported as any).idents.length).toBe(2);
+			});
+
+			test("should parse named imports with aliases", () => {
+				const result = parseAndExtractDeclarations(`import { useState as state, useEffect as effect } from "react";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+
+				const imported = importDecl.imported.get(0);
+				expect(imported._tag).toBe("TsImportedDestructured");
+				expect((imported as any).idents.length).toBe(2);
+			});
+
+			test("should parse star import", () => {
+				const result = parseAndExtractDeclarations(`import * as React from "react";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect(importDecl.typeOnly).toBe(false);
+				expect(importDecl.imported.length).toBe(1);
+
+				const imported = importDecl.imported.get(0);
+				expect(imported._tag).toBe("TsImportedStar");
+				expect((imported as any).asOpt._tag).toBe("Some");
+				expect((imported as any).asOpt.value.value).toBe("React");
+			});
+
+			test("should parse type-only import", () => {
+				const result = parseAndExtractDeclarations(`import type { Props } from "./types";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect(importDecl.typeOnly).toBe(true);
+				expect(importDecl.imported.length).toBe(1);
+
+				const imported = importDecl.imported.get(0);
+				expect(imported._tag).toBe("TsImportedDestructured");
+			});
+
+			test("should parse mixed default and named import", () => {
+				const result = parseAndExtractDeclarations(`import React, { useState } from "react";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect(importDecl.imported.length).toBe(2);
+
+				const defaultImport = importDecl.imported.get(0);
+				expect(defaultImport._tag).toBe("TsImportedIdent");
+
+				const namedImport = importDecl.imported.get(1);
+				expect(namedImport._tag).toBe("TsImportedDestructured");
+			});
+		});
+
+		describe("Export Declarations", () => {
+			test("should parse named export", () => {
+				const result = parseAndExtractDeclarations(`export { foo, bar };`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.typeOnly).toBe(false);
+				expect(exportDecl.tpe._tag).toBe("Named");
+
+				expect(exportDecl.exported._tag).toBe("TsExporteeNames");
+				expect((exportDecl.exported as any).idents.length).toBe(2);
+			});
+
+			test("should parse named export with aliases", () => {
+				const result = parseAndExtractDeclarations(`export { foo as bar, baz };`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.exported._tag).toBe("TsExporteeNames");
+				expect((exportDecl.exported as any).idents.length).toBe(2);
+			});
+
+			test("should parse re-export", () => {
+				const result = parseAndExtractDeclarations(`export { foo } from "module";`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.exported._tag).toBe("TsExporteeNames");
+				expect((exportDecl.exported as any).fromOpt._tag).toBe("Some");
+			});
+
+			test("should parse star export", () => {
+				const result = parseAndExtractDeclarations(`export * from "module";`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.exported._tag).toBe("TsExporteeStar");
+				expect((exportDecl.exported as any).as._tag).toBe("None");
+			});
+
+			test("should parse star export with alias", () => {
+				const result = parseAndExtractDeclarations(`export * as namespace from "module";`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.exported._tag).toBe("TsExporteeStar");
+				expect((exportDecl.exported as any).as._tag).toBe("Some");
+				expect((exportDecl.exported as any).as.value.value).toBe("namespace");
+			});
+
+			test("should parse type-only export", () => {
+				const result = parseAndExtractDeclarations(`export type { Props };`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.typeOnly).toBe(true);
+				expect(exportDecl.exported._tag).toBe("TsExporteeNames");
+			});
+
+			test("should parse export assignment", () => {
+				const result = parseAndExtractDeclarations(`export = myValue;`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.tpe._tag).toBe("Namespaced");
+				expect(exportDecl.exported._tag).toBe("TsExporteeTree");
+			});
+
+			test("should parse default export assignment", () => {
+				const result = parseAndExtractDeclarations(`export default myValue;`);
+				expect(result).toHaveLength(1);
+
+				const exportDecl = result[0] as TsExport;
+				expect(exportDecl._tag).toBe("TsExport");
+				expect(exportDecl.tpe._tag).toBe("Defaulted");
+				expect(exportDecl.exported._tag).toBe("TsExporteeTree");
+			});
+		});
+
+		describe("Complex Import/Export Scenarios", () => {
+			test("should parse multiple imports and exports", () => {
+				const result = parseAndExtractDeclarations(`
+					import React from "react";
+					import { useState } from "react";
+					export { MyComponent };
+					export * from "./utils";
+				`);
+				expect(result).toHaveLength(4);
+
+				expect(result[0]._tag).toBe("TsImport");
+				expect(result[1]._tag).toBe("TsImport");
+				expect(result[2]._tag).toBe("TsExport");
+				expect(result[3]._tag).toBe("TsExport");
+			});
+
+			test("should parse scoped module imports", () => {
+				const result = parseAndExtractDeclarations(`import { Component } from "@angular/core";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect((importDecl.from as any).from.scopeOpt._tag).toBe("Some");
+				expect((importDecl.from as any).from.scopeOpt.value).toBe("angular");
+				expect((importDecl.from as any).from.fragments).toEqual(["core"]);
+			});
+
+			test("should parse relative path imports", () => {
+				const result = parseAndExtractDeclarations(`import { utils } from "./utils/helper";`);
+				expect(result).toHaveLength(1);
+
+				const importDecl = result[0] as TsImport;
+				expect(importDecl._tag).toBe("TsImport");
+				expect((importDecl.from as any).from.fragments).toEqual([".", "utils", "helper"]);
+			});
 		});
 	});
 });

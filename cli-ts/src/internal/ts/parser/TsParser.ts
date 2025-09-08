@@ -19,6 +19,8 @@ import { IArray } from "../../IArray.js";
 import { CodePath } from "../CodePath.js";
 import { Directive } from "../Directive.js";
 import { JsLocation } from "../JsLocation.js";
+import { ExportType } from "../ExportType.js";
+import { type Option } from "fp-ts/Option";
 import {
 	type TsContainerOrDecl,
 	type TsDeclClass,
@@ -66,6 +68,25 @@ import {
 	TsTypeRef as TsTypeRefConstructor,
 	TsTypeTuple,
 	TsTypeUnion,
+	type TsImport,
+	TsImport as TsImportConstructor,
+	type TsExport,
+	TsExport as TsExportConstructor,
+	type TsExportAsNamespace,
+	TsExportAsNamespace as TsExportAsNamespaceConstructor,
+	TsImported,
+	TsImportedIdent,
+	TsImportedDestructured,
+	TsImportedStar,
+	TsImportee,
+	TsImporteeFrom,
+	TsImporteeRequired,
+	TsImporteeLocal,
+	TsExportee,
+	TsExporteeNames,
+	TsExporteeTree,
+	TsExporteeStar,
+	type TsIdentSimple,
 } from "../trees.js";
 
 /**
@@ -410,13 +431,12 @@ export class TsParser {
 				return this.transformEnumDeclaration(statement as ts.EnumDeclaration);
 			case ts.SyntaxKind.ClassDeclaration:
 				return this.transformClassDeclaration(statement as ts.ClassDeclaration);
-			// TODO: Implement these declaration types
-			// case ts.SyntaxKind.ImportDeclaration:
-			// 	return this.transformImportDeclaration(statement as ts.ImportDeclaration);
-			// case ts.SyntaxKind.ExportDeclaration:
-			// 	return this.transformExportDeclaration(statement as ts.ExportDeclaration);
-			// case ts.SyntaxKind.ExportAssignment:
-			// 	return this.transformExportAssignment(statement as ts.ExportAssignment);
+			case ts.SyntaxKind.ImportDeclaration:
+				return this.transformImportDeclaration(statement as ts.ImportDeclaration);
+			case ts.SyntaxKind.ExportDeclaration:
+				return this.transformExportDeclaration(statement as ts.ExportDeclaration);
+			case ts.SyntaxKind.ExportAssignment:
+				return this.transformExportAssignment(statement as ts.ExportAssignment);
 			default:
 				// For now, skip unsupported statement types
 				return null;
@@ -1236,6 +1256,180 @@ export class TsParser {
 			CodePath.noPath(),
 		);
 	}
+		/**
+		 * Transform a TypeScript import declaration
+		 */
+		private transformImportDeclaration(node: ts.ImportDeclaration): TsImport {
+			const comments = Comments.empty();
+
+			// Check if this is a type-only import
+			const typeOnly = node.importClause?.isTypeOnly || false;
+
+			// Transform the import clause to get what's being imported
+			const imported = this.transformImportClause(node.importClause);
+
+			// Transform the module specifier to get where it's imported from
+			const from = this.transformModuleSpecifier(node.moduleSpecifier);
+
+			return TsImportConstructor.create(typeOnly, imported, from);
+		}
+
+		/**
+		 * Transform an import clause to determine what's being imported
+		 */
+		private transformImportClause(importClause?: ts.ImportClause): IArray<TsImported> {
+			if (!importClause) {
+				return IArray.Empty;
+			}
+
+			const imported: TsImported[] = [];
+
+			// Handle default import: import React from "react"
+			if (importClause.name) {
+				const defaultImport = TsImportedIdent.create(
+					TsIdent.simple(importClause.name.text)
+				);
+				imported.push(defaultImport);
+			}
+
+			// Handle named bindings: import { foo, bar } from "module" or import * as ns from "module"
+			if (importClause.namedBindings) {
+				if (ts.isNamespaceImport(importClause.namedBindings)) {
+					// Star import: import * as ns from "module"
+					const starImport = TsImportedStar.create(
+						some(TsIdent.simple(importClause.namedBindings.name.text))
+					);
+					imported.push(starImport);
+				} else if (ts.isNamedImports(importClause.namedBindings)) {
+					// Named imports: import { foo, bar as baz } from "module"
+					const namedImports = importClause.namedBindings.elements.map(
+						(element): [TsIdent, Option<TsIdentSimple>] => {
+							const originalName = TsIdent.simple(element.name.text);
+							const alias = element.propertyName
+								? some(TsIdent.simple(element.propertyName.text))
+								: none;
+							return [originalName, alias];
+						}
+					);
+					const destructuredImport = TsImportedDestructured.create(
+						IArray.fromArray(namedImports)
+					);
+					imported.push(destructuredImport);
+				}
+			}
+
+			return IArray.fromArray(imported);
+		}
+
+		/**
+		 * Transform a module specifier to determine where the import is from
+		 */
+		private transformModuleSpecifier(moduleSpecifier: ts.Expression): TsImportee {
+			if (ts.isStringLiteral(moduleSpecifier)) {
+				const moduleText = moduleSpecifier.text;
+				const moduleIdent = this.parseModuleName(moduleText);
+				return TsImporteeFrom.create(moduleIdent);
+			}
+
+			// Fallback for non-string module specifiers
+			const moduleIdent = TsIdent.module(none, [moduleSpecifier.getText()]);
+			return TsImporteeFrom.create(moduleIdent);
+		}
+		/**
+		 * Transform a TypeScript export declaration
+		 */
+		private transformExportDeclaration(node: ts.ExportDeclaration): TsExport {
+			const comments = Comments.empty();
+
+			// Check if this is a type-only export
+			const typeOnly = node.isTypeOnly || false;
+
+			// Determine export type (named by default, unless it's a default export)
+			const exportType = ExportType.named();
+
+			// Transform the export clause to get what's being exported
+			const exported = this.transformExportClause(node);
+
+			return TsExportConstructor.create(comments, typeOnly, exportType, exported);
+		}
+
+		/**
+		 * Transform an export clause to determine what's being exported
+		 */
+		private transformExportClause(node: ts.ExportDeclaration): TsExportee {
+			// Handle star exports: export * from "module" or export * as ns from "module"
+			if (!node.exportClause) {
+				if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+					const moduleText = node.moduleSpecifier.text;
+					const moduleIdent = this.parseModuleName(moduleText);
+					return TsExporteeStar.create(none, moduleIdent);
+				}
+			}
+
+			// Handle named exports: export { foo, bar as baz } or export { foo } from "module"
+			if (node.exportClause && ts.isNamedExports(node.exportClause)) {
+				const namedExports = node.exportClause.elements.map(
+					(element): [TsQIdent, Option<TsIdentSimple>] => {
+						const originalName = TsQIdent.of(TsIdent.simple(element.name.text));
+						const alias = element.propertyName
+							? some(TsIdent.simple(element.propertyName.text))
+							: none;
+						return [originalName, alias];
+					}
+				);
+
+				const from = node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)
+					? some(this.parseModuleName(node.moduleSpecifier.text))
+					: none;
+
+				return TsExporteeNames.create(IArray.fromArray(namedExports), from);
+			}
+
+			// Handle namespace exports: export * as ns from "module"
+			if (node.exportClause && ts.isNamespaceExport(node.exportClause)) {
+				if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+					const alias = TsIdent.simple(node.exportClause.name.text);
+					const moduleText = node.moduleSpecifier.text;
+					const moduleIdent = this.parseModuleName(moduleText);
+					return TsExporteeStar.create(some(alias), moduleIdent);
+				}
+			}
+
+			// Fallback: empty named export
+			return TsExporteeNames.create(IArray.Empty, none);
+		}
+
+		/**
+		 * Transform a TypeScript export assignment (export = value)
+		 */
+		private transformExportAssignment(node: ts.ExportAssignment): TsExport {
+			const comments = Comments.empty();
+			const typeOnly = false;
+
+			// Export assignments are typically default exports or namespace exports
+			const exportType = node.isExportEquals
+				? ExportType.namespaced()
+				: ExportType.defaulted();
+
+			// For now, create a simple tree export with the expression
+			// TODO: Implement proper expression transformation
+			const mockDecl: any = {
+				_tag: "TsDeclVar",
+				comments: Comments.empty(),
+				declared: false,
+				readOnly: false,
+				name: TsIdent.simple("exported"),
+				tpe: none,
+				expr: none,
+				jsLocation: JsLocation.zero(),
+				codePath: CodePath.noPath(),
+				asString: `export = ${node.expression.getText()}`
+			};
+
+			const exported = TsExporteeTree.create(mockDecl);
+
+			return TsExportConstructor.create(comments, typeOnly, exportType, exported);
+		}
 }
 
 /**
