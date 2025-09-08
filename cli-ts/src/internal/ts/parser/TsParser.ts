@@ -11,71 +11,61 @@
  * 3. Maintain 100% behavioral parity with the Scala implementation
  */
 
+import { none, some } from "fp-ts/Option";
 import * as ts from "typescript";
-import { none, some, type Option } from "fp-ts/Option";
+import { Raw } from "../../Comment.js";
 import { Comments } from "../../Comments.js";
-import { Comment, Raw } from "../../Comment.js";
 import { IArray } from "../../IArray.js";
 import { CodePath } from "../CodePath.js";
 import { Directive } from "../Directive.js";
 import { JsLocation } from "../JsLocation.js";
 import {
-	type TsParsedFile,
 	type TsContainerOrDecl,
-	type TsDeclInterface,
-	type TsDeclTypeAlias,
-	type TsDeclVar,
-	type TsDeclFunction,
-	type TsDeclNamespace,
-	type TsDeclModule,
-	type TsGlobal,
-	type TsImport,
-	type TsExport,
-	type TsDeclEnum,
 	type TsDeclClass,
-	type TsType,
-	type TsTypeRef,
-
-	type TsIdentSimple,
-	type TsIdentModule,
-	type TsMember,
-	type TsTypeParam,
-	type TsEnumMember,
-	TsIdent,
-	TsQIdent,
-	TsTypeRef as TsTypeRefConstructor,
-	TsParsedFile as TsParsedFileConstructor,
-	TsDeclInterface as TsDeclInterfaceConstructor,
-	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
-	TsDeclVar as TsDeclVarConstructor,
-	TsDeclFunction as TsDeclFunctionConstructor,
-	TsDeclNamespace as TsDeclNamespaceConstructor,
-	TsDeclModule as TsDeclModuleConstructor,
-	TsGlobal as TsGlobalConstructor,
-	TsImport as TsImportConstructor,
-	TsExport as TsExportConstructor,
-	TsDeclEnum as TsDeclEnumConstructor,
 	TsDeclClass as TsDeclClassConstructor,
-	TsTypeUnion,
-	TsTypeIntersect,
-	TsTypeObject,
-	TsTypeTuple,
-	TsTupleElement,
-	TsTypeQuery,
-	TsTypeLiteral,
-	TsLiteral,
+	type TsDeclEnum,
+	TsDeclEnum as TsDeclEnumConstructor,
+	type TsDeclFunction,
+	TsDeclFunction as TsDeclFunctionConstructor,
+	type TsDeclInterface,
+	TsDeclInterface as TsDeclInterfaceConstructor,
+	TsDeclModule as TsDeclModuleConstructor,
+	TsDeclNamespace as TsDeclNamespaceConstructor,
+	type TsDeclTypeAlias,
+	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
+	type TsDeclVar,
+	TsDeclVar as TsDeclVarConstructor,
+	type TsEnumMember,
+	TsEnumMember as TsEnumMemberConstructor,
+	TsFunParam,
 	TsFunSig,
-	TsMemberProperty,
-	TsMemberFunction,
+	TsIdent,
+	type TsIdentModule,
+	TsLiteral,
+	type TsMember,
 	TsMemberCall,
 	TsMemberCtor,
+	TsMemberFunction,
 	TsMemberIndex,
+	TsMemberProperty,
+	type TsParsedFile,
+	TsParsedFile as TsParsedFileConstructor,
 	TsProtectionLevel,
-	TsFunParam,
-	TsTypeParam as TsTypeParamConstructor,
-	TsEnumMember as TsEnumMemberConstructor,
+	TsQIdent,
 	TsQIdentArray,
 	TsQIdentFunction,
+	TsTupleElement,
+	type TsType,
+	TsTypeIntersect,
+	TsTypeLiteral,
+	TsTypeObject,
+	type TsTypeParam,
+	TsTypeParam as TsTypeParamConstructor,
+	TsTypeQuery,
+	type TsTypeRef,
+	TsTypeRef as TsTypeRefConstructor,
+	TsTypeTuple,
+	TsTypeUnion,
 } from "../trees.js";
 
 /**
@@ -84,7 +74,6 @@ import {
  */
 export class TsParser {
 	private readonly path?: string;
-	private readonly fileLength?: number;
 
 	/**
 	 * Creates a new TsParser instance
@@ -92,7 +81,6 @@ export class TsParser {
 	 */
 	constructor(path?: { path: string; length: number }) {
 		this.path = path?.path;
-		this.fileLength = path?.length;
 	}
 
 	/**
@@ -111,21 +99,26 @@ export class TsParser {
 				cleanedContent,
 				ts.ScriptTarget.Latest,
 				true, // setParentNodes
-				ts.ScriptKind.TS
+				ts.ScriptKind.TS,
 			);
 
 			// Check for syntax errors by examining the AST for error nodes
 			const hasErrors = this.hasParseErrors(sourceFile);
 			if (hasErrors) {
-				return { _tag: "Left", value: "Parse error: Invalid TypeScript syntax" };
+				return {
+					_tag: "Left",
+					value: "Parse error: Invalid TypeScript syntax",
+				};
 			}
 
 			// Transform the TypeScript AST to our format
 			const parsedFile = this.transformSourceFile(sourceFile);
 			return { _tag: "Right", value: parsedFile };
-
 		} catch (error) {
-			return { _tag: "Left", value: `Parse error: ${error instanceof Error ? error.message : String(error)}` };
+			return {
+				_tag: "Left",
+				value: `Parse error: ${error instanceof Error ? error.message : String(error)}`,
+			};
 		}
 	}
 
@@ -152,7 +145,10 @@ export class TsParser {
 		// Check for specific syntax error patterns
 
 		// Pattern 1: "interface { invalid syntax" - interface without name
-		if (/interface\s*\{/.test(sourceText) && !/interface\s+\w+\s*\{/.test(sourceText)) {
+		if (
+			/interface\s*\{/.test(sourceText) &&
+			!/interface\s+\w+\s*\{/.test(sourceText)
+		) {
 			return true;
 		}
 
@@ -171,8 +167,10 @@ export class TsParser {
 
 		function visit(node: ts.Node): void {
 			// Check for missing tokens or incomplete declarations
-			if (node.kind === ts.SyntaxKind.MissingDeclaration ||
-				node.kind === ts.SyntaxKind.Unknown) {
+			if (
+				node.kind === ts.SyntaxKind.MissingDeclaration ||
+				node.kind === ts.SyntaxKind.Unknown
+			) {
 				hasErrors = true;
 				return;
 			}
@@ -206,15 +204,18 @@ export class TsParser {
 	 */
 	private processShebang(content: string): string {
 		// Handle shebang lines at the beginning of the file
-		const lines = content.split('\n');
+		const lines = content.split("\n");
 		let processedLines = lines;
 
 		// Remove shebang lines (lines starting with #!)
-		while (processedLines.length > 0 && processedLines[0].trim().startsWith('#!')) {
+		while (
+			processedLines.length > 0 &&
+			processedLines[0].trim().startsWith("#!")
+		) {
 			processedLines = processedLines.slice(1);
 		}
 
-		return processedLines.join('\n');
+		return processedLines.join("\n");
 	}
 
 	/**
@@ -235,7 +236,7 @@ export class TsParser {
 			comments,
 			directives,
 			members,
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
@@ -243,8 +244,9 @@ export class TsParser {
 	 * Extract comments from the source file
 	 */
 	private extractComments(sourceFile: ts.SourceFile): Comments {
-		const commentRanges = ts.getLeadingCommentRanges(sourceFile.getFullText(), 0) || [];
-		const comments = commentRanges.map(range => {
+		const commentRanges =
+			ts.getLeadingCommentRanges(sourceFile.getFullText(), 0) || [];
+		const comments = commentRanges.map((range) => {
 			const text = sourceFile.getFullText().substring(range.pos, range.end);
 			return new Raw(text);
 		});
@@ -277,7 +279,10 @@ export class TsParser {
 	 */
 	private parseDirectiveFromComment(commentText: string): Directive | null {
 		// Remove comment markers and trim
-		const cleaned = commentText.replace(/^\/\*\*?|\*\/$/g, '').replace(/^\/\//, '').trim();
+		const cleaned = commentText
+			.replace(/^\/\*\*?|\*\/$/g, "")
+			.replace(/^\/\//, "")
+			.trim();
 
 		// Match triple-slash directive pattern: /// <directive attr="value" />
 		const tripleSlashMatch = cleaned.match(/^\/\s*<([^>]+)>/);
@@ -288,12 +293,12 @@ export class TsParser {
 		const directiveContent = tripleSlashMatch[1];
 
 		// Parse reference directives
-		if (directiveContent.startsWith('reference ')) {
+		if (directiveContent.startsWith("reference ")) {
 			return this.parseReferenceDirective(directiveContent);
 		}
 
 		// Parse amd-module directive
-		if (directiveContent.startsWith('amd-module ')) {
+		if (directiveContent.startsWith("amd-module ")) {
 			return this.parseAmdModuleDirective(directiveContent);
 		}
 
@@ -311,13 +316,17 @@ export class TsParser {
 		}
 
 		// Match types reference: reference types="value"
-		const typesMatch = content.match(/reference\s+types\s*=\s*["']([^"']+)["']/);
+		const typesMatch = content.match(
+			/reference\s+types\s*=\s*["']([^"']+)["']/,
+		);
 		if (typesMatch) {
 			return Directive.typesRef(typesMatch[1]);
 		}
 
 		// Handle typo variant: references types="value"
-		const typesTypoMatch = content.match(/references\s+types\s*=\s*["']([^"']+)["']/);
+		const typesTypoMatch = content.match(
+			/references\s+types\s*=\s*["']([^"']+)["']/,
+		);
 		if (typesTypoMatch) {
 			return Directive.typesRef(typesTypoMatch[1]);
 		}
@@ -329,7 +338,9 @@ export class TsParser {
 		}
 
 		// Match no-default-lib: reference no-default-lib="true"
-		const noStdLibMatch = content.match(/reference\s+no-default-lib\s*=\s*["']true["']/);
+		const noStdLibMatch = content.match(
+			/reference\s+no-default-lib\s*=\s*["']true["']/,
+		);
 		if (noStdLibMatch) {
 			return Directive.noStdLib();
 		}
@@ -353,7 +364,9 @@ export class TsParser {
 	/**
 	 * Transform TypeScript statements to our AST format
 	 */
-	private transformStatements(statements: ts.NodeArray<ts.Statement>): IArray<TsContainerOrDecl> {
+	private transformStatements(
+		statements: ts.NodeArray<ts.Statement>,
+	): IArray<TsContainerOrDecl> {
 		const transformed: TsContainerOrDecl[] = [];
 
 		for (const statement of statements) {
@@ -369,18 +382,30 @@ export class TsParser {
 	/**
 	 * Transform a single TypeScript statement to our AST format
 	 */
-	private transformStatement(statement: ts.Statement): TsContainerOrDecl | null {
+	private transformStatement(
+		statement: ts.Statement,
+	): TsContainerOrDecl | null {
 		switch (statement.kind) {
 			case ts.SyntaxKind.InterfaceDeclaration:
-				return this.transformInterfaceDeclaration(statement as ts.InterfaceDeclaration);
+				return this.transformInterfaceDeclaration(
+					statement as ts.InterfaceDeclaration,
+				);
 			case ts.SyntaxKind.TypeAliasDeclaration:
-				return this.transformTypeAliasDeclaration(statement as ts.TypeAliasDeclaration);
+				return this.transformTypeAliasDeclaration(
+					statement as ts.TypeAliasDeclaration,
+				);
 			case ts.SyntaxKind.VariableStatement:
-				return this.transformVariableStatement(statement as ts.VariableStatement);
+				return this.transformVariableStatement(
+					statement as ts.VariableStatement,
+				);
 			case ts.SyntaxKind.FunctionDeclaration:
-				return this.transformFunctionDeclaration(statement as ts.FunctionDeclaration);
+				return this.transformFunctionDeclaration(
+					statement as ts.FunctionDeclaration,
+				);
 			case ts.SyntaxKind.ModuleDeclaration:
-				return this.transformModuleDeclaration(statement as ts.ModuleDeclaration);
+				return this.transformModuleDeclaration(
+					statement as ts.ModuleDeclaration,
+				);
 			case ts.SyntaxKind.EnumDeclaration:
 				return this.transformEnumDeclaration(statement as ts.EnumDeclaration);
 			case ts.SyntaxKind.ClassDeclaration:
@@ -401,7 +426,9 @@ export class TsParser {
 	/**
 	 * Transform a TypeScript interface declaration
 	 */
-	private transformInterfaceDeclaration(node: ts.InterfaceDeclaration): TsDeclInterface {
+	private transformInterfaceDeclaration(
+		node: ts.InterfaceDeclaration,
+	): TsDeclInterface {
 		const name = TsIdent.simple(node.name.text);
 		const comments = Comments.empty();
 		const members = this.transformInterfaceMembers(node.members);
@@ -414,14 +441,16 @@ export class TsParser {
 			tparams,
 			IArray.Empty, // inheritance
 			members,
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
 	/**
 	 * Transform interface members
 	 */
-	private transformInterfaceMembers(members: ts.NodeArray<ts.TypeElement>): IArray<TsMember> {
+	private transformInterfaceMembers(
+		members: ts.NodeArray<ts.TypeElement>,
+	): IArray<TsMember> {
 		const transformedMembers: TsMember[] = [];
 
 		for (const member of members) {
@@ -444,11 +473,17 @@ export class TsParser {
 			case ts.SyntaxKind.MethodSignature:
 				return this.transformMethodSignature(member as ts.MethodSignature);
 			case ts.SyntaxKind.CallSignature:
-				return this.transformCallSignature(member as ts.CallSignatureDeclaration);
+				return this.transformCallSignature(
+					member as ts.CallSignatureDeclaration,
+				);
 			case ts.SyntaxKind.ConstructSignature:
-				return this.transformConstructSignature(member as ts.ConstructSignatureDeclaration);
+				return this.transformConstructSignature(
+					member as ts.ConstructSignatureDeclaration,
+				);
 			case ts.SyntaxKind.IndexSignature:
-				return this.transformIndexSignature(member as ts.IndexSignatureDeclaration);
+				return this.transformIndexSignature(
+					member as ts.IndexSignatureDeclaration,
+				);
 			default:
 				// For now, skip unsupported member types
 				return null;
@@ -473,7 +508,7 @@ export class TsParser {
 			tpe,
 			none, // expr - no initializer in interface
 			false, // isStatic - not applicable in interfaces
-			isReadOnly
+			isReadOnly,
 		);
 	}
 
@@ -494,7 +529,7 @@ export class TsParser {
 			{ _tag: "Normal" }, // MethodType.Normal
 			signature,
 			false, // isStatic - not applicable in interfaces
-			false  // isReadOnly - not applicable for methods
+			false, // isReadOnly - not applicable for methods
 		);
 	}
 
@@ -512,7 +547,9 @@ export class TsParser {
 	/**
 	 * Transform a construct signature to a member constructor
 	 */
-	private transformConstructSignature(node: ts.ConstructSignatureDeclaration): TsMember {
+	private transformConstructSignature(
+		node: ts.ConstructSignatureDeclaration,
+	): TsMember {
 		const comments = Comments.empty();
 		const level = TsProtectionLevel.default();
 		const signature = this.transformFunctionSignature(node);
@@ -523,7 +560,9 @@ export class TsParser {
 	/**
 	 * Transform an index signature to a member index
 	 */
-	private transformIndexSignature(node: ts.IndexSignatureDeclaration): TsMember {
+	private transformIndexSignature(
+		node: ts.IndexSignatureDeclaration,
+	): TsMember {
 		const comments = Comments.empty();
 		const level = this.extractProtectionLevel(node.modifiers);
 		const isReadOnly = this.hasModifier(node, ts.SyntaxKind.ReadonlyKeyword);
@@ -538,7 +577,7 @@ export class TsParser {
 			_tag: "Dict" as const,
 			name: indexName,
 			tpe: indexType,
-			asString: `Dict(${indexName.value}: ${indexType.asString})`
+			asString: `Dict(${indexName.value}: ${indexType.asString})`,
 		};
 
 		const valueType = node.type ? some(this.transformType(node.type)) : none;
@@ -548,14 +587,16 @@ export class TsParser {
 			isReadOnly,
 			level,
 			indexing,
-			valueType
+			valueType,
 		);
 	}
 
 	/**
 	 * Transform a TypeScript type alias declaration
 	 */
-	private transformTypeAliasDeclaration(node: ts.TypeAliasDeclaration): TsDeclTypeAlias {
+	private transformTypeAliasDeclaration(
+		node: ts.TypeAliasDeclaration,
+	): TsDeclTypeAlias {
 		const name = TsIdent.simple(node.name.text);
 		const comments = Comments.empty();
 		const alias = this.transformType(node.type);
@@ -567,14 +608,16 @@ export class TsParser {
 			name,
 			tparams,
 			alias,
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
 	/**
 	 * Transform a TypeScript variable statement
 	 */
-	private transformVariableStatement(node: ts.VariableStatement): TsDeclVar | null {
+	private transformVariableStatement(
+		node: ts.VariableStatement,
+	): TsDeclVar | null {
 		// Handle only the first declaration for now (similar to Scala's deprecated behavior)
 		const declaration = node.declarationList.declarations[0];
 		if (!declaration) return null;
@@ -582,7 +625,9 @@ export class TsParser {
 		const name = TsIdent.simple((declaration.name as ts.Identifier).text);
 		const comments = Comments.empty();
 		const isReadOnly = (node.declarationList.flags & ts.NodeFlags.Const) !== 0;
-		const tpe = declaration.type ? some(this.transformType(declaration.type)) : none;
+		const tpe = declaration.type
+			? some(this.transformType(declaration.type))
+			: none;
 
 		return TsDeclVarConstructor.create(
 			comments,
@@ -592,7 +637,7 @@ export class TsParser {
 			tpe,
 			none, // expr - we'll implement expression transformation later
 			JsLocation.zero(),
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
@@ -643,9 +688,11 @@ export class TsParser {
 			default:
 				// For unsupported types, return string type with a warning comment
 				return TsTypeRefConstructor.create(
-					Comments.apply([new Raw(`/* Unsupported type: ${ts.SyntaxKind[node.kind]} */`)]),
+					Comments.apply([
+						new Raw(`/* Unsupported type: ${ts.SyntaxKind[node.kind]} */`),
+					]),
 					TsQIdent.ofStrings("string"),
-					IArray.Empty
+					IArray.Empty,
 				);
 		}
 	}
@@ -660,7 +707,7 @@ export class TsParser {
 		return TsTypeRefConstructor.create(
 			Comments.empty(),
 			qident,
-			IArray.Empty // We'll implement type arguments later
+			IArray.Empty, // We'll implement type arguments later
 		);
 	}
 
@@ -668,7 +715,7 @@ export class TsParser {
 	 * Transform a TypeScript union type
 	 */
 	private transformUnionType(node: ts.UnionTypeNode): TsType {
-		const types = node.types.map(typeNode => this.transformType(typeNode));
+		const types = node.types.map((typeNode) => this.transformType(typeNode));
 
 		return TsTypeUnion.simplified(IArray.fromArray(types));
 	}
@@ -677,7 +724,7 @@ export class TsParser {
 	 * Transform a TypeScript intersection type
 	 */
 	private transformIntersectionType(node: ts.IntersectionTypeNode): TsType {
-		const types = node.types.map(typeNode => this.transformType(typeNode));
+		const types = node.types.map((typeNode) => this.transformType(typeNode));
 
 		return TsTypeIntersect.simplified(IArray.fromArray(types));
 	}
@@ -686,7 +733,7 @@ export class TsParser {
 	 * Transform a TypeScript tuple type
 	 */
 	private transformTupleType(node: ts.TupleTypeNode): TsType {
-		const elements = node.elements.map(element => {
+		const elements = node.elements.map((element) => {
 			// For now, create unlabeled tuple elements
 			// TODO: Handle labeled tuple elements and optional elements
 			const elementType = this.transformType(element);
@@ -714,7 +761,9 @@ export class TsParser {
 	/**
 	 * Extract qualified name from EntityName (Identifier or QualifiedName)
 	 */
-	private extractQualifiedNameFromEntityName(entityName: ts.EntityName): TsQIdent {
+	private extractQualifiedNameFromEntityName(
+		entityName: ts.EntityName,
+	): TsQIdent {
 		if (ts.isIdentifier(entityName)) {
 			return TsQIdent.of(TsIdent.simple(entityName.text));
 		} else {
@@ -757,14 +806,19 @@ export class TsParser {
 			case ts.SyntaxKind.NullKeyword:
 				// For null, use a string literal since TsLiteral doesn't have null
 				return TsLiteral.str("null");
-			case ts.SyntaxKind.PrefixUnaryExpression:
+			case ts.SyntaxKind.PrefixUnaryExpression: {
 				// Handle negative numbers
 				const unaryExpr = node as ts.PrefixUnaryExpression;
-				if (unaryExpr.operator === ts.SyntaxKind.MinusToken &&
-					unaryExpr.operand.kind === ts.SyntaxKind.NumericLiteral) {
-					return TsLiteral.num("-" + (unaryExpr.operand as ts.NumericLiteral).text);
+				if (
+					unaryExpr.operator === ts.SyntaxKind.MinusToken &&
+					unaryExpr.operand.kind === ts.SyntaxKind.NumericLiteral
+				) {
+					return TsLiteral.num(
+						`-${(unaryExpr.operand as ts.NumericLiteral).text}`,
+					);
 				}
 				return TsLiteral.str(node.getText());
+			}
 			default:
 				// Fallback to string literal
 				return TsLiteral.str(node.getText());
@@ -779,7 +833,7 @@ export class TsParser {
 		return TsTypeRefConstructor.create(
 			Comments.empty(),
 			TsQIdentArray,
-			IArray.fromArray([elementType])
+			IArray.fromArray([elementType]),
 		);
 	}
 
@@ -793,47 +847,59 @@ export class TsParser {
 		return TsTypeRefConstructor.create(
 			Comments.empty(),
 			TsQIdentFunction,
-			IArray.Empty
+			IArray.Empty,
 		);
 	}
 
 	/**
 	 * Transform TypeScript type parameters to our format
 	 */
-	private transformTypeParameters(typeParameters?: ts.NodeArray<ts.TypeParameterDeclaration>): IArray<TsTypeParam> {
+	private transformTypeParameters(
+		typeParameters?: ts.NodeArray<ts.TypeParameterDeclaration>,
+	): IArray<TsTypeParam> {
 		if (!typeParameters || typeParameters.length === 0) {
 			return IArray.Empty;
 		}
 
-		const transformedParams = typeParameters.map(param => this.transformTypeParameter(param));
+		const transformedParams = typeParameters.map((param) =>
+			this.transformTypeParameter(param),
+		);
 		return IArray.fromArray(transformedParams);
 	}
 
 	/**
 	 * Transform a single TypeScript type parameter
 	 */
-	private transformTypeParameter(node: ts.TypeParameterDeclaration): TsTypeParam {
+	private transformTypeParameter(
+		node: ts.TypeParameterDeclaration,
+	): TsTypeParam {
 		const name = TsIdent.simple(node.name.text);
 		const comments = Comments.empty();
 
 		// Transform constraint (extends clause)
-		const constraint = node.constraint ? some(this.transformType(node.constraint)) : none;
+		const constraint = node.constraint
+			? some(this.transformType(node.constraint))
+			: none;
 
 		// Transform default type
-		const defaultType = node.default ? some(this.transformType(node.default)) : none;
+		const defaultType = node.default
+			? some(this.transformType(node.default))
+			: none;
 
 		return TsTypeParamConstructor.create(
 			comments,
 			name,
 			constraint,
-			defaultType
+			defaultType,
 		);
 	}
 
 	/**
 	 * Transform a TypeScript module declaration (namespace or module)
 	 */
-	private transformModuleDeclaration(node: ts.ModuleDeclaration): TsContainerOrDecl {
+	private transformModuleDeclaration(
+		node: ts.ModuleDeclaration,
+	): TsContainerOrDecl {
 		const comments = Comments.empty();
 		const declared = this.hasModifier(node, ts.SyntaxKind.DeclareKeyword);
 
@@ -841,7 +907,9 @@ export class TsParser {
 		if (node.name.kind === ts.SyntaxKind.Identifier) {
 			// This is a namespace declaration
 			const name = TsIdent.simple((node.name as ts.Identifier).text);
-			const members = node.body ? this.transformModuleBody(node.body) : IArray.Empty;
+			const members = node.body
+				? this.transformModuleBody(node.body)
+				: IArray.Empty;
 
 			return TsDeclNamespaceConstructor.create(
 				comments,
@@ -849,13 +917,15 @@ export class TsParser {
 				name,
 				members,
 				CodePath.noPath(),
-				JsLocation.zero()
+				JsLocation.zero(),
 			);
 		} else if (node.name.kind === ts.SyntaxKind.StringLiteral) {
 			// This is a module declaration
 			const moduleText = (node.name as ts.StringLiteral).text;
 			const moduleName = this.parseModuleName(moduleText);
-			const members = node.body ? this.transformModuleBody(node.body) : IArray.Empty;
+			const members = node.body
+				? this.transformModuleBody(node.body)
+				: IArray.Empty;
 
 			return TsDeclModuleConstructor.create(
 				comments,
@@ -864,7 +934,7 @@ export class TsParser {
 				members,
 				CodePath.noPath(),
 				JsLocation.zero(),
-				IArray.Empty // augmentedModules
+				IArray.Empty, // augmentedModules
 			);
 		} else {
 			// Fallback - treat as namespace
@@ -875,7 +945,7 @@ export class TsParser {
 				name,
 				IArray.Empty,
 				CodePath.noPath(),
-				JsLocation.zero()
+				JsLocation.zero(),
 			);
 		}
 	}
@@ -918,8 +988,11 @@ export class TsParser {
 	 * Check if a node has a specific modifier
 	 */
 	private hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
-		return ts.canHaveModifiers(node) &&
-			   ts.getModifiers(node)?.some(modifier => modifier.kind === kind) || false;
+		return (
+			(ts.canHaveModifiers(node) &&
+				ts.getModifiers(node)?.some((modifier) => modifier.kind === kind)) ||
+			false
+		);
 	}
 
 	/**
@@ -941,14 +1014,16 @@ export class TsParser {
 			!isConst, // const enums don't create runtime values
 			none, // exportedFrom
 			JsLocation.zero(),
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
 	/**
 	 * Transform enum members
 	 */
-	private transformEnumMembers(members: ts.NodeArray<ts.EnumMember>): IArray<TsEnumMember> {
+	private transformEnumMembers(
+		members: ts.NodeArray<ts.EnumMember>,
+	): IArray<TsEnumMember> {
 		const transformedMembers: TsEnumMember[] = [];
 
 		for (const member of members) {
@@ -967,7 +1042,9 @@ export class TsParser {
 		const name = TsIdent.simple(member.name.getText());
 
 		// Transform initializer expression if present
-		const expr = member.initializer ? some(this.transformExpression(member.initializer)) : none;
+		const expr = member.initializer
+			? some(this.transformExpression(member.initializer))
+			: none;
 
 		return TsEnumMemberConstructor.create(comments, name, expr);
 	}
@@ -980,7 +1057,7 @@ export class TsParser {
 		// TODO: Implement full expression transformation
 		return {
 			_tag: "TsExprLiteral",
-			value: node.getText()
+			value: node.getText(),
 		};
 	}
 
@@ -991,18 +1068,30 @@ export class TsParser {
 		const comments = Comments.empty();
 		const declared = this.hasModifier(node, ts.SyntaxKind.DeclareKeyword);
 		const isAbstract = this.hasModifier(node, ts.SyntaxKind.AbstractKeyword);
-		const name = node.name ? TsIdent.simple(node.name.text) : TsIdent.simple("default");
+		const name = node.name
+			? TsIdent.simple(node.name.text)
+			: TsIdent.simple("default");
 		const tparams = this.transformTypeParameters(node.typeParameters);
 
 		// Transform extends clause
-		const parent = node.heritageClauses?.find(clause => clause.token === ts.SyntaxKind.ExtendsKeyword);
-		const parentType = parent?.types[0] ? some(this.transformHeritageClause(parent.types[0])) : none;
+		const parent = node.heritageClauses?.find(
+			(clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+		);
+		const parentType = parent?.types[0]
+			? some(this.transformHeritageClause(parent.types[0]))
+			: none;
 
 		// Transform implements clause
-		const implementsClause = node.heritageClauses?.find(clause => clause.token === ts.SyntaxKind.ImplementsKeyword);
-		const implementsTypes = implementsClause?.types ?
-			IArray.fromArray(implementsClause.types.map(type => this.transformHeritageClause(type))) :
-			IArray.Empty;
+		const implementsClause = node.heritageClauses?.find(
+			(clause) => clause.token === ts.SyntaxKind.ImplementsKeyword,
+		);
+		const implementsTypes = implementsClause?.types
+			? IArray.fromArray(
+					implementsClause.types.map((type) =>
+						this.transformHeritageClause(type),
+					),
+				)
+			: IArray.Empty;
 
 		// Transform class members
 		const members = this.transformClassMembers(node.members);
@@ -1017,18 +1106,22 @@ export class TsParser {
 			implementsTypes,
 			members,
 			JsLocation.zero(),
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 
 	/**
 	 * Transform heritage clause (extends/implements)
 	 */
-	private transformHeritageClause(node: ts.ExpressionWithTypeArguments): TsTypeRef {
+	private transformHeritageClause(
+		node: ts.ExpressionWithTypeArguments,
+	): TsTypeRef {
 		const name = this.extractQualifiedName(node.expression);
-		const typeArgs = node.typeArguments ?
-			IArray.fromArray(node.typeArguments.map(arg => this.transformType(arg))) :
-			IArray.Empty;
+		const typeArgs = node.typeArguments
+			? IArray.fromArray(
+					node.typeArguments.map((arg) => this.transformType(arg)),
+				)
+			: IArray.Empty;
 
 		return TsTypeRefConstructor.create(Comments.empty(), name, typeArgs);
 	}
@@ -1052,7 +1145,9 @@ export class TsParser {
 	/**
 	 * Extract protection level from modifiers
 	 */
-	private extractProtectionLevel(modifiers?: ts.NodeArray<ts.ModifierLike>): TsProtectionLevel {
+	private extractProtectionLevel(
+		modifiers?: ts.NodeArray<ts.ModifierLike>,
+	): TsProtectionLevel {
 		if (!modifiers) return TsProtectionLevel.default();
 
 		for (const modifier of modifiers) {
@@ -1069,8 +1164,6 @@ export class TsParser {
 		return TsProtectionLevel.default();
 	}
 
-
-
 	/**
 	 * Transform a function-like signature (method, call, construct)
 	 */
@@ -1086,7 +1179,9 @@ export class TsParser {
 	/**
 	 * Transform function parameters
 	 */
-	private transformParameters(parameters: ts.NodeArray<ts.ParameterDeclaration>): IArray<TsFunParam> {
+	private transformParameters(
+		parameters: ts.NodeArray<ts.ParameterDeclaration>,
+	): IArray<TsFunParam> {
 		const transformedParams: any[] = [];
 
 		for (const param of parameters) {
@@ -1094,11 +1189,7 @@ export class TsParser {
 			const tpe = param.type ? some(this.transformType(param.type)) : none;
 			// TODO: Handle optional parameters with param.questionToken
 
-			const funParam = TsFunParam.create(
-				Comments.empty(),
-				name,
-				tpe
-			);
+			const funParam = TsFunParam.create(Comments.empty(), name, tpe);
 
 			transformedParams.push(funParam);
 		}
@@ -1109,7 +1200,9 @@ export class TsParser {
 	/**
 	 * Transform class members (basic implementation)
 	 */
-	private transformClassMembers(_members: ts.NodeArray<ts.ClassElement>): IArray<TsMember> {
+	private transformClassMembers(
+		_members: ts.NodeArray<ts.ClassElement>,
+	): IArray<TsMember> {
 		// For now, return empty array - we'll implement member transformation later
 		// TODO: Implement full class member transformation
 		return IArray.Empty;
@@ -1118,7 +1211,9 @@ export class TsParser {
 	/**
 	 * Transform a TypeScript function declaration
 	 */
-	private transformFunctionDeclaration(node: ts.FunctionDeclaration): TsDeclFunction {
+	private transformFunctionDeclaration(
+		node: ts.FunctionDeclaration,
+	): TsDeclFunction {
 		const name = TsIdent.simple(node.name?.text || "default");
 		const comments = Comments.empty();
 
@@ -1138,7 +1233,7 @@ export class TsParser {
 			name,
 			signature,
 			JsLocation.zero(),
-			CodePath.noPath()
+			CodePath.noPath(),
 		);
 	}
 }
@@ -1146,7 +1241,7 @@ export class TsParser {
 /**
  * Either type for representing success/failure results
  */
-export type Either<L, R> = 
+export type Either<L, R> =
 	| { _tag: "Left"; value: L }
 	| { _tag: "Right"; value: R };
 

@@ -870,13 +870,26 @@ describe("Exports", () => {
 	describe("Newly Implemented Features", () => {
 		test("SetCodePath transformation is applied correctly", () => {
 			const interface1 = createMockInterface("TestInterface");
-			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
+			const export1 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(interface1),
+			);
 			const scope = createScopedScope(createMockNamespace("TestScope"));
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
-			const result = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result.length).toBeGreaterThan(0);
 			// The result should have the correct code path applied
@@ -892,7 +905,15 @@ describe("Exports", () => {
 			const jsLocationFn = createJsLocationFunction();
 
 			// This should not cause infinite recursion due to scope limiting
-			const result = Exports.export(ownerCp, jsLocationFn, scope, ExportType.named(), interface1, none, loopDetector);
+			const result = Exports.export(
+				ownerCp,
+				jsLocationFn,
+				scope,
+				ExportType.named(),
+				interface1,
+				none,
+				loopDetector,
+			);
 
 			expect(result.length).toBeGreaterThanOrEqual(0);
 		});
@@ -902,20 +923,44 @@ describe("Exports", () => {
 			const libName = TsIdent.librarySimple("test-lib");
 			const logger = Logger.DevNull();
 			const deps = new Map();
-			const rootScope = TsTreeScope.create(libName, false, deps, logger).caching();
+			const rootScope = TsTreeScope.create(
+				libName,
+				false,
+				deps,
+				logger,
+			).caching();
 			const scope = rootScope["/"](createMockNamespace("TestScope"));
 
 			const interface1 = createMockInterface("TestInterface");
-			const export1 = createMockExport(ExportType.named(), TsExporteeTree.create(interface1));
+			const export1 = createMockExport(
+				ExportType.named(),
+				TsExporteeTree.create(interface1),
+			);
 			const loopDetector = createMockLoopDetector();
-			const owner = createMockModule("TestModule", IArray.Empty, createHasPath("test", "TestModule"));
+			const owner = createMockModule(
+				"TestModule",
+				IArray.Empty,
+				createHasPath("test", "TestModule"),
+			);
 			const jsLocationFn = createJsLocationFunction();
 
 			// First call should populate cache
-			const result1 = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result1 = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			// Second call should use cache
-			const result2 = Exports.expandExport(scope, jsLocationFn, export1, loopDetector, owner);
+			const result2 = Exports.expandExport(
+				scope,
+				jsLocationFn,
+				export1,
+				loopDetector,
+				owner,
+			);
 
 			expect(result1.length).toBe(result2.length);
 			expect(result1.length).toBeGreaterThan(0);

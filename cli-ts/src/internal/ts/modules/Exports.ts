@@ -14,7 +14,6 @@ import type { ExportType } from "../ExportType.js";
 import { JsLocation } from "../JsLocation.js";
 import { ModuleSpec } from "../ModuleSpec.js";
 import { Picker } from "../Picker.js";
-import { SetCodePathTransformFunction } from "../transforms/SetCodePath.js";
 import type { LoopDetector, TsTreeScope } from "../TsTreeScope.js";
 import {
 	TsDeclNamespace,
@@ -83,7 +82,10 @@ export const Exports = {
 		const key = `${scope.toString()}-${JSON.stringify(e)}`;
 
 		// Check cache first
-		if (isSome(scope.root.cache) && scope.root.cache.value.expandExport.has(key)) {
+		if (
+			isSome(scope.root.cache) &&
+			scope.root.cache.value.expandExport.has(key)
+		) {
 			return scope.root.cache.value.expandExport.get(key)!;
 		}
 
@@ -182,9 +184,8 @@ export const Exports = {
 		// Limit scope to prevent self-reference issues
 		// If the scope is scoped and the current declaration is the same as the one being exported,
 		// use the outer scope to prevent infinite recursion
-		const limitedScope = isScoped(scope) && scope.current === namedDecl
-			? scope.outer
-			: scope;
+		const limitedScope =
+			isScoped(scope) && scope.current === namedDecl ? scope.outer : scope;
 
 		// Rewrite exports if necessary
 		const rewritten = rewriteExports(namedDecl, limitedScope, loopDetector);

@@ -8,16 +8,20 @@
  */
 
 import { describe, expect, test } from "vitest";
+import type { TsDeclInterface, TsDeclTypeAlias, TsDeclVar } from "../trees.js";
+import {
+	PerformanceTester,
+	TestDataGenerator,
+	TestRunner,
+} from "./TestUtils.js";
 import { parseString } from "./TsParser.js";
-import { TsDeclInterface, TsDeclTypeAlias, TsDeclVar } from "../trees.js";
-import { TestRunner, TestDataGenerator, ASTComparator, PerformanceTester } from "./TestUtils.js";
 
 describe("TsParser", () => {
 	describe("Basic Parsing - Empty File", () => {
 		test("should parse empty string successfully", () => {
 			const result = parseString("");
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(0);
@@ -29,7 +33,7 @@ describe("TsParser", () => {
 			const content = "// This is a comment\n/* Block comment */";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(0);
@@ -41,7 +45,7 @@ describe("TsParser", () => {
 			const content = "   \n\t  \n  ";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(0);
@@ -55,14 +59,14 @@ describe("TsParser", () => {
 			const content = "interface MyInterface { x: number; }";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(1);
-				
+
 				const member = parsed.members.apply(0);
 				expect(member._tag).toBe("TsDeclInterface");
-				
+
 				if (member._tag === "TsDeclInterface") {
 					const interface_ = member as TsDeclInterface;
 					expect(interface_.name.value).toBe("MyInterface");
@@ -75,14 +79,14 @@ describe("TsParser", () => {
 			const content = "type MyType = string;";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(1);
-				
+
 				const member = parsed.members.apply(0);
 				expect(member._tag).toBe("TsDeclTypeAlias");
-				
+
 				if (member._tag === "TsDeclTypeAlias") {
 					const alias = member as TsDeclTypeAlias;
 					expect(alias.name.value).toBe("MyType");
@@ -155,7 +159,8 @@ describe("TsParser", () => {
 
 	describe("Complex Parsing Tests", () => {
 		test("should parse function declaration", () => {
-			const content = "function myFunction(x: number): string { return x.toString(); }";
+			const content =
+				"function myFunction(x: number): string { return x.toString(); }";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
 
@@ -238,7 +243,7 @@ describe("TsParser", () => {
 			`;
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(3);
@@ -252,7 +257,7 @@ describe("TsParser", () => {
 			const content = "#!/usr/bin/env node\ninterface Test { }";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(1);
@@ -265,91 +270,91 @@ describe("TsParser", () => {
 	describe("Generated Test Cases", () => {
 		describe("Interface Declarations", () => {
 			const interfaceTests = TestDataGenerator.generateInterfaceTests();
-			interfaceTests.forEach(testCase => {
+			interfaceTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Type Alias Declarations", () => {
 			const typeAliasTests = TestDataGenerator.generateTypeAliasTests();
-			typeAliasTests.forEach(testCase => {
+			typeAliasTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Variable Declarations", () => {
 			const variableTests = TestDataGenerator.generateVariableTests();
-			variableTests.forEach(testCase => {
+			variableTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Error Handling", () => {
 			const errorTests = TestDataGenerator.generateErrorTests();
-			errorTests.forEach(testCase => {
+			errorTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Directive Processing", () => {
 			const directiveTests = TestDataGenerator.generateDirectiveTests();
-			directiveTests.forEach(testCase => {
+			directiveTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Shebang Handling", () => {
 			const shebangTests = TestDataGenerator.generateShebangTests();
-			shebangTests.forEach(testCase => {
+			shebangTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Generic Types", () => {
 			const genericTests = TestDataGenerator.generateGenericTests();
-			genericTests.forEach(testCase => {
+			genericTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Namespace Declarations", () => {
 			const namespaceTests = TestDataGenerator.generateNamespaceTests();
-			namespaceTests.forEach(testCase => {
+			namespaceTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Module Declarations", () => {
 			const moduleTests = TestDataGenerator.generateModuleTests();
-			moduleTests.forEach(testCase => {
+			moduleTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Enum Declarations", () => {
 			const enumTests = TestDataGenerator.generateEnumTests();
-			enumTests.forEach(testCase => {
+			enumTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Class Declarations", () => {
 			const classTests = TestDataGenerator.generateClassTests();
-			classTests.forEach(testCase => {
+			classTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Advanced Type System", () => {
 			const advancedTypeTests = TestDataGenerator.generateAdvancedTypeTests();
-			advancedTypeTests.forEach(testCase => {
+			advancedTypeTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
 
 		describe("Member System", () => {
 			const memberSystemTests = TestDataGenerator.generateMemberSystemTests();
-			memberSystemTests.forEach(testCase => {
+			memberSystemTests.forEach((testCase) => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
@@ -380,7 +385,10 @@ describe("TsParser", () => {
 					metadata?: Record<string, any>;
 				}
 			`;
-			const avgTime = PerformanceTester.measureParsingTime(complexInterface, 10);
+			const avgTime = PerformanceTester.measureParsingTime(
+				complexInterface,
+				10,
+			);
 
 			// Should parse complex declarations in reasonable time
 			expect(avgTime).toBeLessThan(20);
