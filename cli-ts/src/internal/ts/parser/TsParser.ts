@@ -30,6 +30,7 @@ import {
 	type TsTypeRef,
 	type TsIdentSimple,
 	type TsMember,
+	type TsTypeParam,
 	TsIdent,
 	TsQIdent,
 	TsTypeRef as TsTypeRefConstructor,
@@ -40,6 +41,7 @@ import {
 	TsDeclFunction as TsDeclFunctionConstructor,
 	TsTypeUnion,
 	TsFunSig,
+	TsTypeParam as TsTypeParamConstructor,
 } from "../trees.js";
 
 /**
@@ -99,8 +101,12 @@ export class TsParser {
 	private cleanString(content: string): string {
 		const BOM = "\uFEFF";
 		let cleaned = content.startsWith(BOM) ? content.replace(BOM, "") : content;
-		cleaned = cleaned.replace(/\r\n/g, "\n").trim();
-		return cleaned;
+		cleaned = cleaned.replace(/\r\n/g, "\n");
+
+		// Process shebang lines
+		cleaned = this.processShebang(cleaned);
+
+		return cleaned.trim();
 	}
 
 	/**
@@ -162,6 +168,22 @@ export class TsParser {
 	}
 
 	/**
+	 * Enhanced shebang detection and removal
+	 */
+	private processShebang(content: string): string {
+		// Handle shebang lines at the beginning of the file
+		const lines = content.split('\n');
+		let processedLines = lines;
+
+		// Remove shebang lines (lines starting with #!)
+		while (processedLines.length > 0 && processedLines[0].trim().startsWith('#!')) {
+			processedLines = processedLines.slice(1);
+		}
+
+		return processedLines.join('\n');
+	}
+
+	/**
 	 * Transform a TypeScript SourceFile to our TsParsedFile format
 	 */
 	private transformSourceFile(sourceFile: ts.SourceFile): TsParsedFile {
@@ -198,9 +220,100 @@ export class TsParser {
 	/**
 	 * Extract directives from the source file
 	 */
-	private extractDirectives(_sourceFile: ts.SourceFile): IArray<Directive> {
-		// For now, return empty array - we'll implement directive parsing later
-		return IArray.Empty;
+	private extractDirectives(sourceFile: ts.SourceFile): IArray<Directive> {
+		const directives: Directive[] = [];
+		const sourceText = sourceFile.getFullText();
+
+		// Extract all comment ranges that might contain directives
+		const commentRanges = ts.getLeadingCommentRanges(sourceText, 0) || [];
+
+		for (const range of commentRanges) {
+			const commentText = sourceText.substring(range.pos, range.end);
+			const directive = this.parseDirectiveFromComment(commentText);
+			if (directive) {
+				directives.push(directive);
+			}
+		}
+
+		return IArray.fromArray(directives);
+	}
+
+	/**
+	 * Parse a directive from a comment string
+	 */
+	private parseDirectiveFromComment(commentText: string): Directive | null {
+		// Remove comment markers and trim
+		const cleaned = commentText.replace(/^\/\*\*?|\*\/$/g, '').replace(/^\/\//, '').trim();
+
+		// Match triple-slash directive pattern: /// <directive attr="value" />
+		const tripleSlashMatch = cleaned.match(/^\/\s*<([^>]+)>/);
+		if (!tripleSlashMatch) {
+			return null;
+		}
+
+		const directiveContent = tripleSlashMatch[1];
+
+		// Parse reference directives
+		if (directiveContent.startsWith('reference ')) {
+			return this.parseReferenceDirective(directiveContent);
+		}
+
+		// Parse amd-module directive
+		if (directiveContent.startsWith('amd-module ')) {
+			return this.parseAmdModuleDirective(directiveContent);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Parse reference directive (lib, types, path, no-default-lib)
+	 */
+	private parseReferenceDirective(content: string): Directive | null {
+		// Match lib reference: reference lib="value"
+		const libMatch = content.match(/reference\s+lib\s*=\s*["']([^"']+)["']/);
+		if (libMatch) {
+			return Directive.libRef(libMatch[1]);
+		}
+
+		// Match types reference: reference types="value"
+		const typesMatch = content.match(/reference\s+types\s*=\s*["']([^"']+)["']/);
+		if (typesMatch) {
+			return Directive.typesRef(typesMatch[1]);
+		}
+
+		// Handle typo variant: references types="value"
+		const typesTypoMatch = content.match(/references\s+types\s*=\s*["']([^"']+)["']/);
+		if (typesTypoMatch) {
+			return Directive.typesRef(typesTypoMatch[1]);
+		}
+
+		// Match path reference: reference path="value"
+		const pathMatch = content.match(/reference\s+path\s*=\s*["']([^"']+)["']/);
+		if (pathMatch) {
+			return Directive.pathRef(pathMatch[1]);
+		}
+
+		// Match no-default-lib: reference no-default-lib="true"
+		const noStdLibMatch = content.match(/reference\s+no-default-lib\s*=\s*["']true["']/);
+		if (noStdLibMatch) {
+			return Directive.noStdLib();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Parse amd-module directive
+	 */
+	private parseAmdModuleDirective(content: string): Directive | null {
+		// Match amd-module: amd-module name="value"
+		const amdMatch = content.match(/amd-module\s+name\s*=\s*["']([^"']+)["']/);
+		if (amdMatch) {
+			return Directive.amdModule(amdMatch[1]);
+		}
+
+		return null;
 	}
 
 	/**

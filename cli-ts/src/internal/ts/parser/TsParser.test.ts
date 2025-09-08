@@ -3,11 +3,14 @@
  *
  * This test suite follows a Test-Driven Development (TDD) approach to ensure
  * 100% behavioral parity with the original Scala TsParser implementation.
+ *
+ * Enhanced with comprehensive test utilities and systematic test generation.
  */
 
 import { describe, expect, test } from "vitest";
 import { parseString } from "./TsParser.js";
 import { TsDeclInterface, TsDeclTypeAlias, TsDeclVar } from "../trees.js";
+import { TestRunner, TestDataGenerator, ASTComparator, PerformanceTester } from "./TestUtils.js";
 
 describe("TsParser", () => {
 	describe("Basic Parsing - Empty File", () => {
@@ -255,6 +258,83 @@ describe("TsParser", () => {
 				expect(parsed.members.length).toBe(1);
 				expect(parsed.members.apply(0)._tag).toBe("TsDeclInterface");
 			}
+		});
+	});
+
+	// Systematic test generation using TestUtils
+	describe("Generated Test Cases", () => {
+		describe("Interface Declarations", () => {
+			const interfaceTests = TestDataGenerator.generateInterfaceTests();
+			interfaceTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Type Alias Declarations", () => {
+			const typeAliasTests = TestDataGenerator.generateTypeAliasTests();
+			typeAliasTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Variable Declarations", () => {
+			const variableTests = TestDataGenerator.generateVariableTests();
+			variableTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Error Handling", () => {
+			const errorTests = TestDataGenerator.generateErrorTests();
+			errorTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Directive Processing", () => {
+			const directiveTests = TestDataGenerator.generateDirectiveTests();
+			directiveTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+
+		describe("Shebang Handling", () => {
+			const shebangTests = TestDataGenerator.generateShebangTests();
+			shebangTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
+	});
+
+	describe("Performance Benchmarks", () => {
+		test("should maintain reasonable parsing performance", () => {
+			const simpleInterface = "interface User { name: string; age: number; }";
+			const avgTime = PerformanceTester.measureParsingTime(simpleInterface, 10);
+
+			// Should parse in less than 10ms on average
+			expect(avgTime).toBeLessThan(10);
+		});
+
+		test("should handle complex declarations efficiently", () => {
+			const complexInterface = `
+				interface ComplexUser {
+					id: string;
+					profile: {
+						name: string;
+						email: string;
+						preferences: {
+							theme: 'light' | 'dark';
+							notifications: boolean;
+						};
+					};
+					permissions: Array<'read' | 'write' | 'admin'>;
+					metadata?: Record<string, any>;
+				}
+			`;
+			const avgTime = PerformanceTester.measureParsingTime(complexInterface, 10);
+
+			// Should parse complex declarations in reasonable time
+			expect(avgTime).toBeLessThan(20);
 		});
 	});
 });
