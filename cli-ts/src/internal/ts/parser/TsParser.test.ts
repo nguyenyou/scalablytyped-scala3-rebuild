@@ -304,6 +304,13 @@ describe("TsParser", () => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
+
+		describe("Generic Types", () => {
+			const genericTests = TestDataGenerator.generateGenericTests();
+			genericTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
 	});
 
 	describe("Performance Benchmarks", () => {

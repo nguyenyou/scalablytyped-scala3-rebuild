@@ -335,6 +335,68 @@ interface Test { }`,
     }
 
     /**
+     * Generate generic type test cases
+     */
+    static generateGenericTests(): TestCase[] {
+        return [
+            {
+                name: "generic interface",
+                description: "Interface with single type parameter",
+                input: "interface Container<T> { value: T; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "generic interface with constraint",
+                description: "Interface with constrained type parameter",
+                input: "interface Comparable<T extends string> { compare(other: T): number; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "generic interface with default",
+                description: "Interface with default type parameter",
+                input: "interface Optional<T = string> { value?: T; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "multiple type parameters",
+                description: "Interface with multiple type parameters",
+                input: "interface Map<K, V> { get(key: K): V; set(key: K, value: V): void; }",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclInterface"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "generic type alias",
+                description: "Type alias with type parameter",
+                input: "type Result<T> = T | Error;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "complex generic type alias",
+                description: "Type alias with multiple constrained type parameters",
+                input: "type Mapper<T extends object, U = string> = (input: T) => U;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            }
+        ];
+    }
+
+    /**
      * Generate all test cases
      */
     static generateAllTests(): TestCase[] {
@@ -344,7 +406,8 @@ interface Test { }`,
             ...this.generateVariableTests(),
             ...this.generateErrorTests(),
             ...this.generateDirectiveTests(),
-            ...this.generateShebangTests()
+            ...this.generateShebangTests(),
+            ...this.generateGenericTests()
         ];
     }
 }

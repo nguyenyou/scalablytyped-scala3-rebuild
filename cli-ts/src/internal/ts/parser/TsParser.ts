@@ -358,12 +358,13 @@ export class TsParser {
 		const name = TsIdent.simple(node.name.text);
 		const comments = Comments.empty();
 		const members = this.transformInterfaceMembers(node.members);
+		const tparams = this.transformTypeParameters(node.typeParameters);
 
 		return TsDeclInterfaceConstructor.create(
 			comments,
 			false, // declared
 			name,
-			IArray.Empty, // tparams
+			tparams,
 			IArray.Empty, // inheritance
 			members,
 			CodePath.noPath()
@@ -429,12 +430,13 @@ export class TsParser {
 		const name = TsIdent.simple(node.name.text);
 		const comments = Comments.empty();
 		const alias = this.transformType(node.type);
+		const tparams = this.transformTypeParameters(node.typeParameters);
 
 		return TsDeclTypeAliasConstructor.create(
 			comments,
 			false, // declared
 			name,
-			IArray.Empty, // tparams
+			tparams,
 			alias,
 			CodePath.noPath()
 		);
@@ -511,6 +513,39 @@ export class TsParser {
 		const types = node.types.map(typeNode => this.transformType(typeNode));
 
 		return TsTypeUnion.simplified(IArray.fromArray(types));
+	}
+
+	/**
+	 * Transform TypeScript type parameters to our format
+	 */
+	private transformTypeParameters(typeParameters?: ts.NodeArray<ts.TypeParameterDeclaration>): IArray<TsTypeParam> {
+		if (!typeParameters || typeParameters.length === 0) {
+			return IArray.Empty;
+		}
+
+		const transformedParams = typeParameters.map(param => this.transformTypeParameter(param));
+		return IArray.fromArray(transformedParams);
+	}
+
+	/**
+	 * Transform a single TypeScript type parameter
+	 */
+	private transformTypeParameter(node: ts.TypeParameterDeclaration): TsTypeParam {
+		const name = TsIdent.simple(node.name.text);
+		const comments = Comments.empty();
+
+		// Transform constraint (extends clause)
+		const constraint = node.constraint ? some(this.transformType(node.constraint)) : none;
+
+		// Transform default type
+		const defaultType = node.default ? some(this.transformType(node.default)) : none;
+
+		return TsTypeParamConstructor.create(
+			comments,
+			name,
+			constraint,
+			defaultType
+		);
 	}
 
 	/**
