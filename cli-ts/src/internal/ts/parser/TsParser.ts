@@ -35,6 +35,7 @@ import {
 	type TsDeclClass,
 	type TsType,
 	type TsTypeRef,
+
 	type TsIdentSimple,
 	type TsIdentModule,
 	type TsMember,
@@ -56,9 +57,18 @@ import {
 	TsDeclEnum as TsDeclEnumConstructor,
 	TsDeclClass as TsDeclClassConstructor,
 	TsTypeUnion,
+	TsTypeIntersect,
+	TsTypeObject,
+	TsTypeTuple,
+	TsTupleElement,
+	TsTypeQuery,
+	TsTypeLiteral,
+	TsLiteral,
 	TsFunSig,
 	TsTypeParam as TsTypeParamConstructor,
 	TsEnumMember as TsEnumMemberConstructor,
+	TsQIdentArray,
+	TsQIdentFunction,
 } from "../trees.js";
 
 /**
@@ -508,10 +518,39 @@ export class TsParser {
 				return TsTypeRefConstructor.number;
 			case ts.SyntaxKind.BooleanKeyword:
 				return TsTypeRefConstructor.boolean;
+			case ts.SyntaxKind.VoidKeyword:
+				return TsTypeRefConstructor.void;
+			case ts.SyntaxKind.UndefinedKeyword:
+				return TsTypeRefConstructor.undefined;
+			case ts.SyntaxKind.NullKeyword:
+				return TsTypeRefConstructor.null;
+			case ts.SyntaxKind.AnyKeyword:
+				return TsTypeRefConstructor.any;
+			case ts.SyntaxKind.UnknownKeyword:
+				// Unknown type - use any as fallback since unknown isn't defined
+				return TsTypeRefConstructor.any;
+			case ts.SyntaxKind.NeverKeyword:
+				return TsTypeRefConstructor.never;
+			case ts.SyntaxKind.ObjectKeyword:
+				return TsTypeRefConstructor.object;
 			case ts.SyntaxKind.TypeReference:
 				return this.transformTypeReference(node as ts.TypeReferenceNode);
 			case ts.SyntaxKind.UnionType:
 				return this.transformUnionType(node as ts.UnionTypeNode);
+			case ts.SyntaxKind.IntersectionType:
+				return this.transformIntersectionType(node as ts.IntersectionTypeNode);
+			case ts.SyntaxKind.TupleType:
+				return this.transformTupleType(node as ts.TupleTypeNode);
+			case ts.SyntaxKind.TypeQuery:
+				return this.transformTypeQuery(node as ts.TypeQueryNode);
+			case ts.SyntaxKind.TypeLiteral:
+				return this.transformTypeLiteral(node as ts.TypeLiteralNode);
+			case ts.SyntaxKind.LiteralType:
+				return this.transformLiteralType(node as ts.LiteralTypeNode);
+			case ts.SyntaxKind.ArrayType:
+				return this.transformArrayType(node as ts.ArrayTypeNode);
+			case ts.SyntaxKind.FunctionType:
+				return this.transformFunctionType(node as ts.FunctionTypeNode);
 			default:
 				// For unsupported types, return string type with a warning comment
 				return TsTypeRefConstructor.create(
@@ -543,6 +582,133 @@ export class TsParser {
 		const types = node.types.map(typeNode => this.transformType(typeNode));
 
 		return TsTypeUnion.simplified(IArray.fromArray(types));
+	}
+
+	/**
+	 * Transform a TypeScript intersection type
+	 */
+	private transformIntersectionType(node: ts.IntersectionTypeNode): TsType {
+		const types = node.types.map(typeNode => this.transformType(typeNode));
+
+		return TsTypeIntersect.simplified(IArray.fromArray(types));
+	}
+
+	/**
+	 * Transform a TypeScript tuple type
+	 */
+	private transformTupleType(node: ts.TupleTypeNode): TsType {
+		const elements = node.elements.map(element => {
+			// For now, create unlabeled tuple elements
+			// TODO: Handle labeled tuple elements and optional elements
+			const elementType = this.transformType(element);
+			return TsTupleElement.create(none, elementType);
+		});
+
+		return TsTypeTuple.create(IArray.fromArray(elements));
+	}
+
+	/**
+	 * Transform a TypeScript type query (typeof)
+	 */
+	private transformTypeQuery(node: ts.TypeQueryNode): TsType {
+		// Handle EntityName (Identifier or QualifiedName)
+		let qident: TsQIdent;
+		if (ts.isIdentifier(node.exprName)) {
+			qident = TsQIdent.of(TsIdent.simple(node.exprName.text));
+		} else {
+			// For QualifiedName, extract the full qualified name
+			qident = this.extractQualifiedNameFromEntityName(node.exprName);
+		}
+		return TsTypeQuery.create(qident);
+	}
+
+	/**
+	 * Extract qualified name from EntityName (Identifier or QualifiedName)
+	 */
+	private extractQualifiedNameFromEntityName(entityName: ts.EntityName): TsQIdent {
+		if (ts.isIdentifier(entityName)) {
+			return TsQIdent.of(TsIdent.simple(entityName.text));
+		} else {
+			// QualifiedName: left.right
+			const left = this.extractQualifiedNameFromEntityName(entityName.left);
+			const right = TsIdent.simple(entityName.right.text);
+			return TsQIdent.append(left, right);
+		}
+	}
+
+	/**
+	 * Transform a TypeScript type literal (object type)
+	 */
+	private transformTypeLiteral(node: ts.TypeLiteralNode): TsType {
+		const members = this.transformInterfaceMembers(node.members);
+		return TsTypeObject.create(Comments.empty(), members);
+	}
+
+	/**
+	 * Transform a TypeScript literal type
+	 */
+	private transformLiteralType(node: ts.LiteralTypeNode): TsType {
+		const literal = this.transformLiteral(node.literal);
+		return TsTypeLiteral.create(literal);
+	}
+
+	/**
+	 * Transform a TypeScript literal to our literal format
+	 */
+	private transformLiteral(node: any): any {
+		switch (node.kind) {
+			case ts.SyntaxKind.StringLiteral:
+				return TsLiteral.str((node as ts.StringLiteral).text);
+			case ts.SyntaxKind.NumericLiteral:
+				return TsLiteral.num((node as ts.NumericLiteral).text);
+			case ts.SyntaxKind.TrueKeyword:
+				return TsLiteral.bool(true);
+			case ts.SyntaxKind.FalseKeyword:
+				return TsLiteral.bool(false);
+			case ts.SyntaxKind.NullKeyword:
+				// For null, use a string literal since TsLiteral doesn't have null
+				return TsLiteral.str("null");
+			case ts.SyntaxKind.PrefixUnaryExpression:
+				// Handle negative numbers
+				const unaryExpr = node as ts.PrefixUnaryExpression;
+				if (unaryExpr.operator === ts.SyntaxKind.MinusToken &&
+					unaryExpr.operand.kind === ts.SyntaxKind.NumericLiteral) {
+					return TsLiteral.num("-" + (unaryExpr.operand as ts.NumericLiteral).text);
+				}
+				return TsLiteral.str(node.getText());
+			default:
+				// Fallback to string literal
+				return TsLiteral.str(node.getText());
+		}
+	}
+
+	/**
+	 * Transform a TypeScript array type
+	 */
+	private transformArrayType(node: ts.ArrayTypeNode): TsType {
+		const elementType = this.transformType(node.elementType);
+		return TsTypeRefConstructor.create(
+			Comments.empty(),
+			TsQIdentArray,
+			IArray.fromArray([elementType])
+		);
+	}
+
+	/**
+	 * Transform a TypeScript function type
+	 */
+	private transformFunctionType(node: ts.FunctionTypeNode): TsType {
+		// For now, create a basic function signature
+		// TODO: Implement full function type transformation
+		const params = IArray.Empty; // We'll implement parameter transformation later
+		const resultType = this.transformType(node.type);
+		const signature = TsFunSig.create(Comments.empty(), IArray.Empty, params, some(resultType));
+
+		return TsTypeRefConstructor.create(
+			Comments.empty(),
+			TsQIdentFunction,
+			IArray.Empty
+		);
 	}
 
 	/**
@@ -800,7 +966,7 @@ export class TsParser {
 	/**
 	 * Transform class members (basic implementation)
 	 */
-	private transformClassMembers(members: ts.NodeArray<ts.ClassElement>): IArray<TsMember> {
+	private transformClassMembers(_members: ts.NodeArray<ts.ClassElement>): IArray<TsMember> {
 		// For now, return empty array - we'll implement member transformation later
 		// TODO: Implement full class member transformation
 		return IArray.Empty;

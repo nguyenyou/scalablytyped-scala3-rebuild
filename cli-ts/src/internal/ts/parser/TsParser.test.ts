@@ -339,6 +339,13 @@ describe("TsParser", () => {
 				TestRunner.runTestCase(testCase);
 			});
 		});
+
+		describe("Advanced Type System", () => {
+			const advancedTypeTests = TestDataGenerator.generateAdvancedTypeTests();
+			advancedTypeTests.forEach(testCase => {
+				TestRunner.runTestCase(testCase);
+			});
+		});
 	});
 
 	describe("Performance Benchmarks", () => {

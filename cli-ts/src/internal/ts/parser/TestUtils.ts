@@ -595,6 +595,122 @@ interface Test { }`,
     }
 
     /**
+     * Generate advanced type system test cases
+     */
+    static generateAdvancedTypeTests(): TestCase[] {
+        return [
+            {
+                name: "intersection type",
+                description: "Type alias with intersection type",
+                input: "type Combined = TypeA & TypeB;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "tuple type",
+                description: "Type alias with tuple type",
+                input: "type Coordinates = [number, number];",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "complex tuple type",
+                description: "Type alias with complex tuple type",
+                input: "type ComplexTuple = [string, number, boolean];",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "typeof type query",
+                description: "Type alias with typeof query",
+                input: "type TypeOfValue = typeof someValue;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "object type literal",
+                description: "Type alias with object type literal",
+                input: "type ObjectType = { name: string; age: number; };",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "string literal type",
+                description: "Type alias with string literal type",
+                input: 'type Status = "active";',
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "number literal type",
+                description: "Type alias with number literal type",
+                input: "type Version = 1;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "boolean literal type",
+                description: "Type alias with boolean literal type",
+                input: "type IsEnabled = true;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "array type",
+                description: "Type alias with array type",
+                input: "type StringArray = string[];",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "function type",
+                description: "Type alias with function type",
+                input: "type Handler = (event: Event) => void;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "complex intersection",
+                description: "Complex intersection with multiple types",
+                input: "type ComplexIntersection = TypeA & TypeB & TypeC;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            },
+            {
+                name: "union and intersection combined",
+                description: "Type with both union and intersection",
+                input: "type Complex = (TypeA | TypeB) & TypeC;",
+                expectedSuccess: true,
+                expectedDeclarationCount: 1,
+                expectedDeclarationTypes: ["TsDeclTypeAlias"],
+                category: TestCategory.TYPES
+            }
+        ];
+    }
+
+    /**
      * Generate all test cases
      */
     static generateAllTests(): TestCase[] {
@@ -609,7 +725,8 @@ interface Test { }`,
             ...this.generateNamespaceTests(),
             ...this.generateModuleTests(),
             ...this.generateEnumTests(),
-            ...this.generateClassTests()
+            ...this.generateClassTests(),
+            ...this.generateAdvancedTypeTests()
         ];
     }
 }
