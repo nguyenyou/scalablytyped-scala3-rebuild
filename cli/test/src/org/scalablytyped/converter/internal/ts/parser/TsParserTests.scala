@@ -126,5 +126,289 @@ object TsParserTests extends TestSuite {
         }
       }
     }
+
+    test("Advanced Type System Features - Batch 1") {
+      test("Keyof Operator - should parse keyof type") {
+        val content = "type Keys = keyof MyInterface;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Keys")
+          assert(alias.alias.isInstanceOf[TsTypeKeyOf])
+        }
+      }
+
+      test("Keyof Operator - should parse complex keyof expression") {
+        val content = "type ComplexKeys = keyof (A & B);"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "ComplexKeys")
+          assert(alias.alias.isInstanceOf[TsTypeKeyOf])
+        }
+      }
+
+      test("Indexed Access Types - should parse indexed access type") {
+        val content = "type Value = MyType[K];"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Value")
+          assert(alias.alias.isInstanceOf[TsTypeLookup])
+        }
+      }
+
+      test("Indexed Access Types - should parse nested indexed access") {
+        val content = "type NestedValue = MyType[K][P];"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "NestedValue")
+          // This should be a nested TsTypeLookup
+          assert(alias.alias.isInstanceOf[TsTypeLookup])
+        }
+      }
+    }
+
+    test("Advanced Type System Features - Batch 2") {
+      test("Conditional Types - should parse simple conditional type") {
+        val content = "type IsString<T> = T extends string ? true : false;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "IsString")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+
+      test("Conditional Types - should parse complex conditional type") {
+        val content = "type ReturnType<T> = T extends (...args: any[]) => infer R ? R : any;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "ReturnType")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+
+      test("Conditional Types - should parse nested conditional types") {
+        val content = "type Complex<T> = T extends string ? string[] : T extends number ? number[] : never;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Complex")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+
+      test("Infer Types - should parse infer in conditional type") {
+        val content = "type ElementType<T> = T extends (infer U)[] ? U : never;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "ElementType")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+
+      test("Infer Types - should parse multiple infer types") {
+        val content = "type Parameters<T> = T extends (...args: infer P) => infer R ? P : never;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Parameters")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+    }
+
+    test("Advanced Type System Features - Batch 3") {
+      test("Template Literal Types - should parse simple template literal type") {
+        val content = "type Greeting = `Hello, ${string}!`;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Greeting")
+          // In Scala implementation, template literals are converted to string types with comments
+          assert(alias.alias.isInstanceOf[TsTypeRef])
+          val typeRef = alias.alias.asInstanceOf[TsTypeRef]
+          assert(typeRef.name.parts.head.value == "string")
+        }
+      }
+
+      test("Template Literal Types - should parse complex template literal type") {
+        val content = "type EventName<T> = `on${Capitalize<T>}Change`;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "EventName")
+          // In Scala implementation, template literals are converted to string types with comments
+          assert(alias.alias.isInstanceOf[TsTypeRef])
+          val typeRef = alias.alias.asInstanceOf[TsTypeRef]
+          assert(typeRef.name.parts.head.value == "string")
+        }
+      }
+
+      test("Template Literal Types - should parse multiple interpolations") {
+        val content = "type Path = `${string}/${string}/${string}`;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Path")
+          // In Scala implementation, template literals are converted to string types with comments
+          assert(alias.alias.isInstanceOf[TsTypeRef])
+          val typeRef = alias.alias.asInstanceOf[TsTypeRef]
+          assert(typeRef.name.parts.head.value == "string")
+        }
+      }
+
+      test("Mapped Types - should parse simple mapped type") {
+        val content = "type Readonly<T> = { readonly [P in keyof T]: T[P] };"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Readonly")
+          assert(alias.alias.isInstanceOf[TsTypeObject])
+        }
+      }
+
+      test("Mapped Types - should parse optional mapped type") {
+        val content = "type Partial<T> = { [P in keyof T]?: T[P] };"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Partial")
+          assert(alias.alias.isInstanceOf[TsTypeObject])
+        }
+      }
+    }
+
+    test("Advanced Type System Features - Batch 4") {
+      test("Type Queries - should parse simple typeof query") {
+        val content = "type TypeOfValue = typeof myValue;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "TypeOfValue")
+          assert(alias.alias.isInstanceOf[TsTypeQuery])
+        }
+      }
+
+      test("Type Queries - should parse typeof with property access") {
+        val content = "type TypeOfProperty = typeof obj.prop;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "TypeOfProperty")
+          assert(alias.alias.isInstanceOf[TsTypeQuery])
+        }
+      }
+
+      test("Advanced Combinations - should parse keyof typeof combination") {
+        val content = "type Keys = keyof typeof myObject;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Keys")
+          assert(alias.alias.isInstanceOf[TsTypeKeyOf])
+        }
+      }
+
+      test("Advanced Combinations - should parse conditional with keyof") {
+        val content = "type IsKeyOf<T, K> = K extends keyof T ? true : false;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "IsKeyOf")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+
+      test("Advanced Combinations - should parse indexed access with conditional") {
+        val content = "type Get<T, K> = K extends keyof T ? T[K] : never;"
+        val result  = parseString(content)
+        assert(result.isRight)
+        result.foreach { parsed =>
+          assert(parsed.members.length == 1)
+          val member = parsed.members.head
+          assert(member.isInstanceOf[TsDeclTypeAlias])
+          val alias = member.asInstanceOf[TsDeclTypeAlias]
+          assert(alias.name.value == "Get")
+          assert(alias.alias.isInstanceOf[TsTypeConditional])
+        }
+      }
+    }
   }
 }
