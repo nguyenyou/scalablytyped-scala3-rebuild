@@ -25,6 +25,7 @@ import {
 	type TsDeclInterface,
 	type TsDeclTypeAlias,
 	type TsDeclVar,
+	type TsDeclFunction,
 	type TsType,
 	type TsTypeRef,
 	type TsIdentSimple,
@@ -36,6 +37,9 @@ import {
 	TsDeclInterface as TsDeclInterfaceConstructor,
 	TsDeclTypeAlias as TsDeclTypeAliasConstructor,
 	TsDeclVar as TsDeclVarConstructor,
+	TsDeclFunction as TsDeclFunctionConstructor,
+	TsTypeUnion,
+	TsFunSig,
 } from "../trees.js";
 
 /**
@@ -226,6 +230,8 @@ export class TsParser {
 				return this.transformTypeAliasDeclaration(statement as ts.TypeAliasDeclaration);
 			case ts.SyntaxKind.VariableStatement:
 				return this.transformVariableStatement(statement as ts.VariableStatement);
+			case ts.SyntaxKind.FunctionDeclaration:
+				return this.transformFunctionDeclaration(statement as ts.FunctionDeclaration);
 			default:
 				// For now, skip unsupported statement types
 				return null;
@@ -287,7 +293,7 @@ export class TsParser {
 		const name = TsIdent.simple((node.name as ts.Identifier).text);
 		const comments = Comments.empty();
 		const tpe = node.type ? some(this.transformType(node.type)) : none;
-		const isOptional = !!node.questionToken;
+		// TODO: Handle optional properties with node.questionToken
 
 		// Create a simple member property
 		return {
@@ -359,6 +365,8 @@ export class TsParser {
 				return TsTypeRefConstructor.boolean;
 			case ts.SyntaxKind.TypeReference:
 				return this.transformTypeReference(node as ts.TypeReferenceNode);
+			case ts.SyntaxKind.UnionType:
+				return this.transformUnionType(node as ts.UnionTypeNode);
 			default:
 				// For unsupported types, return string type with a warning comment
 				return TsTypeRefConstructor.create(
@@ -380,6 +388,42 @@ export class TsParser {
 			Comments.empty(),
 			qident,
 			IArray.Empty // We'll implement type arguments later
+		);
+	}
+
+	/**
+	 * Transform a TypeScript union type
+	 */
+	private transformUnionType(node: ts.UnionTypeNode): TsType {
+		const types = node.types.map(typeNode => this.transformType(typeNode));
+
+		return TsTypeUnion.simplified(IArray.fromArray(types));
+	}
+
+	/**
+	 * Transform a TypeScript function declaration
+	 */
+	private transformFunctionDeclaration(node: ts.FunctionDeclaration): TsDeclFunction {
+		const name = TsIdent.simple(node.name?.text || "default");
+		const comments = Comments.empty();
+
+		// Create a simple function signature for now
+		const signature = {
+			_tag: "TsFunSig",
+			comments: Comments.empty(),
+			tparams: IArray.Empty,
+			params: IArray.Empty, // We'll implement parameter parsing later
+			resultType: none, // We'll implement return type parsing later
+			asString: "TsFunSig()",
+		} as any; // We'll fix the type later
+
+		return TsDeclFunctionConstructor.create(
+			comments,
+			false, // declared
+			name,
+			signature,
+			JsLocation.zero(),
+			CodePath.noPath()
 		);
 	}
 }

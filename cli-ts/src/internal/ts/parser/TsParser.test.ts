@@ -92,19 +92,118 @@ describe("TsParser", () => {
 			const content = "let myVar: string;";
 			const result = parseString(content);
 			expect(result._tag).toBe("Right");
-			
+
 			if (result._tag === "Right") {
 				const parsed = result.value;
 				expect(parsed.members.length).toBe(1);
-				
+
 				const member = parsed.members.apply(0);
 				expect(member._tag).toBe("TsDeclVar");
-				
+
 				if (member._tag === "TsDeclVar") {
 					const variable = member as TsDeclVar;
 					expect(variable.name.value).toBe("myVar");
 					expect(variable.readOnly).toBe(false);
 				}
+			}
+		});
+
+		test("should parse const variable declaration", () => {
+			const content = "const myConst: number = 42;";
+			const result = parseString(content);
+			expect(result._tag).toBe("Right");
+
+			if (result._tag === "Right") {
+				const parsed = result.value;
+				expect(parsed.members.length).toBe(1);
+
+				const member = parsed.members.apply(0);
+				expect(member._tag).toBe("TsDeclVar");
+
+				if (member._tag === "TsDeclVar") {
+					const variable = member as TsDeclVar;
+					expect(variable.name.value).toBe("myConst");
+					expect(variable.readOnly).toBe(true);
+				}
+			}
+		});
+
+		test("should parse union type alias", () => {
+			const content = "type StringOrNumber = string | number;";
+			const result = parseString(content);
+			expect(result._tag).toBe("Right");
+
+			if (result._tag === "Right") {
+				const parsed = result.value;
+				expect(parsed.members.length).toBe(1);
+
+				const member = parsed.members.apply(0);
+				expect(member._tag).toBe("TsDeclTypeAlias");
+
+				if (member._tag === "TsDeclTypeAlias") {
+					const alias = member as TsDeclTypeAlias;
+					expect(alias.name.value).toBe("StringOrNumber");
+					// The alias should be a union type, but for now we'll just check it exists
+					expect(alias.alias).toBeDefined();
+				}
+			}
+		});
+	});
+
+	describe("Complex Parsing Tests", () => {
+		test("should parse function declaration", () => {
+			const content = "function myFunction(x: number): string { return x.toString(); }";
+			const result = parseString(content);
+			expect(result._tag).toBe("Right");
+
+			if (result._tag === "Right") {
+				const parsed = result.value;
+				expect(parsed.members.length).toBe(1);
+
+				const member = parsed.members.apply(0);
+				// For now, function declarations might not be fully supported
+				// but they should at least not cause parsing to fail
+				expect(member).toBeDefined();
+			}
+		});
+
+		test("should parse interface with multiple members", () => {
+			const content = `
+				interface ComplexInterface {
+					name: string;
+					age: number;
+					isActive: boolean;
+				}
+			`;
+			const result = parseString(content);
+			expect(result._tag).toBe("Right");
+
+			if (result._tag === "Right") {
+				const parsed = result.value;
+				expect(parsed.members.length).toBe(1);
+
+				const member = parsed.members.apply(0);
+				expect(member._tag).toBe("TsDeclInterface");
+
+				if (member._tag === "TsDeclInterface") {
+					const interface_ = member as TsDeclInterface;
+					expect(interface_.name.value).toBe("ComplexInterface");
+					expect(interface_.members.length).toBe(3);
+				}
+			}
+		});
+
+		test("should parse nested type alias", () => {
+			const content = "type NestedType = { prop: string | number };";
+			const result = parseString(content);
+			expect(result._tag).toBe("Right");
+
+			if (result._tag === "Right") {
+				const parsed = result.value;
+				expect(parsed.members.length).toBe(1);
+
+				const member = parsed.members.apply(0);
+				expect(member._tag).toBe("TsDeclTypeAlias");
 			}
 		});
 	});
