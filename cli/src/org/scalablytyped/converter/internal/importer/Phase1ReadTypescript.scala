@@ -358,7 +358,7 @@ class Phase1ReadTypescript(
 }
 
 object Phase1ReadTypescript {
-  private def Pipeline(
+  def Pipeline(
       scope: TsTreeScope.Root,
       libName: TsIdentLibrary,
       expandTypeMappings: Selection[TsIdentLibrary],

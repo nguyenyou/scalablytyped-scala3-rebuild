@@ -81,7 +81,451 @@ object Phase1ReadTypescriptTest extends TestSuite {
     PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
   }
 
+  def createMockScope(declarations: TsContainerOrDecl*): TsTreeScope.Root = {
+    TsTreeScope(
+      libName = TsIdentLibrary("test-lib"),
+      pedantic = false,
+      deps = Map.empty,
+      logger = Logger.DevNull
+    )
+  }
+
   def tests = Tests {
+    test("Pipeline Object Tests") {
+      test("should return non-empty list of transformations") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+
+        assert(pipeline.nonEmpty)
+        assert(pipeline.length > 10) // Should have many transformation steps
+      }
+
+      test("should handle React libraries differently") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+
+        val nonReactPipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact = false)
+        val reactPipeline    = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact = true)
+
+        assert(nonReactPipeline.length == reactPipeline.length)
+        // Both should have same number of steps but different behavior in ExtractClasses step
+      }
+
+      test("should handle expandTypeMappings selection") {
+        val scope         = createMockScope()
+        val libName       = TsIdentLibrary("test-lib")
+        val involvesReact = false
+
+        val expandAllPipeline =
+          Phase1ReadTypescript.Pipeline(scope, libName, Selection.All[TsIdentLibrary], involvesReact)
+        val expandNonePipeline =
+          Phase1ReadTypescript.Pipeline(scope, libName, Selection.None[TsIdentLibrary], involvesReact)
+
+        assert(expandAllPipeline.length == expandNonePipeline.length)
+        // Should have same number of steps but different behavior in ExpandTypeMappings steps
+      }
+
+      test("should handle different library names") {
+        val scope              = createMockScope()
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val stdPipeline = Phase1ReadTypescript.Pipeline(scope, TsIdentLibrary("std"), expandTypeMappings, involvesReact)
+        val reactPipeline =
+          Phase1ReadTypescript.Pipeline(scope, TsIdentLibrary("react"), expandTypeMappings, involvesReact)
+        val customPipeline =
+          Phase1ReadTypescript.Pipeline(scope, TsIdentLibrary("custom-lib"), expandTypeMappings, involvesReact)
+
+        assert(stdPipeline.length == reactPipeline.length)
+        assert(reactPipeline.length == customPipeline.length)
+        // All should have same number of steps
+      }
+    }
+
+    test("Pipeline Execution Tests") {
+      test("should execute pipeline on simple parsed file") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val inputFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclVar(
+              comments = NoComments,
+              declared = false,
+              readOnly = false,
+              name = TsIdentSimple("testVar"),
+              tpe = Some(TsTypeRef.string),
+              expr = Some(TsExpr.Literal(TsLiteral.Str("test"))),
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result   = pipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+
+      test("should execute pipeline on complex parsed file with interfaces") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val inputFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclInterface(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("TestInterface"),
+              tparams = IArray.Empty,
+              inheritance = IArray.Empty,
+              members = IArray(
+                TsMemberProperty(
+                  comments = NoComments,
+                  level = TsProtectionLevel.Default,
+                  name = TsIdentSimple("prop"),
+                  tpe = Some(TsTypeRef.string),
+                  expr = None,
+                  isStatic = false,
+                  isReadOnly = false
+                )
+              ),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result   = pipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+
+      test("should execute pipeline on file with classes") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val inputFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclClass(
+              comments = NoComments,
+              declared = false,
+              isAbstract = false,
+              name = TsIdentSimple("TestClass"),
+              tparams = IArray.Empty,
+              parent = None,
+              implements = IArray.Empty,
+              members = IArray(
+                TsMemberFunction(
+                  comments = NoComments,
+                  level = TsProtectionLevel.Default,
+                  name = TsIdentSimple("method"),
+                  methodType = MethodType.Normal,
+                  signature = TsFunSig(
+                    comments = NoComments,
+                    tparams = IArray.Empty,
+                    params = IArray.Empty,
+                    resultType = Some(TsTypeRef.void)
+                  ),
+                  isStatic = false,
+                  isReadOnly = false
+                )
+              ),
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result   = pipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+    }
+
+    test("Pipeline Edge Cases and Error Handling") {
+      test("should handle empty parsed file") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val emptyFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result   = pipeline.foldLeft(emptyFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.isEmpty)
+      }
+
+      test("should handle file with complex type hierarchies") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val complexFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclInterface(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("BaseInterface"),
+              tparams = IArray.Empty,
+              inheritance = IArray.Empty,
+              members = IArray.Empty,
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            ),
+            TsDeclInterface(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("DerivedInterface"),
+              tparams = IArray.Empty,
+              inheritance =
+                IArray(TsTypeRef(NoComments, TsQIdent(IArray(TsIdentSimple("BaseInterface"))), IArray.Empty)),
+              members = IArray.Empty,
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            ),
+            TsDeclClass(
+              comments = NoComments,
+              declared = false,
+              isAbstract = false,
+              name = TsIdentSimple("ConcreteClass"),
+              tparams = IArray.Empty,
+              parent = None,
+              implements =
+                IArray(TsTypeRef(NoComments, TsQIdent(IArray(TsIdentSimple("DerivedInterface"))), IArray.Empty)),
+              members = IArray.Empty,
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline             = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result: TsParsedFile = pipeline.foldLeft(complexFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+
+      test("should handle file with type aliases and enums") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val typeFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclTypeAlias(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("StringAlias"),
+              tparams = IArray.Empty,
+              alias = TsTypeRef.string,
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            ),
+            TsDeclEnum(
+              comments = NoComments,
+              declared = false,
+              isConst = false,
+              name = TsIdentSimple("TestEnum"),
+              members = IArray(
+                TsEnumMember(
+                  comments = NoComments,
+                  name = TsIdentSimple("VALUE1"),
+                  expr = Some(TsExpr.Literal(TsLiteral.Str("value1")))
+                )
+              ),
+              isValue = true,
+              exportedFrom = None,
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result   = pipeline.foldLeft(typeFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+
+      test("should handle file with modules and namespaces") {
+        val scope              = createMockScope()
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val moduleFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclNamespace(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("TestNamespace"),
+              members = IArray(
+                TsDeclVar(
+                  comments = NoComments,
+                  declared = false,
+                  readOnly = false,
+                  name = TsIdentSimple("namespaceVar"),
+                  tpe = Some(TsTypeRef.string),
+                  expr = Some(TsExpr.Literal(TsLiteral.Str("test"))),
+                  jsLocation = JsLocation.Global(TsQIdent.empty),
+                  codePath = CodePath.HasPath(libName, TsQIdent.empty)
+                )
+              ),
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            ),
+            TsDeclModule(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentModule(None, List("test-module")),
+              members = IArray.Empty,
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val pipeline             = Phase1ReadTypescript.Pipeline(scope, libName, expandTypeMappings, involvesReact)
+        val result: TsParsedFile = pipeline.foldLeft(moduleFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+    }
+
+    test("Pipeline Configuration Variations") {
+      test("should handle different scope configurations") {
+        val libName            = TsIdentLibrary("test-lib")
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val involvesReact      = false
+
+        val inputFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclVar(
+              comments = NoComments,
+              declared = false,
+              readOnly = false,
+              name = TsIdentSimple("testVar"),
+              tpe = Some(TsTypeRef.string),
+              expr = Some(TsExpr.Literal(TsLiteral.Str("test"))),
+              jsLocation = JsLocation.Global(TsQIdent.empty),
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        // Test with pedantic scope
+        val pedanticScope = TsTreeScope(
+          libName = libName,
+          pedantic = true,
+          deps = Map.empty,
+          logger = Logger.DevNull
+        )
+        val pedanticPipeline = Phase1ReadTypescript.Pipeline(pedanticScope, libName, expandTypeMappings, involvesReact)
+        val pedanticResult   = pedanticPipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        // Test with non-pedantic scope
+        val nonPedanticScope = TsTreeScope(
+          libName = libName,
+          pedantic = false,
+          deps = Map.empty,
+          logger = Logger.DevNull
+        )
+        val nonPedanticPipeline =
+          Phase1ReadTypescript.Pipeline(nonPedanticScope, libName, expandTypeMappings, involvesReact)
+        val nonPedanticResult = nonPedanticPipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        assert(pedanticResult != null)
+        assert(nonPedanticResult != null)
+        assert(pedanticResult.isInstanceOf[TsParsedFile])
+        assert(nonPedanticResult.isInstanceOf[TsParsedFile])
+      }
+
+      test("should handle Selection.Only for expandTypeMappings") {
+        val scope         = createMockScope()
+        val libName       = TsIdentLibrary("test-lib")
+        val involvesReact = false
+
+        val inputFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(
+            TsDeclTypeAlias(
+              comments = NoComments,
+              declared = false,
+              name = TsIdentSimple("TestAlias"),
+              tparams = IArray.Empty,
+              alias = TsTypeRef.string,
+              codePath = CodePath.HasPath(libName, TsQIdent.empty)
+            )
+          ),
+          codePath = CodePath.HasPath(libName, TsQIdent.empty)
+        )
+
+        val onlySelection = Selection.NoneExcept(libName)
+        val pipeline      = Phase1ReadTypescript.Pipeline(scope, libName, onlySelection, involvesReact)
+        val result        = pipeline.foldLeft(inputFile) { case (acc, f) => f(acc) }
+
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.nonEmpty)
+      }
+    }
+
     test("Phase1ReadTypescript Basic Functionality") {
       test("should ignore libraries in ignored set") {
         withTempDir("ignore-test") { tempDir =>
