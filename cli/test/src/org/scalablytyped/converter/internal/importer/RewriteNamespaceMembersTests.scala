@@ -267,6 +267,109 @@ object RewriteNamespaceMembersTests extends TestSuite {
         assert(result._3.isEmpty)       // remaining should be empty
         assert(result._4 == NoComments) // comments
       }
+
+      test("should handle empty namespaced containers") {
+        val emptyModule  = createMockModuleTree(Name.namespaced, IArray.Empty)
+        val emptyPackage = createMockPackageTree(Name.namespaced, IArray.Empty)
+        val original     = IArray(emptyModule, emptyPackage)
+        val result       = RewriteNamespaceMembers(original)
+
+        // Should handle empty containers gracefully
+        assert(result._1.isEmpty)       // no inheritance from empty containers
+        assert(result._2.isEmpty)       // no members extracted from empty containers
+        assert(result._3.isEmpty)       // remaining should be empty
+        assert(result._4 == NoComments) // comments
+      }
+    }
+
+    test("RewriteNamespaceMembers - Advanced Scenarios") {
+      test("should handle combination of all namespaced types") {
+        val namespacedField  = createMockFieldTree(Name.namespaced, TypeRef.String)
+        val namespacedMethod = createMockMethodTree(Name.namespaced, TypeRef.Unit)
+        val innerMember      = createMockFieldTree(Name("innerField"))
+        val namespacedModule = createMockModuleTree(Name.namespaced, IArray(innerMember))
+        val original         = IArray(namespacedField, namespacedMethod, namespacedModule)
+        val result           = RewriteNamespaceMembers(original)
+
+        // Should handle all types correctly
+        assert(result._1.length == 1)   // inheritance from field
+        assert(result._2.length == 2)   // rewritten method + extracted member
+        assert(result._3.isEmpty)       // remaining should be empty
+        assert(result._4 == NoComments) // comments
+      }
+
+      test("should preserve method name rewriting") {
+        val namespacedMethod1 = createMockMethodTree(Name.namespaced, TypeRef.String)
+        val namespacedMethod2 = createMockMethodTree(Name.namespaced, TypeRef.Unit)
+        val original          = IArray(namespacedMethod1, namespacedMethod2)
+        val result            = RewriteNamespaceMembers(original)
+
+        // Should rewrite both methods to Name.APPLY
+        assert(result._1.isEmpty)       // no inheritance from methods
+        assert(result._2.length == 2)   // both rewritten methods
+        assert(result._3.isEmpty)       // remaining should be empty
+        assert(result._4 == NoComments) // comments
+
+        // Verify both methods were renamed to APPLY
+        val rewrittenMethods = result._2.map(_.asInstanceOf[MethodTree])
+        assert(rewrittenMethods.forall(_.name == Name.APPLY))
+      }
+
+      test("should handle intersection type creation correctly") {
+        val field1   = createMockFieldTree(Name.namespaced, TypeRef.String)
+        val field2   = createMockFieldTree(Name.namespaced, TypeRef.Unit)
+        val field3   = createMockFieldTree(Name.namespaced, TypeRef.Boolean)
+        val original = IArray(field1, field2, field3)
+        val result   = RewriteNamespaceMembers(original)
+
+        // Should create single intersection type from all field types
+        assert(result._1.length == 1)   // single intersection type
+        assert(result._2.isEmpty)       // no member trees
+        assert(result._3.isEmpty)       // remaining should be empty
+        assert(result._4 == NoComments) // comments
+
+        // Verify it's an intersection type containing all three types
+        val inheritanceType = result._1.head
+        assert(inheritanceType.typeName.parts.last == Name("<intersection>"))
+        assert(inheritanceType.targs.length == 3) // should contain all three field types
+      }
+
+      test("should handle deeply nested container structures") {
+        val deepField        = createMockFieldTree(Name("deepField"))
+        val level2Module     = createMockModuleTree(Name("level2"), IArray(deepField))
+        val level1Module     = createMockModuleTree(Name("level1"), IArray(level2Module))
+        val namespacedModule = createMockModuleTree(Name.namespaced, IArray(level1Module))
+        val original         = IArray(namespacedModule)
+        val result           = RewriteNamespaceMembers(original)
+
+        // Based on the actual behavior: namespaced containers don't extract their children to newMemberTrees
+        // They go to remaining instead
+        assert(result._1.isEmpty)       // no inheritance from ModuleTree
+        assert(result._2.isEmpty)       // no member trees extracted from containers
+        assert(result._3.length == 1)   // level1Module goes to remaining
+        assert(result._4 == NoComments) // comments
+      }
+
+      test("should handle mixed member and non-member trees") {
+        val namespacedField = createMockFieldTree(Name.namespaced, TypeRef.String)
+        val regularMethod   = createMockMethodTree(Name("regularMethod"), TypeRef.Unit)
+        val typeAlias = TypeAliasTree(
+          name = Name("TestAlias"),
+          level = ProtectionLevel.Public,
+          tparams = IArray.Empty,
+          alias = TypeRef.String,
+          comments = NoComments,
+          codePath = createMockQualifiedName("TestAlias")
+        )
+        val original = IArray(namespacedField, regularMethod, typeAlias)
+        val result   = RewriteNamespaceMembers(original)
+
+        // Should separate namespaced, member, and non-member trees correctly
+        assert(result._1.length == 1)   // inheritance from namespaced field
+        assert(result._2.length == 1)   // regular method
+        assert(result._3.length == 1)   // type alias in remaining
+        assert(result._4 == NoComments) // comments
+      }
     }
   }
 }
