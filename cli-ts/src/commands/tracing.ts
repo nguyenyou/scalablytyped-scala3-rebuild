@@ -162,8 +162,33 @@ export class TracingCommand extends BaseCommand {
 			} as Logger<void>;
 		};
 
-		// Create phase listener
+		// Create phase listener - use logging listener for better visibility
 		const listener = new CollectingPhaseListener<LibTsSource>();
+
+		// Add a logging phase listener for real-time feedback
+		const loggingListener = {
+			on: (phaseName: string, id: LibTsSource, event: any) => {
+				switch (event._tag) {
+					case "Started":
+						console.log(`🚀 [${phaseName}] Started processing: ${id.libName.value}`);
+						break;
+					case "Success":
+						console.log(`✅ [${phaseName}] Successfully processed: ${id.libName.value}`);
+						break;
+					case "Failure":
+						console.error(`❌ [${phaseName}] Failed to process: ${id.libName.value}`);
+						break;
+					case "Blocked":
+						console.log(`⏸️  [${phaseName}] Blocked on dependencies: ${id.libName.value}`);
+						break;
+					case "Ignored":
+						console.log(`⏭️  [${phaseName}] Ignored: ${id.libName.value}`);
+						break;
+				}
+				// Also forward to collecting listener
+				listener.on(phaseName, id, event);
+			}
+		};
 
 		// Create formatters and orderings
 		const formatter = Formatters.create<LibTsSource>(
@@ -188,6 +213,7 @@ export class TracingCommand extends BaseCommand {
 
 		// Configure Phase2: TypeScript to Scala.js conversion
 		this.executionLogger.logStep("Configuring Phase2ToScalaJs");
+		console.log("🔧 [TracingCommand] Setting up Phase2ToScalaJs configuration...");
 		const phase2Config = {
 			pedantic: false,
 			useDeprecatedModuleNames: this.DefaultOptions.useDeprecatedModuleNames,
@@ -196,7 +222,9 @@ export class TracingCommand extends BaseCommand {
 			outputPkg: this.DefaultOptions.outputPackage,
 			flavour: NormalFlavourImpl.createMock(),
 		};
+		console.log("🏗️  [TracingCommand] Creating Phase2ToScalaJs instance...");
 		const phase2 = Phase2ToScalaJs.create(phase2Config);
+		console.log("✅ [TracingCommand] Phase2ToScalaJs configured successfully");
 
 		// Configure Phase3: Flavour transformations
 		this.executionLogger.logStep("Configuring PhaseFlavour");
@@ -215,11 +243,11 @@ export class TracingCommand extends BaseCommand {
 			.next(phase2.apply.bind(phase2), "Phase2ToScalaJs")
 			.next(phase3.apply.bind(phase3), "PhaseFlavour");
 
-		// Create phase runner
+		// Create phase runner - use the logging listener for better visibility
 		const runner = PhaseRunner.apply(
 			pipeline,
 			getLogger,
-			listener,
+			loggingListener,
 			formatter,
 			ordering,
 		);

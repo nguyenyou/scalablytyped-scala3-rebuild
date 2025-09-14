@@ -10,6 +10,7 @@
 	"scripts": {
 		"build": "bun build src/main.ts --outdir dist --target node --format esm",
 		"dev": "bun --watch src/main.ts convert",
+    "dev:debug": "bun run dev convert --debug --output ./generated-sources",
 		"test": "bun test",
 		"coverage": "vitest run --coverage",
 		"format": "biome format --write",

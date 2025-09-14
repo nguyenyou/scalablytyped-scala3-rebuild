@@ -1,5 +1,5 @@
 === ScalablyTyped Converter Execution Log ===
-Started at: 2025-09-02 07:57:07
+Started at: 2025-09-14 07:10:30
 Working directory: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/cli-ts
 Output directory: /Users/tunguyen/Desktop/DELETEME/scalablytyped-scala3-rebuild/cli-ts/generated-sources
 ==================================================
@@ -9,7 +9,22 @@ Step 1: Bootstrapping TypeScript environment
   → Bootstrap completed, found std as stdlib
   → Initial sources from bootstrap: clsx, scroll-into-view-if-needed, tabulator-tables, tabulator-tables
   → Converting clsx, scroll-into-view-if-needed, tabulator-tables, tabulator-tables to scalajs...
+Step 2: Setting up three-phase pipeline
+Step 3: Configuring Phase1ReadTypescript
+Step 4: Configuring Phase2ToScalaJs
+Step 5: Configuring PhaseFlavour
+Step 6: Creating three-phase pipeline
+Step 7: Executing three-phase pipeline
+  → Processing clsx through three-phase pipeline
+  → Successfully processed clsx
+  → Processing scroll-into-view-if-needed through three-phase pipeline
+  → Successfully processed scroll-into-view-if-needed
+  → Processing tabulator-tables through three-phase pipeline
+  → Successfully processed tabulator-tables
+  → Processing tabulator-tables through three-phase pipeline
+  → Successfully processed tabulator-tables
+Step 8: Three-phase pipeline execution completed
 
 ==================================================
-Execution completed successfully at: 2025-09-02 07:57:07
-Total steps executed: 1
+Execution completed successfully at: 2025-09-14 07:10:30
+Total steps executed: 8

@@ -50,22 +50,29 @@ export class Phase2ToScalaJs {
 		_isCircular: IsCircular,
 		logger: Logger<void>,
 	): PhaseRes<LibTsSource, LibScalaJs> {
+		// Always log to console for visibility, regardless of debug flag
+		console.log(`🔄 [Phase2ToScalaJs] Starting conversion of: ${tsLibrary.name.value}`);
+
 		logger.info(
 			`Converting TypeScript library to Scala.js: ${tsLibrary.name.value}`,
 		);
 
 		try {
 			// DUMMY IMPLEMENTATION: Get dependencies (but don't use them for real processing)
+			console.log(`🔍 [Phase2ToScalaJs] Garbage collecting libraries for: ${tsLibrary.name.value}`);
 			const knownLibs = this.garbageCollectLibs(tsLibrary, logger);
 
 			return pipe(
 				getDeps(knownLibs),
 				flatMap((scalaDeps: SortedMap<LibTsSource, LibScalaJs>) => {
+					console.log(`📦 [Phase2ToScalaJs] Processing ${tsLibrary.name.value} with ${scalaDeps.size} dependencies`);
+
 					logger.info(
 						`Processing ${tsLibrary.name.value} with ${scalaDeps.size} dependencies`,
 					);
 
 					// DUMMY IMPLEMENTATION: Create mock Scala.js library
+					console.log(`🏗️  [Phase2ToScalaJs] Creating mock Scala.js library for: ${tsLibrary.name.value}`);
 					const mockLibScalaJs = this.createMockLibScalaJs(
 						source,
 						tsLibrary,
@@ -73,6 +80,7 @@ export class Phase2ToScalaJs {
 						logger,
 					);
 
+					console.log(`✅ [Phase2ToScalaJs] Successfully completed conversion of: ${tsLibrary.name.value}`);
 					logger.info(
 						`Successfully created mock LibScalaJs for ${tsLibrary.name.value}`,
 					);
@@ -82,6 +90,8 @@ export class Phase2ToScalaJs {
 		} catch (error) {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
+			console.error(`❌ [Phase2ToScalaJs] Failed to convert ${tsLibrary.name.value}: ${errorMessage}`);
+
 			logger.error(
 				`Failed to convert ${tsLibrary.name.value} to Scala.js: ${errorMessage}`,
 			);
@@ -99,14 +109,18 @@ export class Phase2ToScalaJs {
 		tsLibrary: LibTs,
 		logger: Logger<void>,
 	): SortedSet<LibTsSource> {
+		console.log(`🗑️  [Phase2ToScalaJs] Garbage collecting ${tsLibrary.dependencies.size} dependencies for ${tsLibrary.name.value}`);
+
 		logger.info(`Garbage collecting libraries for ${tsLibrary.name.value}`);
 
 		// DUMMY IMPLEMENTATION: Just return the dependencies as a set
 		const deps = new Set<LibTsSource>();
 		for (const [source, _lib] of tsLibrary.dependencies) {
+			console.log(`   📚 Adding dependency: ${source.libName.value}`);
 			deps.add(source);
 		}
 
+		console.log(`🔗 [Phase2ToScalaJs] Collected ${deps.size} dependencies for ${tsLibrary.name.value}`);
 		return new SortedSet(deps);
 	}
 
@@ -119,17 +133,25 @@ export class Phase2ToScalaJs {
 		scalaDeps: SortedMap<LibTsSource, LibScalaJs>,
 		logger: Logger<void>,
 	): LibScalaJs {
+		console.log(`🏭 [Phase2ToScalaJs] Creating mock Scala.js library for ${tsLibrary.name.value}`);
+
 		logger.info(`Creating mock Scala.js library for ${tsLibrary.name.value}`);
 
 		// Create mock Scala name
 		const scalaName = new Name(tsLibrary.name.value.replace(/\./g, "_"));
+		console.log(`📝 [Phase2ToScalaJs] Generated Scala name: ${scalaName.value}`);
 
 		// Create mock package tree
 		const mockPackageTree = this.createMockPackageTree(scalaName, logger);
 
 		// Convert dependencies map
 		const dependencies = new Map<LibTsSource, LibScalaJs>();
-		scalaDeps.forEach((lib, source) => dependencies.set(source, lib));
+		scalaDeps.forEach((lib, source) => {
+			console.log(`🔗 [Phase2ToScalaJs] Adding dependency mapping: ${source.libName.value} -> ${lib.scalaName.value}`);
+			dependencies.set(source, lib);
+		});
+
+		console.log(`🎯 [Phase2ToScalaJs] Created LibScalaJs with ${dependencies.size} dependencies for ${tsLibrary.name.value}`);
 
 		return new LibScalaJs(
 			source,
@@ -150,10 +172,15 @@ export class Phase2ToScalaJs {
 		scalaName: Name,
 		logger: Logger<void>,
 	): PackageTree {
+		console.log(`🌳 [Phase2ToScalaJs] Creating mock package tree for ${scalaName.value}`);
+
 		logger.info(`Creating mock package tree for ${scalaName.value}`);
 
 		// DUMMY IMPLEMENTATION: In real implementation, this would involve complex AST transformations
-		return PackageTree.createMock(scalaName);
+		const mockTree = PackageTree.createMock(scalaName);
+		console.log(`🌲 [Phase2ToScalaJs] Mock package tree created for ${scalaName.value}`);
+
+		return mockTree;
 	}
 
 	/**
