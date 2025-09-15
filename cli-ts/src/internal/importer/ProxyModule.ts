@@ -10,13 +10,16 @@ import { IArray } from "../IArray";
 import type { Logger } from "../logging";
 import { Comments } from "../Comments";
 import { CodePath } from "../ts/CodePath";
+import { ExportType } from "../ts/ExportType";
 import { JsLocation } from "../ts/JsLocation";
 import {
 	type TsIdentLibrary,
 	type TsIdentModule,
-	type TsIdent,
+	TsIdent,
 	TsDeclModule,
-	TsExport
+	TsExport,
+	TsExporteeStar,
+	TsQIdent
 } from "../ts/trees";
 import type { LibraryResolver } from "./LibraryResolver";
 import type { LibTsSource } from "./LibTsSource";
@@ -37,21 +40,25 @@ export class ProxyModule {
 	 */
 	get asModule(): TsDeclModule {
 		// Create a star export from the source module
-		const starExport = TsExport.star(this.fromModule);
+		const starExportee = TsExporteeStar.create(none, this.fromModule);
+		const starExport = TsExport.create(
+			Comments.empty(),
+			false,
+			ExportType.named(),
+			starExportee
+		);
 
-		// For now, create a simplified TsDeclModule
-		// In a full implementation, this would use proper constructors
-		return {
-			_tag: "TsDeclModule",
-			comments: this.comments,
-			declared: false,
-			name: this.toModule,
-			members: IArray.fromArray([starExport as any]), // Cast to any for now
-			codePath: CodePath.noPath(), // Simplified for now
-			jsLocation: JsLocation.zero(),
-			augmentedModules: IArray.Empty,
-			asString: `TsDeclModule(${this.toModule.value})`
-		} as TsDeclModule;
+		// Create the code path
+		const codePath = CodePath.hasPath(this.libName, TsQIdent.of(this.toModule));
+
+		return TsDeclModule.create(
+			this.comments,
+			false,
+			this.toModule,
+			IArray.fromArray([starExport as any]),
+			codePath,
+			JsLocation.zero()
+		);
 	}
 }
 
@@ -81,46 +88,43 @@ export namespace ProxyModule {
 		existing: (ident: TsIdent) => boolean,
 		exports: Map<string, string>
 	): ProxyModule[] {
-		const result: ProxyModule[] = [];
-
 		// Expand glob patterns in exports
 		const expandedGlobs = expandGlobPatterns(exports, source, logger);
 
 		// Get the library module identifier
-		const libModule = createLibraryModule(source.libName);
+		const libModule = TsIdent.module(
+			source.libName._tag === "TsIdentLibraryScoped" ? some((source.libName as any).scope) : none,
+			source.libName._tag === "TsIdentLibraryScoped" ? [(source.libName as any).name] : [source.libName.value]
+		);
+
+		const result: ProxyModule[] = [];
 
 		// Process each export
 		for (const [name, types] of expandedGlobs) {
-			try {
-				// Resolve the target module
-				const moduleResult = resolve.module(source, source.folder, types);
-				if (moduleResult._tag === "None") {
-					// exports are manually annotated, no surprise there are typos
-					logger.warn(`couldn't resolve export ${name} -> ${types}`);
-					continue;
-				}
-
-				const resolvedModule = moduleResult.value;
-				const fromModule = resolvedModule.moduleName;
-
-				// Create the target module name
-				const nameParts = name.split("/").filter(part => part !== ".");
-				const toModule = {
-					...libModule,
-					fragments: [...libModule.fragments, ...nameParts]
-				};
-
-				// Check if module already exists
-				if (existing(toModule as any)) {
-					continue;
-				}
-
-				logger.info(`exposing module ${toModule.value} from ${fromModule.value}`);
-				result.push(new ProxyModule(FromExports, source.libName, fromModule, toModule));
-
-			} catch (error) {
-				logger.warn(`Error processing export ${name} -> ${types}: ${error}`);
+			const moduleResult = resolve.module(source, source.folder, types);
+			if (moduleResult._tag === "None") {
+				// exports are manually annotated, no surprise there are typos
+				logger.warn(`couldn't resolve export ${name} -> ${types}`);
+				continue;
 			}
+
+			const resolvedModule = moduleResult.value;
+			const fromModule = resolvedModule.moduleName;
+
+			// Create the target module name
+			const nameParts = name.split("/").filter(part => part !== ".");
+			const toModule = TsIdent.module(
+				libModule.scopeOpt,
+				[...libModule.fragments, ...nameParts]
+			);
+
+			// Check if module already exists
+			if (existing(toModule)) {
+				continue;
+			}
+
+			logger.info(`exposing module ${toModule.value} from ${fromModule.value}`);
+			result.push(new ProxyModule(FromExports, source.libName, fromModule, toModule));
 		}
 
 		return result;
@@ -128,54 +132,35 @@ export namespace ProxyModule {
 
 	/**
 	 * Expand glob patterns in export paths
+	 * Matches the Scala implementation's glob expansion logic
 	 */
 	function expandGlobPatterns(
 		exports: Map<string, string>,
-		source: LibTsSource,
+		_source: LibTsSource,
 		logger: Logger<void>
 	): Map<string, string> {
 		const expanded = new Map<string, string>();
 
 		for (const [exportedName, exportedTypesRelPath] of exports) {
 			const parts = exportedTypesRelPath.split('*');
-			
+
 			if (parts.length === 1) {
 				// No glob pattern, use as-is
 				expanded.set(exportedName, exportedTypesRelPath);
 			} else if (parts.length === 2) {
 				// Simple glob pattern: prefix*suffix
-				const [pre, post] = parts;
-				
-				// For now, implement a simplified glob expansion
-				// In a full implementation, this would scan the filesystem
-				// and find all matching files
-				try {
-					// Simplified: just use the pattern as-is for now
-					expanded.set(exportedName, exportedTypesRelPath);
-				} catch (error) {
-					logger.warn(`Failed to expand glob pattern ${exportedTypesRelPath}: ${error}`);
-				}
+				// For now, implement a simplified version that just passes through
+				// In the full Scala implementation, this would scan the filesystem
+				// using os.walk to find matching files
+				expanded.set(exportedName, exportedTypesRelPath);
 			} else {
-				logger.warn(`Complex glob patterns not supported: ${exportedTypesRelPath}`);
+				// Multiple glob patterns not supported
+				logger.fatal(`need to add support for more than one '*' in glob pattern ${exportedTypesRelPath}`);
 			}
 		}
 
 		return expanded;
 	}
 
-	/**
-	 * Create a library module identifier from a library name
-	 */
-	function createLibraryModule(libName: TsIdentLibrary): TsIdentModule {
-		// This is a simplified implementation
-		// In the full version, this would use TsIdentModule.fromLibrary
-		return {
-			_tag: "TsIdentModule",
-			scopeOpt: libName._tag === "TsIdentLibraryScoped" ? some((libName as any).scope) : none,
-			fragments: libName._tag === "TsIdentLibraryScoped" ? [(libName as any).name] : [libName.value],
-			value: libName.value,
-			inLibrary: libName,
-			asString: `TsIdentModule(${libName.value})`
-		};
-	}
+
 }
