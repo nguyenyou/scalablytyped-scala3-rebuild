@@ -231,9 +231,19 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 				const patchedScope = scope.parent["/"](
 					mod.withMembers(_rest.filter((member) => member._tag === "TsImport")),
 				);
-				return _rest.map((member) =>
+				// Only create new array if any members are actually changed
+				const transformedMembers = _rest.map((member) =>
 					qualifyReferences.visitTsContainerOrDecl(patchedScope)(member),
 				);
+				// Check if any members were actually changed
+				let hasChanges = false;
+				for (let i = 0; i < transformedMembers.length; i++) {
+					if (transformedMembers.apply(i) !== _rest.apply(i)) {
+						hasChanges = true;
+						break;
+					}
+				}
+				return hasChanges ? transformedMembers : _rest;
 			})();
 
 			if (namespaces.isEmpty) {
@@ -271,6 +281,10 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 							const updatedDecl = SetCodePathTransformFunction.enterTsDecl(
 								mod.codePath.forceHasPath(),
 							)(exporteeTree.decl);
+							// Only create new object if declaration actually changed
+							if (updatedDecl === exporteeTree.decl) {
+								return exportDecl; // No change, return original
+							}
 							return {
 								...exportDecl,
 								exported: TsExporteeTree.create(updatedDecl),
@@ -315,7 +329,8 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 				.concat(maybeKeepOriginalExport);
 
 			// This is essentially a hack to make aws-sdk work, (2)
-			const patchedNewMembers = newMembers.map((member) => {
+			// Only create new array if any members are actually changed
+			const transformedNewMembers = newMembers.map((member) => {
 				if (member._tag === "TsExport") {
 					const exportDecl = member as TsExport;
 					if (
@@ -365,6 +380,16 @@ export class HandleCommonJsModules extends TreeTransformationScopedChanges {
 				}
 				return member;
 			});
+
+			// Check if any members were actually changed
+			let hasChanges = false;
+			for (let i = 0; i < transformedNewMembers.length; i++) {
+				if (transformedNewMembers.apply(i) !== newMembers.apply(i)) {
+					hasChanges = true;
+					break;
+				}
+			}
+			const patchedNewMembers = hasChanges ? transformedNewMembers : newMembers;
 
 			// Handle (1) - erase namespace references
 			const eraseNamespaceRefs = new EraseNamespaceRefs(target);

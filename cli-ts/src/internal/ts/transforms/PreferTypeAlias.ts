@@ -597,7 +597,8 @@ ${formattedCircularGroup}
 
 		// Fallback: apply type replacement to the original type alias
 		const replaceTypes = this.createReplaceTypesTransformation(rewrite);
-		const updatedTa = { ...ta, comments };
+		// Only create new object if comments actually changed
+		const updatedTa = comments === ta.comments ? ta : { ...ta, comments };
 		return this.applyTypeReplacement(updatedTa, replaceTypes, rewrite);
 	}
 
@@ -610,7 +611,10 @@ ${formattedCircularGroup}
 		const replaceTypes = this.createReplaceTypesTransformation(rewrite);
 
 		// Apply type replacement to interface with empty members, then restore original members
-		const emptyInterface: TsDeclInterface = { ...iface, members: IArray.Empty };
+		// Only create new object if members are not already empty
+		const emptyInterface: TsDeclInterface = iface.members.isEmpty
+			? iface
+			: { ...iface, members: IArray.Empty };
 		const processedInterface = this.applyTypeReplacement(
 			emptyInterface,
 			replaceTypes,

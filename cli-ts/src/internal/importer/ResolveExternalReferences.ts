@@ -13,7 +13,7 @@ import { none, some, type Option } from "fp-ts/Option";
 import { IArray } from "../IArray";
 import type { Logger } from "../logging";
 import { TreeTransformationScopedChanges } from "../ts/TreeTransformations";
-import type { TsTreeScope } from "../ts/TsTreeScope";
+import { TsTreeScope, type TsTreeScope as TsTreeScopeInterface } from "../ts/TsTreeScope";
 import {
 	type TsIdentLibrary,
 	type TsIdentModule,
@@ -63,12 +63,17 @@ class ResolveExternalReferencesVisitor extends TreeTransformationScopedChanges {
 				const importeeFrom = x.from as any; // Type assertion for now
 				const resolved = this.resolveModule(importeeFrom.from);
 				if (resolved) {
+					// Only create new object if module name actually changed
+					const newFrom = resolved.moduleName;
+					if (newFrom === importeeFrom.from) {
+						return x; // No change, return original
+					}
 					// Update the import with resolved module name
 					return {
 						...x,
 						from: {
 							...importeeFrom,
-							from: resolved.moduleName
+							from: newFrom
 						}
 					};
 				}
@@ -88,12 +93,17 @@ class ResolveExternalReferencesVisitor extends TreeTransformationScopedChanges {
 				if (exporteeNames.fromOpt && exporteeNames.fromOpt._tag === "Some") {
 					const resolved = this.resolveModule(exporteeNames.fromOpt.value);
 					if (resolved) {
+						// Only create new object if module name actually changed
+						const newModuleName = resolved.moduleName;
+						if (newModuleName === exporteeNames.fromOpt.value) {
+							return x; // No change, return original
+						}
 						// Update the export with resolved module name
 						return {
 							...x,
 							exported: {
 								...exporteeNames,
-								fromOpt: { _tag: "Some", value: resolved.moduleName }
+								fromOpt: { _tag: "Some", value: newModuleName }
 							}
 						};
 					}
@@ -102,12 +112,17 @@ class ResolveExternalReferencesVisitor extends TreeTransformationScopedChanges {
 				const exporteeStar = x.exported as any; // Type assertion for now
 				const resolved = this.resolveModule(exporteeStar.from);
 				if (resolved) {
+					// Only create new object if module name actually changed
+					const newModuleName = resolved.moduleName;
+					if (newModuleName === exporteeStar.from) {
+						return x; // No change, return original
+					}
 					// Update the star export with resolved module name
 					return {
 						...x,
 						exported: {
 							...exporteeStar,
-							from: resolved.moduleName
+							from: newModuleName
 						}
 					};
 				}
@@ -201,14 +216,13 @@ export const ResolveExternalReferences = {
 			}
 		});
 
-		// Create a mock root scope for the transformation
-		const mockScope = {
-			root: {
-				libName: source.libName,
-				pedantic: true,
-				logger
-			}
-		} as TsTreeScope;
+		// Create a proper root scope for the transformation
+		const rootScope = TsTreeScope.create(
+			source.libName,
+			true, // pedantic
+			new Map(), // empty deps for testing
+			logger
+		);
 
 		const visitor = new ResolveExternalReferencesVisitor(resolve, source, folder, logger);
 
@@ -217,7 +231,7 @@ export const ResolveExternalReferences = {
 			visitor.resolveModule(moduleId);
 		});
 
-		const transformedFile = visitor.visitTsParsedFile(mockScope)(file);
+		const transformedFile = visitor.visitTsParsedFile(rootScope)(file);
 
 		// For now, skip adding import types as it requires more complex type construction
 		// In a full implementation, this would create proper TsImport objects

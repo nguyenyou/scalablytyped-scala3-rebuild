@@ -703,6 +703,11 @@ export abstract class AbstractTreeTransformation<T>
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsType(tt)(x);
 
+			// Defensive check for undefined entered
+			if (!entered || !entered._tag) {
+				return x;
+			}
+
 			// Dispatch to specific type visit methods based on type tag
 			let processed: TsType;
 			switch (entered._tag) {
@@ -1498,9 +1503,9 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclInterface {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, iface);
-		const newTparams = iface.tparams.map(this.visitTsTypeParam(tt));
-		const newInheritance = iface.inheritance.map(this.visitTsTypeRef(tt));
-		const newMembers = iface.members.map(this.visitTsMember(tt));
+		const newTparams = iface.tparams?.map(this.visitTsTypeParam(tt)) || iface.tparams;
+		const newInheritance = iface.inheritance?.map(this.visitTsTypeRef(tt)) || iface.inheritance;
+		const newMembers = iface.members?.map(this.visitTsMember(tt)) || iface.members;
 
 		// Only create new object if any field changed
 		return newTparams === iface.tparams &&
@@ -1527,7 +1532,17 @@ export abstract class AbstractTreeTransformation<T>
 	protected processModuleRecursively(t: T, mod: TsDeclModule): TsDeclModule {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, mod);
-		const newMembers = mod.members.map(this.visitTsContainerOrDecl(tt));
+		const transformedMembers = mod.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Check if any members were actually changed
+		let hasChanges = false;
+		for (let i = 0; i < transformedMembers.length; i++) {
+			if (transformedMembers.apply(i) !== mod.members.apply(i)) {
+				hasChanges = true;
+				break;
+			}
+		}
+		const newMembers = hasChanges ? transformedMembers : mod.members;
 
 		// Only create new object if members changed
 		return newMembers === mod.members
