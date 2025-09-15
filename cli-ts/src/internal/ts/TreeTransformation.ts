@@ -801,10 +801,13 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsParsedFile) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsParsedFile(tt)(x);
-			const processed = {
-				...entered,
-				members: entered.members.map(this.visitTsContainerOrDecl(tt)),
-			};
+			const newMembers = entered.members.map(this.visitTsContainerOrDecl(tt));
+
+			// Only create new object if members changed
+			const processed = newMembers === entered.members
+				? entered
+				: { ...entered, members: newMembers };
+
 			return this.leaveTsParsedFile(this.withTree(t, processed))(processed);
 		};
 	}
@@ -1171,11 +1174,13 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeRef) => {
 			const entered = this.enterTsTypeRef(t)(x);
 			const tt = this.withTree(t, entered);
-			return {
-				...entered,
-				name: this.visitTsQIdent(tt)(entered.name),
-				tparams: entered.tparams.map(this.visitTsType(tt)),
-			};
+			const newName = this.visitTsQIdent(tt)(entered.name);
+			const newTparams = entered.tparams.map(this.visitTsType(tt));
+
+			// Only create new object if fields changed
+			return newName === entered.name && newTparams === entered.tparams
+				? entered
+				: { ...entered, name: newName, tparams: newTparams };
 		};
 	}
 
@@ -1183,10 +1188,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeRepeated) => {
 			const entered = this.enterTsTypeRepeated(t)(x);
 			const tt = this.withTree(t, entered);
-			return {
-				...entered,
-				underlying: this.visitTsType(tt)(entered.underlying),
-			};
+			const newUnderlying = this.visitTsType(tt)(entered.underlying);
+
+			// Only create new object if underlying changed
+			return newUnderlying === entered.underlying
+				? entered
+				: { ...entered, underlying: newUnderlying };
 		};
 	}
 
@@ -1201,10 +1208,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeAsserts) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeAsserts(tt)(x);
-			return {
-				...entered,
-				isOpt: O.map(this.visitTsType(tt))(entered.isOpt),
-			};
+			const newIsOpt = O.map(this.visitTsType(tt))(entered.isOpt);
+
+			// Only create new object if isOpt changed
+			return newIsOpt === entered.isOpt
+				? entered
+				: { ...entered, isOpt: newIsOpt };
 		};
 	}
 
@@ -1459,13 +1468,18 @@ export abstract class AbstractTreeTransformation<T>
 	protected processClassRecursively(t: T, cls: TsDeclClass): TsDeclClass {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, cls);
-		return {
-			...cls,
-			tparams: cls.tparams.map(this.visitTsTypeParam(tt)),
-			parent: O.map(this.visitTsTypeRef(tt))(cls.parent),
-			implementsInterfaces: cls.implementsInterfaces.map(this.visitTsTypeRef(tt)),
-			members: cls.members.map(this.visitTsMember(tt)),
-		};
+		const newTparams = cls.tparams.map(this.visitTsTypeParam(tt));
+		const newParent = O.map(this.visitTsTypeRef(tt))(cls.parent);
+		const newImplementsInterfaces = cls.implementsInterfaces.map(this.visitTsTypeRef(tt));
+		const newMembers = cls.members.map(this.visitTsMember(tt));
+
+		// Only create new object if any field changed
+		return newTparams === cls.tparams &&
+			   newParent === cls.parent &&
+			   newImplementsInterfaces === cls.implementsInterfaces &&
+			   newMembers === cls.members
+			? cls
+			: { ...cls, tparams: newTparams, parent: newParent, implementsInterfaces: newImplementsInterfaces, members: newMembers };
 	}
 
 	protected processInterfaceRecursively(
@@ -1474,12 +1488,16 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclInterface {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, iface);
-		return {
-			...iface,
-			tparams: iface.tparams.map(this.visitTsTypeParam(tt)),
-			inheritance: iface.inheritance.map(this.visitTsTypeRef(tt)),
-			members: iface.members.map(this.visitTsMember(tt)),
-		};
+		const newTparams = iface.tparams.map(this.visitTsTypeParam(tt));
+		const newInheritance = iface.inheritance.map(this.visitTsTypeRef(tt));
+		const newMembers = iface.members.map(this.visitTsMember(tt));
+
+		// Only create new object if any field changed
+		return newTparams === iface.tparams &&
+			   newInheritance === iface.inheritance &&
+			   newMembers === iface.members
+			? iface
+			: { ...iface, tparams: newTparams, inheritance: newInheritance, members: newMembers };
 	}
 
 	protected processNamespaceRecursively(
