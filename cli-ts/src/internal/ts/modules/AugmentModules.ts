@@ -80,6 +80,11 @@ export const AugmentModules = {
 	apply:
 		(rootScope: TsTreeScope) =>
 		(file: TsParsedFile): TsParsedFile => {
+			// Early return if no augmented modules to process
+			if (file.augmentedModules.isEmpty) {
+				return file;
+			}
+
 			// Group augmented modules by their target module
 			const targetToAux = new Map<string, IArray<TsAugmentedModule>>();
 
