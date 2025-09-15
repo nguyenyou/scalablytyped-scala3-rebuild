@@ -3,8 +3,11 @@
  * Port of ProxyModuleTests.scala with comprehensive test coverage
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { none, some } from "fp-ts/Option";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
 import { IArray } from "@/internal/IArray";
 import { Comments } from "@/internal/Comments";
 import { InFolder } from "@/internal/files";
@@ -422,6 +425,212 @@ describe("ProxyModule", () => {
 			// Verify single character names work
 			expect(proxyModule.fromModule.fragments[0]).toBe("a");
 			expect(proxyModule.toModule.fragments[0]).toBe("b");
+		});
+	});
+
+	describe("Glob Pattern Expansion", () => {
+		let tempDir: string;
+		let mockSource: LibTsSource;
+		let mockLogger: Logger<void>;
+		let mockResolver: LibraryResolver;
+
+		beforeEach(() => {
+			// Create a temporary directory for testing
+			tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "proxy-module-test-"));
+
+			// Create mock source with the temp directory
+			const mockFolder = { path: tempDir } as InFolder;
+			mockSource = createMockLibTsSource(createMockLibrarySimple("test-lib"));
+			(mockSource as any).folder = mockFolder;
+
+			mockLogger = createMockLogger();
+
+			// Create a resolver that returns a mock resolved module for any path
+			const resolvedModule = createMockResolvedModule(createMockModuleIdent("resolved-module"));
+			mockResolver = {
+				module: (_source: LibTsSource, _folder: InFolder, value: string) => {
+					// Return a resolved module for any .d.ts file
+					if (value.endsWith('.d.ts')) {
+						return some(resolvedModule);
+					}
+					return none;
+				}
+			} as LibraryResolver;
+		});
+
+		afterEach(() => {
+			// Clean up temporary directory
+			try {
+				fs.rmSync(tempDir, { recursive: true, force: true });
+			} catch (error) {
+				// Ignore cleanup errors
+			}
+		});
+
+		it("should handle simple glob patterns", () => {
+			// Create test files
+			fs.mkdirSync(path.join(tempDir, "lib"), { recursive: true });
+			fs.writeFileSync(path.join(tempDir, "lib", "index.d.ts"), "");
+			fs.writeFileSync(path.join(tempDir, "lib", "utils.d.ts"), "");
+
+			const exports = new Map([
+				["lib/*", "lib/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(2);
+
+			// Check that both files were expanded
+			const moduleNames = proxyModules.map(m => m.toModule.fragments.join("/"));
+			expect(moduleNames).toContain("test-lib/lib/index");
+			expect(moduleNames).toContain("test-lib/lib/utils");
+		});
+
+		it("should handle glob patterns with prefix and suffix", () => {
+			// Create test files
+			fs.mkdirSync(path.join(tempDir, "lib"), { recursive: true });
+			fs.writeFileSync(path.join(tempDir, "lib", "api.d.ts"), "");
+			fs.writeFileSync(path.join(tempDir, "lib", "core.d.ts"), "");
+			fs.writeFileSync(path.join(tempDir, "lib", "utils.js"), ""); // Should be ignored
+
+			const exports = new Map([
+				["types/*", "lib/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(2);
+
+			// Check that export names were correctly expanded
+			const moduleNames = proxyModules.map(m => m.toModule.fragments.join("/"));
+			expect(moduleNames).toContain("test-lib/types/api");
+			expect(moduleNames).toContain("test-lib/types/core");
+		});
+
+		it("should handle nested directory patterns", () => {
+			// Create nested test files
+			fs.mkdirSync(path.join(tempDir, "src", "core"), { recursive: true });
+			fs.writeFileSync(path.join(tempDir, "src", "core", "main.d.ts"), "");
+
+			const exports = new Map([
+				["api/*", "src/*/main.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(1);
+			expect(proxyModules[0].toModule.fragments.join("/")).toBe("test-lib/api/core");
+		});
+
+		it("should handle patterns ending with slash", () => {
+			// Create test files
+			fs.mkdirSync(path.join(tempDir, "dist"), { recursive: true });
+			fs.writeFileSync(path.join(tempDir, "dist", "bundle.d.ts"), "");
+
+			const exports = new Map([
+				["build/*", "dist/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(1);
+			expect(proxyModules[0].toModule.fragments.join("/")).toBe("test-lib/build/bundle");
+		});
+
+		it("should handle patterns that match no files", () => {
+			const exports = new Map([
+				["missing/*", "nonexistent/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(0);
+		});
+
+		it("should handle patterns with dot directories", () => {
+			// Create test files with dot directories
+			fs.mkdirSync(path.join(tempDir, "src", "types"), { recursive: true });
+			fs.writeFileSync(path.join(tempDir, "src", "types", "index.d.ts"), "");
+
+			const exports = new Map([
+				["api/*", "./src/types/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				mockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(1);
+			expect(proxyModules[0].toModule.fragments.join("/")).toBe("test-lib/api/index");
+		});
+
+		it("should skip patterns when filesystem operations fail", () => {
+			// Use a non-existent base directory
+			const badMockSource = createMockLibTsSource(createMockLibrarySimple("bad-lib"));
+			(badMockSource as any).folder = { path: "/nonexistent/path" };
+
+			const exports = new Map([
+				["api/*", "lib/*.d.ts"]
+			]);
+
+			const existing = () => false;
+
+			const proxyModules = ProxyModule.fromExports(
+				badMockSource,
+				mockLogger,
+				mockResolver,
+				existing,
+				exports
+			);
+
+			expect(proxyModules).toHaveLength(0);
 		});
 	});
 });

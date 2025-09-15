@@ -6,6 +6,8 @@
  */
 
 import { none, some, type Option } from "fp-ts/Option";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { IArray } from "../IArray";
 import type { Logger } from "../logging";
 import { Comments } from "../Comments";
@@ -132,11 +134,11 @@ export namespace ProxyModule {
 
 	/**
 	 * Expand glob patterns in export paths
-	 * Matches the Scala implementation's glob expansion logic
+	 * Complete port of the Scala implementation's glob expansion logic
 	 */
 	function expandGlobPatterns(
 		exports: Map<string, string>,
-		_source: LibTsSource,
+		source: LibTsSource,
 		logger: Logger<void>
 	): Map<string, string> {
 		const expanded = new Map<string, string>();
@@ -149,10 +151,33 @@ export namespace ProxyModule {
 				expanded.set(exportedName, exportedTypesRelPath);
 			} else if (parts.length === 2) {
 				// Simple glob pattern: prefix*suffix
-				// For now, implement a simplified version that just passes through
-				// In the full Scala implementation, this would scan the filesystem
-				// using os.walk to find matching files
-				expanded.set(exportedName, exportedTypesRelPath);
+				const [pre, post] = parts;
+
+				try {
+					// Split the pre path and filter out "." entries
+					const splitPrePath = pre.split('/').filter(part => part !== ".");
+
+					// Last part of `pre` may not be a full path fragment, so drop it and consider it below
+					const [folderPrePart, preFileNameStart] = pre.endsWith("/")
+						? [splitPrePath, ""]
+						: [splitPrePath.slice(0, -1), splitPrePath[splitPrePath.length - 1] || ""];
+
+					// Build the lookup directory path
+					const lookIn = path.resolve(source.folder.path, ...folderPrePart);
+
+					// Find all matching files using filesystem walking
+					const expandedFragments = walkDirectory(lookIn, preFileNameStart, post, lookIn);
+
+					// Expand each fragment into both name and types
+					for (const fragment of expandedFragments) {
+						const expandedName = exportedName.replace("*", fragment);
+						const expandedTypes = exportedTypesRelPath.replace("*", fragment);
+						expanded.set(expandedName, expandedTypes);
+					}
+				} catch (error) {
+					// If filesystem operations fail, log warning and skip this pattern
+					logger.warn(`Failed to expand glob pattern ${exportedTypesRelPath}: ${error}`);
+				}
 			} else {
 				// Multiple glob patterns not supported
 				logger.fatal(`need to add support for more than one '*' in glob pattern ${exportedTypesRelPath}`);
@@ -160,6 +185,54 @@ export namespace ProxyModule {
 		}
 
 		return expanded;
+	}
+
+	/**
+	 * Walk directory recursively to find files matching the pattern
+	 * Equivalent to Scala's os.walk(lookIn).flatMap { ... }
+	 */
+	function walkDirectory(
+		dir: string,
+		preFileNameStart: string,
+		post: string,
+		lookIn: string
+	): string[] {
+		const results: string[] = [];
+
+		try {
+			// Check if directory exists
+			if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+				return results;
+			}
+
+			// Read directory contents
+			const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+			for (const entry of entries) {
+				const fullPath = path.join(dir, entry.name);
+
+				if (entry.isDirectory()) {
+					// Recursively walk subdirectories
+					results.push(...walkDirectory(fullPath, preFileNameStart, post, lookIn));
+				} else if (entry.isFile()) {
+					// Get relative path from lookIn directory
+					const relPathString = path.relative(lookIn, fullPath);
+
+					// Check if file matches the pattern
+					if (relPathString.startsWith(preFileNameStart) && relPathString.endsWith(post)) {
+						// Extract the fragment between prefix and suffix
+						const fragment = relPathString
+							.substring(preFileNameStart.length)
+							.substring(0, relPathString.length - preFileNameStart.length - post.length);
+						results.push(fragment);
+					}
+				}
+			}
+		} catch (error) {
+			// Ignore filesystem errors and return empty results
+		}
+
+		return results;
 	}
 
 
