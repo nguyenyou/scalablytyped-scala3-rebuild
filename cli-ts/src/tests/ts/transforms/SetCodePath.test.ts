@@ -4,7 +4,7 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.SetCodePathTests
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import { CodePathNoPath } from "@/internal/ts/CodePath.js";
 import { AbstractTreeTransformation } from "@/internal/ts/TreeTransformation.js";

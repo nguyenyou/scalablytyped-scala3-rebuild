@@ -3,7 +3,7 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.SimplifyParentsTests
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import {
 	SimplifyParents,

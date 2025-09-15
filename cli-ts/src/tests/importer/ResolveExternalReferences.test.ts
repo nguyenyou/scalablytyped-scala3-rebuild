@@ -2,7 +2,7 @@
  * Unit tests for ResolveExternalReferences
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { none, some } from "fp-ts/Option";
 import { IArray } from "../../internal/IArray";
 import { Comments } from "../../internal/Comments";

@@ -4,7 +4,7 @@
  */
 
 import { type Either, left, right } from "fp-ts/Either";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import {
 	CollectingPhaseListener,
 	isEventBlocked,

@@ -4,7 +4,7 @@
  * Tests for the RewriteNamespaceMembers transformation
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Comments } from "@/internal/Comments";
 import { IArray } from "@/internal/IArray";
 import { Name } from "@/internal/scalajs/Name";

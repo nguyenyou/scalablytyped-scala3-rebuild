@@ -4,7 +4,7 @@
  * Port of org.scalablytyped.converter.internal.ts.transforms.SetJsLocationTests
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import { JsLocation } from "@/internal/ts/JsLocation.js";
 import { AbstractTreeTransformation } from "@/internal/ts/TreeTransformation.js";

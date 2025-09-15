@@ -5,7 +5,7 @@
  * parser outputs, including AST comparison functions and test data generators.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import type { TsContainerOrDecl, TsParsedFile } from "../trees.js";
 import { parseString } from "./TsParser.js";
 

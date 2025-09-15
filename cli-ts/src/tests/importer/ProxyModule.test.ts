@@ -3,7 +3,7 @@
  * Port of ProxyModuleTests.scala with comprehensive test coverage
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { none, some } from "fp-ts/Option";
 import * as fs from "node:fs";
 import * as path from "node:path";

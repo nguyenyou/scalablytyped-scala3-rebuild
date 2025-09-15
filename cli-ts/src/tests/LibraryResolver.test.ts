@@ -6,7 +6,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as O from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { InFile, InFolder } from "../internal/files.js";
 import { IArray } from "../internal/IArray.js";
 import {

@@ -15,7 +15,7 @@
  * - Boundary conditions
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import {
 	ExtractClasses,

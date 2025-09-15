@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { IArray } from "@/internal/IArray";
 import { TsTreeTraverse } from "@/internal/ts/TsTreeTraverse";
 import {

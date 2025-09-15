@@ -6,7 +6,7 @@
  */
 
 import { none, type Option, some } from "fp-ts/Option";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Comments } from "../../internal/Comments.js";
 import { IArray } from "../../internal/IArray.js";
 import { HasClassMembers } from "../../internal/ts/MemberCache.js";

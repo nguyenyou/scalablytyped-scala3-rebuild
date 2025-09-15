@@ -3,7 +3,7 @@
  * Tests for Phase1ReadTypescript class functionality
  */
 
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { left, right } from "fp-ts/Either";
 import * as fs from "fs-extra";
 import * as path from "path";

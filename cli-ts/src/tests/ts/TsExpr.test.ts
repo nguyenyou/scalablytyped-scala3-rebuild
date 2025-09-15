@@ -3,7 +3,7 @@
  * Comprehensive test suite ported from Scala TsExprTests.scala to ensure behavioral parity
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Comments } from "@/internal/Comments.js";
 import { IArray } from "@/internal/IArray.ts";
 import {

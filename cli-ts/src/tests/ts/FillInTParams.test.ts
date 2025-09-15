@@ -3,7 +3,7 @@
  */
 
 import { none, some } from "fp-ts/Option";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Comments } from "@/internal/Comments.ts";
 import { IArray } from "@/internal/IArray.ts";
 import { CodePath } from "@/internal/ts/CodePath.ts";

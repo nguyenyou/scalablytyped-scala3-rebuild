@@ -3,7 +3,7 @@
  */
 
 import * as O from "fp-ts/Option";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import {
 	BooleanLit,
 	Comment,

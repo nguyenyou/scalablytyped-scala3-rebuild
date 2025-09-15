@@ -4,7 +4,7 @@
  */
 
 import { isNone, none } from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { IArray } from "@/internal/IArray.js";
 import { ExpandedMod } from "@/internal/ts/modules/ExpandedMod.js";
 import { Imports } from "@/internal/ts/modules/Imports.js";

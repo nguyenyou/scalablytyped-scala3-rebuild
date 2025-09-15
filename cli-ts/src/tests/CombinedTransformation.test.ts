@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect } from "bun:test";
 import { TreeTransformationScopedChanges } from "@/internal/ts/TreeTransformations.js";
 import type {
 	TsDeclClass,

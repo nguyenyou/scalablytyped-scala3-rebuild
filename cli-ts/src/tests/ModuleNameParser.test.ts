@@ -1,5 +1,5 @@
 import * as O from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { ModuleNameParser } from "@/internal/ts/ModuleNameParser";
 
 describe("ModuleNameParser", () => {

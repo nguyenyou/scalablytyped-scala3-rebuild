@@ -7,7 +7,7 @@
 
 import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import {
 	arrayFormatter,
 	eitherFormatter,

@@ -7,7 +7,7 @@
  * Enhanced with comprehensive test utilities and systematic test generation.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import type {
 	TsContainerOrDecl,
 	TsDeclInterface,

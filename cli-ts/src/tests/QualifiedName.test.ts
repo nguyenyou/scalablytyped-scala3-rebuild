@@ -3,7 +3,7 @@
  */
 
 import * as O from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { Name } from "../internal/scalajs/Name.js";
 import { QualifiedName, StdNames } from "../internal/scalajs/QualifiedName.js";
 

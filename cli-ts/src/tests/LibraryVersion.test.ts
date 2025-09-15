@@ -6,7 +6,7 @@
 
 import { pipe } from "fp-ts/function";
 import { getOrElse, isNone, isSome } from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { Digest } from "../internal/Digest.js";
 import { IArray } from "../internal/IArray.js";
 import { InGit, LibraryVersion } from "../internal/LibraryVersion.js";

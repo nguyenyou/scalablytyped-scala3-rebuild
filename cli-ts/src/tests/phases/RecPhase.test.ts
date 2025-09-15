@@ -4,7 +4,7 @@
  */
 
 import { none, some } from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { Logger } from "../../internal/logging";
 import { PhaseRes } from "../../internal/phases/PhaseRes";
 import { RecPhase, RecPhaseInitial } from "../../internal/phases/RecPhase";

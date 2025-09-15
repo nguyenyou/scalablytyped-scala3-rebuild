@@ -4,7 +4,7 @@
  */
 
 import { right } from "fp-ts/Either";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { SortedSet } from "@/internal/collections";
 import { Logger } from "@/internal/logging";
 import {

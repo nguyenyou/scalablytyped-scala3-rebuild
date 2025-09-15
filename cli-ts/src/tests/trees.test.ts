@@ -6,7 +6,7 @@
 
 import type * as O from "fp-ts/Option";
 import { isSome, none, some } from "fp-ts/Option";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { Comment, Raw } from "../internal/Comment.js";
 import { Comments } from "../internal/Comments.js";
 import { IArray } from "../internal/IArray.js";

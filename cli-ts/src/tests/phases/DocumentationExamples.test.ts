@@ -6,7 +6,7 @@
 import { chain, type Either, fold, left, map, right } from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { none, some } from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { SortedMap, SortedSet } from "@/internal/collections";
 import { Logger } from "@/internal/logging";
 import {

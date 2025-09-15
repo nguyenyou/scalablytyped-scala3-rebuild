@@ -5,7 +5,7 @@
  */
 
 import { none, some } from "fp-ts/Option";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 import { Comments } from "@/internal/Comments";
 import { IArray } from "@/internal/IArray";
 import { CodePath } from "@/internal/ts/CodePath";
