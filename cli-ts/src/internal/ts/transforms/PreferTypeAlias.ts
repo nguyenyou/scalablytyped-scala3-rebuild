@@ -306,22 +306,7 @@ class PreferTypeAliasVisitor extends TreeTransformationScopedChanges {
 		};
 	}
 
-	protected override processParsedFileRecursively(
-		scope: TsTreeScope,
-		file: TsParsedFile,
-	): TsParsedFile {
-		const transformedMembers = file.members.map((member) => {
-			if (this.isTsDecl(member as any)) {
-				return this.visitTsDecl(scope)(member as TsDecl) as any;
-			}
-			return member;
-		});
 
-		return {
-			...file,
-			members: transformedMembers,
-		};
-	}
 
 	/**
 	 * Check if an interface should be converted to a type alias
