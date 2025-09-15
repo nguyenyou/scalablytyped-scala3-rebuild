@@ -19,8 +19,11 @@ import {
 	type TsIdentLibrary,
 	type TsIdentModule,
 	TsParsedFile,
-	type TsContainerOrDecl
+	type TsContainerOrDecl,
+	TsIdent,
+	type TsQIdent
 } from "../ts/trees";
+import type { Directive } from "../ts/Directive";
 import { Comments } from "../Comments";
 import type { CalculateLibraryVersion } from "./CalculateLibraryVersion";
 import type { LibraryResolver } from "./LibraryResolver";
