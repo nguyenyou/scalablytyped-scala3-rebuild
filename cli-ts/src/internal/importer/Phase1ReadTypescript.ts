@@ -5,7 +5,7 @@
  * the tree. For instance defaulted parameters are filled in. The point is to go from a complex tree to a simpler tree
  */
 
-import { type Either, left, right } from "fp-ts/Either";
+import { type Either, right } from "fp-ts/Either";
 import { none } from "fp-ts/Option";
 import { SortedSet } from "../collections";
 import { InFile } from "../files";
@@ -20,15 +20,39 @@ import {
 	type TsIdentModule,
 	TsParsedFile,
 	type TsContainerOrDecl,
-	TsIdent,
-	type TsQIdent
+	TsQIdent
 } from "../ts/trees";
-import type { Directive } from "../ts/Directive";
 import { Comments } from "../Comments";
 import type { CalculateLibraryVersion } from "./CalculateLibraryVersion";
 import type { LibraryResolver } from "./LibraryResolver";
 import { LibTs } from "./LibTs";
 import { LibTsSource } from "./LibTsSource";
+
+// Import all transformations
+import { LibrarySpecific } from "../ts/transforms/LibrarySpecific";
+import { SetJsLocationTransform } from "../ts/transforms/SetJsLocation";
+import { SimplifyParentsTransform } from "../ts/transforms/SimplifyParents";
+import { RemoveStubs } from "../ts/transforms/RemoveStubs";
+import { InferTypeFromExprTransform } from "../ts/transforms/InferTypeFromExpr";
+import { inferEnumTypes } from "../ts/transforms/InferEnumTypes";
+import { NormalizeFunctions } from "../ts/transforms/NormalizeFunctions";
+import { MoveStatics } from "../ts/transforms/MoveStatics";
+import { QualifyReferences } from "../ts/transforms/QualifyReferences";
+import { ResolveTypeQueries } from "../ts/transforms/ResolveTypeQueries";
+// Additional transformations will be imported as needed when implementing the full pipeline
+
+// Import module transformations
+import { HandleCommonJsModules } from "../ts/modules/HandleCommonJsModules";
+import { RewriteExportStarAs } from "../ts/modules/RewriteExportStarAs";
+import { AugmentModules } from "../ts/modules/AugmentModules";
+import { ReplaceExports } from "../ts/modules/ReplaceExports";
+import { ModuleAsGlobalNamespace } from "../ts/modules/ModuleAsGlobalNamespace";
+import { MoveGlobals } from "../ts/modules/MoveGlobals";
+
+// Import utilities
+import { FlattenTrees } from "../ts/FlattenTrees";
+import { JsLocation } from "../ts/JsLocation";
+import { TsTreeScope, LoopDetector } from "../ts/TsTreeScope";
 
 /**
  * Configuration for Phase1ReadTypescript
@@ -295,11 +319,12 @@ export class Phase1ReadTypescript {
 export namespace Phase1ReadTypescript {
 	/**
 	 * Create a transformation pipeline
-	 * This would be a complex transformation pipeline in the real implementation
+	 * Port of the Scala Phase1ReadTypescript.Pipeline method
 	 */
 	export function createPipeline(
+		scope: TsTreeScope.Root,
 		libName: TsIdentLibrary,
-		_expandTypeMappings: Selection<TsIdentLibrary>,
+		expandTypeMappings: Selection<TsIdentLibrary>,
 		involvesReact: boolean,
 		logger: Logger<void>,
 	): ((file: TsParsedFile) => TsParsedFile)[] {
@@ -307,36 +332,95 @@ export namespace Phase1ReadTypescript {
 			`Creating transformation pipeline for ${libName.value} (React: ${involvesReact})`,
 		);
 
-		// In the real implementation, this would include transformations like:
-		// - LibrarySpecific transformations
-		// - SetJsLocation
-		// - SimplifyParents
-		// - HandleCommonJsModules
-		// - QualifyReferences
-		// - And many more...
+		// Create the transformation pipeline following the exact Scala sequence
+		const transformations: ((file: TsParsedFile) => TsParsedFile)[] = [];
 
-		// For now, return identity transformations as placeholders
-		return [
-			(file: TsParsedFile) => {
+		// 1. LibrarySpecific transformations
+		const librarySpecific = LibrarySpecific.apply(libName);
+		if (librarySpecific) {
+			transformations.push((file: TsParsedFile) => {
 				logger.info("Transformation: LibrarySpecific");
+				return librarySpecific.visitTsParsedFile(scope)(file);
+			});
+		} else {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: LibrarySpecific (identity)");
 				return file;
-			},
-			(file: TsParsedFile) => {
-				logger.info("Transformation: SetJsLocation");
-				return file;
-			},
-			(file: TsParsedFile) => {
-				logger.info("Transformation: SimplifyParents");
-				return file;
-			},
-			(file: TsParsedFile) => {
-				logger.info("Transformation: HandleCommonJsModules");
-				return file;
-			},
-			(file: TsParsedFile) => {
-				logger.info("Transformation: QualifyReferences");
-				return file;
-			},
-		];
+			});
+		}
+
+		// 2. SetJsLocation
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: SetJsLocation");
+			return SetJsLocationTransform.visitTsParsedFile(JsLocation.global(TsQIdent.empty()))(file);
+		});
+
+		// 3. Combined transformations: SimplifyParents >> RemoveStubs >> InferTypeFromExpr >> InferEnumTypes >> NormalizeFunctions >> MoveStatics
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: SimplifyParents >> RemoveStubs >> InferTypeFromExpr >> InferEnumTypes >> NormalizeFunctions >> MoveStatics");
+			const scopeWithUnqualified = scope.enableUnqualifiedLookup().caching();
+			let result = SimplifyParentsTransform.visitTsParsedFile(scopeWithUnqualified)(file);
+			result = RemoveStubs.apply().visitTsParsedFile(scopeWithUnqualified)(result);
+			result = InferTypeFromExprTransform.visitTsParsedFile(scopeWithUnqualified)(result);
+			result = inferEnumTypes.visitTsParsedFile(scopeWithUnqualified)(result);
+			result = NormalizeFunctions.instance.visitTsParsedFile(scopeWithUnqualified)(result);
+			result = MoveStatics.instance.visitTsParsedFile(scopeWithUnqualified)(result);
+			return result;
+		});
+
+		// 4. HandleCommonJsModules >> RewriteExportStarAs
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: HandleCommonJsModules >> RewriteExportStarAs");
+			let result = new HandleCommonJsModules().visitTsParsedFile(scope)(file);
+			result = new RewriteExportStarAs().visitTsParsedFile(scope)(result);
+			return result;
+		});
+
+		// 5. QualifyReferences
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: QualifyReferences");
+			const scopeWithUnqualified = scope.enableUnqualifiedLookup().caching();
+			return QualifyReferences.apply(false).visitTsParsedFile(scopeWithUnqualified)(file);
+		});
+
+		// 6. AugmentModules
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: AugmentModules");
+			return AugmentModules.apply(scope.caching())(file);
+		});
+
+		// 7. ResolveTypeQueries
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: ResolveTypeQueries");
+			const scopeWithUnqualified = scope.enableUnqualifiedLookup().caching();
+			return ResolveTypeQueries.apply().visitTsParsedFile(scopeWithUnqualified)(file);
+		});
+
+		// 8. ReplaceExports
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: ReplaceExports");
+			const scopeWithUnqualified = scope.enableUnqualifiedLookup().caching();
+			return new ReplaceExports(LoopDetector.initial).visitTsParsedFile(scopeWithUnqualified)(file);
+		});
+
+		// 9. ModuleAsGlobalNamespace
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: ModuleAsGlobalNamespace");
+			return ModuleAsGlobalNamespace.apply(scope.libName, file);
+		});
+
+		// 10. MoveGlobals
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: MoveGlobals");
+			return MoveGlobals.apply(file);
+		});
+
+		// 11. FlattenTrees
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: FlattenTrees");
+			return FlattenTrees.applySingle(file);
+		});
+
+		return transformations;
 	}
 }
