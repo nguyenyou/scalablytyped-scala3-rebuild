@@ -5,7 +5,7 @@
  * the tree. For instance defaulted parameters are filled in. The point is to go from a complex tree to a simpler tree
  */
 
-import { type Either, right } from "fp-ts/Either";
+import { type Either, right, isLeft, isRight } from "fp-ts/Either";
 import { none } from "fp-ts/Option";
 import { SortedSet } from "../collections";
 import { InFile } from "../files";
@@ -28,6 +28,17 @@ import type { CalculateLibraryVersion } from "./CalculateLibraryVersion";
 import type { LibraryResolver } from "./LibraryResolver";
 import { LibTs } from "./LibTs";
 import { LibTsSource } from "./LibTsSource";
+import { PathsFromTsLibSource } from "./PathsFromTsLibSource";
+import { ResolveExternalReferences } from "./ResolveExternalReferences";
+import { ProxyModule } from "./ProxyModule";
+import type { ResolvedModule } from "./ResolvedModule";
+import { TsIdentLibrarySimple } from "../ts/trees";
+import { CodePath } from "../ts/CodePath";
+import { Comment } from "../Comment";
+import { AddComments } from "../ts/transforms/AddComments";
+import { SetCodePath } from "../ts/transforms/SetCodePath";
+import { InferredDefaultModule } from "../ts/modules/InferredDefaultModule";
+import { InferredDependency } from "../ts/modules/InferredDependency";
 
 // Import all transformations
 import { LibrarySpecific } from "../ts/transforms/LibrarySpecific";
@@ -107,60 +118,64 @@ export class Phase1ReadTypescript {
 		logger: Logger<void>,
 	): PhaseRes<LibTsSource, LibTs> {
 		// Check if library should be ignored or is circular
-		if (this.isIgnored(source) || isCircular) {
-			logger.info(
-				`Ignoring library ${source.libName.value} (ignored: ${this.isIgnored(source)}, circular: ${isCircular})`,
-			);
+		if (this.config.ignored.has(source.libName) || isCircular) {
 			return PhaseRes.Ignore<LibTsSource, LibTs>();
 		}
 
-		logger.info(`Processing TypeScript library: ${source.libName.value}`);
-
-		try {
-			// Get dependencies
-			const depsResult = getDeps(new SortedSet<LibTsSource>());
-			if (depsResult._tag === "Failure") {
-				return PhaseRes.Failure<LibTsSource, LibTs>(depsResult.errors);
+		// Determine included files based on source type
+		const includedFiles: IArray<InFile> = (() => {
+			if (source instanceof LibTsSource.StdLibSource) {
+				return PathsFromTsLibSource.filesFrom(source.files.get(0)!.folder);
+			} else if (source instanceof LibTsSource.FromFolder) {
+				if (source.libName.value === "typescript") {
+					// Don't include std for typescript library
+					return source.shortenedFiles;
+				} else {
+					// There are often whole trees parallel to what is specified in `typings`
+					const bound = source.shortenedFiles.length > 0
+						? source.shortenedFiles.get(0)!.folder
+						: source.folder;
+					return PathsFromTsLibSource.filesFrom(bound);
+				}
+			} else {
+				return IArray.Empty;
 			}
-			if (depsResult._tag === "Ignore") {
-				return PhaseRes.Ignore<LibTsSource, LibTs>();
-			}
+		})();
 
-			const dependencies = depsResult.value;
+		const includedViaDirective = new Set<InFile>();
 
-			// Determine which files to include
-			const filesToInclude = this.determineFilesToInclude(source, logger);
+		// Lazy file preparation - equivalent to Scala's lazy val preparingFiles
+		const preparingFiles = new Map<InFile, () => [TsParsedFile, Set<LibTsSource>]>();
 
-			// Parse files
-			const parsedFiles = this.parseFiles(filesToInclude, logger);
-			if (parsedFiles.length === 0) {
-				logger.warn(`No files parsed for ${source.libName.value}`);
-				return PhaseRes.Ignore<LibTsSource, LibTs>();
-			}
+		for (const file of includedFiles.toArray().sort()) {
+			preparingFiles.set(file, () => {
+				const parseResult = this.config.parser(file);
+				if (isLeft(parseResult)) {
+					const errorMsg = parseResult.left;
+					logger.fatal(`Couldn't parse ${file.path}: ${errorMsg}`);
+					throw new Error(`Parse failed: ${errorMsg}`);
+				}
 
-			// Merge parsed files into a single TsParsedFile
-			const mergedFile = this.mergeFiles(parsedFiles, source, logger);
+				const parsed = parseResult.right;
+				const deps = new Set<LibTsSource>();
+				logger.info(`Preprocessing ${file.path}`);
 
-			// Apply transformation pipeline
-			const transformedFile = this.applyTransformations(mergedFile, source, logger);
+				// TODO: Implement directive processing, module resolution, and file inlining
+				// This is a complex process that involves:
+				// - Processing directives (PathRef, LibRef, TypesRef)
+				// - Module name inference
+				// - External reference resolution
+				// - File inlining for non-module files
+				// - Dependency tracking
 
-			// Calculate library version
-			const version = this.calculateVersion(source, transformedFile, logger);
-
-			// Create final LibTs
-			const libTs = new LibTs(source, version, transformedFile, dependencies);
-
-			logger.info(`Successfully processed ${source.libName.value}`);
-			return PhaseRes.Ok<LibTsSource, LibTs>(libTs);
-
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
-			logger.error(`Failed to process ${source.libName.value}: ${errorMessage}`);
-
-			return PhaseRes.Failure<LibTsSource, LibTs>(
-				new Map([[source, right(`Phase1 processing failed: ${errorMessage}`)]]),
-			);
+				return [parsed, deps];
+			});
 		}
+
+		// TODO: Continue with the rest of the implementation
+		// This includes file evaluation, flattening, proxy module creation, etc.
+
+		return PhaseRes.Ignore<LibTsSource, LibTs>();
 	}
 
 	/**
