@@ -6,6 +6,7 @@
  */
 
 import * as O from "fp-ts/Option";
+import { type Option, some } from "fp-ts/Option";
 import type {
 	TsContainer,
 	TsDecl,
@@ -1488,7 +1489,15 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberProperty) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberProperty(tt)(x);
-			const newTpe = O.map(this.visitTsType(tt))(entered.tpe);
+
+			// Handle Option type with proper change detection
+			let newTpe: Option<TsType>;
+			if (entered.tpe._tag === "Some") {
+				const transformedType = this.visitTsType(tt)(entered.tpe.value);
+				newTpe = transformedType === entered.tpe.value ? entered.tpe : some(transformedType);
+			} else {
+				newTpe = entered.tpe; // None stays None
+			}
 
 			// Only create new object if type actually changed
 			return newTpe === entered.tpe

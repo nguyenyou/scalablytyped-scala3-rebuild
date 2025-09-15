@@ -518,13 +518,7 @@ describe("HandleCommonJsModules", () => {
 			const transformation = new HandleCommonJsModules();
 			const result = transformation.enterTsDeclModule(scope)(module);
 
-			// Debug: Log the members to understand what's happening
-			console.log("Original mainClass:", mainClass);
-			console.log("Result members:", result.members.toArray());
-			console.log("MainClass found in result:", result.members.toArray().some((m) => m === mainClass));
-			console.log("MainClass found by name:", result.members.toArray().find((m) =>
-				m._tag === "TsDeclClass" && (m as any).name.value === "MyLibrary"
-			));
+
 
 			// Should properly transform the CommonJS module
 			expect(result.members.length).toBeGreaterThan(3); // Should have flattened content
