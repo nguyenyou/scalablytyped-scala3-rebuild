@@ -233,10 +233,10 @@ describe("TreeTransformation", () => {
 			const declClass = createMockClass("TestClass");
 
 			const result = combined.visitTsDeclClass(scope)(declClass);
-			// Note: In our simplified implementation, the combined transformation
-			// doesn't actually apply both transformations - it just applies the first one
-			// In a full implementation, both transformations would be applied
-			expect(result.declared).toBe(false); // The mock object starts with declared: false
+			// The combined transformation should apply both transformations in sequence
+			// First transformation sets declared: true, second sets isAbstract: true
+			expect(result.declared).toBe(true); // First transformation applied
+			expect(result.isAbstract).toBe(true); // Second transformation applied
 		});
 
 		test(">> operator is alias for combine", () => {

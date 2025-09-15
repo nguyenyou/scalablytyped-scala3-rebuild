@@ -291,7 +291,7 @@ export abstract class AbstractTreeTransformation<T>
 	abstract withTree(t: T, tree: TsTree): T;
 
 	combine<U>(other: TreeTransformation<U>): TreeTransformation<T> {
-		return new CombinedTransformation(this, other);
+		return new CombinedTransformation(this, other as any);
 	}
 
 	">>"<U>(other: TreeTransformation<U>): TreeTransformation<T> {
@@ -1825,11 +1825,14 @@ export abstract class AbstractTreeTransformation<T>
 /**
  * Implementation of combined transformations.
  * Applies the first transformation, then the second.
+ *
+ * This follows the Scala pattern where transformations are composed using the >> operator.
+ * The second transformation receives the result of the first transformation.
  */
 class CombinedTransformation<T, U> extends AbstractTreeTransformation<T> {
 	constructor(
 		private first: TreeTransformation<T>,
-		_second: TreeTransformation<U>,
+		private second: TreeTransformation<U>,
 	) {
 		super();
 	}
@@ -1838,23 +1841,1073 @@ class CombinedTransformation<T, U> extends AbstractTreeTransformation<T> {
 		return this.first.withTree(t, tree);
 	}
 
-	// Override all methods to apply both transformations
+	// Enter methods - apply first transformation, then second
 	enterTsTree(t: T): (x: TsTree) => TsTree {
 		return (x: TsTree) => {
 			const firstResult = this.first.enterTsTree(t)(x);
-			// For the second transformation, we need to create appropriate context
-			// This is a simplified approach - in practice, you might need more sophisticated context handling
-			return firstResult; // Simplified for now
+			// For the second transformation, we pass the same context as the first
+			// This follows the Scala pattern where both transformations receive the same scope
+			return this.second.enterTsTree(t as any)(firstResult);
 		};
 	}
 
-	// Similar pattern for other methods...
-	// For brevity, showing the pattern with one method
+	enterTsDecl(t: T): (x: TsDecl) => TsDecl {
+		return (x: TsDecl) => {
+			const firstResult = this.first.enterTsDecl(t)(x);
+			return this.second.enterTsDecl(t as any)(firstResult);
+		};
+	}
+
+	enterTsNamedDecl(t: T): (x: TsNamedDecl) => TsNamedDecl {
+		return (x: TsNamedDecl) => {
+			const firstResult = this.first.enterTsNamedDecl(t)(x);
+			return this.second.enterTsNamedDecl(t as any)(firstResult);
+		};
+	}
+
+	enterTsType(t: T): (x: TsType) => TsType {
+		return (x: TsType) => {
+			const firstResult = this.first.enterTsType(t)(x);
+			return this.second.enterTsType(t as any)(firstResult);
+		};
+	}
+
+	enterTsContainer(t: T): (x: TsContainer) => TsContainer {
+		return (x: TsContainer) => {
+			const firstResult = this.first.enterTsContainer(t)(x);
+			return this.second.enterTsContainer(t as any)(firstResult);
+		};
+	}
+
+	enterTsContainerOrDecl(t: T): (x: TsContainerOrDecl) => TsContainerOrDecl {
+		return (x: TsContainerOrDecl) => {
+			const firstResult = this.first.enterTsContainerOrDecl(t)(x);
+			return this.second.enterTsContainerOrDecl(t as any)(firstResult);
+		};
+	}
+
+	enterTsLiteral(t: T): (x: TsLiteral) => TsLiteral {
+		return (x: TsLiteral) => {
+			const firstResult = this.first.enterTsLiteral(t)(x);
+			return this.second.enterTsLiteral(t as any)(firstResult);
+		};
+	}
+
+	enterTsMember(t: T): (x: TsMember) => TsMember {
+		return (x: TsMember) => {
+			const firstResult = this.first.enterTsMember(t)(x);
+			return this.second.enterTsMember(t as any)(firstResult);
+		};
+	}
+
+	enterTsImported(t: T): (x: TsImported) => TsImported {
+		return (x: TsImported) => {
+			const firstResult = this.first.enterTsImported(t)(x);
+			return this.second.enterTsImported(t as any)(firstResult);
+		};
+	}
+
+	enterTsImportee(t: T): (x: TsImportee) => TsImportee {
+		return (x: TsImportee) => {
+			const firstResult = this.first.enterTsImportee(t)(x);
+			return this.second.enterTsImportee(t as any)(firstResult);
+		};
+	}
+
+	enterTsExportee(t: T): (x: TsExportee) => TsExportee {
+		return (x: TsExportee) => {
+			const firstResult = this.first.enterTsExportee(t)(x);
+			return this.second.enterTsExportee(t as any)(firstResult);
+		};
+	}
+
+	enterIndexing(t: T): (x: Indexing) => Indexing {
+		return (x: Indexing) => {
+			const firstResult = this.first.enterIndexing(t)(x);
+			return this.second.enterIndexing(t as any)(firstResult);
+		};
+	}
+
+	// Specific declaration enter methods
+	enterTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile {
+		return (x: TsParsedFile) => {
+			const firstResult = this.first.enterTsParsedFile(t)(x);
+			return this.second.enterTsParsedFile(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass {
+		return (x: TsDeclClass) => {
+			const firstResult = this.first.enterTsDeclClass(t)(x);
+			return this.second.enterTsDeclClass(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclInterface(t: T): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => {
+			const firstResult = this.first.enterTsDeclInterface(t)(x);
+			return this.second.enterTsDeclInterface(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclNamespace(t: T): (x: TsDeclNamespace) => TsDeclNamespace {
+		return (x: TsDeclNamespace) => {
+			const firstResult = this.first.enterTsDeclNamespace(t)(x);
+			return this.second.enterTsDeclNamespace(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclModule(t: T): (x: TsDeclModule) => TsDeclModule {
+		return (x: TsDeclModule) => {
+			const firstResult = this.first.enterTsDeclModule(t)(x);
+			return this.second.enterTsDeclModule(t as any)(firstResult);
+		};
+	}
+
+	enterTsAugmentedModule(t: T): (x: TsAugmentedModule) => TsAugmentedModule {
+		return (x: TsAugmentedModule) => {
+			const firstResult = this.first.enterTsAugmentedModule(t)(x);
+			return this.second.enterTsAugmentedModule(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclVar(t: T): (x: TsDeclVar) => TsDeclVar {
+		return (x: TsDeclVar) => {
+			const firstResult = this.first.enterTsDeclVar(t)(x);
+			return this.second.enterTsDeclVar(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclFunction(t: T): (x: TsDeclFunction) => TsDeclFunction {
+		return (x: TsDeclFunction) => {
+			const firstResult = this.first.enterTsDeclFunction(t)(x);
+			return this.second.enterTsDeclFunction(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclTypeAlias(t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+		return (x: TsDeclTypeAlias) => {
+			const firstResult = this.first.enterTsDeclTypeAlias(t)(x);
+			return this.second.enterTsDeclTypeAlias(t as any)(firstResult);
+		};
+	}
+
+	enterTsDeclEnum(t: T): (x: TsDeclEnum) => TsDeclEnum {
+		return (x: TsDeclEnum) => {
+			const firstResult = this.first.enterTsDeclEnum(t)(x);
+			return this.second.enterTsDeclEnum(t as any)(firstResult);
+		};
+	}
+
+	enterTsGlobal(t: T): (x: TsGlobal) => TsGlobal {
+		return (x: TsGlobal) => {
+			const firstResult = this.first.enterTsGlobal(t)(x);
+			return this.second.enterTsGlobal(t as any)(firstResult);
+		};
+	}
+
+	// Member enter methods
+	enterTsMemberCall(t: T): (x: TsMemberCall) => TsMemberCall {
+		return (x: TsMemberCall) => {
+			const firstResult = this.first.enterTsMemberCall(t)(x);
+			return this.second.enterTsMemberCall(t as any)(firstResult);
+		};
+	}
+
+	enterTsMemberCtor(t: T): (x: TsMemberCtor) => TsMemberCtor {
+		return (x: TsMemberCtor) => {
+			const firstResult = this.first.enterTsMemberCtor(t)(x);
+			return this.second.enterTsMemberCtor(t as any)(firstResult);
+		};
+	}
+
+	enterTsMemberFunction(t: T): (x: TsMemberFunction) => TsMemberFunction {
+		return (x: TsMemberFunction) => {
+			const firstResult = this.first.enterTsMemberFunction(t)(x);
+			return this.second.enterTsMemberFunction(t as any)(firstResult);
+		};
+	}
+
+	enterTsMemberIndex(t: T): (x: TsMemberIndex) => TsMemberIndex {
+		return (x: TsMemberIndex) => {
+			const firstResult = this.first.enterTsMemberIndex(t)(x);
+			return this.second.enterTsMemberIndex(t as any)(firstResult);
+		};
+	}
+
+	enterTsMemberProperty(t: T): (x: TsMemberProperty) => TsMemberProperty {
+		return (x: TsMemberProperty) => {
+			const firstResult = this.first.enterTsMemberProperty(t)(x);
+			return this.second.enterTsMemberProperty(t as any)(firstResult);
+		};
+	}
+
+	enterTsMemberTypeMapped(t: T): (x: TsMemberTypeMapped) => TsMemberTypeMapped {
+		return (x: TsMemberTypeMapped) => {
+			const firstResult = this.first.enterTsMemberTypeMapped(t)(x);
+			return this.second.enterTsMemberTypeMapped(t as any)(firstResult);
+		};
+	}
+
+	// Other enter methods
+	enterTsEnumMember(t: T): (x: TsEnumMember) => TsEnumMember {
+		return (x: TsEnumMember) => {
+			const firstResult = this.first.enterTsEnumMember(t)(x);
+			return this.second.enterTsEnumMember(t as any)(firstResult);
+		};
+	}
+
+	enterTsExportAsNamespace(t: T): (x: TsExportAsNamespace) => TsExportAsNamespace {
+		return (x: TsExportAsNamespace) => {
+			const firstResult = this.first.enterTsExportAsNamespace(t)(x);
+			return this.second.enterTsExportAsNamespace(t as any)(firstResult);
+		};
+	}
+
+	enterTsExporteeNames(t: T): (x: TsExporteeNames) => TsExporteeNames {
+		return (x: TsExporteeNames) => {
+			const firstResult = this.first.enterTsExporteeNames(t)(x);
+			return this.second.enterTsExporteeNames(t as any)(firstResult);
+		};
+	}
+
+	enterTsExporteeStar(t: T): (x: TsExporteeStar) => TsExporteeStar {
+		return (x: TsExporteeStar) => {
+			const firstResult = this.first.enterTsExporteeStar(t)(x);
+			return this.second.enterTsExporteeStar(t as any)(firstResult);
+		};
+	}
+
+	enterTsExporteeTree(t: T): (x: TsExporteeTree) => TsExporteeTree {
+		return (x: TsExporteeTree) => {
+			const firstResult = this.first.enterTsExporteeTree(t)(x);
+			return this.second.enterTsExporteeTree(t as any)(firstResult);
+		};
+	}
+
+	enterTsExport(t: T): (x: TsExport) => TsExport {
+		return (x: TsExport) => {
+			const firstResult = this.first.enterTsExport(t)(x);
+			return this.second.enterTsExport(t as any)(firstResult);
+		};
+	}
+
+	enterTsFunParam(t: T): (x: TsFunParam) => TsFunParam {
+		return (x: TsFunParam) => {
+			const firstResult = this.first.enterTsFunParam(t)(x);
+			return this.second.enterTsFunParam(t as any)(firstResult);
+		};
+	}
+
+	enterTsFunSig(t: T): (x: TsFunSig) => TsFunSig {
+		return (x: TsFunSig) => {
+			const firstResult = this.first.enterTsFunSig(t)(x);
+			return this.second.enterTsFunSig(t as any)(firstResult);
+		};
+	}
+
+	enterTsImportedDestructured(t: T): (x: TsImportedDestructured) => TsImportedDestructured {
+		return (x: TsImportedDestructured) => {
+			const firstResult = this.first.enterTsImportedDestructured(t)(x);
+			return this.second.enterTsImportedDestructured(t as any)(firstResult);
+		};
+	}
+
+	enterTsImportedIdent(t: T): (x: TsImportedIdent) => TsImportedIdent {
+		return (x: TsImportedIdent) => {
+			const firstResult = this.first.enterTsImportedIdent(t)(x);
+			return this.second.enterTsImportedIdent(t as any)(firstResult);
+		};
+	}
+
+	enterTsImportedStar(t: T): (x: TsImportedStar) => TsImportedStar {
+		return (x: TsImportedStar) => {
+			const firstResult = this.first.enterTsImportedStar(t)(x);
+			return this.second.enterTsImportedStar(t as any)(firstResult);
+		};
+	}
+
+	enterTsImporteeFrom(t: T): (x: TsImporteeFrom) => TsImporteeFrom {
+		return (x: TsImporteeFrom) => {
+			const firstResult = this.first.enterTsImporteeFrom(t)(x);
+			return this.second.enterTsImporteeFrom(t as any)(firstResult);
+		};
+	}
+
+	enterTsImporteeLocal(t: T): (x: TsImporteeLocal) => TsImporteeLocal {
+		return (x: TsImporteeLocal) => {
+			const firstResult = this.first.enterTsImporteeLocal(t)(x);
+			return this.second.enterTsImporteeLocal(t as any)(firstResult);
+		};
+	}
+
+	enterTsImporteeRequired(t: T): (x: TsImporteeRequired) => TsImporteeRequired {
+		return (x: TsImporteeRequired) => {
+			const firstResult = this.first.enterTsImporteeRequired(t)(x);
+			return this.second.enterTsImporteeRequired(t as any)(firstResult);
+		};
+	}
+
+	enterTsImport(t: T): (x: TsImport) => TsImport {
+		return (x: TsImport) => {
+			const firstResult = this.first.enterTsImport(t)(x);
+			return this.second.enterTsImport(t as any)(firstResult);
+		};
+	}
+
+	enterTsLiteralBoolean(t: T): (x: TsLiteralBool) => TsLiteralBool {
+		return (x: TsLiteralBool) => {
+			const firstResult = this.first.enterTsLiteralBoolean(t)(x);
+			return this.second.enterTsLiteralBoolean(t as any)(firstResult);
+		};
+	}
+
+	enterTsLiteralNumber(t: T): (x: TsLiteralNum) => TsLiteralNum {
+		return (x: TsLiteralNum) => {
+			const firstResult = this.first.enterTsLiteralNumber(t)(x);
+			return this.second.enterTsLiteralNumber(t as any)(firstResult);
+		};
+	}
+
+	enterTsLiteralString(t: T): (x: TsLiteralStr) => TsLiteralStr {
+		return (x: TsLiteralStr) => {
+			const firstResult = this.first.enterTsLiteralString(t)(x);
+			return this.second.enterTsLiteralString(t as any)(firstResult);
+		};
+	}
+
+	enterTsQIdent(t: T): (x: TsQIdent) => TsQIdent {
+		return (x: TsQIdent) => {
+			const firstResult = this.first.enterTsQIdent(t)(x);
+			return this.second.enterTsQIdent(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeParam(t: T): (x: TsTypeParam) => TsTypeParam {
+		return (x: TsTypeParam) => {
+			const firstResult = this.first.enterTsTypeParam(t)(x);
+			return this.second.enterTsTypeParam(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeQuery(t: T): (x: TsTypeQuery) => TsTypeQuery {
+		return (x: TsTypeQuery) => {
+			const firstResult = this.first.enterTsTypeQuery(t)(x);
+			return this.second.enterTsTypeQuery(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeExtends(t: T): (x: TsTypeExtends) => TsTypeExtends {
+		return (x: TsTypeExtends) => {
+			const firstResult = this.first.enterTsTypeExtends(t)(x);
+			return this.second.enterTsTypeExtends(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeInfer(t: T): (x: TsTypeInfer) => TsTypeInfer {
+		return (x: TsTypeInfer) => {
+			const firstResult = this.first.enterTsTypeInfer(t)(x);
+			return this.second.enterTsTypeInfer(t as any)(firstResult);
+		};
+	}
+
+	enterIndexingDict(t: T): (x: IndexingDict) => IndexingDict {
+		return (x: IndexingDict) => {
+			const firstResult = this.first.enterIndexingDict(t)(x);
+			return this.second.enterIndexingDict(t as any)(firstResult);
+		};
+	}
+
+	enterIndexingSingle(t: T): (x: IndexingSingle) => IndexingSingle {
+		return (x: IndexingSingle) => {
+			const firstResult = this.first.enterIndexingSingle(t)(x);
+			return this.second.enterIndexingSingle(t as any)(firstResult);
+		};
+	}
+
+	// Specific type enter methods
+	enterTsTypeRef(t: T): (x: TsTypeRef) => TsTypeRef {
+		return (x: TsTypeRef) => {
+			const firstResult = this.first.enterTsTypeRef(t)(x);
+			return this.second.enterTsTypeRef(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeRepeated(t: T): (x: TsTypeRepeated) => TsTypeRepeated {
+		return (x: TsTypeRepeated) => {
+			const firstResult = this.first.enterTsTypeRepeated(t)(x);
+			return this.second.enterTsTypeRepeated(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeThis(t: T): (x: TsTypeThis) => TsTypeThis {
+		return (x: TsTypeThis) => {
+			const firstResult = this.first.enterTsTypeThis(t)(x);
+			return this.second.enterTsTypeThis(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeFunction(t: T): (x: TsTypeFunction) => TsTypeFunction {
+		return (x: TsTypeFunction) => {
+			const firstResult = this.first.enterTsTypeFunction(t)(x);
+			return this.second.enterTsTypeFunction(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeIntersect(t: T): (x: TsTypeIntersect) => TsTypeIntersect {
+		return (x: TsTypeIntersect) => {
+			const firstResult = this.first.enterTsTypeIntersect(t)(x);
+			return this.second.enterTsTypeIntersect(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeUnion(t: T): (x: TsTypeUnion) => TsTypeUnion {
+		return (x: TsTypeUnion) => {
+			const firstResult = this.first.enterTsTypeUnion(t)(x);
+			return this.second.enterTsTypeUnion(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeTuple(t: T): (x: TsTypeTuple) => TsTypeTuple {
+		return (x: TsTypeTuple) => {
+			const firstResult = this.first.enterTsTypeTuple(t)(x);
+			return this.second.enterTsTypeTuple(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeObject(t: T): (x: TsTypeObject) => TsTypeObject {
+		return (x: TsTypeObject) => {
+			const firstResult = this.first.enterTsTypeObject(t)(x);
+			return this.second.enterTsTypeObject(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeAsserts(t: T): (x: TsTypeAsserts) => TsTypeAsserts {
+		return (x: TsTypeAsserts) => {
+			const firstResult = this.first.enterTsTypeAsserts(t)(x);
+			return this.second.enterTsTypeAsserts(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeIs(t: T): (x: TsTypeIs) => TsTypeIs {
+		return (x: TsTypeIs) => {
+			const firstResult = this.first.enterTsTypeIs(t)(x);
+			return this.second.enterTsTypeIs(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeKeyOf(t: T): (x: TsTypeKeyOf) => TsTypeKeyOf {
+		return (x: TsTypeKeyOf) => {
+			const firstResult = this.first.enterTsTypeKeyOf(t)(x);
+			return this.second.enterTsTypeKeyOf(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeConditional(t: T): (x: TsTypeConditional) => TsTypeConditional {
+		return (x: TsTypeConditional) => {
+			const firstResult = this.first.enterTsTypeConditional(t)(x);
+			return this.second.enterTsTypeConditional(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeLookup(t: T): (x: TsTypeLookup) => TsTypeLookup {
+		return (x: TsTypeLookup) => {
+			const firstResult = this.first.enterTsTypeLookup(t)(x);
+			return this.second.enterTsTypeLookup(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeConstructor(t: T): (x: TsTypeConstructor) => TsTypeConstructor {
+		return (x: TsTypeConstructor) => {
+			const firstResult = this.first.enterTsTypeConstructor(t)(x);
+			return this.second.enterTsTypeConstructor(t as any)(firstResult);
+		};
+	}
+
+	enterTsTypeLiteral(t: T): (x: TsTypeLiteral) => TsTypeLiteral {
+		return (x: TsTypeLiteral) => {
+			const firstResult = this.first.enterTsTypeLiteral(t)(x);
+			return this.second.enterTsTypeLiteral(t as any)(firstResult);
+		};
+	}
+
+	// Leave methods - apply first transformation, then second
+	leaveTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile {
+		return (x: TsParsedFile) => {
+			const firstResult = this.first.leaveTsParsedFile(t)(x);
+			return this.second.leaveTsParsedFile(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass {
+		return (x: TsDeclClass) => {
+			const firstResult = this.first.leaveTsDeclClass(t)(x);
+			return this.second.leaveTsDeclClass(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclInterface(t: T): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => {
+			const firstResult = this.first.leaveTsDeclInterface(t)(x);
+			return this.second.leaveTsDeclInterface(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclNamespace(t: T): (x: TsDeclNamespace) => TsDeclNamespace {
+		return (x: TsDeclNamespace) => {
+			const firstResult = this.first.leaveTsDeclNamespace(t)(x);
+			return this.second.leaveTsDeclNamespace(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclModule(t: T): (x: TsDeclModule) => TsDeclModule {
+		return (x: TsDeclModule) => {
+			const firstResult = this.first.leaveTsDeclModule(t)(x);
+			return this.second.leaveTsDeclModule(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclVar(t: T): (x: TsDeclVar) => TsDeclVar {
+		return (x: TsDeclVar) => {
+			const firstResult = this.first.leaveTsDeclVar(t)(x);
+			return this.second.leaveTsDeclVar(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclFunction(t: T): (x: TsDeclFunction) => TsDeclFunction {
+		return (x: TsDeclFunction) => {
+			const firstResult = this.first.leaveTsDeclFunction(t)(x);
+			return this.second.leaveTsDeclFunction(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclTypeAlias(t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+		return (x: TsDeclTypeAlias) => {
+			const firstResult = this.first.leaveTsDeclTypeAlias(t)(x);
+			return this.second.leaveTsDeclTypeAlias(t as any)(firstResult);
+		};
+	}
+
+	leaveTsDeclEnum(t: T): (x: TsDeclEnum) => TsDeclEnum {
+		return (x: TsDeclEnum) => {
+			const firstResult = this.first.leaveTsDeclEnum(t)(x);
+			return this.second.leaveTsDeclEnum(t as any)(firstResult);
+		};
+	}
+
+	leaveTsGlobal(t: T): (x: TsGlobal) => TsGlobal {
+		return (x: TsGlobal) => {
+			const firstResult = this.first.leaveTsGlobal(t)(x);
+			return this.second.leaveTsGlobal(t as any)(firstResult);
+		};
+	}
+
+	leaveTsMember(t: T): (x: TsMember) => TsMember {
+		return (x: TsMember) => {
+			const firstResult = this.first.leaveTsMember(t)(x);
+			return this.second.leaveTsMember(t as any)(firstResult);
+		};
+	}
+
+	leaveTsType(t: T): (x: TsType) => TsType {
+		return (x: TsType) => {
+			const firstResult = this.first.leaveTsType(t)(x);
+			return this.second.leaveTsType(t as any)(firstResult);
+		};
+	}
+
+	// Visit methods - main transformation entry points
 	visitTsTree(t: T): (x: TsTree) => TsTree {
 		return (x: TsTree) => {
 			const firstResult = this.first.visitTsTree(t)(x);
-			// Apply second transformation - this is simplified
-			return firstResult;
+			return this.second.visitTsTree(t as any)(firstResult);
+		};
+	}
+
+	visitTsContainerOrDecl(t: T): (x: TsContainer | TsDecl) => TsContainer | TsDecl {
+		return (x: TsContainer | TsDecl) => {
+			const firstResult = this.first.visitTsContainerOrDecl(t)(x);
+			return this.second.visitTsContainerOrDecl(t as any)(firstResult);
+		};
+	}
+
+	visitTsContainer(t: T): (x: TsContainer) => TsContainer {
+		return (x: TsContainer) => {
+			const firstResult = this.first.visitTsContainer(t)(x);
+			return this.second.visitTsContainer(t as any)(firstResult);
+		};
+	}
+
+	visitTsDecl(t: T): (x: TsDecl) => TsDecl {
+		return (x: TsDecl) => {
+			const firstResult = this.first.visitTsDecl(t)(x);
+			return this.second.visitTsDecl(t as any)(firstResult);
+		};
+	}
+
+	visitTsNamedDecl(t: T): (x: TsNamedDecl) => TsNamedDecl {
+		return (x: TsNamedDecl) => {
+			const firstResult = this.first.visitTsNamedDecl(t)(x);
+			return this.second.visitTsNamedDecl(t as any)(firstResult);
+		};
+	}
+
+	visitTsType(t: T): (x: TsType) => TsType {
+		return (x: TsType) => {
+			const firstResult = this.first.visitTsType(t)(x);
+			return this.second.visitTsType(t as any)(firstResult);
+		};
+	}
+
+	visitTsMember(t: T): (x: TsMember) => TsMember {
+		return (x: TsMember) => {
+			const firstResult = this.first.visitTsMember(t)(x);
+			return this.second.visitTsMember(t as any)(firstResult);
+		};
+	}
+
+	visitTsLiteral(t: T): (x: TsLiteral) => TsLiteral {
+		return (x: TsLiteral) => {
+			const firstResult = this.first.visitTsLiteral(t)(x);
+			return this.second.visitTsLiteral(t as any)(firstResult);
+		};
+	}
+
+	visitTsImported(t: T): (x: TsImported) => TsImported {
+		return (x: TsImported) => {
+			const firstResult = this.first.visitTsImported(t)(x);
+			return this.second.visitTsImported(t as any)(firstResult);
+		};
+	}
+
+	visitTsImportee(t: T): (x: TsImportee) => TsImportee {
+		return (x: TsImportee) => {
+			const firstResult = this.first.visitTsImportee(t)(x);
+			return this.second.visitTsImportee(t as any)(firstResult);
+		};
+	}
+
+	visitTsExportee(t: T): (x: TsExportee) => TsExportee {
+		return (x: TsExportee) => {
+			const firstResult = this.first.visitTsExportee(t)(x);
+			return this.second.visitTsExportee(t as any)(firstResult);
+		};
+	}
+
+	visitIndexing(t: T): (x: Indexing) => Indexing {
+		return (x: Indexing) => {
+			const firstResult = this.first.visitIndexing(t)(x);
+			return this.second.visitIndexing(t as any)(firstResult);
+		};
+	}
+
+	// Specific visit methods
+	visitTsParsedFile(t: T): (x: TsParsedFile) => TsParsedFile {
+		return (x: TsParsedFile) => {
+			const firstResult = this.first.visitTsParsedFile(t)(x);
+			return this.second.visitTsParsedFile(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclClass(t: T): (x: TsDeclClass) => TsDeclClass {
+		return (x: TsDeclClass) => {
+			const firstResult = this.first.visitTsDeclClass(t)(x);
+			return this.second.visitTsDeclClass(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclInterface(t: T): (x: TsDeclInterface) => TsDeclInterface {
+		return (x: TsDeclInterface) => {
+			const firstResult = this.first.visitTsDeclInterface(t)(x);
+			return this.second.visitTsDeclInterface(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclNamespace(t: T): (x: TsDeclNamespace) => TsDeclNamespace {
+		return (x: TsDeclNamespace) => {
+			const firstResult = this.first.visitTsDeclNamespace(t)(x);
+			return this.second.visitTsDeclNamespace(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclModule(t: T): (x: TsDeclModule) => TsDeclModule {
+		return (x: TsDeclModule) => {
+			const firstResult = this.first.visitTsDeclModule(t)(x);
+			return this.second.visitTsDeclModule(t as any)(firstResult);
+		};
+	}
+
+	visitTsAugmentedModule(t: T): (x: TsAugmentedModule) => TsAugmentedModule {
+		return (x: TsAugmentedModule) => {
+			const firstResult = this.first.visitTsAugmentedModule(t)(x);
+			return this.second.visitTsAugmentedModule(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclVar(t: T): (x: TsDeclVar) => TsDeclVar {
+		return (x: TsDeclVar) => {
+			const firstResult = this.first.visitTsDeclVar(t)(x);
+			return this.second.visitTsDeclVar(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclFunction(t: T): (x: TsDeclFunction) => TsDeclFunction {
+		return (x: TsDeclFunction) => {
+			const firstResult = this.first.visitTsDeclFunction(t)(x);
+			return this.second.visitTsDeclFunction(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclTypeAlias(t: T): (x: TsDeclTypeAlias) => TsDeclTypeAlias {
+		return (x: TsDeclTypeAlias) => {
+			const firstResult = this.first.visitTsDeclTypeAlias(t)(x);
+			return this.second.visitTsDeclTypeAlias(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclEnum(t: T): (x: TsDeclEnum) => TsDeclEnum {
+		return (x: TsDeclEnum) => {
+			const firstResult = this.first.visitTsDeclEnum(t)(x);
+			return this.second.visitTsDeclEnum(t as any)(firstResult);
+		};
+	}
+
+	visitTsDeclGlobal(t: T): (x: TsGlobal) => TsGlobal {
+		return (x: TsGlobal) => {
+			const firstResult = this.first.visitTsDeclGlobal(t)(x);
+			return this.second.visitTsDeclGlobal(t as any)(firstResult);
+		};
+	}
+
+	// Additional visit methods from Scala
+	visitTsEnumMember(t: T): (x: TsEnumMember) => TsEnumMember {
+		return (x: TsEnumMember) => {
+			const firstResult = this.first.visitTsEnumMember(t)(x);
+			return this.second.visitTsEnumMember(t as any)(firstResult);
+		};
+	}
+
+	visitTsExportAsNamespace(t: T): (x: TsExportAsNamespace) => TsExportAsNamespace {
+		return (x: TsExportAsNamespace) => {
+			const firstResult = this.first.visitTsExportAsNamespace(t)(x);
+			return this.second.visitTsExportAsNamespace(t as any)(firstResult);
+		};
+	}
+
+	visitTsExporteeNames(t: T): (x: TsExporteeNames) => TsExporteeNames {
+		return (x: TsExporteeNames) => {
+			const firstResult = this.first.visitTsExporteeNames(t)(x);
+			return this.second.visitTsExporteeNames(t as any)(firstResult);
+		};
+	}
+
+	visitTsExporteeStar(t: T): (x: TsExporteeStar) => TsExporteeStar {
+		return (x: TsExporteeStar) => {
+			const firstResult = this.first.visitTsExporteeStar(t)(x);
+			return this.second.visitTsExporteeStar(t as any)(firstResult);
+		};
+	}
+
+	visitTsExporteeTree(t: T): (x: TsExporteeTree) => TsExporteeTree {
+		return (x: TsExporteeTree) => {
+			const firstResult = this.first.visitTsExporteeTree(t)(x);
+			return this.second.visitTsExporteeTree(t as any)(firstResult);
+		};
+	}
+
+	visitTsExport(t: T): (x: TsExport) => TsExport {
+		return (x: TsExport) => {
+			const firstResult = this.first.visitTsExport(t)(x);
+			return this.second.visitTsExport(t as any)(firstResult);
+		};
+	}
+
+	visitTsFunParam(t: T): (x: TsFunParam) => TsFunParam {
+		return (x: TsFunParam) => {
+			const firstResult = this.first.visitTsFunParam(t)(x);
+			return this.second.visitTsFunParam(t as any)(firstResult);
+		};
+	}
+
+	visitTsFunSig(t: T): (x: TsFunSig) => TsFunSig {
+		return (x: TsFunSig) => {
+			const firstResult = this.first.visitTsFunSig(t)(x);
+			return this.second.visitTsFunSig(t as any)(firstResult);
+		};
+	}
+
+	visitTsImportedDestructured(t: T): (x: TsImportedDestructured) => TsImportedDestructured {
+		return (x: TsImportedDestructured) => {
+			const firstResult = this.first.visitTsImportedDestructured(t)(x);
+			return this.second.visitTsImportedDestructured(t as any)(firstResult);
+		};
+	}
+
+	visitTsImportedIdent(t: T): (x: TsImportedIdent) => TsImportedIdent {
+		return (x: TsImportedIdent) => {
+			const firstResult = this.first.visitTsImportedIdent(t)(x);
+			return this.second.visitTsImportedIdent(t as any)(firstResult);
+		};
+	}
+
+	visitTsImportedStar(t: T): (x: TsImportedStar) => TsImportedStar {
+		return (x: TsImportedStar) => {
+			const firstResult = this.first.visitTsImportedStar(t)(x);
+			return this.second.visitTsImportedStar(t as any)(firstResult);
+		};
+	}
+
+	visitTsImporteeFrom(t: T): (x: TsImporteeFrom) => TsImporteeFrom {
+		return (x: TsImporteeFrom) => {
+			const firstResult = this.first.visitTsImporteeFrom(t)(x);
+			return this.second.visitTsImporteeFrom(t as any)(firstResult);
+		};
+	}
+
+	visitTsImporteeLocal(t: T): (x: TsImporteeLocal) => TsImporteeLocal {
+		return (x: TsImporteeLocal) => {
+			const firstResult = this.first.visitTsImporteeLocal(t)(x);
+			return this.second.visitTsImporteeLocal(t as any)(firstResult);
+		};
+	}
+
+	visitTsImporteeRequired(t: T): (x: TsImporteeRequired) => TsImporteeRequired {
+		return (x: TsImporteeRequired) => {
+			const firstResult = this.first.visitTsImporteeRequired(t)(x);
+			return this.second.visitTsImporteeRequired(t as any)(firstResult);
+		};
+	}
+
+	visitTsImport(t: T): (x: TsImport) => TsImport {
+		return (x: TsImport) => {
+			const firstResult = this.first.visitTsImport(t)(x);
+			return this.second.visitTsImport(t as any)(firstResult);
+		};
+	}
+
+	visitTsLiteralBoolean(t: T): (x: TsLiteralBool) => TsLiteralBool {
+		return (x: TsLiteralBool) => {
+			const firstResult = this.first.visitTsLiteralBoolean(t)(x);
+			return this.second.visitTsLiteralBoolean(t as any)(firstResult);
+		};
+	}
+
+	visitTsLiteralNumber(t: T): (x: TsLiteralNum) => TsLiteralNum {
+		return (x: TsLiteralNum) => {
+			const firstResult = this.first.visitTsLiteralNumber(t)(x);
+			return this.second.visitTsLiteralNumber(t as any)(firstResult);
+		};
+	}
+
+	visitTsLiteralString(t: T): (x: TsLiteralStr) => TsLiteralStr {
+		return (x: TsLiteralStr) => {
+			const firstResult = this.first.visitTsLiteralString(t)(x);
+			return this.second.visitTsLiteralString(t as any)(firstResult);
+		};
+	}
+
+	visitTsQIdent(t: T): (x: TsQIdent) => TsQIdent {
+		return (x: TsQIdent) => {
+			const firstResult = this.first.visitTsQIdent(t)(x);
+			return this.second.visitTsQIdent(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeParam(t: T): (x: TsTypeParam) => TsTypeParam {
+		return (x: TsTypeParam) => {
+			const firstResult = this.first.visitTsTypeParam(t)(x);
+			return this.second.visitTsTypeParam(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeQuery(t: T): (x: TsTypeQuery) => TsTypeQuery {
+		return (x: TsTypeQuery) => {
+			const firstResult = this.first.visitTsTypeQuery(t)(x);
+			return this.second.visitTsTypeQuery(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeExtends(t: T): (x: TsTypeExtends) => TsTypeExtends {
+		return (x: TsTypeExtends) => {
+			const firstResult = this.first.visitTsTypeExtends(t)(x);
+			return this.second.visitTsTypeExtends(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeInfer(t: T): (x: TsTypeInfer) => TsTypeInfer {
+		return (x: TsTypeInfer) => {
+			const firstResult = this.first.visitTsTypeInfer(t)(x);
+			return this.second.visitTsTypeInfer(t as any)(firstResult);
+		};
+	}
+
+	visitIndexingDict(t: T): (x: IndexingDict) => IndexingDict {
+		return (x: IndexingDict) => {
+			const firstResult = this.first.visitIndexingDict(t)(x);
+			return this.second.visitIndexingDict(t as any)(firstResult);
+		};
+	}
+
+	visitIndexingSingle(t: T): (x: IndexingSingle) => IndexingSingle {
+		return (x: IndexingSingle) => {
+			const firstResult = this.first.visitIndexingSingle(t)(x);
+			return this.second.visitIndexingSingle(t as any)(firstResult);
+		};
+	}
+
+	visitTsTupleElem(t: T): (x: TsTupleElement) => TsTupleElement {
+		return (x: TsTupleElement) => {
+			const firstResult = this.first.visitTsTupleElem(t)(x);
+			return this.second.visitTsTupleElem(t as any)(firstResult);
+		};
+	}
+
+	// Specific type visit methods
+	visitTsTypeRef(t: T): (x: TsTypeRef) => TsTypeRef {
+		return (x: TsTypeRef) => {
+			const firstResult = this.first.visitTsTypeRef(t)(x);
+			return this.second.visitTsTypeRef(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeRepeated(t: T): (x: TsTypeRepeated) => TsTypeRepeated {
+		return (x: TsTypeRepeated) => {
+			const firstResult = this.first.visitTsTypeRepeated(t)(x);
+			return this.second.visitTsTypeRepeated(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeThis(t: T): (x: TsTypeThis) => TsTypeThis {
+		return (x: TsTypeThis) => {
+			const firstResult = this.first.visitTsTypeThis(t)(x);
+			return this.second.visitTsTypeThis(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeAsserts(t: T): (x: TsTypeAsserts) => TsTypeAsserts {
+		return (x: TsTypeAsserts) => {
+			const firstResult = this.first.visitTsTypeAsserts(t)(x);
+			return this.second.visitTsTypeAsserts(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeConstructor(t: T): (x: TsTypeConstructor) => TsTypeConstructor {
+		return (x: TsTypeConstructor) => {
+			const firstResult = this.first.visitTsTypeConstructor(t)(x);
+			return this.second.visitTsTypeConstructor(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeConditional(t: T): (x: TsTypeConditional) => TsTypeConditional {
+		return (x: TsTypeConditional) => {
+			const firstResult = this.first.visitTsTypeConditional(t)(x);
+			return this.second.visitTsTypeConditional(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeFunction(t: T): (x: TsTypeFunction) => TsTypeFunction {
+		return (x: TsTypeFunction) => {
+			const firstResult = this.first.visitTsTypeFunction(t)(x);
+			return this.second.visitTsTypeFunction(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeKeyOf(t: T): (x: TsTypeKeyOf) => TsTypeKeyOf {
+		return (x: TsTypeKeyOf) => {
+			const firstResult = this.first.visitTsTypeKeyOf(t)(x);
+			return this.second.visitTsTypeKeyOf(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeIntersect(t: T): (x: TsTypeIntersect) => TsTypeIntersect {
+		return (x: TsTypeIntersect) => {
+			const firstResult = this.first.visitTsTypeIntersect(t)(x);
+			return this.second.visitTsTypeIntersect(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeIs(t: T): (x: TsTypeIs) => TsTypeIs {
+		return (x: TsTypeIs) => {
+			const firstResult = this.first.visitTsTypeIs(t)(x);
+			return this.second.visitTsTypeIs(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeLiteral(t: T): (x: TsTypeLiteral) => TsTypeLiteral {
+		return (x: TsTypeLiteral) => {
+			const firstResult = this.first.visitTsTypeLiteral(t)(x);
+			return this.second.visitTsTypeLiteral(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeLookup(t: T): (x: TsTypeLookup) => TsTypeLookup {
+		return (x: TsTypeLookup) => {
+			const firstResult = this.first.visitTsTypeLookup(t)(x);
+			return this.second.visitTsTypeLookup(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeObject(t: T): (x: TsTypeObject) => TsTypeObject {
+		return (x: TsTypeObject) => {
+			const firstResult = this.first.visitTsTypeObject(t)(x);
+			return this.second.visitTsTypeObject(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeTuple(t: T): (x: TsTypeTuple) => TsTypeTuple {
+		return (x: TsTypeTuple) => {
+			const firstResult = this.first.visitTsTypeTuple(t)(x);
+			return this.second.visitTsTypeTuple(t as any)(firstResult);
+		};
+	}
+
+	visitTsTypeUnion(t: T): (x: TsTypeUnion) => TsTypeUnion {
+		return (x: TsTypeUnion) => {
+			const firstResult = this.first.visitTsTypeUnion(t)(x);
+			return this.second.visitTsTypeUnion(t as any)(firstResult);
+		};
+	}
+
+	// Specific member visit methods
+	visitTsMemberCall(t: T): (x: TsMemberCall) => TsMemberCall {
+		return (x: TsMemberCall) => {
+			const firstResult = this.first.visitTsMemberCall(t)(x);
+			return this.second.visitTsMemberCall(t as any)(firstResult);
+		};
+	}
+
+	visitTsMemberCtor(t: T): (x: TsMemberCtor) => TsMemberCtor {
+		return (x: TsMemberCtor) => {
+			const firstResult = this.first.visitTsMemberCtor(t)(x);
+			return this.second.visitTsMemberCtor(t as any)(firstResult);
+		};
+	}
+
+	visitTsMemberFunction(t: T): (x: TsMemberFunction) => TsMemberFunction {
+		return (x: TsMemberFunction) => {
+			const firstResult = this.first.visitTsMemberFunction(t)(x);
+			return this.second.visitTsMemberFunction(t as any)(firstResult);
+		};
+	}
+
+	visitTsMemberIndex(t: T): (x: TsMemberIndex) => TsMemberIndex {
+		return (x: TsMemberIndex) => {
+			const firstResult = this.first.visitTsMemberIndex(t)(x);
+			return this.second.visitTsMemberIndex(t as any)(firstResult);
+		};
+	}
+
+	visitTsMemberProperty(t: T): (x: TsMemberProperty) => TsMemberProperty {
+		return (x: TsMemberProperty) => {
+			const firstResult = this.first.visitTsMemberProperty(t)(x);
+			return this.second.visitTsMemberProperty(t as any)(firstResult);
+		};
+	}
+
+	visitTsMemberTypeMapped(t: T): (x: TsMemberTypeMapped) => TsMemberTypeMapped {
+		return (x: TsMemberTypeMapped) => {
+			const firstResult = this.first.visitTsMemberTypeMapped(t)(x);
+			return this.second.visitTsMemberTypeMapped(t as any)(firstResult);
 		};
 	}
 }

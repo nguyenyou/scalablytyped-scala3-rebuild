@@ -495,8 +495,8 @@ export function createMockClass(
 		withComments: function (cs: any) {
 			return { ...this, comments: cs };
 		},
-		addComment: function (_c: any) {
-			return this;
+		addComment: function (c: any) {
+			return { ...this, comments: this.comments.add(c) };
 		},
 	};
 }
