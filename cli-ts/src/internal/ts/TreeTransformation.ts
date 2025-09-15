@@ -1221,10 +1221,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeConstructor) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeConstructor(tt)(x);
-			return {
-				...entered,
-				signature: this.visitTsTypeFunction(tt)(entered.signature),
-			};
+			const newSignature = this.visitTsTypeFunction(tt)(entered.signature);
+
+			// Only create new object if signature changed
+			return newSignature === entered.signature
+				? entered
+				: { ...entered, signature: newSignature };
 		};
 	}
 
@@ -1232,12 +1234,14 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeConditional) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeConditional(tt)(x);
-			return {
-				...entered,
-				pred: this.visitTsType(tt)(entered.pred),
-				ifTrue: this.visitTsType(tt)(entered.ifTrue),
-				ifFalse: this.visitTsType(tt)(entered.ifFalse),
-			};
+			const newPred = this.visitTsType(tt)(entered.pred);
+			const newIfTrue = this.visitTsType(tt)(entered.ifTrue);
+			const newIfFalse = this.visitTsType(tt)(entered.ifFalse);
+
+			// Only create new object if any field changed
+			return newPred === entered.pred && newIfTrue === entered.ifTrue && newIfFalse === entered.ifFalse
+				? entered
+				: { ...entered, pred: newPred, ifTrue: newIfTrue, ifFalse: newIfFalse };
 		};
 	}
 
@@ -1245,10 +1249,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeFunction) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeFunction(tt)(x);
-			return {
-				...entered,
-				signature: this.visitTsFunSig(tt)(entered.signature),
-			};
+			const newSignature = this.visitTsFunSig(tt)(entered.signature);
+
+			// Only create new object if signature changed
+			return newSignature === entered.signature
+				? entered
+				: { ...entered, signature: newSignature };
 		};
 	}
 
@@ -1256,10 +1262,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeKeyOf) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeKeyOf(tt)(x);
-			return {
-				...entered,
-				key: this.visitTsType(tt)(entered.key),
-			};
+			const newKey = this.visitTsType(tt)(entered.key);
+
+			// Only create new object if key changed
+			return newKey === entered.key
+				? entered
+				: { ...entered, key: newKey };
 		};
 	}
 
@@ -1267,10 +1275,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeIntersect) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeIntersect(tt)(x);
-			return {
-				...entered,
-				types: entered.types.map(this.visitTsType(tt)),
-			};
+			const newTypes = entered.types.map(this.visitTsType(tt));
+
+			// Only create new object if types changed
+			return newTypes === entered.types
+				? entered
+				: { ...entered, types: newTypes };
 		};
 	}
 
@@ -1506,28 +1516,34 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclNamespace {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, ns);
-		return {
-			...ns,
-			members: ns.members.map(this.visitTsContainerOrDecl(tt)),
-		};
+		const newMembers = ns.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Only create new object if members changed
+		return newMembers === ns.members
+			? ns
+			: { ...ns, members: newMembers };
 	}
 
 	protected processModuleRecursively(t: T, mod: TsDeclModule): TsDeclModule {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, mod);
-		return {
-			...mod,
-			members: mod.members.map(this.visitTsContainerOrDecl(tt)),
-		};
+		const newMembers = mod.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Only create new object if members changed
+		return newMembers === mod.members
+			? mod
+			: { ...mod, members: newMembers };
 	}
 
 	protected processVarRecursively(t: T, varDecl: TsDeclVar): TsDeclVar {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, varDecl);
-		return {
-			...varDecl,
-			tpe: O.map(this.visitTsType(tt))(varDecl.tpe),
-		};
+		const newTpe = O.map(this.visitTsType(tt))(varDecl.tpe);
+
+		// Only create new object if tpe changed
+		return newTpe === varDecl.tpe
+			? varDecl
+			: { ...varDecl, tpe: newTpe };
 	}
 
 	protected processFunctionRecursively(
@@ -1536,10 +1552,12 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclFunction {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, func);
-		return {
-			...func,
-			signature: this.visitTsFunSig(tt)(func.signature),
-		};
+		const newSignature = this.visitTsFunSig(tt)(func.signature);
+
+		// Only create new object if signature changed
+		return newSignature === func.signature
+			? func
+			: { ...func, signature: newSignature };
 	}
 
 	protected processTypeAliasRecursively(
@@ -1548,30 +1566,36 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclTypeAlias {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, alias);
-		return {
-			...alias,
-			tparams: alias.tparams.map(this.visitTsTypeParam(tt)),
-			alias: this.visitTsType(tt)(alias.alias),
-		};
+		const newTparams = alias.tparams.map(this.visitTsTypeParam(tt));
+		const newAlias = this.visitTsType(tt)(alias.alias);
+
+		// Only create new object if fields changed
+		return newTparams === alias.tparams && newAlias === alias.alias
+			? alias
+			: { ...alias, tparams: newTparams, alias: newAlias };
 	}
 
 	protected processEnumRecursively(t: T, enumDecl: TsDeclEnum): TsDeclEnum {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, enumDecl);
-		return {
-			...enumDecl,
-			members: enumDecl.members.map(this.visitTsEnumMember(tt)),
-			exportedFrom: O.map(this.visitTsTypeRef(tt))(enumDecl.exportedFrom),
-		};
+		const newMembers = enumDecl.members.map(this.visitTsEnumMember(tt));
+		const newExportedFrom = O.map(this.visitTsTypeRef(tt))(enumDecl.exportedFrom);
+
+		// Only create new object if fields changed
+		return newMembers === enumDecl.members && newExportedFrom === enumDecl.exportedFrom
+			? enumDecl
+			: { ...enumDecl, members: newMembers, exportedFrom: newExportedFrom };
 	}
 
 	protected processGlobalRecursively(t: T, global: TsGlobal): TsGlobal {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, global);
-		return {
-			...global,
-			members: global.members.map(this.visitTsContainerOrDecl(tt)),
-		};
+		const newMembers = global.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Only create new object if members changed
+		return newMembers === global.members
+			? global
+			: { ...global, members: newMembers };
 	}
 }
 
