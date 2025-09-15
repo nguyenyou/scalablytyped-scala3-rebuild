@@ -806,7 +806,17 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsParsedFile) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsParsedFile(tt)(x);
-			const newMembers = entered.members.map(this.visitTsContainerOrDecl(tt));
+
+			// Process members with change detection
+			const transformedMembers = entered.members.map(this.visitTsContainerOrDecl(tt));
+			let hasChanges = false;
+			for (let i = 0; i < transformedMembers.length; i++) {
+				if (transformedMembers.apply(i) !== entered.members.apply(i)) {
+					hasChanges = true;
+					break;
+				}
+			}
+			const newMembers = hasChanges ? transformedMembers : entered.members;
 
 			// Only create new object if members changed
 			const processed = newMembers === entered.members
@@ -1167,10 +1177,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTupleElement) => {
 			// Process tuple element recursively
 			const tt = this.withTree(t, x);
-			return {
-				...x,
-				tpe: this.visitTsType(tt)(x.tpe),
-			};
+			const newTpe = this.visitTsType(tt)(x.tpe);
+
+			// Only create new object if type actually changed
+			return newTpe === x.tpe
+				? x
+				: { ...x, tpe: newTpe };
 		};
 	}
 
@@ -1290,7 +1302,17 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeIntersect) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeIntersect(tt)(x);
-			const newTypes = entered.types.map(this.visitTsType(tt));
+
+			// Process types with change detection
+			const transformedTypes = entered.types.map(this.visitTsType(tt));
+			let typesChanged = false;
+			for (let i = 0; i < transformedTypes.length; i++) {
+				if (transformedTypes.apply(i) !== entered.types.apply(i)) {
+					typesChanged = true;
+					break;
+				}
+			}
+			const newTypes = typesChanged ? transformedTypes : entered.types;
 
 			// Only create new object if types changed
 			return newTypes === entered.types
@@ -1303,10 +1325,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeIs) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeIs(tt)(x);
-			return {
-				...entered,
-				tpe: this.visitTsType(tt)(entered.tpe),
-			};
+			const newTpe = this.visitTsType(tt)(entered.tpe);
+
+			// Only create new object if type actually changed
+			return newTpe === entered.tpe
+				? entered
+				: { ...entered, tpe: newTpe };
 		};
 	}
 
@@ -1314,10 +1338,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeLiteral) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeLiteral(tt)(x);
-			return {
-				...entered,
-				literal: this.visitTsLiteral(tt)(entered.literal),
-			};
+			const newLiteral = this.visitTsLiteral(tt)(entered.literal);
+
+			// Only create new object if literal actually changed
+			return newLiteral === entered.literal
+				? entered
+				: { ...entered, literal: newLiteral };
 		};
 	}
 
@@ -1325,11 +1351,13 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeLookup) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeLookup(tt)(x);
-			return {
-				...entered,
-				from: this.visitTsType(tt)(entered.from),
-				key: this.visitTsType(tt)(entered.key),
-			};
+			const newFrom = this.visitTsType(tt)(entered.from);
+			const newKey = this.visitTsType(tt)(entered.key);
+
+			// Only create new object if fields actually changed
+			return newFrom === entered.from && newKey === entered.key
+				? entered
+				: { ...entered, from: newFrom, key: newKey };
 		};
 	}
 
@@ -1337,10 +1365,22 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeObject) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeObject(tt)(x);
-			return {
-				...entered,
-				members: entered.members.map(this.visitTsMember(tt)),
-			};
+
+			// Process members with change detection
+			const transformedMembers = entered.members.map(this.visitTsMember(tt));
+			let membersChanged = false;
+			for (let i = 0; i < transformedMembers.length; i++) {
+				if (transformedMembers.apply(i) !== entered.members.apply(i)) {
+					membersChanged = true;
+					break;
+				}
+			}
+			const newMembers = membersChanged ? transformedMembers : entered.members;
+
+			// Only create new object if members actually changed
+			return newMembers === entered.members
+				? entered
+				: { ...entered, members: newMembers };
 		};
 	}
 
@@ -1348,10 +1388,22 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeTuple) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeTuple(tt)(x);
-			return {
-				...entered,
-				elems: entered.elems.map(this.visitTsTupleElem(tt)),
-			};
+
+			// Process elements with change detection
+			const transformedElems = entered.elems.map(this.visitTsTupleElem(tt));
+			let elemsChanged = false;
+			for (let i = 0; i < transformedElems.length; i++) {
+				if (transformedElems.apply(i) !== entered.elems.apply(i)) {
+					elemsChanged = true;
+					break;
+				}
+			}
+			const newElems = elemsChanged ? transformedElems : entered.elems;
+
+			// Only create new object if elements actually changed
+			return newElems === entered.elems
+				? entered
+				: { ...entered, elems: newElems };
 		};
 	}
 
@@ -1359,10 +1411,22 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsTypeUnion) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsTypeUnion(tt)(x);
-			return {
-				...entered,
-				types: entered.types.map(this.visitTsType(tt)),
-			};
+
+			// Process types with change detection
+			const transformedTypes = entered.types.map(this.visitTsType(tt));
+			let typesChanged = false;
+			for (let i = 0; i < transformedTypes.length; i++) {
+				if (transformedTypes.apply(i) !== entered.types.apply(i)) {
+					typesChanged = true;
+					break;
+				}
+			}
+			const newTypes = typesChanged ? transformedTypes : entered.types;
+
+			// Only create new object if types actually changed
+			return newTypes === entered.types
+				? entered
+				: { ...entered, types: newTypes };
 		};
 	}
 
@@ -1437,12 +1501,14 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberTypeMapped) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberTypeMapped(tt)(x);
-			return {
-				...entered,
-				from: this.visitTsType(tt)(entered.from),
-				as: O.map(this.visitTsType(tt))(entered.as),
-				to: this.visitTsType(tt)(entered.to),
-			};
+			const newFrom = this.visitTsType(tt)(entered.from);
+			const newAs = O.map(this.visitTsType(tt))(entered.as);
+			const newTo = this.visitTsType(tt)(entered.to);
+
+			// Only create new object if fields actually changed
+			return newFrom === entered.from && newAs === entered.as && newTo === entered.to
+				? entered
+				: { ...entered, from: newFrom, as: newAs, to: newTo };
 		};
 	}
 
@@ -1555,9 +1621,48 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclInterface {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, iface);
-		const newTparams = iface.tparams?.map(this.visitTsTypeParam(tt)) || iface.tparams;
-		const newInheritance = iface.inheritance?.map(this.visitTsTypeRef(tt)) || iface.inheritance;
-		const newMembers = iface.members?.map(this.visitTsMember(tt)) || iface.members;
+
+		// Process type parameters with change detection
+		let newTparams = iface.tparams;
+		if (iface.tparams) {
+			const transformedTparams = iface.tparams.map(this.visitTsTypeParam(tt));
+			let tparamsChanged = false;
+			for (let i = 0; i < transformedTparams.length; i++) {
+				if (transformedTparams.apply(i) !== iface.tparams.apply(i)) {
+					tparamsChanged = true;
+					break;
+				}
+			}
+			newTparams = tparamsChanged ? transformedTparams : iface.tparams;
+		}
+
+		// Process inheritance with change detection
+		let newInheritance = iface.inheritance;
+		if (iface.inheritance) {
+			const transformedInheritance = iface.inheritance.map(this.visitTsTypeRef(tt));
+			let inheritanceChanged = false;
+			for (let i = 0; i < transformedInheritance.length; i++) {
+				if (transformedInheritance.apply(i) !== iface.inheritance.apply(i)) {
+					inheritanceChanged = true;
+					break;
+				}
+			}
+			newInheritance = inheritanceChanged ? transformedInheritance : iface.inheritance;
+		}
+
+		// Process members with change detection
+		let newMembers = iface.members;
+		if (iface.members) {
+			const transformedMembers = iface.members.map(this.visitTsMember(tt));
+			let membersChanged = false;
+			for (let i = 0; i < transformedMembers.length; i++) {
+				if (transformedMembers.apply(i) !== iface.members.apply(i)) {
+					membersChanged = true;
+					break;
+				}
+			}
+			newMembers = membersChanged ? transformedMembers : iface.members;
+		}
 
 		// Only create new object if any field changed
 		return newTparams === iface.tparams &&
@@ -1573,7 +1678,17 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclNamespace {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, ns);
-		const newMembers = ns.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Process members with change detection
+		const transformedMembers = ns.members.map(this.visitTsContainerOrDecl(tt));
+		let hasChanges = false;
+		for (let i = 0; i < transformedMembers.length; i++) {
+			if (transformedMembers.apply(i) !== ns.members.apply(i)) {
+				hasChanges = true;
+				break;
+			}
+		}
+		const newMembers = hasChanges ? transformedMembers : ns.members;
 
 		// Only create new object if members changed
 		return newMembers === ns.members
@@ -1633,7 +1748,18 @@ export abstract class AbstractTreeTransformation<T>
 	): TsDeclTypeAlias {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, alias);
-		const newTparams = alias.tparams.map(this.visitTsTypeParam(tt));
+
+		// Process type parameters with change detection
+		const transformedTparams = alias.tparams.map(this.visitTsTypeParam(tt));
+		let tparamsChanged = false;
+		for (let i = 0; i < transformedTparams.length; i++) {
+			if (transformedTparams.apply(i) !== alias.tparams.apply(i)) {
+				tparamsChanged = true;
+				break;
+			}
+		}
+		const newTparams = tparamsChanged ? transformedTparams : alias.tparams;
+
 		const newAlias = this.visitTsType(tt)(alias.alias);
 
 		// Only create new object if fields changed
@@ -1645,7 +1771,18 @@ export abstract class AbstractTreeTransformation<T>
 	protected processEnumRecursively(t: T, enumDecl: TsDeclEnum): TsDeclEnum {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, enumDecl);
-		const newMembers = enumDecl.members.map(this.visitTsEnumMember(tt));
+
+		// Process members with change detection
+		const transformedMembers = enumDecl.members.map(this.visitTsEnumMember(tt));
+		let membersChanged = false;
+		for (let i = 0; i < transformedMembers.length; i++) {
+			if (transformedMembers.apply(i) !== enumDecl.members.apply(i)) {
+				membersChanged = true;
+				break;
+			}
+		}
+		const newMembers = membersChanged ? transformedMembers : enumDecl.members;
+
 		const newExportedFrom = O.map(this.visitTsTypeRef(tt))(enumDecl.exportedFrom);
 
 		// Only create new object if fields changed
@@ -1657,7 +1794,17 @@ export abstract class AbstractTreeTransformation<T>
 	protected processGlobalRecursively(t: T, global: TsGlobal): TsGlobal {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, global);
-		const newMembers = global.members.map(this.visitTsContainerOrDecl(tt));
+
+		// Process members with change detection
+		const transformedMembers = global.members.map(this.visitTsContainerOrDecl(tt));
+		let hasChanges = false;
+		for (let i = 0; i < transformedMembers.length; i++) {
+			if (transformedMembers.apply(i) !== global.members.apply(i)) {
+				hasChanges = true;
+				break;
+			}
+		}
+		const newMembers = hasChanges ? transformedMembers : global.members;
 
 		// Only create new object if members changed
 		return newMembers === global.members
