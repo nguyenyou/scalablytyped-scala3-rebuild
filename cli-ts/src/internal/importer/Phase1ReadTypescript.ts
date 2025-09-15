@@ -6,7 +6,7 @@
  */
 
 import { type Either, right, isLeft, isRight } from "fp-ts/Either";
-import { none } from "fp-ts/Option";
+import { none, isSome } from "fp-ts/Option";
 import { SortedSet } from "../collections";
 import { InFile } from "../files";
 import { IArray } from "../IArray";
@@ -25,13 +25,14 @@ import {
 } from "../ts/trees";
 import { Comments } from "../Comments";
 import type { CalculateLibraryVersion } from "./CalculateLibraryVersion";
-import type { LibraryResolver } from "./LibraryResolver";
+import { LibraryResolver } from "./LibraryResolver";
 import { LibTs } from "./LibTs";
 import { LibTsSource } from "./LibTsSource";
 import { PathsFromTsLibSource } from "./PathsFromTsLibSource";
 import { ResolveExternalReferences } from "./ResolveExternalReferences";
 import { ProxyModule } from "./ProxyModule";
 import type { ResolvedModule } from "./ResolvedModule";
+import { ResolvedModuleNotLocal } from "./ResolvedModule";
 import { TsIdentLibrarySimple } from "../ts/trees";
 import { CodePath } from "../ts/CodePath";
 import { Comment } from "../Comment";
@@ -160,22 +161,171 @@ export class Phase1ReadTypescript {
 				const deps = new Set<LibTsSource>();
 				logger.info(`Preprocessing ${file.path}`);
 
-				// TODO: Implement directive processing, module resolution, and file inlining
-				// This is a complex process that involves:
-				// - Processing directives (PathRef, LibRef, TypesRef)
-				// - Module name inference
-				// - External reference resolution
-				// - File inlining for non-module files
-				// - Dependency tracking
+				// Get module names for this file
+				const moduleNames = LibraryResolver.moduleNameFor(source, file);
 
-				return [parsed, deps];
+				// Infer default module if needed
+				const withInferredModule = InferredDefaultModule.apply(
+					parsed,
+					moduleNames.get(0)!,
+					logger
+				);
+
+				// Process directives for dependency resolution
+				withInferredModule.directives.forEach(directive => {
+					if (directive._tag === "TypesRef") {
+						const resolvedModuleOpt = this.config.resolve.module(source, file.folder, directive.stringPath);
+						if (isSome(resolvedModuleOpt)) {
+							const resolvedModule = resolvedModuleOpt.value;
+							if (resolvedModule instanceof ResolvedModuleNotLocal) {
+								deps.add(resolvedModule.source);
+							}
+						} else {
+							logger.warn(`directives: couldn't resolve ${directive.stringPath}`);
+						}
+					}
+				});
+
+				// Resolve external references
+				const resolveResult = ResolveExternalReferences.apply(
+					this.config.resolve,
+					source,
+					file.folder,
+					withInferredModule,
+					logger
+				);
+
+				const withExternals = resolveResult.transformedFile;
+
+				// Add resolved module dependencies
+				resolveResult.resolvedModules.forEach(resolvedModule => {
+					if (resolvedModule instanceof ResolvedModuleNotLocal) {
+						deps.add(resolvedModule.source);
+					}
+				});
+
+				// Add origin comments for stdlib (simplified for now)
+				const withOrigin = withExternals;
+
+				// Infer additional dependencies
+				const inferredDepNames = InferredDependency.apply(
+					source.libName,
+					withOrigin,
+					resolveResult.unresolvedModules,
+					logger
+				);
+
+				// Resolve inferred dependencies
+				inferredDepNames.forEach(libraryName => {
+					const resolvedModuleOpt = this.config.resolve.module(source, file.folder, libraryName.value);
+					if (isSome(resolvedModuleOpt)) {
+						const resolvedModule = resolvedModuleOpt.value;
+						if (resolvedModule instanceof ResolvedModuleNotLocal) {
+							deps.add(resolvedModule.source);
+						}
+					} else {
+						logger.warn(`Couldn't resolve inferred dependency ${libraryName.value}`);
+					}
+				});
+
+				// TODO: Implement file inlining logic
+				const withInlined = withOrigin; // Placeholder for now
+
+				// Set code path (simplified for now)
+				const withCodePath = withInlined;
+
+				return [withCodePath, deps];
 			});
 		}
 
-		// TODO: Continue with the rest of the implementation
-		// This includes file evaluation, flattening, proxy module creation, etc.
+		// Evaluate all prepared files
+		const preparedFiles: Array<[TsParsedFile, Set<LibTsSource>]> = [];
+		const evaluatedFiles = new Map<InFile, [TsParsedFile, Set<LibTsSource>]>();
 
-		return PhaseRes.Ignore<LibTsSource, LibTs>();
+		if (source instanceof LibTsSource.StdLibSource) {
+			// For stdlib, only include specified files
+			for (const file of source.files.toArray()) {
+				const preparer = preparingFiles.get(file);
+				if (preparer) {
+					const result = preparer();
+					evaluatedFiles.set(file, result);
+					if (!includedViaDirective.has(file)) {
+						preparedFiles.push(result);
+					}
+				}
+			}
+		} else {
+			// For regular folders, include all prepared files
+			for (const [file, preparer] of preparingFiles) {
+				const result = preparer();
+				evaluatedFiles.set(file, result);
+				if (!includedViaDirective.has(file)) {
+					preparedFiles.push(result);
+				}
+			}
+		}
+
+		if (preparedFiles.length === 0) {
+			logger.warn(`No typescript definitions files found for library ${source.libName.value}`);
+			return PhaseRes.Ignore<LibTsSource, LibTs>();
+		}
+
+		// Flatten all files into a single parsed file
+		const flattened = FlattenTrees.apply(IArray.fromArray(preparedFiles.map(([file]) => file)));
+
+		// Collect all dependencies from files
+		const depsFromFiles = new Set<LibTsSource>();
+		preparedFiles.forEach(([, deps]) => {
+			deps.forEach(dep => depsFromFiles.add(dep));
+		});
+
+		// TODO: Create proxy modules from package.json exports
+		const withExportedModules = flattened;
+
+		// TODO: Filter out ignored modules
+		const withFilteredModules = withExportedModules;
+
+		// TODO: Determine stdlib dependency and declared dependencies
+		const allDeps = new SortedSet<LibTsSource>();
+		depsFromFiles.forEach(dep => allDeps.add(dep));
+
+		// Get dependencies and apply transformation pipeline
+		const depsResult = getDeps(allDeps);
+		if (depsResult._tag === "Failure") {
+			return PhaseRes.Failure<LibTsSource, LibTs>(depsResult.errors);
+		}
+		if (depsResult._tag === "Ignore") {
+			return PhaseRes.Ignore<LibTsSource, LibTs>();
+		}
+
+		const deps = depsResult.value;
+
+		// TODO: Handle transitive dependencies properly
+		const transitiveDeps = new Map<LibTsSource, TsParsedFile>();
+		for (const [source, lib] of deps) {
+			transitiveDeps.set(source, lib.parsed);
+		}
+
+		// TODO: Create proper TsTreeScope - simplified for now
+		const scope = TsTreeScope.create(
+			source.libName,
+			this.config.pedantic,
+			transitiveDeps,
+			logger
+		);
+
+		// Determine if React is involved
+		const involvesReact = source.libName.value === "react" ||
+			Array.from(deps.keys()).some((s: any) => s.libName.value === "react");
+
+		// Apply transformation pipeline
+		const transformations = Phase1ReadTypescript.createPipeline(scope, source.libName, this.config.expandTypeMappings, involvesReact, logger);
+		const finished = transformations.reduce((acc: TsParsedFile, f: (file: TsParsedFile) => TsParsedFile) => f(acc), withFilteredModules);
+
+		// Calculate library version - simplified for now
+		const version = LibraryVersion.create(false, "1.0.0", null);
+
+		return PhaseRes.Ok<LibTsSource, LibTs>(new LibTs(source, version, finished, deps));
 	}
 
 	/**
