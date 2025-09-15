@@ -98,6 +98,19 @@ class ResolveExternalReferencesVisitor extends TreeTransformationScopedChanges {
 						};
 					}
 				}
+			} else if (x.exported._tag === "TsExporteeStar") {
+				const exporteeStar = x.exported as any; // Type assertion for now
+				const resolved = this.resolveModule(exporteeStar.from);
+				if (resolved) {
+					// Update the star export with resolved module name
+					return {
+						...x,
+						exported: {
+							...exporteeStar,
+							from: resolved.moduleName
+						}
+					};
+				}
 			}
 			return x;
 		};
@@ -106,7 +119,7 @@ class ResolveExternalReferencesVisitor extends TreeTransformationScopedChanges {
 	/**
 	 * Resolve a module identifier to a concrete module
 	 */
-	private resolveModule(moduleId: TsIdentModule): ResolvedModule | null {
+	public resolveModule(moduleId: TsIdentModule): ResolvedModule | null {
 		try {
 			// Try to resolve as a library module
 			const moduleResult = this.resolve.module(this.source, this.folder, moduleId.value);
@@ -161,6 +174,33 @@ export const ResolveExternalReferences = {
 	): ResolveExternalReferencesResult => {
 		logger.info(`Resolving external references for ${source.libName.value}`);
 
+		// Extract imported modules from imports and exports (matching Scala implementation)
+		const imported = new Set<TsIdentModule>();
+
+		// From imports: collect TsImportee.From and TsImportee.Required
+		file.imports.forEach((imp) => {
+			if (imp.from._tag === "TsImporteeFrom") {
+				const importeeFrom = imp.from as any;
+				imported.add(importeeFrom.from);
+			} else if (imp.from._tag === "TsImporteeRequired") {
+				const importeeRequired = imp.from as any;
+				imported.add(importeeRequired.from);
+			}
+		});
+
+		// From exports: collect TsExportee.Names with fromOpt and TsExportee.Star
+		file.exports.forEach((exp) => {
+			if (exp.exported._tag === "TsExporteeNames") {
+				const exporteeNames = exp.exported as any;
+				if (exporteeNames.fromOpt && exporteeNames.fromOpt._tag === "Some") {
+					imported.add(exporteeNames.fromOpt.value);
+				}
+			} else if (exp.exported._tag === "TsExporteeStar") {
+				const exporteeStar = exp.exported as any;
+				imported.add(exporteeStar.from);
+			}
+		});
+
 		// Create a mock root scope for the transformation
 		const mockScope = {
 			root: {
@@ -171,6 +211,12 @@ export const ResolveExternalReferences = {
 		} as TsTreeScope;
 
 		const visitor = new ResolveExternalReferencesVisitor(resolve, source, folder, logger);
+
+		// Pre-populate the visitor with imported modules to resolve
+		imported.forEach((moduleId) => {
+			visitor.resolveModule(moduleId);
+		});
+
 		const transformedFile = visitor.visitTsParsedFile(mockScope)(file);
 
 		// For now, skip adding import types as it requires more complex type construction

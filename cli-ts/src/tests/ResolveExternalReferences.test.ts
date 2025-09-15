@@ -7,13 +7,68 @@ import { none, some } from "fp-ts/Option";
 import { IArray } from "../internal/IArray";
 import { Comments } from "../internal/Comments";
 import { InFolder } from "../internal/files";
-import { TsIdent, TsIdentModule, TsParsedFile } from "../internal/ts/trees";
+import {
+	TsIdent,
+	TsIdentModule,
+	TsParsedFile,
+	TsImport,
+	TsExport,
+	TsImported,
+	TsImportedStar,
+	TsImportee,
+	TsImporteeFrom,
+	TsExportee,
+	TsExporteeStar,
+	TsContainerOrDecl,
+	TsQIdent
+} from "../internal/ts/trees";
 import { CodePath } from "../internal/ts/CodePath";
 import { LibTsSource } from "../internal/importer/LibTsSource";
 import { ResolveExternalReferences } from "../internal/importer/ResolveExternalReferences";
 import { ResolvedModule, ResolvedModuleLocal, ResolvedModuleNotLocal } from "../internal/importer/ResolvedModule";
 import type { LibraryResolver } from "../internal/importer/LibraryResolver";
 import { DevNullLogger, type Logger } from "../internal/logging";
+import { ExportType } from "../internal/ts/ExportType";
+
+// Helper functions for creating test data (ported from Scala)
+function createSimpleIdent(name: string) {
+	return TsIdent.simple(name);
+}
+
+function createQIdent(name: string) {
+	return TsQIdent.ofStrings(name);
+}
+
+function createMockImport(from: string): TsImport {
+	return TsImport.create(
+		false, // typeOnly
+		IArray.fromArray([TsImportedStar.create(some(createSimpleIdent("imported"))) as TsImported]),
+		TsImporteeFrom.create(TsIdentModule.simple(from))
+	);
+}
+
+function createMockExport(from: string): TsExport {
+	return TsExport.create(
+		Comments.empty(), // comments
+		false, // typeOnly
+		ExportType.named(), // tpe
+		TsExporteeStar.create(none, TsIdentModule.simple(from)) // exported
+	);
+}
+
+function createMockParsedFileWithMembers(
+	imports: IArray<TsImport> = IArray.Empty,
+	exports: IArray<TsExport> = IArray.Empty,
+	members: IArray<TsContainerOrDecl> = IArray.Empty
+): TsParsedFile {
+	const allMembers = imports.concat(exports).concat(members);
+	return TsParsedFile.create(
+		Comments.empty(),
+		IArray.Empty,
+		allMembers,
+		CodePath.noPath()
+	);
+}
 
 // Mock implementations
 function createMockLogger(): Logger<void> {
@@ -52,15 +107,7 @@ function createMockFolder(): InFolder {
 }
 
 function createMockParsedFile(): TsParsedFile {
-	return {
-		_tag: "TsParsedFile",
-		comments: Comments.empty(),
-		directives: IArray.Empty,
-		members: IArray.Empty,
-		codePath: CodePath.noPath(),
-		isModule: false,
-		asString: "TsParsedFile(empty)"
-	} as TsParsedFile;
+	return createMockParsedFileWithMembers();
 }
 
 function createMockLibraryResolver(
@@ -88,45 +135,101 @@ describe("ResolveExternalReferences", () => {
 	});
 
 	describe("Basic Functionality", () => {
-		it("should process a file with no external references", () => {
-			const mockResolver = createMockLibraryResolver();
+		it("should handle empty parsed file", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const parsedFile = createMockParsedFile();
+			const logger = createMockLogger();
 
-			const result = ResolveExternalReferences.apply(
-				mockResolver,
-				mockSource,
-				mockFolder,
-				mockFile,
-				mockLogger
-			);
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
 
-			expect(result).toBeDefined();
 			expect(result.transformedFile).toBeDefined();
-			expect(result.resolvedModules).toBeDefined();
-			expect(result.unresolvedModules).toBeDefined();
 			expect(result.resolvedModules.size).toBe(0);
 			expect(result.unresolvedModules.size).toBe(0);
 		});
 
-		it("should return correct result structure", () => {
-			const mockResolver = createMockLibraryResolver();
+		it("should handle parsed file with simple import", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const importStmt = createMockImport("react");
+			const parsedFile = createMockParsedFileWithMembers(IArray.fromArray([importStmt]));
+			const logger = createMockLogger();
 
-			const result = ResolveExternalReferences.apply(
-				mockResolver,
-				mockSource,
-				mockFolder,
-				mockFile,
-				mockLogger
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should have attempted to resolve the "react" module
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
+		});
+
+		it("should handle parsed file with export statement", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const exportStmt = createMockExport("./utils");
+			const parsedFile = createMockParsedFileWithMembers(IArray.Empty, IArray.fromArray([exportStmt]));
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should have attempted to resolve the "./utils" module
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
+		});
+	});
+
+	describe("Edge Cases", () => {
+		it("should handle multiple imports and exports", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const import1 = createMockImport("react");
+			const import2 = createMockImport("lodash");
+			const export1 = createMockExport("./utils");
+			const export2 = createMockExport("./types");
+			const parsedFile = createMockParsedFileWithMembers(
+				IArray.fromArray([import1, import2]),
+				IArray.fromArray([export1, export2])
 			);
+			const logger = createMockLogger();
 
-			// Verify result structure
-			expect(result).toHaveProperty("transformedFile");
-			expect(result).toHaveProperty("resolvedModules");
-			expect(result).toHaveProperty("unresolvedModules");
-			
-			// Verify types
-			expect(result.transformedFile._tag).toBe("TsParsedFile");
-			expect(result.resolvedModules).toBeInstanceOf(Set);
-			expect(result.unresolvedModules).toBeInstanceOf(Set);
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should have attempted to resolve multiple modules
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
+		});
+
+		it("should handle relative path imports", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const importStmt = createMockImport("../parent/module");
+			const parsedFile = createMockParsedFileWithMembers(IArray.fromArray([importStmt]));
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should handle relative paths
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
+		});
+
+		it("should handle scoped package imports", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const importStmt = createMockImport("@types/node");
+			const parsedFile = createMockParsedFileWithMembers(IArray.fromArray([importStmt]));
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should handle scoped packages
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
 		});
 	});
 
@@ -191,6 +294,53 @@ describe("ResolveExternalReferences", () => {
 			// Since we have an empty file, no modules will be processed
 			expect(result.resolvedModules.size).toBe(0);
 			expect(result.unresolvedModules.size).toBe(0);
+		});
+	});
+
+	describe("Negative Cases", () => {
+		it("should handle parsed file with no imports or exports", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const parsedFile = createMockParsedFile();
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should have no resolved or unresolved modules for empty file
+			expect(result.resolvedModules.size).toBe(0);
+			expect(result.unresolvedModules.size).toBe(0);
+		});
+
+		it("should handle invalid module paths gracefully", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const importStmt = createMockImport(""); // Empty module path
+			const parsedFile = createMockParsedFileWithMembers(IArray.fromArray([importStmt]));
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should handle invalid paths without crashing
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
+		});
+
+		it("should handle complex nested module structures", () => {
+			const resolver = createMockLibraryResolver();
+			const source = createMockLibTsSource("test-lib");
+			const folder = createMockFolder();
+			const importStmt = createMockImport("@scope/package/sub/module");
+			const parsedFile = createMockParsedFileWithMembers(IArray.fromArray([importStmt]));
+			const logger = createMockLogger();
+
+			const result = ResolveExternalReferences.apply(resolver, source, folder, parsedFile, logger);
+
+			expect(result.transformedFile).toBeDefined();
+			// Should handle complex nested paths
+			expect(result.unresolvedModules.size > 0 || result.resolvedModules.size > 0).toBe(true);
 		});
 	});
 
