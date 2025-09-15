@@ -5,8 +5,8 @@
  * the tree. For instance defaulted parameters are filled in. The point is to go from a complex tree to a simpler tree
  */
 
-import { type Either, right, isLeft, isRight } from "fp-ts/Either";
-import { none, isSome } from "fp-ts/Option";
+import { type Either, isLeft } from "fp-ts/Either";
+import { none, isSome, some } from "fp-ts/Option";
 import { SortedSet } from "../collections";
 import { InFile } from "../files";
 import { IArray } from "../IArray";
@@ -38,8 +38,10 @@ import { CodePath } from "../ts/CodePath";
 import { Comment } from "../Comment";
 import { AddComments } from "../ts/transforms/AddComments";
 import { SetCodePath } from "../ts/transforms/SetCodePath";
+import type { Directive } from "../ts/Directive";
 import { InferredDefaultModule } from "../ts/modules/InferredDefaultModule";
 import { InferredDependency } from "../ts/modules/InferredDependency";
+// import { PackageJson } from "../PackageJson";
 
 // Import all transformations
 import { LibrarySpecific } from "../ts/transforms/LibrarySpecific";
@@ -204,8 +206,19 @@ export class Phase1ReadTypescript {
 					}
 				});
 
-				// Add origin comments for stdlib (simplified for now)
-				const withOrigin = withExternals;
+				// Add origin comments for stdlib
+				const withOrigin = (() => {
+					if (source instanceof LibTsSource.StdLibSource) {
+						const shortName = file.path.split('.').slice(1, -2).join('.');
+						if (shortName.length > 0) {
+							const stdComment = new Comments([
+								Comment.create(`/* standard ${shortName} */\n`)
+							]);
+							return new AddComments(stdComment).visitTsParsedFile()(withExternals);
+						}
+					}
+					return withExternals;
+				})();
 
 				// Infer additional dependencies
 				const inferredDepNames = InferredDependency.apply(
@@ -228,11 +241,13 @@ export class Phase1ReadTypescript {
 					}
 				});
 
-				// TODO: Implement file inlining logic
-				const withInlined = withOrigin; // Placeholder for now
+				// File inlining logic - simplified for now
+				// TODO: Implement complete file inlining with circular reference detection
+				const withInlined = withOrigin;
 
-				// Set code path (simplified for now)
-				const withCodePath = withInlined;
+				// Set code path
+				const codePath = CodePath.hasPath(source.libName, TsQIdent.empty());
+				const withCodePath = new SetCodePath().visitTsParsedFile(codePath)(withInlined);
 
 				return [withCodePath, deps];
 			});
@@ -279,13 +294,53 @@ export class Phase1ReadTypescript {
 			deps.forEach(dep => depsFromFiles.add(dep));
 		});
 
-		// TODO: Create proxy modules from package.json exports
-		const withExportedModules = flattened;
+		// Create proxy modules from package.json exports if available
+		const withExportedModules: TsParsedFile = (() => {
+			if (source.packageJsonOpt && source.packageJsonOpt.parsedExported) {
+				try {
+					const proxyModules = ProxyModule.fromExports(
+						source,
+						logger,
+						this.config.resolve,
+						(ident: TsIdent) => flattened.membersByName.has(ident),
+						source.packageJsonOpt.parsedExported
+					);
 
-		// TODO: Filter out ignored modules
-		const withFilteredModules = withExportedModules;
+					// Add proxy modules to the flattened file
+					const newMembers = IArray.fromArray(proxyModules.map(pm => pm.asModule)).concat(flattened.members);
+					return flattened.withMembers(newMembers) as TsParsedFile;
+				} catch (error) {
+					logger.warn(`Failed to create proxy modules from exports: ${error}`);
+					return flattened;
+				}
+			}
+			return flattened;
+		})();
 
-		// TODO: Determine stdlib dependency and declared dependencies
+		// Filter out ignored modules based on ignoredModulePrefixes
+		const withFilteredModules: TsParsedFile = (() => {
+			if (this.config.ignoredModulePrefixes.size > 0) {
+				const filteredMembers = withExportedModules.members.filter(member => {
+					if (member._tag === "TsDeclModule" || member._tag === "TsAugmentedModule") {
+						// Type assertion to access name property
+						const namedMember = member as any;
+						const moduleName = namedMember.name.value;
+						for (const prefix of this.config.ignoredModulePrefixes) {
+							if (moduleName.startsWith(prefix)) {
+								logger.info(`Filtering out ignored module: ${moduleName}`);
+								return false;
+							}
+						}
+					}
+					return true;
+				});
+				return withExportedModules.withMembers(filteredMembers) as TsParsedFile;
+			}
+			return withExportedModules;
+		})();
+
+		// Simplified dependency resolution for now
+		// TODO: Implement complete stdlib and package.json dependency resolution
 		const allDeps = new SortedSet<LibTsSource>();
 		depsFromFiles.forEach(dep => allDeps.add(dep));
 
@@ -320,176 +375,21 @@ export class Phase1ReadTypescript {
 
 		// Apply transformation pipeline
 		const transformations = Phase1ReadTypescript.createPipeline(scope, source.libName, this.config.expandTypeMappings, involvesReact, logger);
-		const finished = transformations.reduce((acc: TsParsedFile, f: (file: TsParsedFile) => TsParsedFile) => f(acc), withFilteredModules);
+		let finished = withFilteredModules;
+		for (const transformation of transformations) {
+			finished = transformation(finished);
+		}
 
-		// Calculate library version - simplified for now
-		const version = LibraryVersion.create(false, "1.0.0", null);
+		// Calculate library version using the configured calculator
+		const packageJsonOpt = source.packageJsonOpt ? some(source.packageJsonOpt) : none;
+		const version = this.config.calculateLibraryVersion.calculate(
+			source.folder,
+			source instanceof LibTsSource.StdLibSource,
+			packageJsonOpt,
+			finished.comments
+		);
 
 		return PhaseRes.Ok<LibTsSource, LibTs>(new LibTs(source, version, finished, deps));
-	}
-
-	/**
-	 * Check if a library should be ignored
-	 */
-	private isIgnored(source: LibTsSource): boolean {
-		// Check if the library name is in the ignored set
-		for (const ignoredLib of this.config.ignored) {
-			if (ignoredLib.value === source.libName.value) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Check if a module should be ignored based on module prefixes
-	 */
-	private ignoreModule(modName: TsIdentModule): boolean {
-		const fragments = modName.fragments;
-		for (let n = 1; n <= fragments.length; n++) {
-			const prefix = fragments.slice(0, n);
-			for (const ignoredPrefix of this.config.ignoredModulePrefixes) {
-				if (this.arraysEqual(prefix, ignoredPrefix)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Helper to compare arrays for equality
-	 */
-	private arraysEqual<T>(a: T[], b: T[]): boolean {
-		return a.length === b.length && a.every((val, i) => val === b[i]);
-	}
-
-	/**
-	 * Determine which files to include for processing
-	 */
-	private determineFilesToInclude(source: LibTsSource, logger: Logger<void>): InFile[] {
-		logger.info(`Determining files to include for ${source.libName.value}`);
-
-		// This would normally use LibraryResolver to find files
-		// For testing purposes, create a mock file if the source has a folder
-		if (source instanceof LibTsSource.FromFolder) {
-			const mockFile = new InFile(source.folder.path + "/index.d.ts");
-			return [mockFile];
-		}
-
-		return [];
-	}
-
-	/**
-	 * Parse TypeScript files using the configured parser
-	 */
-	private parseFiles(files: InFile[], logger: Logger<void>): TsParsedFile[] {
-		logger.info(`Parsing ${files.length} files`);
-
-		const parsed: TsParsedFile[] = [];
-		for (const file of files) {
-			try {
-				const result = this.config.parser(file);
-				if (result._tag === "Right") {
-					parsed.push(result.right);
-				} else {
-					logger.warn(`Failed to parse ${file.path}: ${result.left}`);
-				}
-			} catch (error) {
-				logger.warn(`Error parsing ${file.path}: ${error}`);
-			}
-		}
-
-		return parsed;
-	}
-
-	/**
-	 * Merge multiple parsed files into a single TsParsedFile
-	 */
-	private mergeFiles(files: TsParsedFile[], source: LibTsSource, logger: Logger<void>): TsParsedFile {
-		logger.info(`Merging ${files.length} parsed files for ${source.libName.value}`);
-
-		if (files.length === 0) {
-			return TsParsedFile.createMock();
-		}
-
-		if (files.length === 1) {
-			return files[0];
-		}
-
-		// Merge all files into one
-		const allMembers: TsContainerOrDecl[] = [];
-		const allComments = Comments.empty();
-
-		for (const file of files) {
-			allMembers.push(...file.members);
-		}
-
-		return TsParsedFile.create(
-			allComments,
-			IArray.Empty, // directives
-			IArray.fromArray(allMembers),
-			files[0].codePath // Use first file's code path
-		);
-	}
-
-	/**
-	 * Apply transformation pipeline to the parsed file
-	 */
-	private applyTransformations(file: TsParsedFile, source: LibTsSource, logger: Logger<void>): TsParsedFile {
-		logger.info(`Applying transformations for ${source.libName.value}`);
-
-		let transformedFile = file;
-
-		// Filter out ignored modules if configured
-		if (this.config.ignoredModulePrefixes.size > 0) {
-			transformedFile = this.filterIgnoredModules(transformedFile);
-		}
-
-		// Apply other transformations (placeholder for now)
-		// In the real implementation, this would apply a complex pipeline of transformations
-
-		return transformedFile;
-	}
-
-	/**
-	 * Filter out modules that match ignored prefixes
-	 */
-	private filterIgnoredModules(file: TsParsedFile): TsParsedFile {
-		const filteredMembers = file.members.toArray().filter(member => {
-			// Check if member is a module declaration
-			if (member._tag === "TsDeclModule") {
-				const moduleDecl = member as any; // Type assertion for now
-				return !this.ignoreModule(moduleDecl.name);
-			}
-			if (member._tag === "TsAugmentedModule") {
-				const augmentedModule = member as any; // Type assertion for now
-				return !this.ignoreModule(augmentedModule.name);
-			}
-			return true;
-		});
-
-		return TsParsedFile.create(
-			file.comments,
-			file.directives,
-			IArray.fromArray(filteredMembers),
-			file.codePath
-		);
-	}
-
-	/**
-	 * Calculate library version
-	 */
-	private calculateVersion(source: LibTsSource, file: TsParsedFile, logger: Logger<void>): LibraryVersion {
-		logger.info(`Calculating version for ${source.libName.value}`);
-
-		// Use the configured version calculator
-		const sourceFolder = source.folder;
-		const isStdLib = source.libName.value === "std";
-		const packageJsonOpt = none; // Would be extracted from source
-		const comments = file.comments;
-
-		return this.config.calculateLibraryVersion.calculate(sourceFolder, isStdLib, packageJsonOpt, comments);
 	}
 
 	/**
@@ -498,6 +398,12 @@ export class Phase1ReadTypescript {
 	static create(config: Phase1Config): Phase1ReadTypescript {
 		return new Phase1ReadTypescript(config);
 	}
+
+
+
+
+
+
 }
 
 /**
