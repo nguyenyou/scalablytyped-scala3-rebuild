@@ -9,8 +9,8 @@ import { isLeft } from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import { isSome } from "fp-ts/Option";
 import { IArray, partialFunction } from "../IArray.js";
+import { FillInTParams } from "./FillInTParams.js";
 import {
-	FillInTParams,
 	type LoopDetector,
 	Picker,
 	type TsTreeScope,
@@ -133,7 +133,7 @@ export const AllMembersFor = {
 
 					case "TsDeclClass": {
 						const classDecl = decl as TsDeclClass;
-						const filledClass = FillInTParams.forClass(
+						const filledClass = FillInTParams.apply(
 							classDecl,
 							typeRef.tparams,
 						);
@@ -159,7 +159,7 @@ export const AllMembersFor = {
 
 					case "TsDeclTypeAlias": {
 						const aliasDecl = decl as TsDeclTypeAlias;
-						const filledAlias = FillInTParams.forTypeAlias(
+						const filledAlias = FillInTParams.apply(
 							aliasDecl,
 							typeRef.tparams,
 						);
@@ -185,7 +185,7 @@ export const AllMembersFor = {
 		scope: TsTreeScope,
 		tparams: IArray<TsType>,
 	): IArray<TsMember> => {
-		const filledInterface = FillInTParams.forInterface(interfaceDecl, tparams);
+		const filledInterface = FillInTParams.apply(interfaceDecl, tparams);
 
 		// Get members from inherited interfaces
 		const inheritedMembers = filledInterface.inheritance.flatMap(

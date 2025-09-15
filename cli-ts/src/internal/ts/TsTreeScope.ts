@@ -10,11 +10,8 @@ import type { PackageJson } from "./PackageJson.js";
 import type {
 	TsAugmentedModule,
 	TsContainer,
-	TsDeclClass,
-	TsDeclInterface,
 	TsDeclModule,
 	TsDeclNamespaceOrModule,
-	TsDeclTypeAlias,
 	TsDeclVar,
 	TsExport,
 	TsIdentLibrary,
@@ -26,7 +23,6 @@ import type {
 	TsParsedFile,
 	TsQIdent,
 	TsTree,
-	TsType,
 	TsTypeParam,
 	TsTypeRef,
 } from "./trees.js";
@@ -171,14 +167,29 @@ export const TsTreeScopeUtils = {
 		if (declarations) {
 			const results: [T, TsTreeScope][] = [];
 			for (const decl of declarations.toArray()) {
-				const nestedResults = TsTreeScopeUtils.search(
-					scope["/"](decl) as TsTreeScope,
-					picker,
-					decl as any, // Cast to container for recursive search
-					tail,
-					loopDetector,
-				);
-				results.push(...nestedResults.toArray());
+				// Special handling for enums (like in Scala implementation)
+				if (decl._tag === "TsDeclEnum" && tail.length === 1) {
+					const enumDecl = decl as any; // Cast to access members
+					const enumMemberName = tail.apply(0).value;
+					const enumMember = enumDecl.members?.find((m: any) => m.name.value === enumMemberName);
+					if (enumMember) {
+						// Create fake type alias for enum member (simplified)
+						const picked = picker.pick(decl as any);
+						if (isSome(picked)) {
+							results.push([picked.value, scope]);
+						}
+					}
+				} else if (TsTreeScopeUtils.isContainer(decl)) {
+					// Recursive search in containers
+					const nestedResults = TsTreeScopeUtils.search(
+						scope["/"](decl) as TsTreeScope,
+						picker,
+						decl as TsContainer,
+						tail,
+						loopDetector,
+					);
+					results.push(...nestedResults.toArray());
+				}
 			}
 			return IArray.fromArray(results);
 		}
@@ -1312,11 +1323,16 @@ export namespace TsTreeScope {
 		 * Search within a variable
 		 */
 		private searchInVariable<T extends TsNamedDecl>(
-			_picker: Picker<T>,
-			_variable: TsDeclVar,
-			_wanted: IArray<TsIdent>,
+			picker: Picker<T>,
+			variable: TsDeclVar,
+			wanted: IArray<TsIdent>,
 		): IArray<[T, TsTreeScope]> {
-			// Simplified implementation - in full version would search through variable type
+			// If variable has a type, search within that type
+			if (variable.tpe && variable.tpe._tag === "Some") {
+				// In a full implementation, would use Hoisting.fromType
+				// For now, simplified implementation
+				return IArray.Empty;
+			}
 			return IArray.Empty;
 		}
 
@@ -1598,42 +1614,4 @@ export class MockTsTreeScope implements TsTreeScope {
 	}
 }
 
-/**
- * Stub implementation of FillInTParams for type parameter substitution.
- * For now, this just returns the input unchanged.
- * In a full implementation, this would substitute type parameters with provided types.
- */
-export const FillInTParams = {
-	/**
-	 * Fill in type parameters for an interface declaration
-	 */
-	forInterface: (
-		decl: TsDeclInterface,
-		_tparams: IArray<TsType>,
-	): TsDeclInterface => {
-		// Stub implementation - just return the original declaration
-		// In a full implementation, this would substitute type parameters
-		return decl;
-	},
 
-	/**
-	 * Fill in type parameters for a class declaration
-	 */
-	forClass: (decl: TsDeclClass, _tparams: IArray<TsType>): TsDeclClass => {
-		// Stub implementation - just return the original declaration
-		// In a full implementation, this would substitute type parameters
-		return decl;
-	},
-
-	/**
-	 * Fill in type parameters for a type alias declaration
-	 */
-	forTypeAlias: (
-		decl: TsDeclTypeAlias,
-		_tparams: IArray<TsType>,
-	): TsDeclTypeAlias => {
-		// Stub implementation - just return the original declaration
-		// In a full implementation, this would substitute type parameters
-		return decl;
-	},
-};

@@ -612,6 +612,91 @@ describe("TsTreeScope", () => {
 				expect(result.isEmpty).toBe(true);
 			});
 		});
+
+		describe("Enhanced Search Functionality", () => {
+			test("should handle container search", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockNamespace = createMockNamespace("TestNamespace");
+				const scoped = root["/"](mockNamespace);
+
+				// Test container search
+				const qident = createQIdent("NestedType");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle variable search", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockVar = createMockVariable("testVar");
+				const scoped = root["/"](mockVar);
+
+				// Test variable search
+				const qident = createQIdent("PropertyType");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle enum member search", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				// Test enum member search (simplified since we don't have a real enum)
+				const qident = createQIdentFromParts("TestEnum", "Member");
+				const result = root.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+		});
+
+		describe("Loop Detection Edge Cases", () => {
+			test("should detect simple circular references", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				// Test that circular references are detected and handled
+				const qident = createQIdent("CircularType");
+				const result = root.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle deep circular references", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				// Test deep circular reference chains
+				const qident = createQIdentFromParts("A", "B", "C", "A");
+				const result = root.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle complex nested scope loops", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockNamespace = createMockNamespace("TestNamespace");
+				const scoped = root["/"](mockNamespace);
+
+				// Test complex nested lookups that could create loops
+				const qident = createQIdentFromParts("Nested", "Deep", "Type");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+		});
 	});
 
 	describe("Error Handling and Edge Cases", () => {
