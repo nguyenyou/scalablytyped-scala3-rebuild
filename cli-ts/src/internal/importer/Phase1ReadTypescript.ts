@@ -33,7 +33,7 @@ import { ResolveExternalReferences } from "./ResolveExternalReferences";
 import { ProxyModule } from "./ProxyModule";
 import type { ResolvedModule } from "./ResolvedModule";
 import { ResolvedModuleNotLocal } from "./ResolvedModule";
-import { TsIdentLibrarySimple } from "../ts/trees";
+import { TsIdentStd } from "../ts/trees";
 import { CodePath } from "../ts/CodePath";
 import { Comment } from "../Comment";
 import { AddComments } from "../ts/transforms/AddComments";
@@ -163,6 +163,27 @@ export class Phase1ReadTypescript {
 				const deps = new Set<LibTsSource>();
 				logger.info(`Preprocessing ${file.path}`);
 
+				// Process directives to create toInline array - equivalent to Scala's toInline
+				const toInline: Array<Either<Directive, InFile>> = [];
+				for (const directive of parsed.directives.toArray()) {
+					if (directive._tag === "PathRef") {
+						const fileOpt = LibraryResolver.file(file.folder, directive.stringPath);
+						if (isSome(fileOpt)) {
+							toInline.push({ _tag: "Right", right: fileOpt.value });
+						} else {
+							toInline.push({ _tag: "Left", left: directive });
+						}
+					} else if (directive._tag === "LibRef" && source.libName.value === TsIdentStd.value) {
+						const libFileName = `lib.${directive.stringPath}.d.ts`;
+						const fileOpt = LibraryResolver.file(this.config.resolve.stdLib.folder, libFileName);
+						if (isSome(fileOpt)) {
+							toInline.push({ _tag: "Right", right: fileOpt.value });
+						} else {
+							toInline.push({ _tag: "Left", left: directive });
+						}
+					}
+				}
+
 				// Get module names for this file
 				const moduleNames = LibraryResolver.moduleNameFor(source, file);
 
@@ -241,13 +262,81 @@ export class Phase1ReadTypescript {
 					}
 				});
 
-				// File inlining logic - simplified for now
-				// TODO: Implement complete file inlining with circular reference detection
-				const withInlined = withOrigin;
+				// File inlining logic - equivalent to Scala's withInlined
+				const withInlined: TsParsedFile = (() => {
+					// Remove duplicates and process each file reference
+					const uniqueToInline = Array.from(new Set(toInline.map(item => JSON.stringify(item))))
+						.map(item => JSON.parse(item) as Either<Directive, InFile>);
+
+					return uniqueToInline.reduce((parsed: TsParsedFile, item: Either<Directive, InFile>) => {
+						if (item._tag === "Right") {
+							const referencedFile = item.right;
+							const referencedFileLogger = logger; // Simplified context
+
+							// Get the prepared file data
+							const preparer = preparingFiles.get(referencedFile);
+							if (preparer) {
+								try {
+									const [toInlineFile, depsForInline] = preparer();
+
+									// Check if it's a module - if so, warn and skip
+									if (toInlineFile.isModule) {
+										referencedFileLogger.warn("directives: referenced file was a module");
+										return parsed;
+									}
+
+									// Add to included via directive and merge dependencies
+									includedViaDirective.add(referencedFile);
+									depsForInline.forEach(dep => deps.add(dep));
+
+									// Merge the files
+									return FlattenTrees.mergeFile(parsed, toInlineFile);
+								} catch (error) {
+									referencedFileLogger.warn("directives: reference caused circular graph");
+									return parsed;
+								}
+							} else {
+								referencedFileLogger.warn("directives: reference caused circular graph");
+								return parsed;
+							}
+						} else {
+							// Left case - unresolved directive
+							const dir = item.left;
+							logger.warn(`directives: couldn't resolve ${JSON.stringify(dir)}`);
+							return parsed;
+						}
+					}, withOrigin);
+				})();
+
+				// Handle module aliases - equivalent to Scala's _3 variable
+				const withModuleAliases: TsParsedFile = (() => {
+					if (moduleNames.length === 1) {
+						return withInlined;
+					} else {
+						// Multiple module names - add aliases to module declarations
+						const updatedMembers = withInlined.members.map(member => {
+							if (member._tag === "TsDeclModule") {
+								const moduleDecl = member as any; // Type assertion for module
+								if (moduleNames.toArray().some(name => name.value === moduleDecl.name.value)) {
+									// Add module aliases as comments
+									const otherNames = moduleNames.toArray().filter(name => name.value !== moduleDecl.name.value);
+									if (otherNames.length > 0) {
+										// This is a simplified version - in full implementation would use Marker.ModuleAliases
+										const aliasComment = Comment.create(`/* Module aliases: ${otherNames.map(n => n.value).join(', ')} */`);
+										const updatedComments = moduleDecl.comments.add(aliasComment);
+										return { ...moduleDecl, comments: updatedComments };
+									}
+								}
+							}
+							return member;
+						});
+						return withInlined.withMembers(updatedMembers) as TsParsedFile;
+					}
+				})();
 
 				// Set code path
 				const codePath = CodePath.hasPath(source.libName, TsQIdent.empty());
-				const withCodePath = new SetCodePath().visitTsParsedFile(codePath)(withInlined);
+				const withCodePath = new SetCodePath().visitTsParsedFile(codePath)(withModuleAliases);
 
 				return [withCodePath, deps];
 			});

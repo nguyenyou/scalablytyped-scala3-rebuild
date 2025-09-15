@@ -6,10 +6,15 @@ import { describe, test, expect } from "bun:test";
 import { right } from "fp-ts/Either";
 import { Phase1ReadTypescript, type Phase1Config } from "./Phase1ReadTypescript";
 import { IArray } from "../IArray";
-import { TsIdent, TsParsedFile } from "../ts/trees";
+import { TsIdent, TsParsedFile, TsIdentStd } from "../ts/trees";
 import { Comments } from "../Comments";
 import { CodePath } from "../ts/CodePath";
 import { createMockLogger } from "../../tests/utils/TestUtils";
+import { Directive } from "../ts/Directive";
+import { InFile, InFolder } from "../files";
+import { LibTsSource } from "./LibTsSource";
+import { LibraryResolver } from "./LibraryResolver";
+import { some, none } from "fp-ts/Option";
 
 const createMockConfig = (): Phase1Config => ({
 	parser: () => right(TsParsedFile.create(
