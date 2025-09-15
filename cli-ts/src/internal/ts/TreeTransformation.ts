@@ -1180,7 +1180,17 @@ export abstract class AbstractTreeTransformation<T>
 			const entered = this.enterTsTypeRef(t)(x);
 			const tt = this.withTree(t, entered);
 			const newName = this.visitTsQIdent(tt)(entered.name);
-			const newTparams = entered.tparams.map(this.visitTsType(tt));
+
+			// Process type parameters with change detection
+			const transformedTparams = entered.tparams.map(this.visitTsType(tt));
+			let tparamsChanged = false;
+			for (let i = 0; i < transformedTparams.length; i++) {
+				if (transformedTparams.apply(i) !== entered.tparams.apply(i)) {
+					tparamsChanged = true;
+					break;
+				}
+			}
+			const newTparams = tparamsChanged ? transformedTparams : entered.tparams;
 
 			// Only create new object if fields changed
 			return newName === entered.name && newTparams === entered.tparams
@@ -1361,10 +1371,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberCall) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberCall(tt)(x);
-			return {
-				...entered,
-				signature: this.visitTsFunSig(tt)(entered.signature),
-			};
+			const newSignature = this.visitTsFunSig(tt)(entered.signature);
+
+			// Only create new object if signature actually changed
+			return newSignature === entered.signature
+				? entered
+				: { ...entered, signature: newSignature };
 		};
 	}
 
@@ -1372,10 +1384,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberCtor) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberCtor(tt)(x);
-			return {
-				...entered,
-				signature: this.visitTsFunSig(tt)(entered.signature),
-			};
+			const newSignature = this.visitTsFunSig(tt)(entered.signature);
+
+			// Only create new object if signature actually changed
+			return newSignature === entered.signature
+				? entered
+				: { ...entered, signature: newSignature };
 		};
 	}
 
@@ -1383,10 +1397,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberFunction) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberFunction(tt)(x);
-			return {
-				...entered,
-				signature: this.visitTsFunSig(tt)(entered.signature),
-			};
+			const newSignature = this.visitTsFunSig(tt)(entered.signature);
+
+			// Only create new object if signature actually changed
+			return newSignature === entered.signature
+				? entered
+				: { ...entered, signature: newSignature };
 		};
 	}
 
@@ -1394,11 +1410,13 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberIndex) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberIndex(tt)(x);
-			return {
-				...entered,
-				indexing: this.visitIndexing(tt)(entered.indexing),
-				valueType: O.map(this.visitTsType(tt))(entered.valueType),
-			};
+			const newIndexing = this.visitIndexing(tt)(entered.indexing);
+			const newValueType = O.map(this.visitTsType(tt))(entered.valueType);
+
+			// Only create new object if fields actually changed
+			return newIndexing === entered.indexing && newValueType === entered.valueType
+				? entered
+				: { ...entered, indexing: newIndexing, valueType: newValueType };
 		};
 	}
 
@@ -1406,10 +1424,12 @@ export abstract class AbstractTreeTransformation<T>
 		return (x: TsMemberProperty) => {
 			const tt = this.withTree(t, x);
 			const entered = this.enterTsMemberProperty(tt)(x);
-			return {
-				...entered,
-				tpe: O.map(this.visitTsType(tt))(entered.tpe),
-			};
+			const newTpe = O.map(this.visitTsType(tt))(entered.tpe);
+
+			// Only create new object if type actually changed
+			return newTpe === entered.tpe
+				? entered
+				: { ...entered, tpe: newTpe };
 		};
 	}
 
@@ -1483,10 +1503,42 @@ export abstract class AbstractTreeTransformation<T>
 	protected processClassRecursively(t: T, cls: TsDeclClass): TsDeclClass {
 		// Complete recursive processing following Scala pattern
 		const tt = this.withTree(t, cls);
-		const newTparams = cls.tparams.map(this.visitTsTypeParam(tt));
+
+		// Process type parameters with change detection
+		const transformedTparams = cls.tparams.map(this.visitTsTypeParam(tt));
+		let tparamsChanged = false;
+		for (let i = 0; i < transformedTparams.length; i++) {
+			if (transformedTparams.apply(i) !== cls.tparams.apply(i)) {
+				tparamsChanged = true;
+				break;
+			}
+		}
+		const newTparams = tparamsChanged ? transformedTparams : cls.tparams;
+
+		// Process parent type
 		const newParent = O.map(this.visitTsTypeRef(tt))(cls.parent);
-		const newImplementsInterfaces = cls.implementsInterfaces.map(this.visitTsTypeRef(tt));
-		const newMembers = cls.members.map(this.visitTsMember(tt));
+
+		// Process implements interfaces with change detection
+		const transformedImplementsInterfaces = cls.implementsInterfaces.map(this.visitTsTypeRef(tt));
+		let implementsChanged = false;
+		for (let i = 0; i < transformedImplementsInterfaces.length; i++) {
+			if (transformedImplementsInterfaces.apply(i) !== cls.implementsInterfaces.apply(i)) {
+				implementsChanged = true;
+				break;
+			}
+		}
+		const newImplementsInterfaces = implementsChanged ? transformedImplementsInterfaces : cls.implementsInterfaces;
+
+		// Process members with change detection
+		const transformedMembers = cls.members.map(this.visitTsMember(tt));
+		let membersChanged = false;
+		for (let i = 0; i < transformedMembers.length; i++) {
+			if (transformedMembers.apply(i) !== cls.members.apply(i)) {
+				membersChanged = true;
+				break;
+			}
+		}
+		const newMembers = membersChanged ? transformedMembers : cls.members;
 
 		// Only create new object if any field changed
 		return newTparams === cls.tparams &&
