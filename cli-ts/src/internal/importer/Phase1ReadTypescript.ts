@@ -20,6 +20,7 @@ import {
 	type TsIdentModule,
 	TsParsedFile,
 	type TsContainerOrDecl,
+	TsIdent,
 	TsQIdent
 } from "../ts/trees";
 import { Comments } from "../Comments";
@@ -39,7 +40,28 @@ import { NormalizeFunctions } from "../ts/transforms/NormalizeFunctions";
 import { MoveStatics } from "../ts/transforms/MoveStatics";
 import { QualifyReferences } from "../ts/transforms/QualifyReferences";
 import { ResolveTypeQueries } from "../ts/transforms/ResolveTypeQueries";
-// Additional transformations will be imported as needed when implementing the full pipeline
+// Import additional transformations for the complete pipeline
+import { DefaultedTypeArgumentsTransform } from "../ts/transforms/DefaultedTypeArguments";
+import { TypeAliasIntersectionInstance } from "../ts/transforms/TypeAliasIntersection";
+import { RejiggerIntersections } from "../ts/transforms/RejiggerIntersections";
+import { ExpandTypeMappingsTransform, ExpandTypeMappingsAfterTransform } from "../ts/transforms/ExpandTypeMappings";
+import { TypeAliasToConstEnumInstance } from "../ts/transforms/TypeAliasToConstEnum";
+import { forwardCtors } from "../ts/transforms/ForwardCtors";
+import { expandTypeParams } from "../ts/transforms/ExpandTypeParams";
+import { UnionTypesFromKeyOfTransform } from "../ts/transforms/UnionTypesFromKeyOf";
+import { DropPropertiesTransform } from "../ts/transforms/DropProperties";
+import { InferReturnTypesTransform } from "../ts/transforms/InferReturnTypes";
+import { RewriteTypeThisTransform } from "../ts/transforms/RewriteTypeThis";
+import { InlineConstEnumTransform } from "../ts/transforms/InlineConstEnum";
+import { InlineTrivialTransform } from "../ts/transforms/InlineTrivial";
+import { ResolveTypeLookups } from "../ts/transforms/ResolveTypeLookups";
+import { PreferTypeAlias } from "../ts/transforms/PreferTypeAlias";
+import { extractInterfaces } from "../ts/transforms/ExtractInterfaces";
+import { ExtractClasses } from "../ts/transforms/ExtractClasses";
+import { expandCallables } from "../ts/transforms/ExpandCallables";
+import { SplitMethodsTransform } from "../ts/transforms/SplitMethods";
+import { RemoveDifficultInheritance } from "../ts/transforms/RemoveDifficultInheritance";
+import { VarToNamespaceTransform } from "../ts/transforms/VarToNamespace";
 
 // Import module transformations
 import { HandleCommonJsModules } from "../ts/modules/HandleCommonJsModules";
@@ -419,6 +441,107 @@ export namespace Phase1ReadTypescript {
 		transformations.push((file: TsParsedFile) => {
 			logger.info("Transformation: FlattenTrees");
 			return FlattenTrees.applySingle(file);
+		});
+
+		// 12. Combined transformations: DefaultedTypeArguments >> TypeAliasIntersection >> RejiggerIntersections
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: DefaultedTypeArguments >> TypeAliasIntersection >> RejiggerIntersections");
+			const scopeCaching = scope.caching();
+			let result = DefaultedTypeArgumentsTransform.visitTsParsedFile(scopeCaching)(file);
+			result = TypeAliasIntersectionInstance.visitTsParsedFile(scopeCaching)(result);
+			result = RejiggerIntersections.apply().visitTsParsedFile(scopeCaching)(result);
+			return result;
+		});
+
+		// 13. ExpandTypeMappings (conditional)
+		if (expandTypeMappings.apply(libName)) {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExpandTypeMappings");
+				const scopeCaching = scope.caching();
+				return ExpandTypeMappingsTransform.visitTsParsedFile(scopeCaching)(file);
+			});
+		} else {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExpandTypeMappings (identity)");
+				return file;
+			});
+		}
+
+		// 14. ExpandTypeMappings.After (conditional)
+		if (expandTypeMappings.apply(libName)) {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExpandTypeMappings.After");
+				const scopeCaching = scope.caching();
+				return ExpandTypeMappingsAfterTransform.visitTsParsedFile(scopeCaching)(file);
+			});
+		} else {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExpandTypeMappings.After (identity)");
+				return file;
+			});
+		}
+
+		// 15. Combined transformations: TypeAliasToConstEnum >> ForwardCtors >> ExpandTypeParams >> UnionTypesFromKeyOf >> DropProperties >> InferReturnTypes >> RewriteTypeThis >> InlineConstEnum >> InlineTrivial
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: TypeAliasToConstEnum >> ForwardCtors >> ExpandTypeParams >> UnionTypesFromKeyOf >> DropProperties >> InferReturnTypes >> RewriteTypeThis >> InlineConstEnum >> InlineTrivial");
+			const scopeCaching = scope.caching();
+			let result = TypeAliasToConstEnumInstance.visitTsParsedFile(scopeCaching)(file);
+			result = forwardCtors.visitTsParsedFile(scopeCaching)(result);
+			result = expandTypeParams.visitTsParsedFile(scopeCaching)(result);
+			result = UnionTypesFromKeyOfTransform.visitTsParsedFile(scopeCaching)(result);
+			result = DropPropertiesTransform.visitTsParsedFile(scopeCaching)(result);
+			result = InferReturnTypesTransform.visitTsParsedFile(scopeCaching)(result);
+			result = RewriteTypeThisTransform.visitTsParsedFile(scopeCaching)(result);
+			result = InlineConstEnumTransform.visitTsParsedFile(scopeCaching)(result);
+			result = InlineTrivialTransform.visitTsParsedFile(scopeCaching)(result);
+			return result;
+		});
+
+		// 16. ResolveTypeLookups
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: ResolveTypeLookups");
+			const scopeCaching = scope.caching();
+			return ResolveTypeLookups.apply().visitTsParsedFile(scopeCaching)(file);
+		});
+
+		// 17. PreferTypeAlias
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: PreferTypeAlias");
+			return PreferTypeAlias.apply(file, scope);
+		});
+
+		// 18. ExtractInterfaces
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: ExtractInterfaces");
+			const scopeCaching = scope.caching();
+			return extractInterfaces(libName, TsIdent.simple("anon"), scopeCaching)(file);
+		});
+
+		// 19. ExtractClasses (conditional based on React)
+		if (involvesReact) {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExtractClasses (React mode)");
+				const scopeCaching = scope.caching();
+				return ExtractClasses.instance.visitTsParsedFile(scopeCaching)(file);
+			});
+		} else {
+			transformations.push((file: TsParsedFile) => {
+				logger.info("Transformation: ExtractClasses >> ExpandCallables");
+				const scopeCaching = scope.caching();
+				let result = ExtractClasses.instance.visitTsParsedFile(scopeCaching)(file);
+				result = expandCallables.visitTsParsedFile(scopeCaching)(result);
+				return result;
+			});
+		}
+
+		// 20. Final transformations: SplitMethods >> RemoveDifficultInheritance >> VarToNamespace
+		transformations.push((file: TsParsedFile) => {
+			logger.info("Transformation: SplitMethods >> RemoveDifficultInheritance >> VarToNamespace");
+			const scopeCaching = scope.caching();
+			let result = SplitMethodsTransform.visitTsParsedFile(scopeCaching)(file);
+			result = RemoveDifficultInheritance.apply().visitTsParsedFile(scopeCaching)(result);
+			result = VarToNamespaceTransform.visitTsParsedFile(scopeCaching)(result);
+			return result;
 		});
 
 		return transformations;
