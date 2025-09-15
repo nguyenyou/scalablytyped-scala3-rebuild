@@ -4,6 +4,8 @@ import { IArray } from "../IArray.js";
 import { Logger } from "../logging/index.js";
 import { HasTParams } from "./HasTParams.js";
 import type { HasClassMembers } from "./MemberCache.js";
+import { Exports } from "./modules/Exports.js";
+import { Imports } from "./modules/Imports.js";
 import type { PackageJson } from "./PackageJson.js";
 import type {
 	TsAugmentedModule,
@@ -659,11 +661,12 @@ export namespace TsTreeScope {
 		get moduleScopes(): Map<TsIdentModule, Scoped> {
 			if (!this._moduleScopes) {
 				this._moduleScopes = new Map();
-				for (const [_, [_lib, dep, _depScope]] of this.depScopes.entries()) {
+				for (const [_, [_lib, dep, depScope]] of this.depScopes.entries()) {
 					if (dep._tag === "TsParsedFile") {
-						// Add module scopes from parsed file
-						// Note: This is a simplified implementation
-						// In the full implementation, we would iterate through dep.modules
+						// Iterate through all modules in the parsed file
+						for (const [_, mod] of dep.modules.entries()) {
+							TsTreeScopeUtils.addModuleScope(this._moduleScopes, mod, depScope);
+						}
 					}
 				}
 			}
@@ -676,11 +679,14 @@ export namespace TsTreeScope {
 		get moduleAuxScopes(): Map<TsIdentModule, Scoped> {
 			if (!this._moduleAuxScopes) {
 				this._moduleAuxScopes = new Map();
-				for (const [_, [_lib, dep, _depScope]] of this.depScopes.entries()) {
+				for (const [_, [_lib, dep, depScope]] of this.depScopes.entries()) {
 					if (dep._tag === "TsParsedFile") {
-						// Add augmented module scopes from parsed file
-						// Note: This is a simplified implementation
-						// In the full implementation, we would iterate through dep.augmentedModulesMap
+						// Iterate through augmented modules map
+						for (const [modName, auxMods] of dep.augmentedModulesMap.entries()) {
+							const mod = auxMods.reduce(TsTreeScopeUtils.mergeAugmentedModule);
+							const modScope = depScope["/"](mod);
+							this._moduleAuxScopes.set(modName, modScope);
+						}
 					}
 				}
 			}
@@ -1014,10 +1020,14 @@ export namespace TsTreeScope {
 					this.current._tag === "TsDeclModule" ||
 					this.current._tag === "TsGlobal"
 				) {
-					const _container = this.current as TsContainer;
+					const container = this.current as TsContainer;
 					this._moduleScopes = new Map(this.outer.moduleScopes);
-					// In a full implementation, we would iterate through container.modules
-					// and add module scopes using addModuleScope
+					// Iterate through container modules and add module scopes
+					if (container.modules && container.modules.size > 0) {
+						for (const [_, mod] of container.modules.entries()) {
+							TsTreeScopeUtils.addModuleScope(this._moduleScopes, mod, this);
+						}
+					}
 				} else {
 					this._moduleScopes = this.outer.moduleScopes;
 				}
@@ -1037,9 +1047,15 @@ export namespace TsTreeScope {
 					this.current._tag === "TsDeclModule" ||
 					this.current._tag === "TsGlobal"
 				) {
-					const _container = this.current as TsContainer;
-					// In a full implementation, we would iterate through container.augmentedModulesMap
-					// and merge augmented modules using FlattenTrees.mergeAugmentedModule
+					const container = this.current as TsContainer;
+					// Iterate through augmented modules map and merge them
+					if (container.augmentedModulesMap && container.augmentedModulesMap.size > 0) {
+						for (const [modName, mods] of container.augmentedModulesMap.entries()) {
+							const mergedMod = mods.reduce(TsTreeScopeUtils.mergeAugmentedModule);
+							const modScope = this["/"](mergedMod);
+							this._moduleAuxScopes.set(modName, modScope);
+						}
+					}
 				}
 			}
 			return this._moduleAuxScopes;
@@ -1308,17 +1324,16 @@ export namespace TsTreeScope {
 		 * Exported from module lookup
 		 */
 		private exportedFromModule<T extends TsNamedDecl>(
-			_picker: Picker<T>,
-			_wanted: IArray<TsIdent>,
-			_loopDetector: LoopDetector,
+			picker: Picker<T>,
+			wanted: IArray<TsIdent>,
+			loopDetector: LoopDetector,
 		): IArray<[T, TsTreeScope]> {
 			if (
 				this.current._tag === "TsDeclNamespace" ||
 				this.current._tag === "TsDeclModule"
 			) {
-				const _module = this.current as TsDeclNamespaceOrModule;
-				// In full implementation, would use Exports.lookupExportFrom
-				return IArray.Empty;
+				const module = this.current as TsDeclNamespaceOrModule;
+				return Exports.lookupExportFrom(this, picker, wanted, loopDetector, module);
 			}
 			return IArray.Empty;
 		}
@@ -1327,9 +1342,9 @@ export namespace TsTreeScope {
 		 * Imported from module lookup
 		 */
 		private importedFromModule<T extends TsNamedDecl>(
-			_picker: Picker<T>,
-			_wanted: IArray<TsIdent>,
-			_loopDetector: LoopDetector,
+			picker: Picker<T>,
+			wanted: IArray<TsIdent>,
+			loopDetector: LoopDetector,
 		): IArray<[T, TsTreeScope]> {
 			if (
 				this.current._tag === "TsParsedFile" ||
@@ -1337,9 +1352,8 @@ export namespace TsTreeScope {
 				this.current._tag === "TsDeclModule" ||
 				this.current._tag === "TsGlobal"
 			) {
-				const _container = this.current as TsContainer;
-				// In full implementation, would use Imports.lookupFromImports
-				return IArray.Empty;
+				const container = this.current as TsContainer;
+				return Imports.lookupFromImports(this, picker, wanted, loopDetector, container.imports);
 			}
 			return IArray.Empty;
 		}

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { IArray } from "../internal/IArray.js";
 import { TsTreeScope } from "../internal/ts/TsTreeScope.js";
 import {
+	createMockAugmentedModule,
 	createMockClass,
 	createMockLogger,
 	createMockModule,
@@ -346,6 +348,52 @@ describe("TsTreeScope", () => {
 			expect(scoped.moduleScopes).toBeDefined();
 			expect(scoped.moduleAuxScopes).toBeDefined();
 		});
+
+		test("should process modules from dependencies", () => {
+			const libName = createSimpleLibrary("test-lib");
+			const depLibName = createSimpleLibrary("dep-lib");
+			const logger = createMockLogger();
+
+			// Create a mock parsed file with modules
+			const mockModule = createMockModule("TestModule");
+			const moduleIdent = mockModule.name; // Use the module's actual name identifier
+			const mockFile = {
+				...createMockParsedFile("dep.ts"),
+				modules: new Map([[moduleIdent, mockModule]]),
+			};
+
+			const depLib = { libName: depLibName, packageJsonOpt: undefined };
+			const deps = new Map([[depLib, mockFile]]);
+			const root = TsTreeScope.create(libName, false, deps, logger);
+
+			// Should have module scopes from dependencies
+			expect(root.moduleScopes.size).toBeGreaterThan(0);
+		});
+
+		test("should process augmented modules from dependencies", () => {
+			const libName = createSimpleLibrary("test-lib");
+			const depLibName = createSimpleLibrary("dep-lib");
+			const logger = createMockLogger();
+
+			// Create a mock augmented module using the proper constructor
+			const mockAugModule = createMockAugmentedModule("TestModule");
+			const moduleIdent = mockAugModule.name;
+			const augModules = IArray.fromArray([mockAugModule]); // IArray of augmented modules to be merged
+
+			const mockFile = {
+				...createMockParsedFile("dep.ts"),
+				augmentedModulesMap: new Map([
+					[moduleIdent, augModules]
+				]),
+			};
+
+			const depLib = { libName: depLibName, packageJsonOpt: undefined };
+			const deps = new Map([[depLib, mockFile]]);
+			const root = TsTreeScope.create(libName, false, deps, logger);
+
+			// Should have augmented module scopes from dependencies
+			expect(root.moduleAuxScopes.size).toBeGreaterThan(0);
+		});
 	});
 
 	describe("Exports", () => {
@@ -515,6 +563,54 @@ describe("TsTreeScope", () => {
 			expect(str).toContain("TreeScope");
 			expect(str).toContain("TestNamespace");
 			expect(str).toContain("TestClass");
+		});
+
+		describe("Import/Export Functionality", () => {
+			test("should handle import resolution", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockNamespace = createMockNamespace("TestNamespace");
+				const scoped = root["/"](mockNamespace);
+
+				// Test that import resolution doesn't crash
+				const qident = createQIdent("ImportedType");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle export resolution", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockModule = createMockModule("TestModule");
+				const scoped = root["/"](mockModule);
+
+				// Test that export resolution doesn't crash
+				const qident = createQIdent("ExportedType");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
+
+			test("should handle complex import/export chains", () => {
+				const libName = createSimpleLibrary("test-lib");
+				const logger = createMockLogger();
+				const deps = new Map();
+				const root = TsTreeScope.create(libName, false, deps, logger);
+
+				const mockModule = createMockModule("TestModule");
+				const mockNamespace = createMockNamespace("TestNamespace");
+				const scoped = root["/"](mockModule)["/"](mockNamespace);
+
+				// Test that complex lookup chains work
+				const qident = createQIdentFromParts("Complex", "Nested", "Type");
+				const result = scoped.lookup(qident, true);
+				expect(result.isEmpty).toBe(true);
+			});
 		});
 	});
 
