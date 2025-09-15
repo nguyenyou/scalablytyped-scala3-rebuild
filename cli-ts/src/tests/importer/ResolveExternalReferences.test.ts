@@ -4,9 +4,9 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { none, some } from "fp-ts/Option";
-import { IArray } from "../internal/IArray";
-import { Comments } from "../internal/Comments";
-import { InFolder } from "../internal/files";
+import { IArray } from "../../internal/IArray";
+import { Comments } from "../../internal/Comments";
+import { InFolder } from "../../internal/files";
 import {
 	TsIdent,
 	TsIdentModule,
@@ -21,14 +21,14 @@ import {
 	TsExporteeStar,
 	TsContainerOrDecl,
 	TsQIdent
-} from "../internal/ts/trees";
-import { CodePath } from "../internal/ts/CodePath";
-import { LibTsSource } from "../internal/importer/LibTsSource";
-import { ResolveExternalReferences } from "../internal/importer/ResolveExternalReferences";
-import { ResolvedModule, ResolvedModuleLocal, ResolvedModuleNotLocal } from "../internal/importer/ResolvedModule";
-import type { LibraryResolver } from "../internal/importer/LibraryResolver";
-import { DevNullLogger, type Logger } from "../internal/logging";
-import { ExportType } from "../internal/ts/ExportType";
+} from "../../internal/ts/trees";
+import { CodePath } from "../../internal/ts/CodePath";
+import { LibTsSource } from "../../internal/importer/LibTsSource";
+import { ResolveExternalReferences } from "../../internal/importer/ResolveExternalReferences";
+import { ResolvedModule, ResolvedModuleLocal, ResolvedModuleNotLocal } from "../../internal/importer/ResolvedModule";
+import type { LibraryResolver } from "../../internal/importer/LibraryResolver";
+import { DevNullLogger, type Logger } from "../../internal/logging";
+import { ExportType } from "../../internal/ts/ExportType";
 
 // Helper functions for creating test data (ported from Scala)
 function createSimpleIdent(name: string) {
