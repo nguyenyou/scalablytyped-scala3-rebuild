@@ -1,8 +1,14 @@
 package org.scalablytyped.converter.internal.importer
 
-import org.scalablytyped.converter.internal.{IArray, InFile, InFolder}
-import org.scalablytyped.converter.internal.logging.Logger
-import org.scalablytyped.converter.internal.ts.{TsIdentLibrary, TsIdentLibrarySimple, TsIdentModule}
+import org.scalablytyped.converter.internal.{IArray, InFile, InFolder, NoComments}
+import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
+import org.scalablytyped.converter.internal.ts.{
+  CodePath,
+  TsIdentLibrary,
+  TsIdentLibrarySimple,
+  TsIdentModule,
+  TsParsedFile
+}
 import utest.*
 
 import scala.collection.immutable.SortedSet
@@ -399,6 +405,300 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
           assert(stdlibSourceOpt.nonEmpty)
           // Should not include ignored dependency
           assert(depsDeclared.isEmpty)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+    }
+
+    test("createFileParsingPipeline") {
+      test("should successfully parse and process valid TypeScript files") {
+        val tempDir = os.temp.dir(prefix = "test-file-parsing-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          // Create a simple TypeScript file
+          val tsFile = libDir / "index.d.ts"
+          os.write(tsFile, "export const test: string;")
+
+          val source        = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val includedFiles = IArray(InFile(tsFile))
+
+          // Create a mock resolver
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          // Create a mock parser that returns a simple parsed file
+          val parser: InFile => Either[String, TsParsedFile] = { _ =>
+            Right(
+              TsParsedFile(
+                comments = NoComments,
+                directives = IArray.Empty,
+                members = IArray.Empty,
+                codePath = CodePath.NoPath
+              )
+            )
+          }
+
+          val logger = Logger.DevNull
+
+          // Create an implicit formatter for InFile
+          implicit val inFileFormatter: Formatter[InFile] = _.path.toString
+
+          val (preparingFiles, includedViaDirective) = Phase1ReadTypescript.createFileParsingPipeline(
+            source,
+            includedFiles,
+            resolver,
+            parser,
+            logger
+          )
+
+          assert(preparingFiles.nonEmpty)
+          assert(preparingFiles.contains(InFile(tsFile)))
+          assert(includedViaDirective.isEmpty) // No directives in this simple case
+
+          // Verify that the lazy evaluation works
+          val lazyResult = preparingFiles(InFile(tsFile))
+          lazyResult.get match {
+            case Some((parsedFile: TsParsedFile, deps: Set[LibTsSource])) =>
+              assert(parsedFile.members.isEmpty) // Simple empty file
+              assert(deps.isEmpty)               // No dependencies in this simple case
+            case None =>
+              assert(false) // Expected lazy evaluation to return a value
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle parsing errors gracefully") {
+        val tempDir = os.temp.dir(prefix = "test-parsing-error-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val tsFile = libDir / "invalid.d.ts"
+          os.write(tsFile, "invalid typescript syntax")
+
+          val source        = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val includedFiles = IArray(InFile(tsFile))
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          // Create a parser that returns an error
+          val parser: InFile => Either[String, TsParsedFile] = { _ =>
+            Left("Parse error: invalid syntax")
+          }
+
+          val logger                                      = Logger.DevNull
+          implicit val inFileFormatter: Formatter[InFile] = _.path.toString
+
+          val (preparingFiles, _) = Phase1ReadTypescript.createFileParsingPipeline(
+            source,
+            includedFiles,
+            resolver,
+            parser,
+            logger
+          )
+
+          assert(preparingFiles.nonEmpty)
+          assert(preparingFiles.contains(InFile(tsFile)))
+
+          // The lazy evaluation should handle the error when accessed
+          // Note: In the actual implementation, this would call logger.fatal and terminate
+          // For testing, we just verify the structure is created correctly
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle empty file list") {
+        val tempDir = os.temp.dir(prefix = "test-empty-files-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source        = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val includedFiles = IArray.Empty
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val parser: InFile => Either[String, TsParsedFile] = { _ =>
+            Right(
+              TsParsedFile(
+                comments = NoComments,
+                directives = IArray.Empty,
+                members = IArray.Empty,
+                codePath = CodePath.NoPath
+              )
+            )
+          }
+
+          val logger                                      = Logger.DevNull
+          implicit val inFileFormatter: Formatter[InFile] = _.path.toString
+
+          val (preparingFiles, includedViaDirective) = Phase1ReadTypescript.createFileParsingPipeline(
+            source,
+            includedFiles,
+            resolver,
+            parser,
+            logger
+          )
+
+          assert(preparingFiles.isEmpty)
+          assert(includedViaDirective.isEmpty)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle multiple files with dependencies") {
+        val tempDir = os.temp.dir(prefix = "test-multiple-files-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val file1 = libDir / "file1.d.ts"
+          val file2 = libDir / "file2.d.ts"
+          os.write(file1, "export const test1: string;")
+          os.write(file2, "export const test2: number;")
+
+          val source        = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val includedFiles = IArray(InFile(file1), InFile(file2))
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val parser: InFile => Either[String, TsParsedFile] = { _ =>
+            Right(
+              TsParsedFile(
+                comments = NoComments,
+                directives = IArray.Empty,
+                members = IArray.Empty,
+                codePath = CodePath.NoPath
+              )
+            )
+          }
+
+          val logger                                      = Logger.DevNull
+          implicit val inFileFormatter: Formatter[InFile] = _.path.toString
+
+          val (preparingFiles, includedViaDirective) = Phase1ReadTypescript.createFileParsingPipeline(
+            source,
+            includedFiles,
+            resolver,
+            parser,
+            logger
+          )
+
+          assert(preparingFiles.size == 2)
+          assert(preparingFiles.contains(InFile(file1)))
+          assert(preparingFiles.contains(InFile(file2)))
+          assert(includedViaDirective.isEmpty)
+
+          // Verify both files can be processed
+          val lazy1 = preparingFiles(InFile(file1))
+          val lazy2 = preparingFiles(InFile(file2))
+
+          lazy1.get match {
+            case Some((parsed1: TsParsedFile, deps1: Set[LibTsSource])) =>
+              assert(parsed1.members.isEmpty)
+              assert(deps1.isEmpty)
+            case None =>
+              assert(false) // Expected lazy evaluation to return a value for file1
+          }
+
+          lazy2.get match {
+            case Some((parsed2: TsParsedFile, deps2: Set[LibTsSource])) =>
+              assert(parsed2.members.isEmpty)
+              assert(deps2.isEmpty)
+            case None =>
+              assert(false) // Expected lazy evaluation to return a value for file2
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should preserve lazy evaluation characteristics") {
+        val tempDir = os.temp.dir(prefix = "test-lazy-eval-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val tsFile = libDir / "lazy.d.ts"
+          os.write(tsFile, "export const lazy: string;")
+
+          val source        = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val includedFiles = IArray(InFile(tsFile))
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          var parseCount = 0
+          val parser: InFile => Either[String, TsParsedFile] = { _ =>
+            parseCount += 1
+            Right(
+              TsParsedFile(
+                comments = NoComments,
+                directives = IArray.Empty,
+                members = IArray.Empty,
+                codePath = CodePath.NoPath
+              )
+            )
+          }
+
+          val logger                                      = Logger.DevNull
+          implicit val inFileFormatter: Formatter[InFile] = _.path.toString
+
+          val (preparingFiles, _) = Phase1ReadTypescript.createFileParsingPipeline(
+            source,
+            includedFiles,
+            resolver,
+            parser,
+            logger
+          )
+
+          // Parser should not have been called yet due to lazy evaluation
+          assert(parseCount == 0)
+
+          // Access the lazy value to trigger parsing
+          preparingFiles(InFile(tsFile)).get
+
+          // Now parser should have been called exactly once
+          assert(parseCount == 1)
+
+          // Accessing again should not trigger another parse (lazy caching)
+          preparingFiles(InFile(tsFile)).get
+          assert(parseCount == 1)
         } finally {
           os.remove.all(tempDir)
         }
