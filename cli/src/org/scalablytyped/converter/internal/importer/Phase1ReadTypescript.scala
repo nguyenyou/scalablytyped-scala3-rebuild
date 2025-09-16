@@ -40,7 +40,7 @@ class Phase1ReadTypescript(
     _.path.toString
 
   private def ignoreModule(modName: TsIdentModule): Boolean =
-    (1 to modName.fragments.length).exists(n => ignoredModulePrefixes(modName.fragments.take(n)))
+    Phase1ReadTypescript.shouldIgnoreModule(modName, ignoredModulePrefixes)
 
   override def apply(
       source: LibTsSource,
@@ -52,22 +52,7 @@ class Phase1ReadTypescript(
     source match {
       case source if ignored(source.libName) || isCircular => PhaseRes.Ignore()
       case source =>
-        val includedFiles: IArray[InFile] =
-          source match {
-            case LibTsSource.StdLibSource(_, files, _) =>
-              PathsFromTsLibSource.filesFrom(files.head.folder)
-            case f @ LibTsSource.FromFolder(
-                  _,
-                  TsIdentLibrarySimple("typescript")
-                ) =>
-              /* don't include std */
-              f.shortenedFiles
-            case f: LibTsSource.FromFolder =>
-              /* There are often whole trees parallel to what is specified in `typings` (or similar). This ignores them */
-              val bound =
-                f.shortenedFiles.headOption.map(_.folder).getOrElse(f.folder)
-              PathsFromTsLibSource.filesFrom(bound)
-          }
+        val includedFiles: IArray[InFile] = Phase1ReadTypescript.determineIncludedFiles(source)
 
         val includedViaDirective = mutable.Set.empty[InFile]
 
@@ -358,6 +343,43 @@ class Phase1ReadTypescript(
 }
 
 object Phase1ReadTypescript {
+
+  /** Determines if a module should be ignored based on configured module prefixes.
+    *
+    * @param modName
+    *   The module identifier to check
+    * @param ignoredModulePrefixes
+    *   Set of module prefix patterns to ignore
+    * @return
+    *   true if the module should be ignored, false otherwise
+    */
+  def shouldIgnoreModule(modName: TsIdentModule, ignoredModulePrefixes: Set[List[String]]): Boolean =
+    (1 to modName.fragments.length).exists(n => ignoredModulePrefixes(modName.fragments.take(n)))
+
+  /** Determines which files should be included for processing based on the library source type.
+    *
+    * @param source
+    *   The library source to determine files for
+    * @return
+    *   Array of files to include in processing
+    */
+  def determineIncludedFiles(source: LibTsSource): IArray[InFile] =
+    source match {
+      case LibTsSource.StdLibSource(_, files, _) =>
+        PathsFromTsLibSource.filesFrom(files.head.folder)
+      case f @ LibTsSource.FromFolder(
+            _,
+            TsIdentLibrarySimple("typescript")
+          ) =>
+        /* don't include std */
+        f.shortenedFiles
+      case f: LibTsSource.FromFolder =>
+        /* There are often whole trees parallel to what is specified in `typings` (or similar). This ignores them */
+        val bound =
+          f.shortenedFiles.headOption.map(_.folder).getOrElse(f.folder)
+        PathsFromTsLibSource.filesFrom(bound)
+    }
+
   def Pipeline(
       scope: TsTreeScope.Root,
       libName: TsIdentLibrary,
