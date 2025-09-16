@@ -1444,5 +1444,77 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
         }
       }
     }
+
+    test("processExportModules") {
+      test("should handle missing package.json gracefully") {
+        val tempDir = os.temp.dir(prefix = "test-no-package-json-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val flattened = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.processExportModules(source, flattened, resolver, logger)
+
+          // Should return the original flattened file unchanged
+          assert(result == flattened)
+          assert(result.members.isEmpty)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should return unchanged file when no exports") {
+        val tempDir = os.temp.dir(prefix = "test-no-exports-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val flattened = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.processExportModules(source, flattened, resolver, logger)
+
+          // Should return the original flattened file unchanged
+          assert(result == flattened)
+          assert(result.members.isEmpty)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+    }
   }
 }

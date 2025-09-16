@@ -422,21 +422,7 @@ object Phase1ReadTypescript {
     val (flattened, depsFromFiles) = flattenAndCollectDependencies(preparedFiles)
 
     // Process exported modules from package.json
-    val withExportedModules =
-      source.packageJsonOpt.flatMap(_.parsedExported).foldLeft(flattened) { case (file, exports) =>
-        val proxyModules = ProxyModule.fromExports(
-          source,
-          logger,
-          resolve,
-          existing = file.membersByName.contains,
-          exports
-        )
-        file.copy(members =
-          IArray
-            .fromTraversable(proxyModules)
-            .map(_.asModule) ++ file.members
-        )
-      }
+    val withExportedModules = processExportModules(source, flattened, resolve, logger)
 
     // Filter modules based on ignored prefixes
     val withFilteredModules: TsParsedFile =
@@ -569,6 +555,44 @@ object Phase1ReadTypescript {
     }
 
     (flattened, depsFromFiles)
+  }
+
+  /** Processes package.json exports and creates proxy modules.
+    *
+    * This function handles the processing of package.json exports field to create proxy modules that re-export content
+    * from other modules. It integrates these proxy modules into the existing flattened file structure.
+    *
+    * @param source
+    *   The library source containing package.json information
+    * @param flattened
+    *   The flattened parsed file to add proxy modules to
+    * @param resolve
+    *   Library resolver for module resolution
+    * @param logger
+    *   Logger for reporting
+    * @return
+    *   The parsed file with proxy modules added from exports
+    */
+  def processExportModules(
+      source: LibTsSource,
+      flattened: TsParsedFile,
+      resolve: LibraryResolver,
+      logger: Logger[Unit]
+  ): TsParsedFile = {
+    source.packageJsonOpt.flatMap(_.parsedExported).foldLeft(flattened) { case (file, exports) =>
+      val proxyModules = ProxyModule.fromExports(
+        source,
+        logger,
+        resolve,
+        existing = file.membersByName.contains,
+        exports
+      )
+      file.copy(members =
+        IArray
+          .fromTraversable(proxyModules)
+          .map(_.asModule) ++ file.members
+      )
+    }
   }
 
   def Pipeline(
