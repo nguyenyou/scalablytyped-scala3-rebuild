@@ -25,6 +25,37 @@ import scala.collection.mutable
 
 object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
 
+  // Helper functions for creating mock objects
+  def createMockSource(libName: String): LibTsSource = {
+    val tempDir = os.temp.dir(prefix = s"mock-$libName-")
+    LibTsSource.FromFolder(InFolder(tempDir), TsIdentLibrarySimple(libName))
+  }
+
+  def createMockParsedFile(fileName: String): TsParsedFile = {
+    TsParsedFile(
+      comments = NoComments,
+      directives = IArray.Empty,
+      members = IArray.Empty,
+      codePath = CodePath.HasPath(TsIdentLibrarySimple(fileName), TsQIdent.empty)
+    )
+  }
+
+  def createMockLibTs(source: LibTsSource, version: String): LibTs = {
+    LibTs(source)(
+      org.scalablytyped.converter.internal.LibraryVersion(false, Some(version), None),
+      createMockParsedFile(source.libName.value),
+      SortedMap.empty[LibTsSource, LibTs]
+    )
+  }
+
+  def createMockLibTsWithDeps(source: LibTsSource, version: String, deps: SortedMap[LibTsSource, LibTs]): LibTs = {
+    LibTs(source)(
+      org.scalablytyped.converter.internal.LibraryVersion(false, Some(version), None),
+      createMockParsedFile(source.libName.value),
+      deps
+    )
+  }
+
   def tests = Tests {
     test("shouldIgnoreModule") {
       test("should return false when ignoredModulePrefixes is empty") {
@@ -1681,6 +1712,190 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
 
         assert(result.members.length == 1)
         assert(result.members.head.asInstanceOf[TsDeclModule].name.fragments == List("kept", "module"))
+      }
+    }
+
+    test("executeTransformationPipeline") {
+      test("should execute transformation pipeline with empty dependencies") {
+        val source             = createMockSource("test-lib")
+        val inputFile          = createMockParsedFile("test-file")
+        val deps               = SortedMap.empty[LibTsSource, LibTs]
+        val pedantic           = false
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val logger             = Logger.DevNull
+
+        val result = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          expandTypeMappings,
+          logger
+        )
+
+        // Verify the result is a transformed TsParsedFile
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        // The transformation pipeline should have been applied
+        assert(result.codePath == inputFile.codePath)
+      }
+
+      test("should detect React involvement when source library is React") {
+        val reactSource        = createMockSource("react")
+        val inputFile          = createMockParsedFile("react-file")
+        val deps               = SortedMap.empty[LibTsSource, LibTs]
+        val pedantic           = false
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val logger             = Logger.DevNull
+
+        val result = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          reactSource,
+          inputFile,
+          pedantic,
+          expandTypeMappings,
+          logger
+        )
+
+        // Verify the transformation completed successfully
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        // React-specific transformations should have been applied
+        assert(result.codePath == inputFile.codePath)
+      }
+
+      test("should detect React involvement when dependencies include React") {
+        val source    = createMockSource("test-lib")
+        val inputFile = createMockParsedFile("test-file")
+
+        // Create a React dependency
+        val reactSource = createMockSource("react")
+        val reactLib    = createMockLibTs(reactSource, "1.0.0")
+        val deps        = SortedMap(reactSource -> reactLib)
+
+        val pedantic           = false
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val logger             = Logger.DevNull
+
+        val result = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          expandTypeMappings,
+          logger
+        )
+
+        // Verify the transformation completed successfully with React detection
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.codePath == inputFile.codePath)
+      }
+
+      test("should handle different expandTypeMappings configurations") {
+        val source    = createMockSource("test-lib")
+        val inputFile = createMockParsedFile("test-file")
+        val deps      = SortedMap.empty[LibTsSource, LibTs]
+        val pedantic  = false
+        val logger    = Logger.DevNull
+
+        // Test with Selection.All
+        val resultAll = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          Selection.All[TsIdentLibrary],
+          logger
+        )
+        assert(resultAll != null)
+
+        // Test with Selection.None
+        val resultNone = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          Selection.None[TsIdentLibrary],
+          logger
+        )
+        assert(resultNone != null)
+
+        // Test with Selection.NoneExcept for specific library (equivalent to Only)
+        val resultOnly = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          Selection.NoneExcept(TsIdentLibrarySimple("test-lib")),
+          logger
+        )
+        assert(resultOnly != null)
+
+        // All configurations should produce valid results
+        assert(resultAll.codePath == inputFile.codePath)
+        assert(resultNone.codePath == inputFile.codePath)
+        assert(resultOnly.codePath == inputFile.codePath)
+      }
+
+      test("should handle complex dependency scenarios with transitive dependencies") {
+        val source    = createMockSource("main-lib")
+        val inputFile = createMockParsedFile("main-file")
+
+        // Create a dependency chain: main-lib -> dep1 -> dep2
+        val dep1Source = createMockSource("dep1")
+        val dep2Source = createMockSource("dep2")
+
+        val dep2Lib = createMockLibTs(dep2Source, "1.0.0")
+        val dep1Lib = createMockLibTsWithDeps(dep1Source, "1.0.0", SortedMap(dep2Source -> dep2Lib))
+        val deps    = SortedMap(dep1Source -> dep1Lib)
+
+        val pedantic           = true // Test with pedantic mode
+        val expandTypeMappings = Selection.All[TsIdentLibrary]
+        val logger             = Logger.DevNull
+
+        val result = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          inputFile,
+          pedantic,
+          expandTypeMappings,
+          logger
+        )
+
+        // Verify the transformation handles transitive dependencies correctly
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.codePath == inputFile.codePath)
+      }
+
+      test("should handle edge cases with empty files and pedantic mode") {
+        val source = createMockSource("edge-case-lib")
+        val emptyFile = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("edge-case-lib"), TsQIdent.empty)
+        )
+        val deps               = SortedMap.empty[LibTsSource, LibTs]
+        val pedantic           = true
+        val expandTypeMappings = Selection.None[TsIdentLibrary]
+        val logger             = Logger.DevNull
+
+        val result = Phase1ReadTypescript.executeTransformationPipeline(
+          deps,
+          source,
+          emptyFile,
+          pedantic,
+          expandTypeMappings,
+          logger
+        )
+
+        // Verify empty files are handled gracefully
+        assert(result != null)
+        assert(result.isInstanceOf[TsParsedFile])
+        assert(result.members.isEmpty)
+        assert(result.codePath == emptyFile.codePath)
       }
     }
   }

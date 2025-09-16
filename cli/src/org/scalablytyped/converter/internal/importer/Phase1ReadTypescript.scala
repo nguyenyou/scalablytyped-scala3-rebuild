@@ -457,6 +457,45 @@ object Phase1ReadTypescript {
     }
   }
 
+  /** Executes the transformation pipeline on the filtered modules.
+    *
+    * This function represents the core transformation phase of the TypeScript processing pipeline. It creates a
+    * TsTreeScope from the filtered file and all transitive dependencies, determines React involvement based on library
+    * name and dependencies, then applies a comprehensive transformation pipeline to produce the final transformed
+    * TypeScript file.
+    *
+    * The transformation pipeline includes multiple phases:
+    *   - Library-specific transformations based on the library name
+    *   - JavaScript location setting for proper code generation
+    *   - Type system transformations (simplify parents, remove stubs, infer types)
+    *   - Module system handling (CommonJS, export rewriting)
+    *   - Reference qualification and type query resolution
+    *   - Module augmentation and global namespace handling
+    *   - Tree flattening and final optimizations
+    *
+    * React detection is performed by checking if the source library name is "react" or if any of the dependencies
+    * include React. This affects certain transformation behaviors.
+    *
+    * @param deps
+    *   The resolved dependencies as a SortedMap from LibTsSource to LibTs. These dependencies are used to build the
+    *   transformation scope and determine React involvement.
+    * @param source
+    *   The TypeScript library source being processed. Used for library name identification and React detection logic.
+    * @param withFilteredModules
+    *   The filtered parsed file containing TypeScript declarations with ignored modules removed. This is the input to
+    *   the transformation pipeline.
+    * @param pedantic
+    *   Whether to use pedantic mode for type checking and validation. When true, enables stricter validation and error
+    *   reporting during transformations.
+    * @param expandTypeMappings
+    *   Configuration for type mapping expansion. Controls which libraries should have their type mappings expanded
+    *   during transformation (Selection.All, Selection.None, or Selection.Only).
+    * @param logger
+    *   Logger for tracking transformation progress and reporting issues during pipeline execution.
+    * @return
+    *   The fully transformed TsParsedFile ready for final library creation. Contains all applied transformations
+    *   including type resolution, module handling, and optimizations.
+    */
   def executeTransformationPipeline(
       deps: SortedMap[LibTsSource, LibTs],
       source: LibTsSource,
@@ -464,7 +503,7 @@ object Phase1ReadTypescript {
       pedantic: Boolean,
       expandTypeMappings: Selection[TsIdentLibrary],
       logger: Logger[Unit]
-  ) = {
+  ): TsParsedFile = {
     val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
       acc ++ lib.transitiveDependencies
     }
