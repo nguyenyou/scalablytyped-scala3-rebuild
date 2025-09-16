@@ -196,168 +196,446 @@ object Phase1ReadTypescript {
       includedFiles.sorted
         .map { file =>
           file -> Lazy {
-            parser(file) match {
-              case Left(msg) =>
-                logger.withContext(file).fatal(s"Couldn't parse: $msg")
-              case Right(parsed) =>
-                val deps = Set.newBuilder[LibTsSource]
-
-                val fileLogger = logger.withContext(file)
-                fileLogger.info("Preprocessing")
-
-                val toInline: IArray[Either[Directive.Ref, InFile]] =
-                  parsed.directives.collect {
-                    case dir @ Directive.PathRef(stringPath) =>
-                      LibraryResolver
-                        .file(file.folder, stringPath)
-                        .toRight(dir)
-                    case dir @ Directive.LibRef(value) if source.libName === TsIdent.std =>
-                      LibraryResolver
-                        .file(resolve.stdLib.folder, s"lib.$value.d.ts")
-                        .toRight(dir)
-                  }
-
-                val moduleNames =
-                  LibraryResolver.moduleNameFor(source, file)
-
-                val withInferredModule = modules.InferredDefaultModule(
-                  parsed,
-                  moduleNames.head,
-                  logger
-                )
-
-                withInferredModule.directives.foreach {
-                  case dir @ Directive.TypesRef(value) =>
-                    resolve.module(source, file.folder, value) match {
-                      case Some(ResolvedModule.NotLocal(depSource, _)) =>
-                        deps += depSource
-                      case Some(ResolvedModule.Local(depSource, _)) =>
-                        logger.warn(
-                          s"unexpected typeref from local file $depSource"
-                        )
-                      case _ =>
-                        logger.warn(s"directives: couldn't resolve $dir")
-                    }
-                  case _ => ()
-                }
-
-                /* Resolve all references to other modules in `from` clauses, rename modules */
-                val ResolveExternalReferences.Result(
-                  withExternals,
-                  resolvedModules,
-                  unresolvedModules
-                ) =
-                  ResolveExternalReferences(
-                    resolve,
-                    source,
-                    file.folder,
-                    withInferredModule,
-                    logger
-                  )
-
-                resolvedModules.foreach {
-                  case ResolvedModule.NotLocal(source, _) => deps += source
-                  case _                                  => ()
-                }
-
-                val withOrigin = {
-                  source match {
-                    case LibTsSource.StdLibSource(_, _, _) =>
-                      val shortName = file.path.last
-                        .split("\\.")
-                        .drop(1)
-                        .dropRight(2)
-                        .mkString(".")
-                      if (shortName.nonEmpty) {
-                        val stdComment = Comments(
-                          List(Comment(s"/* standard $shortName */\n"))
-                        )
-                        T.AddComments(stdComment)
-                          .visitTsParsedFile(())(withExternals)
-                      } else withExternals
-
-                    case _ =>
-                      withExternals
-                  }
-                }
-
-                val inferredDepNames: Set[TsIdentLibrary] =
-                  modules.InferredDependency(
-                    source.libName,
-                    withOrigin,
-                    unresolvedModules,
-                    logger
-                  )
-
-                inferredDepNames.foreach { libraryName =>
-                  resolve.module(
-                    source,
-                    file.folder,
-                    libraryName.value
-                  ) match {
-                    case Some(ResolvedModule.NotLocal(dep, _)) =>
-                      deps += dep
-                    case _ =>
-                      logger.warn(
-                        s"Couldn't resolve inferred dependency ${libraryName.value}"
-                      )
-                  }
-                }
-
-                val withInlined: TsParsedFile =
-                  toInline.distinct.foldLeft(withOrigin) {
-                    case (parsed, Right(referencedFile)) =>
-                      val referencedFileLogger =
-                        fileLogger.withContext(referencedFile)
-
-                      preparingFiles
-                        .get(referencedFile)
-                        .flatMap(_.get) match {
-                        case Some((toInline, depsForInline)) if !toInline.isModule =>
-                          includedViaDirective += referencedFile
-                          deps ++= depsForInline
-                          FlattenTrees.mergeFile(parsed, toInline)
-                        case Some((modFile, _)) if modFile.isModule =>
-                          referencedFileLogger.warn(
-                            "directives: referenced file was a module"
-                          )
-                          parsed
-                        case _ =>
-                          referencedFileLogger.warn(
-                            "directives: reference caused circular graph"
-                          )
-                          parsed
-                      }
-                    case (parsed, Left(dir)) =>
-                      fileLogger.warn(s"directives: couldn't resolve $dir")
-                      parsed
-                  }
-
-                val _3 = moduleNames match {
-                  case IArray.exactlyOne(_) => withInlined
-                  case more =>
-                    withInlined.copy(members = withInlined.members.map {
-                      case m: TsDeclModule if more.contains(m.name) =>
-                        m.copy(comments =
-                          m.comments + Marker.ModuleAliases(
-                            more.filterNot(_ === m.name)
-                          )
-                        )
-                      case other => other
-                    })
-                }
-                val _4 = T.SetCodePath.visitTsParsedFile(
-                  CodePath.HasPath(source.libName, TsQIdent.empty)
-                )(_3)
-
-                (_4, deps.result())
-            }
+            processFileWithDependencies(source, file, resolve, parser, logger, preparingFiles, includedViaDirective)
           }
         }
         .toMap
         .toSorted
 
     (preparingFiles, includedViaDirective)
+  }
+
+  /** Processes a single file and tracks its dependencies.
+    *
+    * This method handles the complete processing pipeline for a single TypeScript file, including parsing, directive
+    * resolution, module inference, external reference resolution, and file inlining.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The specific file to process
+    * @param resolve
+    *   The library resolver for dependency and module resolution
+    * @param parser
+    *   Function to parse individual TypeScript files
+    * @param logger
+    *   Logger for recording processing information and errors
+    * @param preparingFiles
+    *   Lazy map of all files being prepared (for circular reference handling)
+    * @param includedViaDirective
+    *   Mutable set to track files included via directives
+    * @return
+    *   Tuple of processed file and its dependencies
+    */
+  private def processFileWithDependencies(
+      source: LibTsSource,
+      file: InFile,
+      resolve: LibraryResolver,
+      parser: InFile => Either[String, TsParsedFile],
+      logger: Logger[Unit],
+      preparingFiles: => SortedMap[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]],
+      includedViaDirective: mutable.Set[InFile]
+  )(implicit
+      inFileFormatter: Formatter[InFile]
+  ): (TsParsedFile, Set[LibTsSource]) = {
+    parser(file) match {
+      case Left(msg) =>
+        logger.withContext(file).fatal(s"Couldn't parse: $msg")
+      case Right(parsed) =>
+        val deps       = Set.newBuilder[LibTsSource]
+        val fileLogger = logger.withContext(file)
+        fileLogger.info("Preprocessing")
+
+        // Process directives and collect files to inline
+        val toInline = collectDirectivesToInline(source, file, resolve, parsed)
+
+        // Infer default module if needed
+        val moduleNames        = LibraryResolver.moduleNameFor(source, file)
+        val withInferredModule = modules.InferredDefaultModule(parsed, moduleNames.head, logger)
+
+        // Process type reference directives for dependencies
+        processTypeReferenceDirectives(source, file, resolve, withInferredModule, deps, logger)
+
+        // Resolve external references
+        val resolveResult = resolveExternalReferences(source, file, resolve, withInferredModule, logger)
+        collectDependenciesFromResolvedModules(resolveResult.resolvedModules, deps)
+
+        // Add standard library comments if needed
+        val withOrigin = addStandardLibraryComments(source, file, resolveResult.rewritten)
+
+        // Infer additional dependencies from unresolved modules
+        val inferredDepNames = inferAdditionalDependencies(source, withOrigin, resolveResult.unresolvedModules, logger)
+        resolveDependenciesFromInferredNames(source, file, resolve, inferredDepNames, deps, logger)
+
+        // Inline referenced files
+        val withInlined = inlineReferencedFiles(
+          toInline,
+          withOrigin,
+          fileLogger,
+          preparingFiles,
+          includedViaDirective,
+          deps
+        )
+
+        // Handle module aliases and set code path
+        val withModuleAliases = addModuleAliases(withInlined, moduleNames)
+        val withCodePath      = setCodePath(source, withModuleAliases)
+
+        (withCodePath, deps.result())
+    }
+  }
+
+  /** Collects directives that need to be inlined from a parsed file.
+    *
+    * This method processes the directives in a parsed TypeScript file and identifies which ones represent files that
+    * should be inlined. It handles both PathRef directives (for relative file references) and LibRef directives (for
+    * standard library references).
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The file containing the directives
+    * @param resolve
+    *   The library resolver for file resolution
+    * @param parsed
+    *   The parsed file containing directives
+    * @return
+    *   Array of Either[Directive.Ref, InFile] where Right contains resolved files and Left contains unresolved
+    *   directives
+    */
+  private def collectDirectivesToInline(
+      source: LibTsSource,
+      file: InFile,
+      resolve: LibraryResolver,
+      parsed: TsParsedFile
+  ): IArray[Either[Directive.Ref, InFile]] = {
+    parsed.directives.collect {
+      case dir @ Directive.PathRef(stringPath) =>
+        LibraryResolver
+          .file(file.folder, stringPath)
+          .toRight(dir)
+      case dir @ Directive.LibRef(value) if source.libName === TsIdent.std =>
+        LibraryResolver
+          .file(resolve.stdLib.folder, s"lib.$value.d.ts")
+          .toRight(dir)
+    }
+  }
+
+  /** Processes type reference directives and collects dependencies.
+    *
+    * This method examines TypesRef directives in the file and resolves them to dependencies. It adds resolved
+    * dependencies to the dependency builder and logs warnings for unresolved references.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The file containing the directives
+    * @param resolve
+    *   The library resolver for module resolution
+    * @param withInferredModule
+    *   The parsed file with inferred module information
+    * @param deps
+    *   The dependency builder to add resolved dependencies to
+    * @param logger
+    *   Logger for warnings and errors
+    */
+  private def processTypeReferenceDirectives(
+      source: LibTsSource,
+      file: InFile,
+      resolve: LibraryResolver,
+      withInferredModule: TsParsedFile,
+      deps: mutable.Builder[LibTsSource, Set[LibTsSource]],
+      logger: Logger[Unit]
+  ): Unit = {
+    withInferredModule.directives.foreach {
+      case dir @ Directive.TypesRef(value) =>
+        resolve.module(source, file.folder, value) match {
+          case Some(ResolvedModule.NotLocal(depSource, _)) =>
+            deps += depSource
+          case Some(ResolvedModule.Local(depSource, _)) =>
+            logger.warn(
+              s"unexpected typeref from local file $depSource"
+            )
+          case _ =>
+            logger.warn(s"directives: couldn't resolve $dir")
+        }
+      case _ => ()
+    }
+  }
+
+  /** Resolves external references in a parsed file.
+    *
+    * This method wraps the ResolveExternalReferences transformation to provide a cleaner interface and return type. It
+    * resolves all external module references in import/export statements and returns the transformation result.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The file being processed
+    * @param resolve
+    *   The library resolver for module resolution
+    * @param withInferredModule
+    *   The parsed file with inferred module information
+    * @param logger
+    *   Logger for recording resolution information
+    * @return
+    *   ResolveExternalReferences.Result containing transformed file and resolution information
+    */
+  private def resolveExternalReferences(
+      source: LibTsSource,
+      file: InFile,
+      resolve: LibraryResolver,
+      withInferredModule: TsParsedFile,
+      logger: Logger[Unit]
+  ): ResolveExternalReferences.Result = {
+    ResolveExternalReferences(
+      resolve,
+      source,
+      file.folder,
+      withInferredModule,
+      logger
+    )
+  }
+
+  /** Collects dependencies from resolved modules.
+    *
+    * This method processes the resolved modules from external reference resolution and adds non-local dependencies to
+    * the dependency builder.
+    *
+    * @param resolvedModules
+    *   Set of resolved modules from external reference resolution
+    * @param deps
+    *   The dependency builder to add dependencies to
+    */
+  private def collectDependenciesFromResolvedModules(
+      resolvedModules: Set[ResolvedModule],
+      deps: mutable.Builder[LibTsSource, Set[LibTsSource]]
+  ): Unit = {
+    resolvedModules.foreach {
+      case ResolvedModule.NotLocal(source, _) => deps += source
+      case _                                  => ()
+    }
+  }
+
+  /** Adds standard library comments to a parsed file if it's from the standard library.
+    *
+    * This method checks if the source is a standard library source and adds appropriate comments to identify the
+    * specific standard library module. It extracts the module name from the file path and creates a comment.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The file being processed
+    * @param withExternals
+    *   The parsed file with external references resolved
+    * @return
+    *   The parsed file with standard library comments added (if applicable)
+    */
+  private def addStandardLibraryComments(
+      source: LibTsSource,
+      file: InFile,
+      withExternals: TsParsedFile
+  ): TsParsedFile = {
+    source match {
+      case LibTsSource.StdLibSource(_, _, _) =>
+        val shortName = file.path.last
+          .split("\\.")
+          .drop(1)
+          .dropRight(2)
+          .mkString(".")
+        if (shortName.nonEmpty) {
+          val stdComment = Comments(
+            List(Comment(s"/* standard $shortName */\n"))
+          )
+          T.AddComments(stdComment)
+            .visitTsParsedFile(())(withExternals)
+        } else withExternals
+
+      case _ =>
+        withExternals
+    }
+  }
+
+  /** Infers additional dependencies from unresolved modules.
+    *
+    * This method uses the InferredDependency module to analyze the parsed file and unresolved modules to infer
+    * additional library dependencies that might be needed.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param withOrigin
+    *   The parsed file with origin comments added
+    * @param unresolvedModules
+    *   Set of modules that couldn't be resolved
+    * @param logger
+    *   Logger for recording inference information
+    * @return
+    *   Set of inferred library dependencies
+    */
+  private def inferAdditionalDependencies(
+      source: LibTsSource,
+      withOrigin: TsParsedFile,
+      unresolvedModules: Set[TsIdentModule],
+      logger: Logger[Unit]
+  ): Set[TsIdentLibrary] = {
+    modules.InferredDependency(
+      source.libName,
+      withOrigin,
+      unresolvedModules,
+      logger
+    )
+  }
+
+  /** Resolves dependencies from inferred library names.
+    *
+    * This method takes inferred library names and attempts to resolve them to actual library sources, adding
+    * successfully resolved dependencies to the dependency builder.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param file
+    *   The file being processed
+    * @param resolve
+    *   The library resolver for module resolution
+    * @param inferredDepNames
+    *   Set of inferred library names to resolve
+    * @param deps
+    *   The dependency builder to add resolved dependencies to
+    * @param logger
+    *   Logger for warnings about unresolved dependencies
+    */
+  private def resolveDependenciesFromInferredNames(
+      source: LibTsSource,
+      file: InFile,
+      resolve: LibraryResolver,
+      inferredDepNames: Set[TsIdentLibrary],
+      deps: mutable.Builder[LibTsSource, Set[LibTsSource]],
+      logger: Logger[Unit]
+  ): Unit = {
+    inferredDepNames.foreach { libraryName =>
+      resolve.module(
+        source,
+        file.folder,
+        libraryName.value
+      ) match {
+        case Some(ResolvedModule.NotLocal(dep, _)) =>
+          deps += dep
+        case _ =>
+          logger.warn(
+            s"Couldn't resolve inferred dependency ${libraryName.value}"
+          )
+      }
+    }
+  }
+
+  /** Inlines referenced files into the main parsed file.
+    *
+    * This method processes the collected directives to inline and merges referenced files into the main file. It
+    * handles circular references and tracks which files were included via directives.
+    *
+    * @param toInline
+    *   Array of directives and resolved files to inline
+    * @param withOrigin
+    *   The parsed file with origin comments added
+    * @param fileLogger
+    *   Logger for the current file context
+    * @param preparingFiles
+    *   Lazy map of all files being prepared (for circular reference handling)
+    * @param includedViaDirective
+    *   Mutable set to track files included via directives
+    * @param deps
+    *   The dependency builder to add dependencies from inlined files
+    * @return
+    *   The parsed file with referenced files inlined
+    */
+  private def inlineReferencedFiles(
+      toInline: IArray[Either[Directive.Ref, InFile]],
+      withOrigin: TsParsedFile,
+      fileLogger: Logger[Unit],
+      preparingFiles: => SortedMap[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]],
+      includedViaDirective: mutable.Set[InFile],
+      deps: mutable.Builder[LibTsSource, Set[LibTsSource]]
+  )(implicit
+      inFileFormatter: Formatter[InFile]
+  ): TsParsedFile = {
+    toInline.distinct.foldLeft(withOrigin) {
+      case (parsed, Right(referencedFile)) =>
+        val referencedFileLogger = fileLogger.withContext(referencedFile)
+
+        preparingFiles
+          .get(referencedFile)
+          .flatMap(_.get) match {
+          case Some((toInline, depsForInline)) if !toInline.isModule =>
+            includedViaDirective += referencedFile
+            deps ++= depsForInline
+            FlattenTrees.mergeFile(parsed, toInline)
+          case Some((modFile, _)) if modFile.isModule =>
+            referencedFileLogger.warn(
+              "directives: referenced file was a module"
+            )
+            parsed
+          case _ =>
+            referencedFileLogger.warn(
+              "directives: reference caused circular graph"
+            )
+            parsed
+        }
+      case (parsed, Left(dir)) =>
+        fileLogger.warn(s"directives: couldn't resolve $dir")
+        parsed
+    }
+  }
+
+  /** Adds module aliases to module declarations when multiple module names exist.
+    *
+    * This method handles the case where a file has multiple module names by adding module alias markers to the
+    * appropriate module declarations.
+    *
+    * @param withInlined
+    *   The parsed file with inlined references
+    * @param moduleNames
+    *   Array of module names for this file
+    * @return
+    *   The parsed file with module aliases added
+    */
+  private def addModuleAliases(
+      withInlined: TsParsedFile,
+      moduleNames: IArray[TsIdentModule]
+  ): TsParsedFile = {
+    moduleNames match {
+      case IArray.exactlyOne(_) => withInlined
+      case more =>
+        withInlined.copy(members = withInlined.members.map {
+          case m: TsDeclModule if more.contains(m.name) =>
+            m.copy(comments =
+              m.comments + Marker.ModuleAliases(
+                more.filterNot(_ === m.name)
+              )
+            )
+          case other => other
+        })
+    }
+  }
+
+  /** Sets the code path for the parsed file.
+    *
+    * This method applies the SetCodePath transformation to set the appropriate code path information on the parsed file
+    * and its members.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param withModuleAliases
+    *   The parsed file with module aliases added
+    * @return
+    *   The parsed file with code path information set
+    */
+  private def setCodePath(
+      source: LibTsSource,
+      withModuleAliases: TsParsedFile
+  ): TsParsedFile = {
+    T.SetCodePath.visitTsParsedFile(
+      CodePath.HasPath(source.libName, TsQIdent.empty)
+    )(withModuleAliases)
   }
 
   /** Executes the complete transformation pipeline on parsed TypeScript files.
