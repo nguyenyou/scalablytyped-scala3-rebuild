@@ -8,6 +8,7 @@ import org.scalablytyped.converter.internal.ts.{
   CalculateLibraryVersion,
   CodePath,
   JsLocation,
+  TsAugmentedModule,
   TsDeclInterface,
   TsDeclModule,
   TsIdentLibrary,
@@ -1514,6 +1515,172 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
         } finally {
           os.remove.all(tempDir)
         }
+      }
+    }
+
+    test("filterIgnoredModules") {
+      test("should return unchanged file when no ignored prefixes") {
+        val module1 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("test", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val file = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(module1),
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val result = Phase1ReadTypescript.filterIgnoredModules(file, Set.empty)
+
+        assert(result == file)
+        assert(result.members.length == 1)
+      }
+
+      test("should filter TsDeclModule with matching prefix") {
+        val module1 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("ignored", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val module2 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("kept", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val file = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(module1, module2),
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val ignoredPrefixes = Set(List("ignored"))
+        val result          = Phase1ReadTypescript.filterIgnoredModules(file, ignoredPrefixes)
+
+        assert(result.members.length == 1)
+        assert(result.members.head.asInstanceOf[TsDeclModule].name.fragments == List("kept", "module"))
+      }
+
+      test("should filter TsAugmentedModule with matching prefix") {
+        val augmentedModule = TsAugmentedModule(
+          comments = NoComments,
+          name = TsIdentModule(None, List("ignored", "augmented")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val declModule = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("kept", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val file = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(augmentedModule, declModule),
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val ignoredPrefixes = Set(List("ignored"))
+        val result          = Phase1ReadTypescript.filterIgnoredModules(file, ignoredPrefixes)
+
+        assert(result.members.length == 1)
+        assert(result.members.head.isInstanceOf[TsDeclModule])
+      }
+
+      test("should preserve non-module members") {
+        val interface = TsDeclInterface(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentSimple("TestInterface"),
+          tparams = IArray.Empty,
+          inheritance = IArray.Empty,
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val module1 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("ignored", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val file = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(interface, module1),
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val ignoredPrefixes = Set(List("ignored"))
+        val result          = Phase1ReadTypescript.filterIgnoredModules(file, ignoredPrefixes)
+
+        assert(result.members.length == 1)
+        assert(result.members.head.isInstanceOf[TsDeclInterface])
+      }
+
+      test("should handle multiple ignored prefixes") {
+        val module1 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("prefix1", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val module2 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("prefix2", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val module3 = TsDeclModule(
+          comments = NoComments,
+          declared = false,
+          name = TsIdentModule(None, List("kept", "module")),
+          members = IArray.Empty,
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty),
+          jsLocation = JsLocation.Global(TsQIdent.empty)
+        )
+
+        val file = TsParsedFile(
+          comments = NoComments,
+          directives = IArray.Empty,
+          members = IArray(module1, module2, module3),
+          codePath = CodePath.HasPath(TsIdentLibrarySimple("test"), TsQIdent.empty)
+        )
+
+        val ignoredPrefixes = Set(List("prefix1"), List("prefix2"))
+        val result          = Phase1ReadTypescript.filterIgnoredModules(file, ignoredPrefixes)
+
+        assert(result.members.length == 1)
+        assert(result.members.head.asInstanceOf[TsDeclModule].name.fragments == List("kept", "module"))
       }
     }
   }

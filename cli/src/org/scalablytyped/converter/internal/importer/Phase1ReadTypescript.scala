@@ -425,15 +425,7 @@ object Phase1ReadTypescript {
     val withExportedModules = processExportModules(source, flattened, resolve, logger)
 
     // Filter modules based on ignored prefixes
-    val withFilteredModules: TsParsedFile =
-      if (ignoredModulePrefixes.nonEmpty) {
-        val ignoreModule = (modName: TsIdentModule) => shouldIgnoreModule(modName, ignoredModulePrefixes)
-        withExportedModules.copy(members = withExportedModules.members.filterNot {
-          case x: TsDeclModule      => ignoreModule(x.name)
-          case x: TsAugmentedModule => ignoreModule(x.name)
-          case _                    => false
-        })
-      } else withExportedModules
+    val withFilteredModules = filterIgnoredModules(withExportedModules, ignoredModulePrefixes)
 
     // Resolve declared dependencies
     val (stdlibSourceOpt, depsDeclared) = resolveDeclaredDependencies(
@@ -593,6 +585,33 @@ object Phase1ReadTypescript {
           .map(_.asModule) ++ file.members
       )
     }
+  }
+
+  /** Filters modules based on ignored module prefixes.
+    *
+    * This function removes TsDeclModule and TsAugmentedModule instances whose names match any of the provided ignored
+    * prefixes. Other member types are preserved unchanged. If no ignored prefixes are provided, the file is returned
+    * unchanged.
+    *
+    * @param file
+    *   The parsed TypeScript file containing modules to filter
+    * @param ignoredModulePrefixes
+    *   Set of module prefix patterns (as lists of strings) to ignore/filter out
+    * @return
+    *   A new TsParsedFile with filtered modules, or the original file if no filtering needed
+    */
+  def filterIgnoredModules(
+      file: TsParsedFile,
+      ignoredModulePrefixes: Set[List[String]]
+  ): TsParsedFile = {
+    if (ignoredModulePrefixes.nonEmpty) {
+      val ignoreModule = (modName: TsIdentModule) => shouldIgnoreModule(modName, ignoredModulePrefixes)
+      file.copy(members = file.members.filterNot {
+        case x: TsDeclModule      => ignoreModule(x.name)
+        case x: TsAugmentedModule => ignoreModule(x.name)
+        case _                    => false
+      })
+    } else file
   }
 
   def Pipeline(
