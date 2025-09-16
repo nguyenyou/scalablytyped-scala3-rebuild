@@ -109,7 +109,7 @@ object TsTreeScopeTests extends TestSuite {
 
   def createBasicTsLib(name: TsIdentLibrary): TsTreeScope.TsLib =
     new TsTreeScope.TsLib {
-      override def libName: TsIdentLibrary = name
+      override def libName: TsIdentLibrary             = name
       override def packageJsonOpt: Option[PackageJson] = None
     }
 
@@ -118,8 +118,8 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope.Root - Construction and Basic Properties") {
       test("creates root scope with basic properties") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
         val root = TsTreeScope(libName, pedantic = false, deps, logger)
 
@@ -137,8 +137,8 @@ object TsTreeScopeTests extends TestSuite {
 
       test("creates pedantic root scope") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
         val root = TsTreeScope(libName, pedantic = true, deps, logger)
 
@@ -147,12 +147,12 @@ object TsTreeScopeTests extends TestSuite {
       }
 
       test("creates root scope with dependencies") {
-        val libName = createSimpleLibrary("test-lib")
+        val libName    = createSimpleLibrary("test-lib")
         val depLibName = createSimpleLibrary("dep-lib")
-        val logger = createMockLogger()
-        val depLib = createBasicTsLib(depLibName)
-        val depFile = createMockParsedFile("dep-lib")
-        val deps = Map(depLib -> depFile)
+        val logger     = createMockLogger()
+        val depLib     = createBasicTsLib(depLibName)
+        val depFile    = createMockParsedFile("dep-lib")
+        val deps       = Map(depLib -> depFile)
 
         val root = TsTreeScope(libName, pedantic = false, deps, logger)
 
@@ -164,10 +164,10 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope.Root - Caching and Configuration") {
       test("enables caching") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val root        = TsTreeScope(libName, pedantic = false, deps, logger)
         val cachingRoot = root.caching
 
         assert(root.cache.isEmpty)
@@ -178,10 +178,10 @@ object TsTreeScopeTests extends TestSuite {
 
       test("enables unqualified lookup") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val root            = TsTreeScope(libName, pedantic = false, deps, logger)
         val unqualifiedRoot = root.enableUnqualifiedLookup
 
         assert(root.lookupUnqualified == false)
@@ -192,10 +192,10 @@ object TsTreeScopeTests extends TestSuite {
 
       test("chaining caching and unqualified lookup") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val root     = TsTreeScope(libName, pedantic = false, deps, logger)
         val enhanced = root.caching.enableUnqualifiedLookup
 
         assert(enhanced.cache.nonEmpty)
@@ -207,12 +207,12 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope.Scoped - Construction and Basic Properties") {
       test("creates scoped scope from root") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
-        val scoped = root / namespace
+        val scoped    = root / namespace
 
         assert(scoped.outer == root)
         assert(scoped.current == namespace)
@@ -223,14 +223,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("creates nested scoped scopes") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace1 = createMockNamespace("Outer")
         val namespace2 = createMockNamespace("Inner")
-        val scoped1 = root / namespace1
-        val scoped2 = scoped1 / namespace2
+        val scoped1    = root / namespace1
+        val scoped2    = scoped1 / namespace2
 
         assert(scoped2.outer == scoped1)
         assert(scoped2.current == namespace2)
@@ -243,13 +243,13 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Type Parameters and Keys") {
       test("handles type parameters in scoped scope") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
-        val tparam = createTypeParam("T")
+        val tparam    = createTypeParam("T")
         val classDecl = createMockClass("TestClass").copy(tparams = IArray(tparam))
-        val scoped = root / classDecl
+        val scoped    = root / classDecl
 
         assert(scoped.tparams.contains(tparam.name))
         assert(scoped.tparams(tparam.name) == tparam)
@@ -258,14 +258,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("inherits type parameters from outer scope") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val outerTparam = createTypeParam("T")
         val innerTparam = createTypeParam("U")
-        val outerClass = createMockClass("Outer").copy(tparams = IArray(outerTparam))
-        val innerClass = createMockClass("Inner").copy(tparams = IArray(innerTparam))
+        val outerClass  = createMockClass("Outer").copy(tparams = IArray(outerTparam))
+        val innerClass  = createMockClass("Inner").copy(tparams = IArray(innerTparam))
 
         val outerScoped = root / outerClass
         val innerScoped = outerScoped / innerClass
@@ -277,14 +277,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("handles type keys from mapped types") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         // Note: This test would need a proper TsMemberTypeMapped instance
         // For now, we test that tkeys is properly inherited
         val namespace = createMockNamespace("TestNamespace")
-        val scoped = root / namespace
+        val scoped    = root / namespace
 
         assert(scoped.tkeys == root.tkeys)
         assert(scoped.tkeys.isEmpty) // root has no keys
@@ -294,13 +294,13 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Abstract Type Detection") {
       test("detects abstract types from type parameters") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
-        val tparam = createTypeParam("T")
+        val tparam    = createTypeParam("T")
         val classDecl = createMockClass("TestClass").copy(tparams = IArray(tparam))
-        val scoped = root / classDecl
+        val scoped    = root / classDecl
 
         val tQIdent = createQIdent("T")
         assert(scoped.isAbstract(tQIdent) == true)
@@ -311,14 +311,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("detects abstract types from type keys") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         // For a simple test, we check that multi-part QIdents are not abstract
         val multiPartQIdent = createQIdent("Namespace", "Type")
-        val namespace = createMockNamespace("TestNamespace")
-        val scoped = root / namespace
+        val namespace       = createMockNamespace("TestNamespace")
+        val scoped          = root / namespace
 
         assert(scoped.isAbstract(multiPartQIdent) == false)
       }
@@ -327,15 +327,15 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Surrounding Container Detection") {
       test("finds surrounding TsContainer") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
         val classDecl = createMockClass("TestClass")
 
         val namespacedScope = root / namespace
-        val classScope = namespacedScope / classDecl
+        val classScope      = namespacedScope / classDecl
 
         assert(root.surroundingTsContainer.isEmpty)
         assert(namespacedScope.surroundingTsContainer.contains(namespace))
@@ -344,14 +344,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("finds surrounding HasClassMembers") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val classDecl = createMockClass("TestClass")
         val namespace = createMockNamespace("TestNamespace")
 
-        val classScope = root / classDecl
+        val classScope  = root / classDecl
         val nestedScope = classScope / namespace
 
         assert(root.surroundingHasMembers.isEmpty)
@@ -363,40 +363,40 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Lookup Functionality") {
       test("lookup returns empty for primitive types") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val primitiveQIdent = TsQIdent.string
-        val result = root.lookup(primitiveQIdent, skipValidation = true)
+        val result          = root.lookup(primitiveQIdent, skipValidation = true)
 
         assert(result.isEmpty)
       }
 
       test("lookup returns empty for abstract types") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
-        val tparam = createTypeParam("T")
+        val tparam    = createTypeParam("T")
         val classDecl = createMockClass("TestClass").copy(tparams = IArray(tparam))
-        val scoped = root / classDecl
+        val scoped    = root / classDecl
 
         val abstractQIdent = createQIdent("T")
-        val result = scoped.lookup(abstractQIdent, skipValidation = true)
+        val result         = scoped.lookup(abstractQIdent, skipValidation = true)
 
         assert(result.isEmpty)
       }
 
       test("lookupType filters to type declarations only") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val someQIdent = createQIdent("SomeType")
-        val result = root.lookupType(someQIdent, skipValidation = true)
+        val result     = root.lookupType(someQIdent, skipValidation = true)
 
         // Should be empty since we have no dependencies with actual types
         assert(result.isEmpty)
@@ -404,12 +404,12 @@ object TsTreeScopeTests extends TestSuite {
 
       test("lookupIncludeScope returns tuples with scope information") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val someQIdent = createQIdent("SomeDecl")
-        val result = root.lookupIncludeScope(someQIdent, skipValidation = true)
+        val result     = root.lookupIncludeScope(someQIdent, skipValidation = true)
 
         // Should be empty since we have no dependencies
         assert(result.isEmpty)
@@ -417,12 +417,12 @@ object TsTreeScopeTests extends TestSuite {
 
       test("lookupTypeIncludeScope returns type declarations with scope") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val someQIdent = createQIdent("SomeType")
-        val result = root.lookupTypeIncludeScope(someQIdent, skipValidation = true)
+        val result     = root.lookupTypeIncludeScope(someQIdent, skipValidation = true)
 
         // Should be empty since we have no dependencies
         assert(result.isEmpty)
@@ -432,9 +432,9 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Module Scopes") {
       test("root has empty module scopes when no dependencies") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         assert(root.moduleScopes.isEmpty)
         assert(root.moduleAuxScopes.isEmpty)
@@ -442,12 +442,12 @@ object TsTreeScopeTests extends TestSuite {
 
       test("scoped scope inherits module scopes from outer") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
-        val scoped = root / namespace
+        val scoped    = root / namespace
 
         assert(scoped.moduleScopes == root.moduleScopes)
         assert(scoped.moduleAuxScopes == root.moduleAuxScopes)
@@ -457,18 +457,18 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Exports") {
       test("root has empty exports") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         assert(root.exports.isEmpty)
       }
 
       test("scoped scope gets exports from current container") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val exportDecl = createMockExportDecl("testExport")
         val namespace = createMockNamespace("TestNamespace").copy(
@@ -486,15 +486,15 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Within Module Detection") {
       test("detects when not within module") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
         val classDecl = createMockClass("TestClass")
 
         val namespacedScope = root / namespace
-        val classScope = namespacedScope / classDecl
+        val classScope      = namespacedScope / classDecl
 
         assert(root.withinModule == false)
         assert(namespacedScope.withinModule == false)
@@ -503,15 +503,15 @@ object TsTreeScopeTests extends TestSuite {
 
       test("detects when within TsDeclModule") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
-        val module = createMockModule("TestModule")
+        val module    = createMockModule("TestModule")
         val classDecl = createMockClass("TestClass")
 
         val moduleScope = root / module
-        val classScope = moduleScope / classDecl
+        val classScope  = moduleScope / classDecl
 
         assert(moduleScope.withinModule == true)
         assert(classScope.withinModule == true)
@@ -519,9 +519,9 @@ object TsTreeScopeTests extends TestSuite {
 
       test("detects when within TsAugmentedModule") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val augmentedModule = TsAugmentedModule(
           comments = NoComments,
@@ -533,7 +533,7 @@ object TsTreeScopeTests extends TestSuite {
         val classDecl = createMockClass("TestClass")
 
         val moduleScope = root / augmentedModule
-        val classScope = moduleScope / classDecl
+        val classScope  = moduleScope / classDecl
 
         assert(moduleScope.withinModule == true)
         assert(classScope.withinModule == true)
@@ -545,7 +545,7 @@ object TsTreeScopeTests extends TestSuite {
         val libName = createSimpleLibrary("test-lib")
         val logger1 = createMockLogger()
         val logger2 = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
         val root1 = TsTreeScope(libName, pedantic = false, deps, logger1)
         val root2 = TsTreeScope(libName, pedantic = false, deps, logger2)
@@ -557,8 +557,8 @@ object TsTreeScopeTests extends TestSuite {
       test("root scopes are not equal when different library") {
         val libName1 = createSimpleLibrary("test-lib-1")
         val libName2 = createSimpleLibrary("test-lib-2")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val logger   = createMockLogger()
+        val deps     = Map.empty[TsTreeScope.TsLib, TsParsedFile]
 
         val root1 = TsTreeScope(libName1, pedantic = false, deps, logger)
         val root2 = TsTreeScope(libName2, pedantic = false, deps, logger)
@@ -568,13 +568,13 @@ object TsTreeScopeTests extends TestSuite {
 
       test("scoped scopes are equal when same stack") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
-        val scoped1 = root / namespace
-        val scoped2 = root / namespace
+        val scoped1   = root / namespace
+        val scoped2   = root / namespace
 
         assert(scoped1.equals(scoped2))
         assert(scoped1.hashCode == scoped2.hashCode)
@@ -582,14 +582,14 @@ object TsTreeScopeTests extends TestSuite {
 
       test("scoped scopes are not equal when different stack") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace1 = createMockNamespace("TestNamespace1")
         val namespace2 = createMockNamespace("TestNamespace2")
-        val scoped1 = root / namespace1
-        val scoped2 = root / namespace2
+        val scoped1    = root / namespace1
+        val scoped2    = root / namespace2
 
         assert(!scoped1.equals(scoped2))
       }
@@ -598,9 +598,9 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - String Representation") {
       test("root scope toString") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val str = root.toString
         assert(str.contains("TreeScope"))
@@ -609,13 +609,13 @@ object TsTreeScopeTests extends TestSuite {
 
       test("scoped scope toString shows stack") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val namespace = createMockNamespace("TestNamespace")
         val classDecl = createMockClass("TestClass")
-        val scoped = root / namespace / classDecl
+        val scoped    = root / namespace / classDecl
 
         val str = scoped.toString
         assert(str.contains("TreeScope"))
@@ -627,24 +627,24 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Error Handling and Edge Cases") {
       test("handles empty qualified identifier lookup") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val emptyQIdent = TsQIdent.empty
-        val result = root.lookup(emptyQIdent, skipValidation = true)
+        val result      = root.lookup(emptyQIdent, skipValidation = true)
 
         assert(result.isEmpty)
       }
 
       test("handles lookup with skipValidation = false") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val nonExistentQIdent = createQIdent("NonExistent")
-        val result = root.lookup(nonExistentQIdent, skipValidation = false)
+        val result            = root.lookup(nonExistentQIdent, skipValidation = false)
 
         // Should still return empty but may log warnings
         assert(result.isEmpty)
@@ -652,9 +652,9 @@ object TsTreeScopeTests extends TestSuite {
 
       test("handles lookup in pedantic mode") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = true, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = true, deps, logger)
 
         val nonExistentQIdent = createQIdent("NonExistent")
 
@@ -671,9 +671,9 @@ object TsTreeScopeTests extends TestSuite {
       }
 
       test("handles very deep nesting") {
-        val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val libName            = createSimpleLibrary("test-lib")
+        val logger             = createMockLogger()
+        val deps               = Map.empty[TsTreeScope.TsLib, TsParsedFile]
         var scope: TsTreeScope = TsTreeScope(libName, pedantic = false, deps, logger)
 
         // Create a deeply nested scope
@@ -688,9 +688,9 @@ object TsTreeScopeTests extends TestSuite {
 
       test("handles null and edge case inputs") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         // Test that equals handles non-TsTreeScope objects
         assert(!root.equals("not a tree scope"))
@@ -702,9 +702,9 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Cache Functionality") {
       test("cache is properly initialized when enabled") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         val cachingRoot = root.caching
 
@@ -720,12 +720,12 @@ object TsTreeScopeTests extends TestSuite {
 
       test("cache is preserved through scope operations") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger).caching
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger).caching
 
         val namespace = createMockNamespace("TestNamespace")
-        val scoped = root / namespace
+        val scoped    = root / namespace
 
         assert(scoped.root.cache.nonEmpty)
         assert(scoped.root.cache == root.cache)
@@ -735,37 +735,45 @@ object TsTreeScopeTests extends TestSuite {
     test("TsTreeScope - Boundary Conditions") {
       test("handles empty dependencies map") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
         assert(root.moduleScopes.isEmpty)
         assert(root.moduleAuxScopes.isEmpty)
 
         val someQIdent = createQIdent("SomeType")
-        val result = root.lookup(someQIdent, skipValidation = true)
+        val result     = root.lookup(someQIdent, skipValidation = true)
         assert(result.isEmpty)
       }
 
       test("handles library name with special characters") {
         val libName = createScopedLibrary("@types", "node-special-chars_123")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
+        // Verify the library name is correctly set
         assert(root.libName == libName)
-        assert(root.hashCode == libName.hashCode)
+
+        // Verify the scoped library properties are correctly handled
+        assert(libName.isInstanceOf[TsIdentLibraryScoped])
+        val scopedLib = libName.asInstanceOf[TsIdentLibraryScoped]
+        assert(scopedLib.scope == "@types")
+        assert(scopedLib.name == "node-special-chars_123")
+        assert(scopedLib.value == "@@types/node-special-chars_123")
+        assert(libName.`__value` == "@types__node-special-chars_123")
       }
 
       test("handles very long qualified identifiers") {
         val libName = createSimpleLibrary("test-lib")
-        val logger = createMockLogger()
-        val deps = Map.empty[TsTreeScope.TsLib, TsParsedFile]
-        val root = TsTreeScope(libName, pedantic = false, deps, logger)
+        val logger  = createMockLogger()
+        val deps    = Map.empty[TsTreeScope.TsLib, TsParsedFile]
+        val root    = TsTreeScope(libName, pedantic = false, deps, logger)
 
-        val longParts = (1 to 100).map(i => s"Part$i").toArray
+        val longParts  = (1 to 100).map(i => s"Part$i").toArray
         val longQIdent = createQIdent(longParts*)
-        val result = root.lookup(longQIdent, skipValidation = true)
+        val result     = root.lookup(longQIdent, skipValidation = true)
 
         assert(result.isEmpty) // Should handle gracefully
       }

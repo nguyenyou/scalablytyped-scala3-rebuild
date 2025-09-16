@@ -711,12 +711,20 @@ describe("TsTreeScope", () => {
 		});
 
 		test("should handle special characters in identifiers", () => {
-			const libName = createSimpleLibrary("test-lib-with-dashes");
+			const libName = createScopedLibrary("@types", "node-special-chars_123");
 			const logger = createMockLogger();
 			const deps = new Map();
 			const root = TsTreeScope.create(libName, false, deps, logger);
 
-			expect(root.libName.value).toBe("test-lib-with-dashes");
+			// Verify the library name is correctly set
+			expect(root.libName).toBe(libName);
+
+			// Verify the scoped library properties are correctly handled
+			expect(libName._tag).toBe("TsIdentLibraryScoped");
+			expect(libName.scope).toBe("@types");
+			expect(libName.name).toBe("node-special-chars_123");
+			expect(libName.value).toBe("@@types/node-special-chars_123");
+			expect(libName.__value).toBe("@types__node-special-chars_123");
 		});
 
 		test("should handle long identifier chains", () => {

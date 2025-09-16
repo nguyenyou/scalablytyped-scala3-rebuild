@@ -11,14 +11,14 @@ import scala.util.control.NonFatal
 /** Runs a computation given a sequence of input ids.
   */
 object PhaseRunner {
-  def apply[Id: {Formatter, Ordering}, T](
+  def apply[Id: Formatter: Ordering, T](
       phase: RecPhase[Id, T],
       getLogger: Id => Logger[Unit],
       listener: PhaseListener[Id]
   )(initial: phase._Id): PhaseRes[phase._Id, phase._T] =
     go(phase, initial, Nil, getLogger, listener)
 
-  def go[Id: {Formatter, Ordering}, TT](
+  def go[Id: Formatter: Ordering, TT](
       phase: RecPhase[Id, TT],
       id: Id,
       circuitBreaker: List[Id],
@@ -30,7 +30,7 @@ object PhaseRunner {
       case next: RecPhase.Next[Id, t, TT]     => doNext[Id, t, TT](next, id, circuitBreaker, getLogger, listener)
     }
 
-  private def doNext[Id: {Formatter, Ordering}, T, TT](
+  def doNext[Id: Formatter: Ordering, T, TT](
       next: RecPhase.Next[Id, T, TT],
       id: Id,
       circuitBreaker: List[Id],

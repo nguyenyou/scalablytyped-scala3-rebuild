@@ -6,7 +6,7 @@ import io.circe.Encoder
 
 object Versions {
   // this accepts any nightly or milestone with the same binversion as a major release. good enough for now
-  private val Version = "(\\d+).(\\d+).(\\d+).*".r
+  "(\\d+).(\\d+).(\\d+).*".r
 
   case class Scala(scalaVersion: String) {
     val is3: Boolean = scalaVersion.startsWith("3.")
@@ -20,10 +20,9 @@ object Versions {
     implicit val decodes: Decoder[Scala] = Decoder[String].map(Scala.apply)
   }
 
-  val Scala3   = Scala("3.7.2")
+  val Scala3 = Scala("3.7.2")
 
-  case class ScalaJs(scalaJsVersion: String) {
-  }
+  case class ScalaJs(scalaJsVersion: String) {}
 
   object ScalaJs {
     implicit val encodes: Encoder[ScalaJs] = Encoder[String].contramap(_.scalaJsVersion)

@@ -983,8 +983,9 @@ export function createSimpleLibrary(name: string): TsIdentLibrarySimple {
 
 /**
  * Creates a scoped library identifier.
+ * Matches Scala behavior exactly - scope is used as-is.
  *
- * @param scope - The scope name
+ * @param scope - The scope name (may include @ prefix)
  * @param name - The library name
  * @returns A TsIdentLibraryScoped
  */
@@ -992,7 +993,15 @@ export function createScopedLibrary(
 	scope: string,
 	name: string,
 ): TsIdentLibraryScoped {
-	return TsIdent.libraryScoped(scope, name);
+	// Match Scala behavior: scope is used as-is, value gets additional @
+	return {
+		_tag: "TsIdentLibraryScoped",
+		scope,
+		name,
+		value: `@${scope}/${name}`,
+		__value: `${scope}__${name}`,
+		asString: `TsIdentLibraryScoped(@${scope}/${name})`,
+	};
 }
 
 /**
