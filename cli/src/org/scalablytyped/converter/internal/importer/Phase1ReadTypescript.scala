@@ -282,30 +282,12 @@ class Phase1ReadTypescript(
             })
           else withExportedModules
 
-        val stdlibSourceOpt: Option[LibTsSource] =
-          if (includedFiles.exists(_.path === resolve.stdLib.path)) None
-          else Option(resolve.stdLib)
-
-        val depsDeclared: SortedSet[LibTsSource] =
-          if (stdlibSourceOpt.isEmpty) SortedSet.empty
-          else
-            source.packageJsonOpt
-              .getOrElse(PackageJson.Empty)
-              .allLibs(dev = false, peer = true)
-              .keySet
-              .flatMap { depName =>
-                resolve.library(depName) match {
-                  case LibraryResolver.Found(source) =>
-                    Some(source)
-                  case LibraryResolver.Ignored(_) =>
-                    None
-                  case LibraryResolver.NotAvailable(name) =>
-                    logger.warn(
-                      s"Could not find typescript definitions for dependency ${name.value}"
-                    )
-                    None
-                }
-              }
+        val (stdlibSourceOpt, depsDeclared) = Phase1ReadTypescript.resolveDeclaredDependencies(
+          source,
+          includedFiles,
+          resolve,
+          logger
+        )
 
         getDeps(depsDeclared ++ stdlibSourceOpt ++ depsFromFiles).map { deps =>
           val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
@@ -379,6 +361,53 @@ object Phase1ReadTypescript {
           f.shortenedFiles.headOption.map(_.folder).getOrElse(f.folder)
         PathsFromTsLibSource.filesFrom(bound)
     }
+
+  /** Resolves declared dependencies from package.json and determines stdlib inclusion.
+    *
+    * @param source
+    *   The library source to resolve dependencies for
+    * @param includedFiles
+    *   Files that are included in processing
+    * @param resolve
+    *   The library resolver to use for dependency resolution
+    * @param logger
+    *   Logger for warnings and errors
+    * @return
+    *   Tuple of (optional stdlib source, set of declared dependencies)
+    */
+  def resolveDeclaredDependencies(
+      source: LibTsSource,
+      includedFiles: IArray[InFile],
+      resolve: LibraryResolver,
+      logger: Logger[Unit]
+  ): (Option[LibTsSource], SortedSet[LibTsSource]) = {
+    val stdlibSourceOpt: Option[LibTsSource] =
+      if (includedFiles.exists(_.path === resolve.stdLib.path)) None
+      else Option(resolve.stdLib)
+
+    val depsDeclared: SortedSet[LibTsSource] =
+      if (stdlibSourceOpt.isEmpty) SortedSet.empty
+      else
+        source.packageJsonOpt
+          .getOrElse(PackageJson.Empty)
+          .allLibs(dev = false, peer = true)
+          .keySet
+          .flatMap { depName =>
+            resolve.library(depName) match {
+              case LibraryResolver.Found(source) =>
+                Some(source)
+              case LibraryResolver.Ignored(_) =>
+                None
+              case LibraryResolver.NotAvailable(name) =>
+                logger.warn(
+                  s"Could not find typescript definitions for dependency ${name.value}"
+                )
+                None
+            }
+          }
+
+    (stdlibSourceOpt, depsDeclared)
+  }
 
   def Pipeline(
       scope: TsTreeScope.Root,
