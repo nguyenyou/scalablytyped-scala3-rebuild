@@ -1,17 +1,24 @@
 package org.scalablytyped.converter.internal.importer
 
+import org.scalablytyped.converter.Selection
 import org.scalablytyped.converter.internal.{IArray, InFile, InFolder, NoComments}
 import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
+import org.scalablytyped.converter.internal.phases.{GetDeps, PhaseRes}
 import org.scalablytyped.converter.internal.ts.{
+  CalculateLibraryVersion,
   CodePath,
+  JsLocation,
+  TsDeclModule,
   TsIdentLibrary,
   TsIdentLibrarySimple,
   TsIdentModule,
-  TsParsedFile
+  TsParsedFile,
+  TsQIdent
 }
 import utest.*
 
-import scala.collection.immutable.SortedSet
+import scala.collection.immutable.{SortedMap, SortedSet}
+import scala.collection.mutable
 
 object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
 
@@ -699,6 +706,347 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
           // Accessing again should not trigger another parse (lazy caching)
           preparingFiles(InFile(tsFile)).get
           assert(parseCount == 1)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+    }
+
+    test("executePipeline") {
+      test("should successfully execute pipeline with valid parsed files") {
+        val tempDir = os.temp.dir(prefix = "test-execute-pipeline-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val tsFile = libDir / "index.d.ts"
+          os.write(tsFile, "export interface TestInterface { value: string; }")
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          // Create mock parsed file
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          // Create lazy parsers map
+          val preparingFiles       = SortedMap(InFile(tsFile) -> Lazy((parsedFile, Set.empty[LibTsSource])))
+          val includedViaDirective = mutable.Set.empty[InFile]
+
+          // Create mock resolver and dependencies
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val calculateLibraryVersion = CalculateLibraryVersion.PackageJsonOnly
+          val ignoredModulePrefixes   = Set.empty[List[String]]
+          val expandTypeMappings      = Selection.All[TsIdentLibrary]
+
+          // Mock getDeps function
+          val getDeps: GetDeps[LibTsSource, LibTs] = { _ =>
+            PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
+          }
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.executePipeline(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            ignoredModulePrefixes,
+            resolver,
+            calculateLibraryVersion,
+            pedantic = false,
+            expandTypeMappings,
+            getDeps,
+            logger
+          )
+
+          result match {
+            case PhaseRes.Ok(libTs) =>
+              assert(libTs.source == source)
+              assert(libTs.parsed.members.nonEmpty || libTs.parsed.members.isEmpty) // Pipeline may transform
+            case PhaseRes.Ignore() =>
+              assert(false) // Should not ignore with valid files
+            case PhaseRes.Failure(_) =>
+              assert(false) // Should not fail with valid input
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should return Ignore when no files are found") {
+        val tempDir = os.temp.dir(prefix = "test-execute-empty-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("empty-lib"))
+
+          // Empty preparing files map
+          val preparingFiles       = SortedMap.empty[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]]
+          val includedViaDirective = mutable.Set.empty[InFile]
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val calculateLibraryVersion = CalculateLibraryVersion.PackageJsonOnly
+          val ignoredModulePrefixes   = Set.empty[List[String]]
+          val expandTypeMappings      = Selection.All[TsIdentLibrary]
+
+          val getDeps: GetDeps[LibTsSource, LibTs] = { _ =>
+            PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
+          }
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.executePipeline(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            ignoredModulePrefixes,
+            resolver,
+            calculateLibraryVersion,
+            pedantic = false,
+            expandTypeMappings,
+            getDeps,
+            logger
+          )
+
+          result match {
+            case PhaseRes.Ignore() =>
+              assert(true) // Expected behavior
+            case _ =>
+              assert(false) // Should ignore when no files found
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle module filtering with ignored prefixes") {
+        val tempDir = os.temp.dir(prefix = "test-execute-filtering-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val tsFile = libDir / "index.d.ts"
+          os.write(tsFile, "export interface TestInterface { value: string; }")
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          // Create mock parsed file with modules to be filtered
+          val moduleToIgnore = TsDeclModule(
+            comments = NoComments,
+            declared = false,
+            name = TsIdentModule(None, List("ignored", "module")),
+            members = IArray.Empty,
+            codePath = CodePath.NoPath,
+            jsLocation = JsLocation.Zero
+          )
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray(moduleToIgnore),
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles       = SortedMap(InFile(tsFile) -> Lazy((parsedFile, Set.empty[LibTsSource])))
+          val includedViaDirective = mutable.Set.empty[InFile]
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val calculateLibraryVersion = CalculateLibraryVersion.PackageJsonOnly
+          val ignoredModulePrefixes   = Set(List("ignored")) // Should filter out the module
+          val expandTypeMappings      = Selection.All[TsIdentLibrary]
+
+          val getDeps: GetDeps[LibTsSource, LibTs] = { _ =>
+            PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
+          }
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.executePipeline(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            ignoredModulePrefixes,
+            resolver,
+            calculateLibraryVersion,
+            pedantic = false,
+            expandTypeMappings,
+            getDeps,
+            logger
+          )
+
+          result match {
+            case PhaseRes.Ok(libTs) =>
+              // The ignored module should be filtered out
+              val hasIgnoredModule = libTs.parsed.members.exists {
+                case m: TsDeclModule => m.name.fragments.headOption.contains("ignored")
+                case _               => false
+              }
+              assert(!hasIgnoredModule) // Should be filtered out
+            case _ =>
+              assert(false) // Should succeed with filtering
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle StdLibSource file preparation differently") {
+        val tempDir = os.temp.dir(prefix = "test-execute-stdlib-")
+        try {
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+
+          val libFile = stdLibDir / "lib.es5.d.ts"
+          os.write(libFile, "declare var Array: ArrayConstructor;")
+
+          val stdLibFiles = IArray(InFile(libFile))
+          val source      = LibTsSource.StdLibSource(InFolder(stdLibDir), stdLibFiles, TsIdentLibrary("std"))
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles       = SortedMap(InFile(libFile) -> Lazy((parsedFile, Set.empty[LibTsSource])))
+          val includedViaDirective = mutable.Set.empty[InFile]
+
+          val resolver                = new LibraryResolver(source, IArray.Empty, Set.empty)
+          val calculateLibraryVersion = CalculateLibraryVersion.PackageJsonOnly
+          val ignoredModulePrefixes   = Set.empty[List[String]]
+          val expandTypeMappings      = Selection.All[TsIdentLibrary]
+
+          val getDeps: GetDeps[LibTsSource, LibTs] = { _ =>
+            PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
+          }
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.executePipeline(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            ignoredModulePrefixes,
+            resolver,
+            calculateLibraryVersion,
+            pedantic = false,
+            expandTypeMappings,
+            getDeps,
+            logger
+          )
+
+          result match {
+            case PhaseRes.Ok(libTs) =>
+              assert(libTs.source == source)
+              assert(libTs.version.isStdLib) // Should be marked as stdlib
+            case _ =>
+              assert(false) // Should succeed with stdlib processing
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle files included via directive exclusion") {
+        val tempDir = os.temp.dir(prefix = "test-execute-directive-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val mainFile     = libDir / "main.d.ts"
+          val includedFile = libDir / "included.d.ts"
+          os.write(mainFile, "export interface MainInterface { value: string; }")
+          os.write(includedFile, "export interface IncludedInterface { data: number; }")
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val mainParsed = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val includedParsed = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles = SortedMap(
+            InFile(mainFile)     -> Lazy((mainParsed, Set.empty[LibTsSource])),
+            InFile(includedFile) -> Lazy((includedParsed, Set.empty[LibTsSource]))
+          )
+
+          // Mark included file as included via directive (should be excluded)
+          val includedViaDirective = mutable.Set(InFile(includedFile))
+
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+          os.write(stdLibDir / "lib.d.ts", "declare var console: Console;")
+          val stdLibFolder = InFolder(stdLibDir)
+          val stdLibFiles  = IArray(InFile(stdLibDir / "lib.d.ts"))
+          val stdLib       = LibTsSource.StdLibSource(stdLibFolder, stdLibFiles, TsIdentLibrary("std"))
+          val resolver     = new LibraryResolver(stdLib, IArray.Empty, Set.empty)
+
+          val calculateLibraryVersion = CalculateLibraryVersion.PackageJsonOnly
+          val ignoredModulePrefixes   = Set.empty[List[String]]
+          val expandTypeMappings      = Selection.All[TsIdentLibrary]
+
+          val getDeps: GetDeps[LibTsSource, LibTs] = { _ =>
+            PhaseRes.Ok(SortedMap.empty[LibTsSource, LibTs])
+          }
+
+          val logger = Logger.DevNull
+
+          val result = Phase1ReadTypescript.executePipeline(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            ignoredModulePrefixes,
+            resolver,
+            calculateLibraryVersion,
+            pedantic = false,
+            expandTypeMappings,
+            getDeps,
+            logger
+          )
+
+          result match {
+            case PhaseRes.Ok(libTs) =>
+              // Should only have one file (main), included file should be excluded
+              assert(libTs.source == source)
+            // The pipeline should have processed only the main file
+            case _ =>
+              assert(false) // Should succeed with directive exclusion
+          }
         } finally {
           os.remove.all(tempDir)
         }

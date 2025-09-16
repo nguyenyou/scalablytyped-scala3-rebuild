@@ -39,9 +39,6 @@ class Phase1ReadTypescript(
   implicit val InFolderFormatter: Formatter[InFolder] =
     _.path.toString
 
-  private def ignoreModule(modName: TsIdentModule): Boolean =
-    Phase1ReadTypescript.shouldIgnoreModule(modName, ignoredModulePrefixes)
-
   override def apply(
       source: LibTsSource,
       _1: LibTsSource,
@@ -62,105 +59,18 @@ class Phase1ReadTypescript(
           logger
         )
 
-        val preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])] = {
-          // evaluate all, don't refactor and combine this with other steps
-          val base: SortedMap[InFile, (TsParsedFile, Set[LibTsSource])] =
-            source match {
-              case LibTsSource.StdLibSource(_, files, _) =>
-                val b =
-                  SortedMap.newBuilder[InFile, (TsParsedFile, Set[LibTsSource])]
-                files.foreach { file =>
-                  for {
-                    found     <- preparingFiles.get(file)
-                    evaluated <- found.get
-                  } b += ((file, evaluated))
-                }
-                b.result()
-              case LibTsSource.FromFolder(_, _) =>
-                preparingFiles.mapNotNone { case (_, v) => v.get }
-            }
-
-          base.flatMapToIArray {
-            case (file, _) if includedViaDirective(file) => Empty
-            case (_, fileResult)                         => IArray(fileResult)
-          }
-        }
-
-        if (preparedFiles.isEmpty) {
-          logger.warn(
-            s"No typescript definitions files found for library ${source.libName.value}"
-          )
-          return PhaseRes.Ignore()
-        }
-
-        val flattened = FlattenTrees(preparedFiles.map(_._1))
-        val depsFromFiles = preparedFiles.foldLeft(Set.empty[LibTsSource]) { case (acc, (_, deps)) =>
-          acc ++ deps
-        }
-
-        val withExportedModules =
-          source.packageJsonOpt.flatMap(_.parsedExported).foldLeft(flattened) { case (file, exports) =>
-            val proxyModules = ProxyModule.fromExports(
-              source,
-              logger,
-              resolve,
-              existing = file.membersByName.contains,
-              exports
-            )
-            file.copy(members =
-              IArray
-                .fromTraversable(proxyModules)
-                .map(_.asModule) ++ file.members
-            )
-          }
-
-        val withFilteredModules: TsParsedFile =
-          if (ignoredModulePrefixes.nonEmpty)
-            withExportedModules.copy(members = withExportedModules.members.filterNot {
-              case x: TsDeclModule      => ignoreModule(x.name)
-              case x: TsAugmentedModule => ignoreModule(x.name)
-              case _                    => false
-            })
-          else withExportedModules
-
-        val (stdlibSourceOpt, depsDeclared) = Phase1ReadTypescript.resolveDeclaredDependencies(
+        Phase1ReadTypescript.executePipeline(
           source,
-          includedFiles,
+          preparingFiles,
+          includedViaDirective,
+          ignoredModulePrefixes,
           resolve,
+          calculateLibraryVersion,
+          pedantic,
+          expandTypeMappings,
+          getDeps,
           logger
         )
-
-        getDeps(depsDeclared ++ stdlibSourceOpt ++ depsFromFiles).map { deps =>
-          val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
-            acc ++ lib.transitiveDependencies
-          }
-          val scope: TsTreeScope.Root =
-            TsTreeScope(
-              source.libName,
-              pedantic,
-              transitiveDeps.map { case (source, lib) => source -> lib.parsed },
-              logger
-            )
-
-          val involvesReact = {
-            val react = TsIdentLibrarySimple("react")
-            source.libName === react || deps.exists { case (s, _) =>
-              s.libName === react
-            }
-          }
-          val finished = Phase1ReadTypescript
-            .Pipeline(scope, source.libName, expandTypeMappings, involvesReact)
-            .foldLeft(withFilteredModules) { case (acc, f) => f(acc) }
-
-          val version = calculateLibraryVersion(
-            source.folder,
-            source.isInstanceOf[LibTsSource.StdLibSource],
-            source.packageJsonOpt,
-            finished.comments
-          )
-
-          LibTs(source)(version, finished, deps)
-        }
     }
   }
 }
@@ -448,6 +358,164 @@ object Phase1ReadTypescript {
         .toSorted
 
     (preparingFiles, includedViaDirective)
+  }
+
+  /** Executes the complete transformation pipeline on parsed TypeScript files.
+    *
+    * This function orchestrates the final phase of TypeScript processing, including:
+    *   - File preparation and evaluation from lazy parsers
+    *   - Empty file validation and early termination
+    *   - Tree flattening to combine multiple files
+    *   - Dependency collection from parsed files
+    *   - Export module processing from package.json exports
+    *   - Module filtering based on ignored prefixes
+    *   - Dependency resolution and transitive dependency calculation
+    *   - Tree scope creation for type resolution
+    *   - Transformation pipeline execution
+    *   - Library version calculation
+    *   - Final LibTs object creation
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param preparingFiles
+    *   Lazy parsers for each file mapped by InFile
+    * @param includedViaDirective
+    *   Set of files included via directives (to be excluded from final output)
+    * @param ignoredModulePrefixes
+    *   Set of module prefix patterns to filter out
+    * @param resolve
+    *   Library resolver for dependency resolution
+    * @param calculateLibraryVersion
+    *   Function to calculate library version
+    * @param pedantic
+    *   Whether to use pedantic mode for type checking
+    * @param expandTypeMappings
+    *   Configuration for type mapping expansion
+    * @param getDeps
+    *   Function to resolve dependencies
+    * @param logger
+    *   Logger for tracking processing progress
+    * @return
+    *   Either a PhaseRes.Ignore if no files found, or PhaseRes containing the processed LibTs
+    */
+  def executePipeline(
+      source: LibTsSource,
+      preparingFiles: SortedMap[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]],
+      includedViaDirective: mutable.Set[InFile],
+      ignoredModulePrefixes: Set[List[String]],
+      resolve: LibraryResolver,
+      calculateLibraryVersion: CalculateLibraryVersion,
+      pedantic: Boolean,
+      expandTypeMappings: Selection[TsIdentLibrary],
+      getDeps: GetDeps[LibTsSource, LibTs],
+      logger: Logger[Unit]
+  ): PhaseRes[LibTsSource, LibTs] = {
+    // Prepare files by evaluating lazy parsers
+    val preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])] = {
+      // evaluate all, don't refactor and combine this with other steps
+      val base: SortedMap[InFile, (TsParsedFile, Set[LibTsSource])] =
+        source match {
+          case LibTsSource.StdLibSource(_, files, _) =>
+            val b =
+              SortedMap.newBuilder[InFile, (TsParsedFile, Set[LibTsSource])]
+            files.foreach { file =>
+              for {
+                found     <- preparingFiles.get(file)
+                evaluated <- found.get
+              } b += ((file, evaluated))
+            }
+            b.result()
+          case LibTsSource.FromFolder(_, _) =>
+            preparingFiles.mapNotNone { case (_, v) => v.get }
+        }
+
+      base.flatMapToIArray {
+        case (file, _) if includedViaDirective(file) => Empty
+        case (_, fileResult)                         => IArray(fileResult)
+      }
+    }
+
+    // Check if any files were found
+    if (preparedFiles.isEmpty) {
+      logger.warn(
+        s"No typescript definitions files found for library ${source.libName.value}"
+      )
+      return PhaseRes.Ignore()
+    }
+
+    // Flatten trees and collect dependencies
+    val flattened = FlattenTrees(preparedFiles.map(_._1))
+    val depsFromFiles = preparedFiles.foldLeft(Set.empty[LibTsSource]) { case (acc, (_, deps)) =>
+      acc ++ deps
+    }
+
+    // Process exported modules from package.json
+    val withExportedModules =
+      source.packageJsonOpt.flatMap(_.parsedExported).foldLeft(flattened) { case (file, exports) =>
+        val proxyModules = ProxyModule.fromExports(
+          source,
+          logger,
+          resolve,
+          existing = file.membersByName.contains,
+          exports
+        )
+        file.copy(members =
+          IArray
+            .fromTraversable(proxyModules)
+            .map(_.asModule) ++ file.members
+        )
+      }
+
+    // Filter modules based on ignored prefixes
+    val withFilteredModules: TsParsedFile =
+      if (ignoredModulePrefixes.nonEmpty) {
+        val ignoreModule = (modName: TsIdentModule) => shouldIgnoreModule(modName, ignoredModulePrefixes)
+        withExportedModules.copy(members = withExportedModules.members.filterNot {
+          case x: TsDeclModule      => ignoreModule(x.name)
+          case x: TsAugmentedModule => ignoreModule(x.name)
+          case _                    => false
+        })
+      } else withExportedModules
+
+    // Resolve declared dependencies
+    val (stdlibSourceOpt, depsDeclared) = resolveDeclaredDependencies(
+      source,
+      IArray.Empty, // includedFiles not needed for this step
+      resolve,
+      logger
+    )
+
+    // Get dependencies and execute transformation pipeline
+    getDeps(depsDeclared ++ stdlibSourceOpt ++ depsFromFiles).map { deps =>
+      val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
+        acc ++ lib.transitiveDependencies
+      }
+      val scope: TsTreeScope.Root =
+        TsTreeScope(
+          source.libName,
+          pedantic,
+          transitiveDeps.map { case (source, lib) => source -> lib.parsed },
+          logger
+        )
+
+      val involvesReact = {
+        val react = TsIdentLibrarySimple("react")
+        source.libName === react || deps.exists { case (s, _) =>
+          s.libName === react
+        }
+      }
+      val finished = Pipeline(scope, source.libName, expandTypeMappings, involvesReact)
+        .foldLeft(withFilteredModules) { case (acc, f) => f(acc) }
+
+      val version = calculateLibraryVersion(
+        source.folder,
+        source.isInstanceOf[LibTsSource.StdLibSource],
+        source.packageJsonOpt,
+        finished.comments
+      )
+
+      LibTs(source)(version, finished, deps)
+    }
   }
 
   def Pipeline(
