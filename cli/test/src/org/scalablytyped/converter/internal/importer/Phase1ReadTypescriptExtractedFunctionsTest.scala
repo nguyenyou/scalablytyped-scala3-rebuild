@@ -8,10 +8,12 @@ import org.scalablytyped.converter.internal.ts.{
   CalculateLibraryVersion,
   CodePath,
   JsLocation,
+  TsDeclInterface,
   TsDeclModule,
   TsIdentLibrary,
   TsIdentLibrarySimple,
   TsIdentModule,
+  TsIdentSimple,
   TsParsedFile,
   TsQIdent
 }
@@ -1047,6 +1049,396 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
             case _ =>
               assert(false) // Should succeed with directive exclusion
           }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+    }
+
+    test("prepareAndEvaluateFiles") {
+      test("should successfully prepare files from StdLibSource") {
+        val tempDir = os.temp.dir(prefix = "test-prepare-stdlib-")
+        try {
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+
+          val libFile1 = stdLibDir / "lib.es5.d.ts"
+          val libFile2 = stdLibDir / "lib.dom.d.ts"
+          os.write(libFile1, "declare var Array: ArrayConstructor;")
+          os.write(libFile2, "declare var Document: Document;")
+
+          val stdLibFiles = IArray(InFile(libFile1), InFile(libFile2))
+          val source      = LibTsSource.StdLibSource(InFolder(stdLibDir), stdLibFiles, TsIdentLibrary("std"))
+
+          val parsedFile1 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val parsedFile2 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles = SortedMap(
+            InFile(libFile1) -> Lazy((parsedFile1, Set.empty[LibTsSource])),
+            InFile(libFile2) -> Lazy((parsedFile2, Set.empty[LibTsSource]))
+          )
+          val includedViaDirective = mutable.Set.empty[InFile]
+          val logger               = Logger.DevNull
+
+          val result = Phase1ReadTypescript.prepareAndEvaluateFiles(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            logger
+          )
+
+          result match {
+            case Some(files) =>
+              assert(files.length == 2) // Both files should be processed
+              assert(files.forall(_._1.isInstanceOf[TsParsedFile]))
+            case None =>
+              assert(false) // Should not be None with valid files
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should successfully prepare files from FromFolder source") {
+        val tempDir = os.temp.dir(prefix = "test-prepare-folder-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val tsFile1 = libDir / "index.d.ts"
+          val tsFile2 = libDir / "types.d.ts"
+          os.write(tsFile1, "export interface MainInterface { value: string; }")
+          os.write(tsFile2, "export interface TypesInterface { data: number; }")
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val parsedFile1 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val parsedFile2 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles = SortedMap(
+            InFile(tsFile1) -> Lazy((parsedFile1, Set.empty[LibTsSource])),
+            InFile(tsFile2) -> Lazy((parsedFile2, Set.empty[LibTsSource]))
+          )
+          val includedViaDirective = mutable.Set.empty[InFile]
+          val logger               = Logger.DevNull
+
+          val result = Phase1ReadTypescript.prepareAndEvaluateFiles(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            logger
+          )
+
+          result match {
+            case Some(files) =>
+              assert(files.length == 2) // Both files should be processed
+              assert(files.forall(_._1.isInstanceOf[TsParsedFile]))
+            case None =>
+              assert(false) // Should not be None with valid files
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should return None when no files are found") {
+        val tempDir = os.temp.dir(prefix = "test-prepare-empty-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("empty-lib"))
+
+          // Empty preparing files map
+          val preparingFiles       = SortedMap.empty[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]]
+          val includedViaDirective = mutable.Set.empty[InFile]
+          val logger               = Logger.DevNull
+
+          val result = Phase1ReadTypescript.prepareAndEvaluateFiles(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            logger
+          )
+
+          result match {
+            case None =>
+              assert(true) // Expected behavior
+            case Some(_) =>
+              assert(false) // Should be None when no files found
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should exclude files included via directive") {
+        val tempDir = os.temp.dir(prefix = "test-prepare-directive-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val mainFile     = libDir / "main.d.ts"
+          val includedFile = libDir / "included.d.ts"
+          os.write(mainFile, "export interface MainInterface { value: string; }")
+          os.write(includedFile, "export interface IncludedInterface { data: number; }")
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val mainParsed = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val includedParsed = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparingFiles = SortedMap(
+            InFile(mainFile)     -> Lazy((mainParsed, Set.empty[LibTsSource])),
+            InFile(includedFile) -> Lazy((includedParsed, Set.empty[LibTsSource]))
+          )
+
+          // Mark included file as included via directive (should be excluded)
+          val includedViaDirective = mutable.Set(InFile(includedFile))
+          val logger               = Logger.DevNull
+
+          val result = Phase1ReadTypescript.prepareAndEvaluateFiles(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            logger
+          )
+
+          result match {
+            case Some(files) =>
+              assert(files.length == 1) // Only main file should be included
+            // The included file should be excluded
+            case None =>
+              assert(false) // Should have at least the main file
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle StdLibSource with missing files gracefully") {
+        val tempDir = os.temp.dir(prefix = "test-prepare-missing-")
+        try {
+          val stdLibDir = tempDir / "stdlib"
+          os.makeDir.all(stdLibDir)
+
+          val existingFile = stdLibDir / "lib.es5.d.ts"
+          val missingFile  = stdLibDir / "lib.missing.d.ts"
+          os.write(existingFile, "declare var Array: ArrayConstructor;")
+          // Don't create missingFile
+
+          val stdLibFiles = IArray(InFile(existingFile), InFile(missingFile))
+          val source      = LibTsSource.StdLibSource(InFolder(stdLibDir), stdLibFiles, TsIdentLibrary("std"))
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          // Only include the existing file in preparingFiles
+          val preparingFiles = SortedMap(
+            InFile(existingFile) -> Lazy((parsedFile, Set.empty[LibTsSource]))
+          )
+          val includedViaDirective = mutable.Set.empty[InFile]
+          val logger               = Logger.DevNull
+
+          val result = Phase1ReadTypescript.prepareAndEvaluateFiles(
+            source,
+            preparingFiles,
+            includedViaDirective,
+            logger
+          )
+
+          result match {
+            case Some(files) =>
+              assert(files.length == 1) // Only the existing file should be processed
+              assert(files.forall(_._1.isInstanceOf[TsParsedFile]))
+            case None =>
+              assert(false) // Should have at least the existing file
+          }
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+    }
+
+    test("flattenAndCollectDependencies") {
+      test("should flatten single file and collect its dependencies") {
+        val tempDir = os.temp.dir(prefix = "test-flatten-single-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source    = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val depSource = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("dep-lib"))
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val dependencies: Set[LibTsSource] = Set(depSource)
+          val preparedFiles                  = IArray((parsedFile, dependencies))
+
+          val (flattened, depsFromFiles) = Phase1ReadTypescript.flattenAndCollectDependencies(preparedFiles)
+
+          assert(flattened.isInstanceOf[TsParsedFile])
+          assert(depsFromFiles == dependencies)
+          assert(depsFromFiles.contains(depSource))
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should flatten multiple files and merge their dependencies") {
+        val tempDir = os.temp.dir(prefix = "test-flatten-multiple-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source     = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+          val depSource1 = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("dep-lib-1"))
+          val depSource2 = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("dep-lib-2"))
+          val sharedDep  = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("shared-dep"))
+
+          val parsedFile1 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val parsedFile2 = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val dependencies1: Set[LibTsSource] = Set(depSource1, sharedDep)
+          val dependencies2: Set[LibTsSource] = Set(depSource2, sharedDep)
+          val preparedFiles                   = IArray((parsedFile1, dependencies1), (parsedFile2, dependencies2))
+
+          val (flattened, depsFromFiles) = Phase1ReadTypescript.flattenAndCollectDependencies(preparedFiles)
+
+          assert(flattened.isInstanceOf[TsParsedFile])
+          assert(depsFromFiles.size == 3) // Should merge and deduplicate
+          assert(depsFromFiles.contains(depSource1))
+          assert(depsFromFiles.contains(depSource2))
+          assert(depsFromFiles.contains(sharedDep))
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle empty dependencies") {
+        val tempDir = os.temp.dir(prefix = "test-flatten-empty-deps-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparedFiles = IArray((parsedFile, Set.empty[LibTsSource]))
+
+          val (flattened, depsFromFiles) = Phase1ReadTypescript.flattenAndCollectDependencies(preparedFiles)
+
+          assert(flattened.isInstanceOf[TsParsedFile])
+          assert(depsFromFiles.isEmpty)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle empty prepared files") {
+        val preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])] = IArray.Empty
+
+        val (flattened, depsFromFiles) = Phase1ReadTypescript.flattenAndCollectDependencies(preparedFiles)
+
+        assert(flattened.isInstanceOf[TsParsedFile])
+        assert(depsFromFiles.isEmpty)
+        // FlattenTrees should handle empty input gracefully
+        assert(flattened.members.isEmpty)
+      }
+
+      test("should preserve file structure during flattening") {
+        val tempDir = os.temp.dir(prefix = "test-flatten-structure-")
+        try {
+          val libDir = tempDir / "lib"
+          os.makeDir.all(libDir)
+
+          val source = LibTsSource.FromFolder(InFolder(libDir), TsIdentLibrarySimple("test-lib"))
+
+          // Create a parsed file with some members
+          val interfaceMember = TsDeclInterface(
+            comments = NoComments,
+            declared = false,
+            name = TsIdentSimple("TestInterface"),
+            tparams = IArray.Empty,
+            inheritance = IArray.Empty,
+            members = IArray.Empty,
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val parsedFile = TsParsedFile(
+            comments = NoComments,
+            directives = IArray.Empty,
+            members = IArray(interfaceMember),
+            codePath = CodePath.HasPath(source.libName, TsQIdent.empty)
+          )
+
+          val preparedFiles = IArray((parsedFile, Set.empty[LibTsSource]))
+
+          val (flattened, depsFromFiles) = Phase1ReadTypescript.flattenAndCollectDependencies(preparedFiles)
+
+          assert(flattened.isInstanceOf[TsParsedFile])
+          assert(depsFromFiles.isEmpty)
+          // The flattened file should contain the interface member
+          assert(flattened.members.nonEmpty)
         } finally {
           os.remove.all(tempDir)
         }

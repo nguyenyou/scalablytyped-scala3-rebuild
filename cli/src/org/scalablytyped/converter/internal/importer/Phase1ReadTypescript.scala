@@ -410,44 +410,16 @@ object Phase1ReadTypescript {
       getDeps: GetDeps[LibTsSource, LibTs],
       logger: Logger[Unit]
   ): PhaseRes[LibTsSource, LibTs] = {
-    // Prepare files by evaluating lazy parsers
-    val preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])] = {
-      // evaluate all, don't refactor and combine this with other steps
-      val base: SortedMap[InFile, (TsParsedFile, Set[LibTsSource])] =
-        source match {
-          case LibTsSource.StdLibSource(_, files, _) =>
-            val b =
-              SortedMap.newBuilder[InFile, (TsParsedFile, Set[LibTsSource])]
-            files.foreach { file =>
-              for {
-                found     <- preparingFiles.get(file)
-                evaluated <- found.get
-              } b += ((file, evaluated))
-            }
-            b.result()
-          case LibTsSource.FromFolder(_, _) =>
-            preparingFiles.mapNotNone { case (_, v) => v.get }
-        }
+    // Prepare and evaluate files from lazy parsers
+    val preparedFilesOpt = prepareAndEvaluateFiles(source, preparingFiles, includedViaDirective, logger)
 
-      base.flatMapToIArray {
-        case (file, _) if includedViaDirective(file) => Empty
-        case (_, fileResult)                         => IArray(fileResult)
-      }
-    }
-
-    // Check if any files were found
-    if (preparedFiles.isEmpty) {
-      logger.warn(
-        s"No typescript definitions files found for library ${source.libName.value}"
-      )
-      return PhaseRes.Ignore()
+    val preparedFiles = preparedFilesOpt match {
+      case Some(files) => files
+      case None        => return PhaseRes.Ignore()
     }
 
     // Flatten trees and collect dependencies
-    val flattened = FlattenTrees(preparedFiles.map(_._1))
-    val depsFromFiles = preparedFiles.foldLeft(Set.empty[LibTsSource]) { case (acc, (_, deps)) =>
-      acc ++ deps
-    }
+    val (flattened, depsFromFiles) = flattenAndCollectDependencies(preparedFiles)
 
     // Process exported modules from package.json
     val withExportedModules =
@@ -516,6 +488,87 @@ object Phase1ReadTypescript {
 
       LibTs(source)(version, finished, deps)
     }
+  }
+
+  /** Prepares and evaluates files from lazy parsers, handling different source types.
+    *
+    * This function processes the lazy evaluation map to produce actual parsed files, handling the differences between
+    * StdLibSource (which only processes specific files) and FromFolder sources (which process all available files). It
+    * also excludes files that were included via directive.
+    *
+    * @param source
+    *   The TypeScript library source being processed
+    * @param preparingFiles
+    *   Map of files to their lazy parsers
+    * @param includedViaDirective
+    *   Set of files included via directive (to be excluded)
+    * @param logger
+    *   Logger for recording processing events
+    * @return
+    *   Array of prepared files with their dependencies, or None if no files found
+    */
+  def prepareAndEvaluateFiles(
+      source: LibTsSource,
+      preparingFiles: SortedMap[InFile, Lazy[(TsParsedFile, Set[LibTsSource])]],
+      includedViaDirective: mutable.Set[InFile],
+      logger: Logger[Unit]
+  ): Option[IArray[(TsParsedFile, Set[LibTsSource])]] = {
+    // Prepare files by evaluating lazy parsers
+    val preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])] = {
+      // evaluate all, don't refactor and combine this with other steps
+      val base: SortedMap[InFile, (TsParsedFile, Set[LibTsSource])] =
+        source match {
+          case LibTsSource.StdLibSource(_, files, _) =>
+            val b =
+              SortedMap.newBuilder[InFile, (TsParsedFile, Set[LibTsSource])]
+            files.foreach { file =>
+              for {
+                found     <- preparingFiles.get(file)
+                evaluated <- found.get
+              } b += ((file, evaluated))
+            }
+            b.result()
+          case LibTsSource.FromFolder(_, _) =>
+            preparingFiles.mapNotNone { case (_, v) => v.get }
+        }
+
+      base.flatMapToIArray {
+        case (file, _) if includedViaDirective(file) => Empty
+        case (_, fileResult)                         => IArray(fileResult)
+      }
+    }
+
+    // Check if any files were found
+    if (preparedFiles.isEmpty) {
+      logger.warn(
+        s"No typescript definitions files found for library ${source.libName.value}"
+      )
+      None
+    } else {
+      Some(preparedFiles)
+    }
+  }
+
+  /** Flattens parsed files and collects dependencies from file results.
+    *
+    * This function takes the prepared files and performs tree flattening to create a single unified parsed file, while
+    * also collecting all dependencies that were discovered during file parsing.
+    *
+    * @param preparedFiles
+    *   Array of prepared files with their dependencies
+    * @return
+    *   Tuple containing the flattened parsed file and collected dependencies
+    */
+  def flattenAndCollectDependencies(
+      preparedFiles: IArray[(TsParsedFile, Set[LibTsSource])]
+  ): (TsParsedFile, Set[LibTsSource]) = {
+    // Flatten trees and collect dependencies
+    val flattened = FlattenTrees(preparedFiles.map(_._1))
+    val depsFromFiles = preparedFiles.foldLeft(Set.empty[LibTsSource]) { case (acc, (_, deps)) =>
+      acc ++ deps
+    }
+
+    (flattened, depsFromFiles)
   }
 
   def Pipeline(
