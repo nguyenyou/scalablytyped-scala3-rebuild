@@ -437,25 +437,14 @@ object Phase1ReadTypescript {
 
     // Get dependencies and execute transformation pipeline
     getDeps(depsDeclared ++ stdlibSourceOpt ++ depsFromFiles).map { deps =>
-      val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
-        acc ++ lib.transitiveDependencies
-      }
-      val scope: TsTreeScope.Root =
-        TsTreeScope(
-          source.libName,
-          pedantic,
-          transitiveDeps.map { case (source, lib) => source -> lib.parsed },
-          logger
-        )
-
-      val involvesReact = {
-        val react = TsIdentLibrarySimple("react")
-        source.libName === react || deps.exists { case (s, _) =>
-          s.libName === react
-        }
-      }
-      val finished = Pipeline(scope, source.libName, expandTypeMappings, involvesReact)
-        .foldLeft(withFilteredModules) { case (acc, f) => f(acc) }
+      val finished = executeTransformationPipeline(
+        deps,
+        source,
+        withFilteredModules,
+        pedantic,
+        expandTypeMappings,
+        logger
+      )
 
       val version = calculateLibraryVersion(
         source.folder,
@@ -466,6 +455,35 @@ object Phase1ReadTypescript {
 
       LibTs(source)(version, finished, deps)
     }
+  }
+
+  def executeTransformationPipeline(
+      deps: SortedMap[LibTsSource, LibTs],
+      source: LibTsSource,
+      withFilteredModules: TsParsedFile,
+      pedantic: Boolean,
+      expandTypeMappings: Selection[TsIdentLibrary],
+      logger: Logger[Unit]
+  ) = {
+    val transitiveDeps = deps.foldLeft(deps) { case (acc, (_, lib)) =>
+      acc ++ lib.transitiveDependencies
+    }
+    val scope: TsTreeScope.Root =
+      TsTreeScope(
+        source.libName,
+        pedantic,
+        transitiveDeps.map { case (source, lib) => source -> lib.parsed },
+        logger
+      )
+
+    val involvesReact = {
+      val react = TsIdentLibrarySimple("react")
+      source.libName === react || deps.exists { case (s, _) =>
+        s.libName === react
+      }
+    }
+    Pipeline(scope, source.libName, expandTypeMappings, involvesReact)
+      .foldLeft(withFilteredModules) { case (acc, f) => f(acc) }
   }
 
   /** Prepares and evaluates files from lazy parsers, handling different source types.
