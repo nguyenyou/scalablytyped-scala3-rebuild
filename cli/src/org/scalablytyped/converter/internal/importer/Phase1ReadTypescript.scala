@@ -227,7 +227,7 @@ object Phase1ReadTypescript {
     * @return
     *   Tuple of processed file and its dependencies
     */
-  private def processFileWithDependencies(
+  def processFileWithDependencies(
       source: LibTsSource,
       file: InFile,
       resolve: LibraryResolver,
@@ -303,7 +303,7 @@ object Phase1ReadTypescript {
     *   Array of Either[Directive.Ref, InFile] where Right contains resolved files and Left contains unresolved
     *   directives
     */
-  private def collectDirectivesToInline(
+  def collectDirectivesToInline(
       source: LibTsSource,
       file: InFile,
       resolve: LibraryResolver,
@@ -339,7 +339,7 @@ object Phase1ReadTypescript {
     * @param logger
     *   Logger for warnings and errors
     */
-  private def processTypeReferenceDirectives(
+  def processTypeReferenceDirectives(
       source: LibTsSource,
       file: InFile,
       resolve: LibraryResolver,
@@ -381,7 +381,7 @@ object Phase1ReadTypescript {
     * @return
     *   ResolveExternalReferences.Result containing transformed file and resolution information
     */
-  private def resolveExternalReferences(
+  def resolveExternalReferences(
       source: LibTsSource,
       file: InFile,
       resolve: LibraryResolver,
@@ -407,7 +407,7 @@ object Phase1ReadTypescript {
     * @param deps
     *   The dependency builder to add dependencies to
     */
-  private def collectDependenciesFromResolvedModules(
+  def collectDependenciesFromResolvedModules(
       resolvedModules: Set[ResolvedModule],
       deps: mutable.Builder[LibTsSource, Set[LibTsSource]]
   ): Unit = {
@@ -431,7 +431,7 @@ object Phase1ReadTypescript {
     * @return
     *   The parsed file with standard library comments added (if applicable)
     */
-  private def addStandardLibraryComments(
+  def addStandardLibraryComments(
       source: LibTsSource,
       file: InFile,
       withExternals: TsParsedFile
@@ -472,7 +472,7 @@ object Phase1ReadTypescript {
     * @return
     *   Set of inferred library dependencies
     */
-  private def inferAdditionalDependencies(
+  def inferAdditionalDependencies(
       source: LibTsSource,
       withOrigin: TsParsedFile,
       unresolvedModules: Set[TsIdentModule],
@@ -504,7 +504,7 @@ object Phase1ReadTypescript {
     * @param logger
     *   Logger for warnings about unresolved dependencies
     */
-  private def resolveDependenciesFromInferredNames(
+  def resolveDependenciesFromInferredNames(
       source: LibTsSource,
       file: InFile,
       resolve: LibraryResolver,
@@ -548,7 +548,7 @@ object Phase1ReadTypescript {
     * @return
     *   The parsed file with referenced files inlined
     */
-  private def inlineReferencedFiles(
+  def inlineReferencedFiles(
       toInline: IArray[Either[Directive.Ref, InFile]],
       withOrigin: TsParsedFile,
       fileLogger: Logger[Unit],
@@ -598,7 +598,7 @@ object Phase1ReadTypescript {
     * @return
     *   The parsed file with module aliases added
     */
-  private def addModuleAliases(
+  def addModuleAliases(
       withInlined: TsParsedFile,
       moduleNames: IArray[TsIdentModule]
   ): TsParsedFile = {
@@ -629,7 +629,7 @@ object Phase1ReadTypescript {
     * @return
     *   The parsed file with code path information set
     */
-  private def setCodePath(
+  def setCodePath(
       source: LibTsSource,
       withModuleAliases: TsParsedFile
   ): TsParsedFile = {
