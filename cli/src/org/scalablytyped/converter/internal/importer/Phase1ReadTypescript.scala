@@ -446,15 +446,50 @@ object Phase1ReadTypescript {
         logger
       )
 
-      val version = calculateLibraryVersion(
-        source.folder,
-        source.isInstanceOf[LibTsSource.StdLibSource],
-        source.packageJsonOpt,
-        finished.comments
-      )
-
-      LibTs(source)(version, finished, deps)
+      createLibraryWithVersion(source, finished, deps, calculateLibraryVersion)
     }
+  }
+
+  /** Creates the final LibTs object with calculated version and dependencies.
+    *
+    * This function represents the final step of the TypeScript processing pipeline. It calculates the library version
+    * based on the source folder, package.json information, and file comments, then creates the final LibTs object that
+    * encapsulates the processed library with its version, transformed file, and resolved dependencies.
+    *
+    * Version calculation considers multiple sources:
+    *   - For StdLibSource: Uses standard library versioning logic
+    *   - For FromFolder: Extracts version from package.json or file comments
+    *   - Handles missing package.json gracefully by falling back to comment-based extraction
+    *   - Supports both explicit version fields and comment-embedded version information
+    *
+    * The resulting LibTs object serves as the complete representation of the processed TypeScript library, ready for
+    * further phases in the conversion pipeline.
+    *
+    * @param source
+    *   Library source containing folder path and package.json information
+    * @param transformedFile
+    *   Fully transformed TypeScript file from the transformation pipeline
+    * @param deps
+    *   Resolved dependencies that this library depends on
+    * @param calculateLibraryVersion
+    *   Function to calculate library version from various sources
+    * @return
+    *   Complete LibTs object with version, transformed file, and dependencies
+    */
+  def createLibraryWithVersion(
+      source: LibTsSource,
+      transformedFile: TsParsedFile,
+      deps: SortedMap[LibTsSource, LibTs],
+      calculateLibraryVersion: CalculateLibraryVersion
+  ): LibTs = {
+    val version = calculateLibraryVersion(
+      source.folder,
+      source.isInstanceOf[LibTsSource.StdLibSource],
+      source.packageJsonOpt,
+      transformedFile.comments
+    )
+
+    LibTs(source)(version, transformedFile, deps)
   }
 
   /** Executes the transformation pipeline on the filtered modules.

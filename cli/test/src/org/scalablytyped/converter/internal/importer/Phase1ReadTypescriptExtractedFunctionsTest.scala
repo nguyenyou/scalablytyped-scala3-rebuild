@@ -1,7 +1,7 @@
 package org.scalablytyped.converter.internal.importer
 
 import org.scalablytyped.converter.Selection
-import org.scalablytyped.converter.internal.{IArray, InFile, InFolder, NoComments}
+import org.scalablytyped.converter.internal.{Comments, IArray, InFile, InFolder, NoComments}
 import org.scalablytyped.converter.internal.logging.{Formatter, Logger}
 import org.scalablytyped.converter.internal.phases.{GetDeps, PhaseRes}
 import org.scalablytyped.converter.internal.ts.{
@@ -18,6 +18,10 @@ import org.scalablytyped.converter.internal.ts.{
   TsParsedFile,
   TsQIdent
 }
+import org.scalablytyped.converter.internal.{InGit, LibraryVersion}
+
+import java.net.URI
+import java.time.ZonedDateTime
 import utest.*
 
 import scala.collection.immutable.{SortedMap, SortedSet}
@@ -1896,6 +1900,136 @@ object Phase1ReadTypescriptExtractedFunctionsTest extends TestSuite {
         assert(result.isInstanceOf[TsParsedFile])
         assert(result.members.isEmpty)
         assert(result.codePath == emptyFile.codePath)
+      }
+    }
+
+    test("createLibraryWithVersion") {
+      test("should create LibTs with calculated version for FromFolder source") {
+        val source                                        = createMockSource("test-lib")
+        val transformedFile                               = createMockParsedFile("test-lib")
+        val deps                                          = SortedMap.empty[LibTsSource, LibTs]
+        val mockCalculateVersion: CalculateLibraryVersion = (_, _, _, _) => LibraryVersion(false, Some("1.0.0"), None)
+
+        val result = Phase1ReadTypescript.createLibraryWithVersion(
+          source,
+          transformedFile,
+          deps,
+          mockCalculateVersion
+        )
+
+        assert(result.source == source)
+        assert(result.version.libraryVersion.contains("1.0.0"))
+        assert(!result.version.isStdLib)
+        assert(result.parsed == transformedFile)
+        assert(result.dependencies == deps)
+      }
+
+      test("should create LibTs with StdLib version for StdLibSource") {
+        val tempDir = os.temp.dir(prefix = "mock-stdlib-")
+        try {
+          val stdLibFiles     = IArray(InFile(tempDir / "lib.d.ts"))
+          val source          = LibTsSource.StdLibSource(InFolder(tempDir), stdLibFiles, TsIdentLibrary("typescript"))
+          val transformedFile = createMockParsedFile("typescript")
+          val deps            = SortedMap.empty[LibTsSource, LibTs]
+          val mockCalculateVersion: CalculateLibraryVersion =
+            (_, isStdLib, _, _) => LibraryVersion(isStdLib, Some("4.9.0"), None)
+
+          val result = Phase1ReadTypescript.createLibraryWithVersion(
+            source,
+            transformedFile,
+            deps,
+            mockCalculateVersion
+          )
+
+          assert(result.source == source)
+          assert(result.version.libraryVersion.contains("4.9.0"))
+          assert(result.version.isStdLib)
+          assert(result.parsed == transformedFile)
+          assert(result.dependencies == deps)
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle version extraction from package.json") {
+        val tempDir = os.temp.dir(prefix = "mock-package-")
+        try {
+          // Create a mock source with package.json (packageJsonOpt is computed from folder)
+          os.write(tempDir / "package.json", """{"version": "2.1.0", "name": "test-package"}""")
+          val source          = LibTsSource.FromFolder(InFolder(tempDir), TsIdentLibrarySimple("test-package"))
+          val transformedFile = createMockParsedFile("test-package")
+          val deps            = SortedMap.empty[LibTsSource, LibTs]
+          val mockCalculateVersion: CalculateLibraryVersion =
+            (_, _, packageJsonOpt, _) => LibraryVersion(false, packageJsonOpt.flatMap(_.version), None)
+
+          val result = Phase1ReadTypescript.createLibraryWithVersion(
+            source,
+            transformedFile,
+            deps,
+            mockCalculateVersion
+          )
+
+          assert(result.version.libraryVersion.contains("2.1.0"))
+        } finally {
+          os.remove.all(tempDir)
+        }
+      }
+
+      test("should handle version extraction from file comments") {
+        val source          = createMockSource("comment-version-lib")
+        val comments        = Comments("// Version: 3.0.0-beta", "// TypeScript definitions")
+        val transformedFile = createMockParsedFile("comment-version-lib").copy(comments = comments)
+        val deps            = SortedMap.empty[LibTsSource, LibTs]
+        val mockCalculateVersion: CalculateLibraryVersion = (_, _, _, comments) => {
+          val versionFromComments = comments.rawCs
+            .find(_.contains("Version:"))
+            .map(_.split("Version:").last.trim)
+          LibraryVersion(false, versionFromComments, None)
+        }
+
+        val result = Phase1ReadTypescript.createLibraryWithVersion(
+          source,
+          transformedFile,
+          deps,
+          mockCalculateVersion
+        )
+
+        assert(result.version.libraryVersion.contains("3.0.0-beta"))
+      }
+
+      test("should handle complex dependency scenarios") {
+        val source          = createMockSource("complex-lib")
+        val transformedFile = createMockParsedFile("complex-lib")
+
+        // Create mock dependencies
+        val dep1Source = createMockSource("dep1")
+        val dep1       = createMockLibTs(dep1Source, "1.0.0")
+        val dep2Source = createMockSource("dep2")
+        val dep2       = createMockLibTs(dep2Source, "2.0.0")
+        val deps       = SortedMap(dep1Source -> dep1, dep2Source -> dep2)
+
+        val mockCalculateVersion: CalculateLibraryVersion = (_, _, _, _) => {
+          val gitInfo = InGit(
+            repo = new URI("https://github.com/example/complex-lib"),
+            isDefinitelyTyped = false,
+            lastModified = ZonedDateTime.parse("2023-01-15T10:30:00Z")
+          )
+          LibraryVersion(false, Some("1.5.0"), Some(gitInfo))
+        }
+
+        val result = Phase1ReadTypescript.createLibraryWithVersion(
+          source,
+          transformedFile,
+          deps,
+          mockCalculateVersion
+        )
+
+        assert(result.dependencies.size == 2)
+        assert(result.dependencies.contains(dep1Source))
+        assert(result.dependencies.contains(dep2Source))
+        assert(result.version.libraryVersion.contains("1.5.0"))
+        assert(result.version.inGit.isDefined)
+        assert(result.version.inGit.get.repo.toString == "https://github.com/example/complex-lib")
       }
     }
   }
