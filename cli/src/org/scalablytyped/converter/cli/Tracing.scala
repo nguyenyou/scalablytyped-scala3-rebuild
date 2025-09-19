@@ -155,11 +155,12 @@ object Tracing {
 
       val importedLibs: Map[LibTsSource, PhaseRes[LibTsSource, LibScalaJs]] =
         sources
-          .map(s => {
-            executionLogger.logProgress(s"Processing library ${s.libName.value}")
-            val result = PhaseRunner(pipeline, (_: LibTsSource) => logger.void, NoListener)(s)
-            executionLogger.logProgress(s"Result for ${s.libName.value}: ${result.getClass.getSimpleName}")
-            (s: LibTsSource) -> result
+          .map(source => {
+            executionLogger.logProgress(s"Processing library ${source.libName.value}")
+            val runner = PhaseRunner(pipeline, (_: LibTsSource) => logger.void, NoListener)
+            val result = runner(source)
+            executionLogger.logProgress(s"Result for ${source.libName.value}: ${result.getClass.getSimpleName}")
+            (source: LibTsSource) -> result
           })
           .toMap
 
