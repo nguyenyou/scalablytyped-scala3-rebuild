@@ -11,11 +11,17 @@ import scala.collection.immutable.TreeMap
 import scala.concurrent.ExecutionException
 import scala.util.control.NonFatal
 
+/**
+  * Adapts the result of running a phase so we can propagate successes, ignored work, or detailed failures.
+  * The type parameter `Id` keeps track of which element produced the outcome.
+  */
 sealed trait PhaseRes[Id, T] extends Product with Serializable {
   import PhaseRes._
 
+  /** Execute `f` for its side effects when the phase finished successfully. */
   def foreach(f: T => Unit): PhaseRes[Id, Unit] = map(f)
 
+  /** Map the value inside an [[Ok]] while leaving [[Ignore]] and [[Failure]] untouched. */
   def map[U](f: T => U): PhaseRes[Id, U] =
     this match {
       case Ok(value)       => Ok(f(value))
@@ -23,6 +29,7 @@ sealed trait PhaseRes[Id, T] extends Product with Serializable {
       case Failure(errors) => Failure(errors)
     }
 
+  /** Chain another phase result-producing function while preserving Ignore or Failure outcomes. */
   def flatMap[U](f: T => PhaseRes[Id, U]): PhaseRes[Id, U] =
     this match {
       case Ok(value)       => f(value)
@@ -31,17 +38,25 @@ sealed trait PhaseRes[Id, T] extends Product with Serializable {
     }
 }
 
+/** Companion helpers for constructing and combining [[PhaseRes]] instances. */
 object PhaseRes {
-  final case class Ok[Id, T](value: T)                                        extends PhaseRes[Id, T]
-  final case class Ignore[Id, T]()                                            extends PhaseRes[Id, T]
+  /** Successful result carrying the transformed value. */
+  final case class Ok[Id, T](value: T) extends PhaseRes[Id, T]
+
+  /** Signals that a phase elected not to run for the supplied id. */
+  final case class Ignore[Id, T]() extends PhaseRes[Id, T]
+
+  /** Aggregated error information keyed by ids that failed. */
   final case class Failure[Id, T](errors: Map[Id, Either[Throwable, String]]) extends PhaseRes[Id, T]
 
+  /** Lift an `Either` into the phase result family, recording the source id on failure. */
   def fromEither[Id, L, R](id: Id, e: Either[String, R]): PhaseRes[Id, R] =
     e match {
       case Right(value) => Ok(value)
       case Left(error)  => Failure(Map(id -> Right(error)))
     }
 
+  /** Collapse a set of phase results into a single result, accumulating successes or the first failures. */
   def sequenceSet[Id, T](rs: Set[PhaseRes[Id, T]]): PhaseRes[Id, Set[T]] =
     rs.foldLeft[PhaseRes[Id, Set[T]]](Ok(Set.empty)) {
       case (other, Ignore())                 => other
@@ -53,6 +68,10 @@ object PhaseRes {
       case (Ignore(), Failure(error))        => Failure(error)
     }
 
+  /**
+    * Collapse a map of phase results into one result, keyed by the same ids and preserving sorted iteration order.
+    * Intermediate ignore results disappear unless they are the only observed outcome.
+    */
   def sequenceMap[Id: Ordering, T](rs: SortedMap[Id, PhaseRes[Id, T]]): PhaseRes[Id, SortedMap[Id, T]] =
     rs.foldLeft[PhaseRes[Id, SortedMap[Id, T]]](Ok(TreeMap.empty[Id, T])) {
       case (other, (_, Ignore()))                    => other
@@ -64,6 +83,10 @@ object PhaseRes {
       case (Ignore(), (_, Failure(errors)))          => Failure(errors)
     }
 
+  /**
+    * Run a phase body while capturing non-fatal exceptions and logging them before turning them into a failure.
+    * Certain interruption-related exceptions are rethrown so that cancellation semantics are preserved.
+    */
   def attempt[Id, T](id: Id, logger: Logger[Unit], t: => PhaseRes[Id, T]): PhaseRes[Id, T] =
     try t
     catch {
