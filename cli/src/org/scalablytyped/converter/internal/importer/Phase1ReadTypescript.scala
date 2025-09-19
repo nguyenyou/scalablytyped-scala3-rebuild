@@ -40,11 +40,11 @@ class Phase1ReadTypescript(
     _.path.toString
 
   override def apply(
-      source: LibTsSource,
-      _1: LibTsSource,
-      getDeps: GetDeps[LibTsSource, LibTs],
-      isCircular: IsCircular,
-      logger: Logger[Unit]
+      source: LibTsSource,                  // Id
+      _1: LibTsSource,                      // T
+      getDeps: GetDeps[LibTsSource, LibTs], // GetDeps[Id, TT]
+      isCircular: IsCircular,               // IsCircular
+      logger: Logger[Unit]                  // Logger[Unit]
   ): PhaseRes[LibTsSource, LibTs] = {
     source match {
       case source if ignored(source.libName) || isCircular => PhaseRes.Ignore()
